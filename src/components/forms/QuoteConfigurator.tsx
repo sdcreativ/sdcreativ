@@ -1,0 +1,375 @@
+"use client";
+
+import { useEffect, useMemo, useState, type FormEvent } from "react";
+import { useSearchParams } from "next/navigation";
+import {
+  Calculator,
+  CheckCircle,
+  Loader2,
+  Send,
+  AlertCircle,
+  ChevronDown,
+} from "lucide-react";
+import { motion } from "framer-motion";
+import { Button } from "@/components/ui/Button";
+import { HoneypotField } from "@/components/forms/HoneypotField";
+import { TurnstileWidget } from "@/components/forms/TurnstileWidget";
+import { useFormTurnstile } from "@/components/forms/useFormTurnstile";
+import {
+  budgetOptions,
+  timelineOptions,
+} from "@/content/contact-options";
+import {
+  quotePageTiers,
+  quoteProjectTypes,
+} from "@/content/quote-config";
+import {
+  calculateQuote,
+  getAvailableAddons,
+  getProjectType,
+} from "@/lib/quote-calculator";
+import { cn } from "@/lib/utils";
+
+type FormState = "idle" | "loading" | "success" | "error";
+
+const fieldClass =
+  "w-full rounded-xl border border-gray/80 bg-white px-4 py-3.5 text-sm text-foreground shadow-sm transition-all placeholder:text-gray-text/50 focus:border-primary focus:outline-none focus:ring-4 focus:ring-primary/10";
+
+export function QuoteConfigurator() {
+  const searchParams = useSearchParams();
+  const [projectTypeId, setProjectTypeId] = useState(quoteProjectTypes[0]?.id ?? "");
+  const [pageTierId, setPageTierId] = useState("1-5");
+  const [addonIds, setAddonIds] = useState<string[]>([]);
+  const [state, setState] = useState<FormState>("idle");
+  const [errorMessage, setErrorMessage] = useState("");
+  const { turnstileToken, setTurnstileToken, validate, reset, required } = useFormTurnstile();
+
+  useEffect(() => {
+    const type = searchParams.get("type");
+    if (type && quoteProjectTypes.some((t) => t.id === type)) {
+      setProjectTypeId(type);
+    }
+  }, [searchParams]);
+
+  const project = getProjectType(projectTypeId);
+  const availableAddons = useMemo(
+    () => getAvailableAddons(projectTypeId),
+    [projectTypeId],
+  );
+
+  const quote = useMemo(
+    () =>
+      calculateQuote({
+        projectTypeId,
+        pageTierId: project?.supportsPages ? pageTierId : undefined,
+        addonIds,
+      }),
+    [projectTypeId, pageTierId, addonIds, project?.supportsPages],
+  );
+
+  function toggleAddon(id: string) {
+    setAddonIds((prev) =>
+      prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id],
+    );
+  }
+
+  async function handleSubmit(e: FormEvent<HTMLFormElement>) {
+    e.preventDefault();
+    setState("loading");
+    setErrorMessage("");
+
+    const turnstileError = validate();
+    if (turnstileError) {
+      setErrorMessage(turnstileError);
+      setState("error");
+      return;
+    }
+
+    const form = e.currentTarget;
+    const data = new FormData(form);
+
+    try {
+      const res = await fetch("/api/devis", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          name: data.get("name"),
+          email: data.get("email"),
+          phone: data.get("phone"),
+          company: data.get("company"),
+          projectTypeId,
+          pageTierId: project?.supportsPages ? pageTierId : undefined,
+          addonIds,
+          budget: data.get("budget"),
+          timeline: data.get("timeline"),
+          message: data.get("message"),
+          _hp: data.get("_hp"),
+          turnstileToken: turnstileToken || undefined,
+        }),
+      });
+
+      const json = await res.json();
+      if (!res.ok) throw new Error(json.error ?? "Une erreur est survenue.");
+
+      setState("success");
+      form.reset();
+      setAddonIds([]);
+      reset();
+    } catch (err) {
+      setState("error");
+      setErrorMessage(err instanceof Error ? err.message : "Une erreur est survenue.");
+    }
+  }
+
+  if (state === "success") {
+    return (
+      <motion.div
+        initial={{ opacity: 0, scale: 0.98 }}
+        animate={{ opacity: 1, scale: 1 }}
+        className="rounded-3xl border border-primary/20 bg-gradient-to-br from-primary-light via-white to-white p-10 text-center shadow-lg"
+      >
+        <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-primary shadow-lg">
+          <CheckCircle className="h-8 w-8 text-white" aria-hidden />
+        </div>
+        <h3 className="mt-6 text-2xl font-bold text-foreground">Demande envoyée !</h3>
+        <p className="mx-auto mt-3 max-w-md text-gray-text">
+          Votre estimation a été transmise à notre équipe. Nous vous recontactons sous
+          24 à 48 heures avec un devis personnalisé.
+        </p>
+        <Button type="button" variant="ghost" className="mt-8" onClick={() => setState("idle")}>
+          Faire une nouvelle estimation
+        </Button>
+      </motion.div>
+    );
+  }
+
+  return (
+    <div className="grid gap-8 lg:grid-cols-[1fr_340px] lg:items-start">
+      <form
+        onSubmit={handleSubmit}
+        className="relative space-y-8 rounded-3xl border border-gray/60 bg-white p-8 shadow-sm md:p-10"
+      >
+        <HoneypotField />
+        <div>
+          <h2 className="text-xl font-bold text-foreground md:text-2xl">
+            Configurez votre projet
+          </h2>
+          <p className="mt-2 text-sm text-gray-text">
+            Sélectionnez vos options — l&apos;estimation se met à jour en temps réel.
+          </p>
+        </div>
+
+        <div>
+          <label htmlFor="projectType" className="mb-2 block text-sm font-semibold text-foreground">
+            Type de projet <span className="text-accent">*</span>
+          </label>
+          <div className="relative">
+            <select
+              id="projectType"
+              value={projectTypeId}
+              onChange={(e) => {
+                setProjectTypeId(e.target.value);
+                setAddonIds([]);
+              }}
+              className={cn(fieldClass, "cursor-pointer appearance-none pr-10")}
+            >
+              {quoteProjectTypes.map((type) => (
+                <option key={type.id} value={type.id}>
+                  {type.label}
+                </option>
+              ))}
+            </select>
+            <ChevronDown className="pointer-events-none absolute right-4 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-text" aria-hidden />
+          </div>
+        </div>
+
+        {project?.supportsPages && (
+          <div>
+            <label htmlFor="pageTier" className="mb-2 block text-sm font-semibold text-foreground">
+              Nombre de pages
+            </label>
+            <div className="relative">
+              <select
+                id="pageTier"
+                value={pageTierId}
+                onChange={(e) => setPageTierId(e.target.value)}
+                className={cn(fieldClass, "cursor-pointer appearance-none pr-10")}
+              >
+                {quotePageTiers.map((tier) => (
+                  <option key={tier.id} value={tier.id}>
+                    {tier.label}
+                    {tier.extraPrice > 0
+                      ? ` (+${tier.extraPrice.toLocaleString("fr-FR")} FCFA)`
+                      : ""}
+                  </option>
+                ))}
+              </select>
+              <ChevronDown className="pointer-events-none absolute right-4 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-text" aria-hidden />
+            </div>
+          </div>
+        )}
+
+        {availableAddons.length > 0 && (
+          <fieldset>
+            <legend className="mb-3 text-sm font-semibold text-foreground">
+              Options supplémentaires
+            </legend>
+            <div className="grid gap-3 sm:grid-cols-2">
+              {availableAddons.map((addon) => (
+                <label
+                  key={addon.id}
+                  className={cn(
+                    "flex cursor-pointer items-start gap-3 rounded-xl border p-4 text-sm transition-colors",
+                    addonIds.includes(addon.id)
+                      ? "border-primary bg-primary-light/40"
+                      : "border-gray/60 hover:border-primary/30",
+                  )}
+                >
+                  <input
+                    type="checkbox"
+                    checked={addonIds.includes(addon.id)}
+                    onChange={() => toggleAddon(addon.id)}
+                    className="mt-0.5 accent-primary"
+                  />
+                  <span>
+                    <span className="font-medium text-foreground">{addon.label}</span>
+                    <span className="mt-0.5 block text-xs text-gray-text">
+                      +{addon.price.toLocaleString("fr-FR")} FCFA
+                    </span>
+                  </span>
+                </label>
+              ))}
+            </div>
+          </fieldset>
+        )}
+
+        <div className="border-t border-gray/60 pt-8">
+          <h3 className="mb-4 font-bold text-foreground">Vos coordonnées</h3>
+          <div className="grid gap-4 sm:grid-cols-2">
+            <div>
+              <label htmlFor="name" className="mb-1.5 block text-xs font-semibold uppercase tracking-wider text-gray-text">
+                Nom complet *
+              </label>
+              <input id="name" name="name" required className={fieldClass} placeholder="Jean Dupont" />
+            </div>
+            <div>
+              <label htmlFor="email" className="mb-1.5 block text-xs font-semibold uppercase tracking-wider text-gray-text">
+                Email *
+              </label>
+              <input id="email" name="email" type="email" required className={fieldClass} placeholder="vous@entreprise.com" />
+            </div>
+            <div>
+              <label htmlFor="phone" className="mb-1.5 block text-xs font-semibold uppercase tracking-wider text-gray-text">
+                Téléphone
+              </label>
+              <input id="phone" name="phone" type="tel" className={fieldClass} placeholder="+225 07 00 00 00 00" />
+            </div>
+            <div>
+              <label htmlFor="company" className="mb-1.5 block text-xs font-semibold uppercase tracking-wider text-gray-text">
+                Entreprise
+              </label>
+              <input id="company" name="company" className={fieldClass} placeholder="Nom de votre société" />
+            </div>
+            <div>
+              <label htmlFor="budget" className="mb-1.5 block text-xs font-semibold uppercase tracking-wider text-gray-text">
+                Budget indicatif *
+              </label>
+              <select id="budget" name="budget" required className={cn(fieldClass, "cursor-pointer")}>
+                <option value="">Choisir...</option>
+                {budgetOptions.map((o) => (
+                  <option key={o.value} value={o.value}>{o.label}</option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <label htmlFor="timeline" className="mb-1.5 block text-xs font-semibold uppercase tracking-wider text-gray-text">
+                Délai souhaité *
+              </label>
+              <select id="timeline" name="timeline" required className={cn(fieldClass, "cursor-pointer")}>
+                <option value="">Choisir...</option>
+                {timelineOptions.map((o) => (
+                  <option key={o.value} value={o.value}>{o.label}</option>
+                ))}
+              </select>
+            </div>
+          </div>
+          <div className="mt-4">
+            <label htmlFor="message" className="mb-1.5 block text-xs font-semibold uppercase tracking-wider text-gray-text">
+              Précisions (optionnel)
+            </label>
+            <textarea id="message" name="message" rows={3} className={cn(fieldClass, "resize-y")} placeholder="Décrivez brièvement votre projet..." />
+          </div>
+        </div>
+
+        {state === "error" && (
+          <div className="flex items-start gap-3 rounded-xl border border-accent/20 bg-accent/5 p-4 text-sm text-accent-dark">
+            <AlertCircle className="mt-0.5 h-5 w-5 shrink-0" aria-hidden />
+            {errorMessage}
+          </div>
+        )}
+
+        {required && (
+          <TurnstileWidget
+            onToken={setTurnstileToken}
+            onExpire={() => setTurnstileToken("")}
+          />
+        )}
+
+        <div className="flex flex-col gap-5 border-t border-gray/60 pt-6 sm:flex-row sm:items-center sm:justify-between">
+          <p className="max-w-md text-xs leading-relaxed text-gray-text">
+            En soumettant ce formulaire, vous acceptez notre{" "}
+            <a
+              href="/politique-confidentialite"
+              className="font-medium text-primary underline underline-offset-2"
+            >
+              politique de confidentialité
+            </a>
+            . Vos données servent uniquement à établir votre devis.
+          </p>
+
+          <Button type="submit" size="lg" disabled={state === "loading"} className="w-full shrink-0 justify-center sm:w-auto">
+          {state === "loading" ? (
+            <>
+              <Loader2 className="h-4 w-4 animate-spin" aria-hidden />
+              Envoi en cours...
+            </>
+          ) : (
+            <>
+              Recevoir mon estimation par email
+              <Send className="h-4 w-4" aria-hidden />
+            </>
+          )}
+        </Button>
+        </div>
+      </form>
+
+      <aside className="sticky top-28 rounded-3xl border border-primary/20 bg-gradient-to-br from-primary-light to-white p-6 shadow-lg md:p-8">
+        <div className="flex items-center gap-3">
+          <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-primary text-white">
+            <Calculator className="h-5 w-5" aria-hidden />
+          </div>
+          <h3 className="font-bold text-foreground">Votre estimation</h3>
+        </div>
+
+        {quote && (
+          <div className="mt-6">
+            <p className="text-sm text-gray-text">{quote.projectLabel}</p>
+            <ul className="mt-4 space-y-2 border-b border-gray/40 pb-4 text-sm">
+              {quote.lines.map((line) => (
+                <li key={line.label} className="flex justify-between gap-2">
+                  <span className="text-gray-text">{line.label}</span>
+                  <span className="shrink-0 font-medium text-foreground">
+                    {line.amount.toLocaleString("fr-FR")} F
+                  </span>
+                </li>
+              ))}
+            </ul>
+            <p className="mt-4 text-2xl font-bold text-primary">{quote.formattedSubtotal} HT</p>
+            <p className="mt-1 text-sm text-gray-text">Fourchette : {quote.formattedRange} HT</p>
+            <p className="mt-4 text-xs leading-relaxed text-gray-text">{quote.note}</p>
+          </div>
+        )}
+      </aside>
+    </div>
+  );
+}

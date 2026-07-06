@@ -1,0 +1,7 @@
+# Dev local — chargé automatiquement par `docker compose up` (avec docker-compose.yml).
+# 3001 évite le conflit avec `npm run dev` sur 3000.
+
+services:
+  app:
+    ports:
+      - "${APP_PORT:-3001}:3000"

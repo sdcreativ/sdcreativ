@@ -1,0 +1,227 @@
+import Image from "next/image";
+import Link from "next/link";
+import {
+  ArrowRight,
+  ArrowUpRight,
+  CheckCircle2,
+  Clock,
+  MessageCircle,
+  Wallet,
+} from "lucide-react";
+import { AccordionItem } from "@/components/ui/Accordion";
+import { Button } from "@/components/ui/Button";
+import { PageHero } from "@/components/ui/PageHero";
+import { RealisationCard } from "@/components/realisations/RealisationCard";
+import { FaqJsonLd } from "@/components/seo/JsonLd";
+import type { ServiceDetail } from "@/content/service-details";
+import { getRealisation } from "@/content/realisations";
+import type { Service } from "@/content/services";
+import { whatsappUrl } from "@/lib/constants";
+
+type Props = {
+  service: Service;
+  detail: ServiceDetail;
+};
+
+export function ServiceDetailView({ service, detail }: Props) {
+  const Icon = service.icon;
+  const relatedProjects = detail.relatedRealisationIds
+    .map((id) => getRealisation(id))
+    .filter(Boolean);
+
+  return (
+    <>
+      <FaqJsonLd items={detail.faq} />
+      <PageHero
+        eyebrow="Nos services"
+        title={service.title}
+        description={detail.heroDescription}
+        backgroundImage={service.image}
+        backgroundAlt={service.imageAlt ?? service.title}
+        breadcrumb={[
+          { label: "Accueil", href: "/" },
+          { label: "Services", href: "/services" },
+          { label: service.title },
+        ]}
+      />
+
+      <section className="border-b border-gray/40 bg-white py-10 md:py-12">
+        <div className="container mx-auto px-4 md:px-6 lg:px-8">
+          <div className="flex flex-wrap gap-4">
+            <div className="inline-flex items-center gap-2 rounded-full border border-primary/20 bg-primary-light/50 px-4 py-2 text-sm font-semibold text-primary">
+              <Wallet className="h-4 w-4" aria-hidden />À partir de {detail.startingFrom}
+            </div>
+            <div className="inline-flex items-center gap-2 rounded-full border border-gray/60 bg-gray-light px-4 py-2 text-sm font-medium text-foreground/80">
+              <Clock className="h-4 w-4 text-primary" aria-hidden />
+              Délai indicatif : {detail.delay}
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section className="py-16 md:py-20">
+        <div className="container mx-auto grid items-center gap-12 px-4 lg:grid-cols-2 lg:gap-16 md:px-6 lg:px-8">
+          <div>
+            <h2 className="text-2xl font-bold text-foreground md:text-3xl">
+              {detail.problem.title}
+            </h2>
+            <p className="mt-4 leading-relaxed text-gray-text">{detail.problem.text}</p>
+          </div>
+          <div className="rounded-2xl border border-primary/20 bg-primary-light/30 p-6 md:p-8">
+            <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-xl bg-primary text-white">
+              <Icon className="h-6 w-6" aria-hidden />
+            </div>
+            <h2 className="text-xl font-bold text-foreground">{detail.solution.title}</h2>
+            <p className="mt-3 leading-relaxed text-gray-text">{detail.solution.text}</p>
+          </div>
+        </div>
+      </section>
+
+      {service.image && (
+        <section className="border-y border-gray/40 bg-gray-light py-12 md:py-16">
+          <div className="container mx-auto px-4 md:px-6 lg:px-8">
+            <div className="overflow-hidden rounded-3xl border border-gray/60 bg-white shadow-lg">
+              <div className="relative aspect-[16/9]">
+                <Image
+                  src={service.image}
+                  alt={service.imageAlt ?? service.title}
+                  fill
+                  sizes="(max-width: 1280px) 100vw, 1200px"
+                  className="object-cover object-top"
+                  priority
+                />
+              </div>
+            </div>
+          </div>
+        </section>
+      )}
+
+      <section className="py-16 md:py-20">
+        <div className="container mx-auto px-4 md:px-6 lg:px-8">
+          <h2 className="text-center text-2xl font-bold text-foreground md:text-3xl">
+            Ce qui est inclus
+          </h2>
+          <ul className="mx-auto mt-10 grid max-w-4xl gap-3 sm:grid-cols-2">
+            {detail.deliverables.map((item) => (
+              <li
+                key={item}
+                className="flex items-start gap-3 rounded-xl border border-gray/60 bg-white p-4 shadow-sm"
+              >
+                <CheckCircle2 className="mt-0.5 h-5 w-5 shrink-0 text-primary" aria-hidden />
+                <span className="text-sm leading-relaxed text-foreground/85">{item}</span>
+              </li>
+            ))}
+          </ul>
+        </div>
+      </section>
+
+      <section className="border-t border-gray/40 bg-gray-light py-16 md:py-20">
+        <div className="container mx-auto px-4 md:px-6 lg:px-8">
+          <h2 className="text-center text-2xl font-bold text-foreground md:text-3xl">
+            Notre processus en 4 étapes
+          </h2>
+          <ol className="mx-auto mt-10 grid max-w-5xl gap-6 md:grid-cols-2 lg:grid-cols-4">
+            {detail.process.map(({ step, title, description }) => (
+              <li
+                key={step}
+                className="rounded-2xl border border-gray/60 bg-white p-6 shadow-sm"
+              >
+                <span className="font-mono text-sm font-bold text-primary">{step}</span>
+                <h3 className="mt-2 font-bold text-foreground">{title}</h3>
+                <p className="mt-2 text-sm leading-relaxed text-gray-text">{description}</p>
+              </li>
+            ))}
+          </ol>
+        </div>
+      </section>
+
+      <section className="py-16 md:py-20">
+        <div className="container mx-auto px-4 md:px-6 lg:px-8">
+          <h2 className="text-center text-2xl font-bold text-foreground md:text-3xl">
+            Idéal pour
+          </h2>
+          <ul className="mx-auto mt-8 flex max-w-3xl flex-wrap justify-center gap-3">
+            {detail.idealFor.map((item) => (
+              <li
+                key={item}
+                className="rounded-full border border-gray/60 bg-gray-light px-4 py-2 text-sm font-medium text-foreground/80"
+              >
+                {item}
+              </li>
+            ))}
+          </ul>
+        </div>
+      </section>
+
+      {relatedProjects.length > 0 && (
+        <section className="border-t border-gray/40 bg-gray-light py-16 md:py-20">
+          <div className="container mx-auto px-4 md:px-6 lg:px-8">
+            <h2 className="text-center text-2xl font-bold text-foreground md:text-3xl">
+              Réalisations associées
+            </h2>
+            <div className="mt-10 grid gap-8 md:grid-cols-3">
+              {relatedProjects.map((project, i) =>
+                project ? (
+                  <RealisationCard key={project.id} project={project} index={i} />
+                ) : null,
+              )}
+            </div>
+          </div>
+        </section>
+      )}
+
+      <section className="border-t border-gray/40 py-16 md:py-20">
+        <div className="container mx-auto max-w-3xl px-4 md:px-6 lg:px-8">
+          <h2 className="text-center text-2xl font-bold text-foreground md:text-3xl">
+            Questions fréquentes
+          </h2>
+          <div className="mt-8 space-y-3">
+            {detail.faq.map((item) => (
+              <AccordionItem
+                key={item.question}
+                question={item.question}
+                answer={item.answer}
+              />
+            ))}
+          </div>
+        </div>
+      </section>
+
+      <section className="bg-dark py-16 md:py-20">
+        <div className="container mx-auto max-w-2xl px-4 text-center md:px-6 lg:px-8">
+          <h2 className="text-2xl font-bold text-white md:text-3xl">
+            Lancez votre projet {service.title.toLowerCase()}
+          </h2>
+          <p className="mt-4 text-white/70">
+            Estimation en ligne ou échange direct avec notre équipe — réponse sous 24 à 48 h.
+          </p>
+          <div className="mt-8 flex flex-col items-center justify-center gap-4 sm:flex-row">
+            <Button href={`/devis?type=${detail.id}`} size="lg">
+              Estimer mon projet
+              <ArrowUpRight className="h-4 w-4" aria-hidden />
+            </Button>
+            <Button
+              href={`/contact?service=${detail.id}`}
+              variant="outline"
+              size="lg"
+              className="border-white/30 text-white hover:bg-white/10"
+            >
+              Demander un devis
+            </Button>
+            <Button href={whatsappUrl()} external variant="whatsapp" size="lg">
+              <MessageCircle className="h-4 w-4 text-green-400" aria-hidden />
+              WhatsApp
+            </Button>
+          </div>
+          <Link
+            href="/services"
+            className="mt-8 inline-flex items-center gap-2 text-sm text-white/60 transition-colors hover:text-white"
+          >
+            <ArrowRight className="h-4 w-4 rotate-180" aria-hidden />
+            Tous nos services
+          </Link>
+        </div>
+      </section>
+    </>
+  );
+}

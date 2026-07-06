@@ -1,0 +1,828 @@
+"use client";
+
+import { useCallback, useEffect, useMemo, useState } from "react";
+import Link from "next/link";
+import { useSearchParams } from "next/navigation";
+import {
+  getBudgetLabel,
+  getTimelineLabel,
+} from "@/content/contact-options";
+import {
+  QUOTE_PIPELINE_COLUMNS,
+  QUOTE_STATUS_LABELS,
+  formatQuoteAmount,
+  formatQuoteDate,
+  statusStyles,
+  type QuoteStatus,
+} from "@/content/quotes-labels";
+import type { Quote } from "@/lib/quotes";
+import {
+  createQuoteApi,
+  deleteQuoteApi,
+  fetchQuoteStats,
+  fetchQuotes,
+  getQuotePdfUrl,
+  updateQuoteApi,
+  type QuoteListFilters,
+} from "@/lib/quotes-api";
+import { createInvoiceFromQuoteApi } from "@/lib/invoices-api";
+import { fetchCrmClients } from "@/lib/clients-api";
+import type { Client } from "@/lib/clients";
+import { QuoteEmailComposer } from "@/components/admin/QuoteEmailComposer";
+import { KanbanDropColumn, KANBAN_DRAG_MIME } from "@/lib/kanban-dnd";
+import { cn } from "@/lib/utils";
+import { useDialog } from "@/components/ui/DialogProvider";
+import {
+  Download,
+  FileText,
+  GripVertical,
+  Loader2,
+  Mail,
+  Plus,
+  Receipt,
+  RefreshCw,
+  Trash2,
+  TrendingUp,
+  X,
+} from "lucide-react";
+
+const fieldClass =
+  "w-full rounded-xl border border-gray/60 bg-white px-3 py-2.5 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20";
+
+export function CrmQuotesView() {
+  const { confirm } = useDialog();
+  const searchParams = useSearchParams();
+  const [quotes, setQuotes] = useState<Quote[]>([]);
+  const [clients, setClients] = useState<Client[]>([]);
+  const [stats, setStats] = useState({ total: 0, sent: 0, accepted: 0, conversionRate: 0 });
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
+  const [selected, setSelected] = useState<Quote | null>(null);
+  const [showCreate, setShowCreate] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [dragOverColumn, setDragOverColumn] = useState<QuoteStatus | null>(null);
+  const [draggingId, setDraggingId] = useState<string | null>(null);
+
+  const [search, setSearch] = useState("");
+  const [clientFilter, setClientFilter] = useState("all");
+  const [statusFilter, setStatusFilter] = useState<QuoteStatus | "all">("all");
+  const [amountMin, setAmountMin] = useState("");
+  const [dateFrom, setDateFrom] = useState("");
+  const [dateTo, setDateTo] = useState("");
+
+  const listFilters = useMemo((): QuoteListFilters => ({
+    q: search.trim() || undefined,
+    clientId: clientFilter !== "all" ? clientFilter : undefined,
+    status: statusFilter !== "all" ? statusFilter : undefined,
+    amountMin: amountMin ? Number(amountMin) : undefined,
+    dateFrom: dateFrom || undefined,
+    dateTo: dateTo || undefined,
+  }), [search, clientFilter, statusFilter, amountMin, dateFrom, dateTo]);
+
+  const load = useCallback(async () => {
+    setLoading(true);
+    setError("");
+    try {
+      const [quotesData, statsData, clientList] = await Promise.all([
+        fetchQuotes(listFilters),
+        fetchQuoteStats(),
+        fetchCrmClients(),
+      ]);
+      setQuotes(quotesData);
+      setStats(statsData);
+      setClients(clientList);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Impossible de charger les devis.");
+      setQuotes([]);
+    } finally {
+      setLoading(false);
+    }
+  }, [listFilters]);
+
+  useEffect(() => {
+    void load();
+  }, [load]);
+
+  useEffect(() => {
+    const status = searchParams.get("status");
+    const quoteStatuses = QUOTE_PIPELINE_COLUMNS.map((c) => c.status);
+    if (status && quoteStatuses.includes(status as QuoteStatus)) {
+      setStatusFilter(status as QuoteStatus);
+    }
+    const q = searchParams.get("q");
+    if (q) setSearch(q);
+  }, [searchParams]);
+
+  const hasActiveFilters =
+    clientFilter !== "all" ||
+    statusFilter !== "all" ||
+    !!amountMin ||
+    !!dateFrom ||
+    !!dateTo ||
+    !!search.trim();
+
+  function clearFilters() {
+    setSearch("");
+    setClientFilter("all");
+    setStatusFilter("all");
+    setAmountMin("");
+    setDateFrom("");
+    setDateTo("");
+  }
+
+  async function handleStatusChange(quote: Quote, status: QuoteStatus) {
+    setSaving(true);
+    try {
+      const updated = await updateQuoteApi(quote.id, {
+        status,
+        followUpAt: status === "follow_up" ? new Date().toISOString() : undefined,
+      });
+      setQuotes((prev) => prev.map((q) => (q.id === updated.id ? updated : q)));
+      setSelected((prev) => (prev?.id === updated.id ? updated : prev));
+      const statsData = await fetchQuoteStats();
+      setStats(statsData);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Mise à jour impossible.");
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  async function handleDropOnColumn(targetStatus: QuoteStatus, quoteId: string) {
+    const quote = quotes.find((q) => q.id === quoteId);
+    if (!quote || quote.status === targetStatus) return;
+    await handleStatusChange(quote, targetStatus);
+  }
+
+  async function handleDelete(id: string) {
+    const ok = await confirm({
+      title: "Supprimer le devis",
+      message: "Supprimer ce devis ?",
+      confirmLabel: "Supprimer",
+      variant: "danger",
+    });
+    if (!ok) return;
+    setSaving(true);
+    try {
+      await deleteQuoteApi(id);
+      setQuotes((prev) => prev.filter((q) => q.id !== id));
+      setSelected(null);
+      const statsData = await fetchQuoteStats();
+      setStats(statsData);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Suppression impossible.");
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  const pipelineQuotes = quotes.filter(
+    (q) => q.status !== "rejected" && q.status !== "expired" && q.status !== "draft",
+  );
+  const archivedQuotes = quotes.filter(
+    (q) => q.status === "rejected" || q.status === "expired" || q.status === "draft",
+  );
+
+  return (
+    <div className="space-y-6">
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <p className="text-sm text-gray-text">
+          Historique des devis du configurateur en ligne, création manuelle, relances et suivi de conversion.
+        </p>
+        <div className="flex gap-2">
+          <button
+            type="button"
+            onClick={() => void load()}
+            disabled={loading}
+            className="inline-flex items-center gap-2 rounded-xl border border-gray/60 bg-white px-3 py-2 text-sm font-medium text-gray-text hover:text-foreground"
+          >
+            <RefreshCw className={cn("h-4 w-4", loading && "animate-spin")} aria-hidden />
+            Actualiser
+          </button>
+          <button
+            type="button"
+            onClick={() => setShowCreate(true)}
+            className="inline-flex items-center gap-2 rounded-xl bg-primary px-4 py-2 text-sm font-semibold text-white hover:bg-primary-dark"
+          >
+            <Plus className="h-4 w-4" aria-hidden />
+            Nouveau devis
+          </button>
+        </div>
+      </div>
+
+      <div className="rounded-2xl border border-gray/40 bg-white p-4 shadow-sm">
+        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
+          <label className="block text-xs font-semibold uppercase tracking-wide text-gray-text">
+            Recherche
+            <input
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              placeholder="Réf., nom, projet…"
+              className="mt-1 w-full rounded-xl border border-gray/60 px-3 py-2 text-sm"
+            />
+          </label>
+          <label className="block text-xs font-semibold uppercase tracking-wide text-gray-text">
+            Client
+            <select
+              value={clientFilter}
+              onChange={(e) => setClientFilter(e.target.value)}
+              className="mt-1 w-full rounded-xl border border-gray/60 px-3 py-2 text-sm"
+            >
+              <option value="all">Tous</option>
+              {clients.map((client) => (
+                <option key={client.id} value={client.id}>
+                  {client.company || client.name}
+                </option>
+              ))}
+            </select>
+          </label>
+          <label className="block text-xs font-semibold uppercase tracking-wide text-gray-text">
+            Statut
+            <select
+              value={statusFilter}
+              onChange={(e) => setStatusFilter(e.target.value as QuoteStatus | "all")}
+              className="mt-1 w-full rounded-xl border border-gray/60 px-3 py-2 text-sm"
+            >
+              <option value="all">Tous</option>
+              {Object.entries(QUOTE_STATUS_LABELS).map(([value, label]) => (
+                <option key={value} value={value}>{label}</option>
+              ))}
+            </select>
+          </label>
+          <label className="block text-xs font-semibold uppercase tracking-wide text-gray-text">
+            Montant min. (FCFA)
+            <input
+              type="number"
+              min={0}
+              value={amountMin}
+              onChange={(e) => setAmountMin(e.target.value)}
+              placeholder="Ex. 500000"
+              className="mt-1 w-full rounded-xl border border-gray/60 px-3 py-2 text-sm"
+            />
+          </label>
+          <label className="block text-xs font-semibold uppercase tracking-wide text-gray-text">
+            Période
+            <div className="mt-1 flex gap-1">
+              <input type="date" value={dateFrom} onChange={(e) => setDateFrom(e.target.value)} className="w-full rounded-xl border border-gray/60 px-2 py-2 text-xs" />
+              <input type="date" value={dateTo} onChange={(e) => setDateTo(e.target.value)} className="w-full rounded-xl border border-gray/60 px-2 py-2 text-xs" />
+            </div>
+          </label>
+        </div>
+        {hasActiveFilters && (
+          <button type="button" onClick={clearFilters} className="mt-3 text-xs font-semibold text-primary hover:underline">
+            Réinitialiser les filtres
+          </button>
+        )}
+      </div>
+
+      <div className="grid gap-4 sm:grid-cols-3">
+        <StatCard label="Devis total" value={String(stats.total)} />
+        <StatCard label="Acceptés" value={String(stats.accepted)} />
+        <StatCard
+          label="Taux de conversion"
+          value={`${stats.conversionRate} %`}
+          icon={<TrendingUp className="h-4 w-4 text-emerald-600" aria-hidden />}
+        />
+      </div>
+
+      {error && (
+        <p className="rounded-xl border border-accent/30 bg-accent/5 px-4 py-3 text-sm text-accent">
+          {error}
+        </p>
+      )}
+
+      {loading ? (
+        <div className="flex items-center gap-2 py-16 text-sm text-gray-text">
+          <Loader2 className="h-5 w-5 animate-spin text-primary" aria-hidden />
+          Chargement des devis…
+        </div>
+      ) : quotes.length === 0 ? (
+        <div className="rounded-2xl border border-gray/40 bg-white p-12 text-center shadow-sm">
+          <FileText className="mx-auto h-10 w-10 text-gray-text/40" aria-hidden />
+          <p className="mt-4 font-medium text-foreground">Aucun devis</p>
+          <p className="mt-1 text-sm text-gray-text">
+            Les demandes via le{" "}
+            <Link href="/devis" className="text-primary hover:underline">
+              configurateur en ligne
+            </Link>{" "}
+            apparaîtront ici automatiquement.
+          </p>
+        </div>
+      ) : (
+        <>
+          <div className="flex gap-4 overflow-x-auto pb-2">
+            {QUOTE_PIPELINE_COLUMNS.map(({ status, title }) => {
+              const column = pipelineQuotes.filter((q) => q.status === status);
+              return (
+                <KanbanDropColumn
+                  key={status}
+                  columnId={status}
+                  isDropTarget={dragOverColumn === status}
+                  dragMime={KANBAN_DRAG_MIME.quote}
+                  onDrop={(quoteId) => void handleDropOnColumn(status, quoteId)}
+                  onDragOverChange={(id) => setDragOverColumn(id as QuoteStatus | null)}
+                >
+                  <div className="mb-3 flex items-center justify-between px-1">
+                    <h2 className="text-xs font-bold tracking-wide text-gray-text">{title}</h2>
+                    <span className="rounded-full bg-white px-2 py-0.5 text-xs font-semibold shadow-sm">
+                      {column.length}
+                    </span>
+                  </div>
+                  <div className="space-y-2">
+                    {column.map((quote) => (
+                      <QuoteCard
+                        key={quote.id}
+                        quote={quote}
+                        dragging={draggingId === quote.id}
+                        onOpen={() => setSelected(quote)}
+                        onStatusChange={(next) => void handleStatusChange(quote, next)}
+                        onDragStart={() => setDraggingId(quote.id)}
+                        onDragEnd={() => {
+                          setDraggingId(null);
+                          setDragOverColumn(null);
+                        }}
+                        disabled={saving}
+                      />
+                    ))}
+                    {column.length === 0 && (
+                      <p className="px-1 py-6 text-center text-xs text-gray-text">
+                        {dragOverColumn === status ? "Déposer ici" : "Aucun devis"}
+                      </p>
+                    )}
+                  </div>
+                </KanbanDropColumn>
+              );
+            })}
+          </div>
+
+          {archivedQuotes.length > 0 && (
+            <section className="rounded-2xl border border-gray/40 bg-white p-5 shadow-sm">
+              <h2 className="mb-4 text-sm font-bold text-gray-text">
+                BROUILLONS / REFUSÉS / EXPIRÉS ({archivedQuotes.length})
+              </h2>
+              <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
+                {archivedQuotes.map((quote) => (
+                  <QuoteCard
+                    key={quote.id}
+                    quote={quote}
+                    onOpen={() => setSelected(quote)}
+                    onStatusChange={(next) => void handleStatusChange(quote, next)}
+                    disabled={saving}
+                    compact
+                  />
+                ))}
+              </div>
+            </section>
+          )}
+        </>
+      )}
+
+      {selected && (
+        <QuoteDetailPanel
+          quote={selected}
+          saving={saving}
+          onClose={() => setSelected(null)}
+          onUpdated={(updated) => {
+            setQuotes((prev) => prev.map((q) => (q.id === updated.id ? updated : q)));
+            setSelected(updated);
+          }}
+          onDelete={() => void handleDelete(selected.id)}
+        />
+      )}
+
+      {showCreate && (
+        <CreateQuoteModal
+          clients={clients}
+          onClose={() => setShowCreate(false)}
+          onCreated={(quote) => {
+            void load();
+            setShowCreate(false);
+            setSelected(quote);
+          }}
+        />
+      )}
+    </div>
+  );
+}
+
+function StatCard({
+  label,
+  value,
+  icon,
+}: {
+  label: string;
+  value: string;
+  icon?: React.ReactNode;
+}) {
+  return (
+    <div className="rounded-2xl border border-gray/40 bg-white p-4 shadow-sm">
+      <p className="text-xs font-semibold uppercase tracking-wide text-gray-text">{label}</p>
+      <p className="mt-1 flex items-center gap-2 text-2xl font-bold text-foreground">
+        {value}
+        {icon}
+      </p>
+    </div>
+  );
+}
+
+function QuoteCard({
+  quote,
+  onOpen,
+  onStatusChange,
+  onDragStart,
+  onDragEnd,
+  disabled,
+  compact,
+  dragging,
+}: {
+  quote: Quote;
+  onOpen: () => void;
+  onStatusChange: (status: QuoteStatus) => void;
+  onDragStart?: () => void;
+  onDragEnd?: () => void;
+  disabled: boolean;
+  compact?: boolean;
+  dragging?: boolean;
+}) {
+  return (
+    <article
+      draggable={!compact}
+      onDragStart={(e) => {
+        e.dataTransfer.setData(KANBAN_DRAG_MIME.quote, quote.id);
+        e.dataTransfer.effectAllowed = "move";
+        onDragStart?.();
+      }}
+      onDragEnd={() => onDragEnd?.()}
+      className={cn(
+        "rounded-xl border border-gray/40 bg-white p-3 shadow-sm transition-shadow hover:shadow-md",
+        compact && "p-2.5",
+        dragging && "opacity-50 ring-2 ring-primary/30",
+      )}
+    >
+      <div className="flex items-start gap-1">
+        {!compact && (
+          <GripVertical className="mt-0.5 h-4 w-4 shrink-0 cursor-grab text-gray-text/40" aria-hidden />
+        )}
+        <button type="button" onClick={onOpen} className="min-w-0 flex-1 text-left">
+        <div className="flex items-start justify-between gap-2">
+          <div className="min-w-0">
+            <p className="font-mono text-[10px] font-semibold text-primary">{quote.reference}</p>
+            <h3 className="truncate text-sm font-bold text-foreground">{quote.name}</h3>
+          </div>
+        </div>
+        <p className="mt-1 truncate text-xs text-gray-text">{quote.projectLabel}</p>
+        <p className="mt-2 text-sm font-bold text-primary">{formatQuoteAmount(quote.subtotal)}</p>
+        <p className="mt-1 text-[10px] text-gray-text">{formatQuoteDate(quote.createdAt)}</p>
+        </button>
+      </div>
+      {!compact && (
+        <label className="mt-2 block text-[10px] font-medium uppercase tracking-wide text-gray-text">
+          Statut
+          <select
+            value={quote.status}
+            disabled={disabled}
+            onChange={(e) => onStatusChange(e.target.value as QuoteStatus)}
+            className="mt-1 w-full rounded-lg border border-gray/50 px-2 py-1.5 text-xs"
+            aria-label={`Statut de ${quote.reference}`}
+          >
+            {Object.entries(QUOTE_STATUS_LABELS).map(([value, label]) => (
+              <option key={value} value={value}>{label}</option>
+            ))}
+          </select>
+        </label>
+      )}
+    </article>
+  );
+}
+
+function QuoteDetailPanel({
+  quote,
+  saving,
+  onClose,
+  onUpdated,
+  onDelete,
+}: {
+  quote: Quote;
+  saving: boolean;
+  onClose: () => void;
+  onUpdated: (quote: Quote) => void;
+  onDelete: () => void;
+}) {
+  const [notes, setNotes] = useState(quote.notes ?? "");
+  const [showEmail, setShowEmail] = useState(false);
+  const [creatingInvoice, setCreatingInvoice] = useState(false);
+  const [invoiceError, setInvoiceError] = useState("");
+
+  async function handleCreateInvoice() {
+    setCreatingInvoice(true);
+    setInvoiceError("");
+    try {
+      const invoice = await createInvoiceFromQuoteApi(quote.id);
+      window.location.href = `/admin/crm/factures?ref=${encodeURIComponent(invoice.reference)}`;
+    } catch (err) {
+      setInvoiceError(err instanceof Error ? err.message : "Création de facture impossible.");
+    } finally {
+      setCreatingInvoice(false);
+    }
+  }
+
+  async function handleStatusChange(status: QuoteStatus) {
+    const updated = await updateQuoteApi(quote.id, {
+      status,
+      followUpAt: status === "follow_up" ? new Date().toISOString() : undefined,
+    });
+    onUpdated(updated);
+  }
+
+  async function handleSaveNotes() {
+    const updated = await updateQuoteApi(quote.id, { notes: notes.trim() || null });
+    onUpdated(updated);
+  }
+
+  const rangeLabel =
+    quote.estimateMin != null && quote.estimateMax != null
+      ? `${formatQuoteAmount(quote.estimateMin).replace(" HT", "")} – ${formatQuoteAmount(quote.estimateMax)}`
+      : null;
+
+  return (
+    <>
+      <div className="fixed inset-0 z-50 flex justify-end bg-black/40 p-4 backdrop-blur-sm">
+      <div className="flex h-full w-full max-w-lg flex-col rounded-2xl bg-white shadow-2xl">
+        <div className="flex items-center justify-between border-b border-gray/40 px-5 py-4">
+          <div>
+            <p className="font-mono text-xs font-semibold text-primary">{quote.reference}</p>
+            <span className={cn("mt-1 inline-block rounded-full px-2 py-0.5 text-[10px] font-bold", statusStyles[quote.status])}>
+              {QUOTE_STATUS_LABELS[quote.status]}
+            </span>
+            <h2 className="mt-2 font-bold text-foreground">{quote.name}</h2>
+            {quote.company && <p className="text-sm text-gray-text">{quote.company}</p>}
+          </div>
+          <button type="button" onClick={onClose} className="rounded-lg p-1.5 hover:bg-gray-light" aria-label="Fermer">
+            <X className="h-5 w-5" aria-hidden />
+          </button>
+        </div>
+
+        <div className="flex-1 space-y-5 overflow-y-auto px-5 py-4 text-sm">
+          <label className="block">
+            <span className="text-xs font-semibold uppercase tracking-wide text-gray-text">Statut</span>
+            <select
+              value={quote.status}
+              disabled={saving}
+              onChange={(e) => void handleStatusChange(e.target.value as QuoteStatus)}
+              className="mt-1 w-full rounded-xl border border-gray/60 px-3 py-2.5"
+            >
+              {Object.entries(QUOTE_STATUS_LABELS).map(([value, label]) => (
+                <option key={value} value={value}>{label}</option>
+              ))}
+            </select>
+          </label>
+
+          <div>
+            <p className="text-xs font-semibold uppercase tracking-wide text-gray-text">Projet</p>
+            <p className="mt-1 font-medium text-foreground">{quote.projectLabel}</p>
+          </div>
+
+          <div className="rounded-xl border border-primary/20 bg-primary-light/30 p-4">
+            <p className="text-2xl font-bold text-primary">{formatQuoteAmount(quote.subtotal)}</p>
+            {rangeLabel && <p className="mt-1 text-xs text-gray-text">Fourchette : {rangeLabel}</p>}
+          </div>
+
+          {quote.lines.length > 0 && (
+            <div>
+              <p className="text-xs font-semibold uppercase tracking-wide text-gray-text">Détail</p>
+              <ul className="mt-2 space-y-1 rounded-xl bg-gray-light/60 p-3">
+                {quote.lines.map((line, i) => (
+                  <li key={i} className="flex justify-between gap-2 text-sm">
+                    <span className="text-gray-text">{line.label}</span>
+                    <span className="font-medium">{formatQuoteAmount(line.amount)}</span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
+
+          <dl className="grid gap-3 sm:grid-cols-2">
+            <div>
+              <dt className="text-xs font-semibold uppercase tracking-wide text-gray-text">Budget client</dt>
+              <dd className="mt-0.5 font-medium">
+                {quote.budget ? getBudgetLabel(quote.budget) : "—"}
+              </dd>
+            </div>
+            <div>
+              <dt className="text-xs font-semibold uppercase tracking-wide text-gray-text">Délai souhaité</dt>
+              <dd className="mt-0.5 font-medium">
+                {quote.timeline ? getTimelineLabel(quote.timeline) : "—"}
+              </dd>
+            </div>
+            <div>
+              <dt className="text-xs font-semibold uppercase tracking-wide text-gray-text">Envoyé le</dt>
+              <dd className="mt-0.5 font-medium">{formatQuoteDate(quote.sentAt ?? quote.createdAt)}</dd>
+            </div>
+            <div>
+              <dt className="text-xs font-semibold uppercase tracking-wide text-gray-text">Relance</dt>
+              <dd className="mt-0.5 font-medium">{formatQuoteDate(quote.followUpAt)}</dd>
+            </div>
+          </dl>
+
+          {quote.message && (
+            <div>
+              <p className="text-xs font-semibold uppercase tracking-wide text-gray-text">Message client</p>
+              <p className="mt-1 whitespace-pre-wrap rounded-xl bg-gray-light/70 p-3">{quote.message}</p>
+            </div>
+          )}
+
+          <div>
+            <label className="block text-xs font-semibold uppercase tracking-wide text-gray-text">
+              Notes internes
+            </label>
+            <textarea
+              value={notes}
+              onChange={(e) => setNotes(e.target.value)}
+              rows={3}
+              className="mt-1 w-full rounded-xl border border-gray/60 px-3 py-2.5 text-sm"
+              placeholder="Relance effectuée, négociation en cours…"
+            />
+            <button
+              type="button"
+              disabled={saving}
+              onClick={() => void handleSaveNotes()}
+              className="mt-2 rounded-xl bg-primary px-4 py-2 text-xs font-semibold text-white hover:bg-primary-dark disabled:opacity-50"
+            >
+              Enregistrer les notes
+            </button>
+          </div>
+        </div>
+
+        {quote.status === "accepted" && (
+          <div className="border-t border-gray/40 px-5 py-3">
+            {invoiceError && (
+              <p className="mb-2 text-xs text-accent">{invoiceError}</p>
+            )}
+            <button
+              type="button"
+              disabled={saving || creatingInvoice}
+              onClick={() => void handleCreateInvoice()}
+              className="inline-flex w-full items-center justify-center gap-2 rounded-xl bg-primary py-2.5 text-sm font-semibold text-white hover:bg-primary-dark disabled:opacity-50"
+            >
+              {creatingInvoice ? (
+                <Loader2 className="h-4 w-4 animate-spin" aria-hidden />
+              ) : (
+                <Receipt className="h-4 w-4" aria-hidden />
+              )}
+              Créer une facture
+            </button>
+          </div>
+        )}
+
+        <div className="flex gap-2 border-t border-gray/40 px-5 py-4">
+          <a
+            href={getQuotePdfUrl(quote.id)}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex flex-1 items-center justify-center gap-2 rounded-xl border border-primary/30 py-2.5 text-sm font-semibold text-primary hover:bg-primary-light/30"
+          >
+            <Download className="h-4 w-4" aria-hidden />
+            PDF
+          </a>
+          <button
+            type="button"
+            onClick={() => setShowEmail(true)}
+            className="inline-flex flex-1 items-center justify-center gap-2 rounded-xl border border-gray/60 py-2.5 text-sm font-medium hover:bg-gray-light"
+          >
+            <Mail className="h-4 w-4" aria-hidden />
+            Email
+          </button>
+          {quote.leadId && (
+            <Link
+              href="/admin/crm/leads"
+              className="inline-flex flex-1 items-center justify-center rounded-xl border border-gray/60 py-2.5 text-sm font-medium hover:bg-gray-light"
+            >
+              Voir le lead
+            </Link>
+          )}
+          <button
+            type="button"
+            disabled={saving}
+            onClick={onDelete}
+            aria-label="Supprimer le devis"
+            className="inline-flex items-center justify-center rounded-xl border border-accent/30 px-4 py-2.5 text-accent hover:bg-accent/5"
+          >
+            <Trash2 className="h-4 w-4" aria-hidden />
+          </button>
+        </div>
+      </div>
+      </div>
+
+      {showEmail && (
+        <QuoteEmailComposer
+          quoteId={quote.id}
+          quoteReference={quote.reference}
+          quoteEmail={quote.email}
+          quoteName={quote.name}
+          quoteAmount={quote.subtotal}
+          onClose={() => setShowEmail(false)}
+          onSent={() => {
+            if (quote.status === "draft") void handleStatusChange("sent");
+          }}
+        />
+      )}
+    </>
+  );
+}
+
+function CreateQuoteModal({
+  clients,
+  onClose,
+  onCreated,
+}: {
+  clients: Client[];
+  onClose: () => void;
+  onCreated: (quote: Quote) => void;
+}) {
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
+  const [selectedClientId, setSelectedClientId] = useState("");
+
+  const selectedClient = clients.find((c) => c.id === selectedClientId);
+
+  async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
+    e.preventDefault();
+    setLoading(true);
+    setError("");
+    const data = new FormData(e.currentTarget);
+    const lineLabel = String(data.get("lineLabel") || "Prestation").trim();
+    const subtotal = Number(data.get("subtotal") || 0);
+
+    try {
+      const quote = await createQuoteApi({
+        name: String(data.get("name") || selectedClient?.name || ""),
+        email: String(data.get("email") || selectedClient?.email || ""),
+        phone: String(data.get("phone") || selectedClient?.phone || "") || null,
+        company: String(data.get("company") || selectedClient?.company || "") || null,
+        clientId: selectedClientId || null,
+        projectLabel: String(data.get("projectLabel")),
+        lines: [{ label: lineLabel, amount: subtotal }],
+        subtotal,
+        status: String(data.get("status") || "sent"),
+        notes: String(data.get("notes") || "") || null,
+      });
+      onCreated(quote);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Création impossible.");
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4 backdrop-blur-sm">
+      <form onSubmit={handleSubmit} className="max-h-[90vh] w-full max-w-lg overflow-y-auto rounded-2xl bg-white p-6 shadow-2xl">
+        <div className="mb-4 flex items-center justify-between">
+          <h2 className="text-lg font-bold text-foreground">Nouveau devis</h2>
+          <button type="button" onClick={onClose} aria-label="Fermer">
+            <X className="h-5 w-5 text-gray-text" aria-hidden />
+          </button>
+        </div>
+
+        <label className="mb-3 block text-xs font-semibold uppercase tracking-wide text-gray-text">
+          Client existant (optionnel)
+          <select
+            value={selectedClientId}
+            onChange={(e) => setSelectedClientId(e.target.value)}
+            className="mt-1 w-full rounded-xl border border-gray/60 px-3 py-2.5 text-sm"
+          >
+            <option value="">Saisie manuelle</option>
+            {clients.map((client) => (
+              <option key={client.id} value={client.id}>
+                {client.company || client.name} — {client.email}
+              </option>
+            ))}
+          </select>
+        </label>
+
+        <div className="grid gap-3">
+          <input name="name" required defaultValue={selectedClient?.name} placeholder="Nom du contact *" className={fieldClass} key={`name-${selectedClientId}`} />
+          <input name="email" type="email" required defaultValue={selectedClient?.email} placeholder="Email *" className={fieldClass} key={`email-${selectedClientId}`} />
+          <input name="phone" defaultValue={selectedClient?.phone ?? ""} placeholder="Téléphone" className={fieldClass} key={`phone-${selectedClientId}`} />
+          <input name="company" defaultValue={selectedClient?.company ?? ""} placeholder="Entreprise" className={fieldClass} key={`company-${selectedClientId}`} />
+          <input name="projectLabel" required placeholder="Intitulé du projet *" className={fieldClass} />
+          <input name="lineLabel" defaultValue="Prestation" placeholder="Libellé ligne principale" className={fieldClass} />
+          <input name="subtotal" type="number" min={0} required placeholder="Montant HT (FCFA) *" className={fieldClass} />
+          <select name="status" defaultValue="sent" className={fieldClass} aria-label="Statut initial">
+            <option value="draft">Brouillon</option>
+            <option value="sent">Envoyé</option>
+          </select>
+        </div>
+        <textarea name="notes" placeholder="Notes internes" rows={2} className={`${fieldClass} mt-3`} />
+        {error && <p className="mt-3 text-sm text-accent">{error}</p>}
+        <button
+          type="submit"
+          disabled={loading}
+          className="mt-4 w-full rounded-xl bg-primary py-3 text-sm font-semibold text-white hover:bg-primary-dark disabled:opacity-50"
+        >
+          {loading ? "Création…" : "Créer le devis"}
+        </button>
+      </form>
+    </div>
+  );
+}
