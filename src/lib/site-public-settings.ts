@@ -1,10 +1,7 @@
 import { cache } from "react";
 import { z } from "zod";
 import { isDatabaseConfigured, withDb } from "@/lib/db";
-import {
-  getEnvSitePublicDefaults,
-  resolveSitePublic,
-} from "@/lib/site-public-resolver";
+import { resolveSitePublic } from "@/lib/site-public-resolver";
 import type { ResolvedSitePublic, SitePublicSettings } from "@/lib/site-public-types";
 
 type SitePublicRow = {
@@ -95,5 +92,4 @@ export async function updateSitePublicSettings(
   return data;
 }
 
-export { getEnvSitePublicDefaults, resolveSitePublic } from "@/lib/site-public-resolver";
-export { buildWhatsappUrl } from "@/lib/site-public-resolver";
+export { getEnvSitePublicDefaults, resolveSitePublic, buildWhatsappUrl } from "@/lib/site-public-resolver";

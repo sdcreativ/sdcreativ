@@ -3,6 +3,7 @@ import Link from "next/link";
 import { ArrowRight, Calendar, Clock, Star } from "lucide-react";
 import { PageHero } from "@/components/ui/PageHero";
 import { AnimatedCard } from "@/components/ui/AnimatedSection";
+import type { BlogPost } from "@/content/blog";
 import { getBlogPosts } from "@/lib/cms";
 import { createMetadata } from "@/lib/metadata";
 import { cn } from "@/lib/utils";
@@ -14,6 +15,86 @@ export const metadata = createMetadata({
   path: "/blog",
 });
 
+function PostCard({
+  post,
+  i,
+  large = false,
+}: {
+  post: BlogPost;
+  i: number;
+  large?: boolean;
+}) {
+  return (
+    <AnimatedCard
+      delay={i * 0.06}
+      className={cn(
+        "group flex flex-col overflow-hidden rounded-2xl border border-gray bg-white shadow-sm transition-shadow hover:shadow-lg",
+        large && "md:flex-row md:items-stretch",
+      )}
+    >
+      {post.coverImage ? (
+        <div
+          className={cn(
+            "relative overflow-hidden bg-gray-light",
+            large ? "aspect-video md:aspect-auto md:w-1/2 md:min-h-[280px]" : "aspect-video",
+          )}
+        >
+          <Image
+            src={post.coverImage}
+            alt=""
+            fill
+            unoptimized
+            sizes={large ? "(max-width: 768px) 100vw, 600px" : "(max-width: 768px) 100vw, 400px"}
+            className="object-cover transition-transform duration-300 group-hover:scale-105"
+          />
+        </div>
+      ) : (
+        <div
+          className={cn(
+            "bg-gradient-to-br from-primary/15 to-gray-light",
+            large ? "aspect-video md:aspect-auto md:w-1/2 md:min-h-[280px]" : "aspect-video",
+          )}
+        />
+      )}
+      <div className={cn("flex flex-1 flex-col p-6", large && "md:justify-center")}>
+        <span className="text-xs font-semibold uppercase tracking-wider text-primary">
+          {post.category}
+        </span>
+        <h2
+          className={cn(
+            "mt-2 font-bold text-foreground group-hover:text-primary",
+            large ? "text-2xl md:text-3xl" : "text-xl",
+          )}
+        >
+          <Link href={`/blog/${post.slug}`}>{post.title}</Link>
+        </h2>
+        <p className="mt-3 flex-1 text-sm leading-relaxed text-gray-text">{post.excerpt}</p>
+        <div className="mt-4 flex items-center gap-4 text-xs text-gray-text">
+          <span className="flex items-center gap-1">
+            <Calendar className="h-3.5 w-3.5" aria-hidden />
+            {new Date(post.date).toLocaleDateString("fr-FR", {
+              day: "numeric",
+              month: "long",
+              year: "numeric",
+            })}
+          </span>
+          <span className="flex items-center gap-1">
+            <Clock className="h-3.5 w-3.5" aria-hidden />
+            {post.readTime}
+          </span>
+        </div>
+        <Link
+          href={`/blog/${post.slug}`}
+          className="mt-4 inline-flex items-center gap-1 text-sm font-semibold text-primary"
+        >
+          Lire l&apos;article
+          <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
+        </Link>
+      </div>
+    </AnimatedCard>
+  );
+}
+
 export default async function BlogPage() {
   const allPosts = await getBlogPosts();
   const featured = allPosts
@@ -22,86 +103,6 @@ export default async function BlogPage() {
     .slice(0, 3);
   const featuredSlugs = new Set(featured.map((post) => post.slug));
   const blogPosts = allPosts.filter((post) => !featuredSlugs.has(post.slug));
-
-  function PostCard({
-    post,
-    i,
-    large = false,
-  }: {
-    post: (typeof allPosts)[number];
-    i: number;
-    large?: boolean;
-  }) {
-    return (
-      <AnimatedCard
-        delay={i * 0.06}
-        className={cn(
-          "group flex flex-col overflow-hidden rounded-2xl border border-gray bg-white shadow-sm transition-shadow hover:shadow-lg",
-          large && "md:flex-row md:items-stretch",
-        )}
-      >
-        {post.coverImage ? (
-          <div
-            className={cn(
-              "relative overflow-hidden bg-gray-light",
-              large ? "aspect-video md:aspect-auto md:w-1/2 md:min-h-[280px]" : "aspect-video",
-            )}
-          >
-            <Image
-              src={post.coverImage}
-              alt=""
-              fill
-              unoptimized
-              sizes={large ? "(max-width: 768px) 100vw, 600px" : "(max-width: 768px) 100vw, 400px"}
-              className="object-cover transition-transform duration-300 group-hover:scale-105"
-            />
-          </div>
-        ) : (
-          <div
-            className={cn(
-              "bg-gradient-to-br from-primary/15 to-gray-light",
-              large ? "aspect-video md:aspect-auto md:w-1/2 md:min-h-[280px]" : "aspect-video",
-            )}
-          />
-        )}
-        <div className={cn("flex flex-1 flex-col p-6", large && "md:justify-center")}>
-          <span className="text-xs font-semibold uppercase tracking-wider text-primary">
-            {post.category}
-          </span>
-          <h2
-            className={cn(
-              "mt-2 font-bold text-foreground group-hover:text-primary",
-              large ? "text-2xl md:text-3xl" : "text-xl",
-            )}
-          >
-            <Link href={`/blog/${post.slug}`}>{post.title}</Link>
-          </h2>
-          <p className="mt-3 flex-1 text-sm leading-relaxed text-gray-text">{post.excerpt}</p>
-          <div className="mt-4 flex items-center gap-4 text-xs text-gray-text">
-            <span className="flex items-center gap-1">
-              <Calendar className="h-3.5 w-3.5" aria-hidden />
-              {new Date(post.date).toLocaleDateString("fr-FR", {
-                day: "numeric",
-                month: "long",
-                year: "numeric",
-              })}
-            </span>
-            <span className="flex items-center gap-1">
-              <Clock className="h-3.5 w-3.5" aria-hidden />
-              {post.readTime}
-            </span>
-          </div>
-          <Link
-            href={`/blog/${post.slug}`}
-            className="mt-4 inline-flex items-center gap-1 text-sm font-semibold text-primary"
-          >
-            Lire l&apos;article
-            <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
-          </Link>
-        </div>
-      </AnimatedCard>
-    );
-  }
 
   return (
     <>
