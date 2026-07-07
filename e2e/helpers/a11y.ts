@@ -22,9 +22,15 @@ export async function gotoPage(page: Page, path: string) {
   await page.goto(path, { waitUntil: "load" });
 }
 
+/** Désactive les animations (Framer Motion + CSS) pour des scans axe stables. */
+export async function prepReducedMotion(page: Page) {
+  await page.emulateMedia({ reducedMotion: "reduce" });
+}
+
 /** Navigation avec cookies déjà acceptés (localStorage avant chargement). */
 export async function gotoWithAcceptedCookies(page: Page, path: string) {
   await prepAcceptedCookies(page);
+  await prepReducedMotion(page);
   await page.goto(path, { waitUntil: "load" });
   await expect(page.getByRole("dialog", { name: /cookies/i })).toBeHidden({
     timeout: 10_000,
@@ -45,6 +51,7 @@ function formatViolations(violations: Result[]) {
 
 /** Analyse WCAG 2.x AA — échoue avec un message lisible si violations. */
 export async function assertNoA11yViolations(page: Page) {
+  await page.waitForLoadState("networkidle");
   const results = await new AxeBuilder({ page })
     .withTags(["wcag2a", "wcag2aa", "wcag21a", "wcag21aa"])
     .analyze();

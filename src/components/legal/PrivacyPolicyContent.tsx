@@ -227,7 +227,7 @@ export async function PrivacyPolicyContent() {
                         href={`#${item.id}`}
                         className="flex gap-2 rounded-lg px-2 py-2 text-sm text-foreground/75 transition-colors hover:bg-primary-light/50 hover:text-primary"
                       >
-                        <span className="font-mono text-xs text-primary/60">
+                        <span className="font-mono text-xs text-gray-text">
                           {String(index + 1).padStart(2, "0")}
                         </span>
                         {item.title}

@@ -1,10 +1,15 @@
 "use client";
 
-import { motion, type Variants } from "framer-motion";
+import { motion, useReducedMotion, type Variants } from "framer-motion";
 import { cn } from "@/lib/utils";
 
 const fadeUpVariants: Variants = {
   hidden: { opacity: 0, y: 32 },
+  visible: { opacity: 1, y: 0 },
+};
+
+const noMotionVariants: Variants = {
+  hidden: { opacity: 1, y: 0 },
   visible: { opacity: 1, y: 0 },
 };
 
@@ -21,15 +26,18 @@ export function AnimatedSection({
   id,
   delay = 0,
 }: AnimatedSectionProps) {
+  const reduceMotion = useReducedMotion();
+  const variants = reduceMotion ? noMotionVariants : fadeUpVariants;
+
   return (
     <motion.section
       id={id}
       className={cn(className)}
-      initial="hidden"
-      whileInView="visible"
+      initial={reduceMotion ? false : "hidden"}
+      whileInView={reduceMotion ? undefined : "visible"}
       viewport={{ once: true, margin: "-80px" }}
       transition={{ duration: 0.55, delay, ease: [0.22, 1, 0.36, 1] }}
-      variants={fadeUpVariants}
+      variants={variants}
     >
       {children}
     </motion.section>
@@ -43,15 +51,18 @@ type AnimatedCardProps = {
 };
 
 export function AnimatedCard({ children, className, delay = 0 }: AnimatedCardProps) {
+  const reduceMotion = useReducedMotion();
+  const variants = reduceMotion ? noMotionVariants : fadeUpVariants;
+
   return (
     <motion.div
       className={cn(className)}
-      initial="hidden"
-      whileInView="visible"
+      initial={reduceMotion ? false : "hidden"}
+      whileInView={reduceMotion ? undefined : "visible"}
       viewport={{ once: true, margin: "-40px" }}
       transition={{ duration: 0.45, delay, ease: [0.22, 1, 0.36, 1] }}
-      variants={fadeUpVariants}
-      whileHover={{ y: -4, transition: { duration: 0.2 } }}
+      variants={variants}
+      whileHover={reduceMotion ? undefined : { y: -4, transition: { duration: 0.2 } }}
     >
       {children}
     </motion.div>

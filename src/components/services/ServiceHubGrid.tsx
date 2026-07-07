@@ -39,7 +39,7 @@ export function ServiceHubGrid({ limit, className }: Props) {
               {service.features.slice(0, 4).map((feature) => (
                 <li
                   key={feature}
-                  className="flex items-start gap-2 text-sm text-foreground/80"
+                  className="flex items-start gap-2 text-sm text-gray-text"
                 >
                   <span className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-primary" />
                   {feature}
@@ -48,7 +48,7 @@ export function ServiceHubGrid({ limit, className }: Props) {
             </ul>
             <Link
               href={href}
-              className="mt-6 inline-flex items-center gap-1.5 text-sm font-semibold text-primary transition-colors hover:text-primary-dark"
+              className="mt-6 inline-flex items-center gap-1.5 text-sm font-semibold text-primary-dark transition-colors hover:text-primary"
             >
               {getServiceHubLinkLabel(service)}
               <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-0.5" aria-hidden />

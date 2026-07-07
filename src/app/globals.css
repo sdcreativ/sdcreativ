@@ -13,7 +13,7 @@
   --dark-footer: #05080f;
   --gray-light: #f5f7fa;
   --gray: #e8ecf0;
-  --gray-text: #64748b;
+  --gray-text: #4d6175;
   --silver: #c8cdd3;
 }
 
@@ -88,6 +88,14 @@ body {
 
 .animate-fade-up {
   animation: fade-up 0.6s ease-out forwards;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .animate-fade-up {
+    animation: none;
+    opacity: 1;
+    transform: none;
+  }
 }
 
 /* Navigation — soulignement fluide (header : discret, sans boîte) */
