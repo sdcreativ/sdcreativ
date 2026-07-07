@@ -1,80 +1,79 @@
 name: Deploy
 
+# Production : VPS Hostinger + Docker (pas Vercel).
+# Voir docs/DEPLOIEMENT-SDCREATIV-COM.md
+#
+# Qualité automatique : workflow ci.yml (lint, build, tests) sur chaque push/PR.
+# Ce workflow sert au déploiement manuel ou futur déploiement SSH automatisé.
+
 on:
-  push:
-    branches: [main, master]
+  workflow_dispatch:
+    inputs:
+      confirm:
+        description: "Tapez deploy pour lancer le déploiement VPS"
+        required: true
+        default: "deploy"
 
 concurrency:
   group: deploy-production
   cancel-in-progress: true
 
 jobs:
-  quality:
-    name: Lint & Build
+  deploy-vps:
+    name: Deploy VPS (Docker)
     runs-on: ubuntu-latest
-
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: "20"
-          cache: npm
-
-      - name: Install dependencies
-        run: npm ci
-
-      - name: Lint
-        run: npm run lint
-
-      - name: Unit tests
-        run: npm run test:unit
-
-      - name: Build
-        run: npm run build
-        env:
-          NEXT_PUBLIC_SITE_URL: https://sdcreativ.com
-
-  deploy:
-    name: Deploy to Vercel
-    runs-on: ubuntu-latest
-    needs: quality
+    if: github.event.inputs.confirm == 'deploy'
     environment:
       name: production
-      url: ${{ steps.deploy.outputs.url }}
+      url: https://sdcreativ.com
 
     steps:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: "20"
-          cache: npm
-
-      - name: Install Vercel CLI
-        run: npm install --global vercel@latest
-
-      - name: Pull Vercel environment
-        run: vercel pull --yes --environment=production --token=${{ secrets.VERCEL_TOKEN }}
+      # secrets.* n'est pas autorisé dans les `if:` — on teste via env + output
+      - name: Vérifier secrets VPS
+        id: vps_secrets
         env:
-          VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
-          VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
-
-      - name: Build project
-        run: vercel build --prod --token=${{ secrets.VERCEL_TOKEN }}
-        env:
-          VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
-          VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
-
-      - name: Deploy to production
-        id: deploy
+          VPS_HOST: ${{ secrets.VPS_HOST }}
+          VPS_SSH_KEY: ${{ secrets.VPS_SSH_KEY }}
         run: |
-          url=$(vercel deploy --prebuilt --prod --token=${{ secrets.VERCEL_TOKEN }})
-          echo "url=$url" >> "$GITHUB_OUTPUT"
-        env:
-          VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
-          VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
+          if [ -n "${VPS_HOST}" ] && [ -n "${VPS_SSH_KEY}" ]; then
+            echo "configured=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "configured=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Déploiement SSH
+        if: steps.vps_secrets.outputs.configured == 'true'
+        uses: appleboy/ssh-action@v1.2.0
+        with:
+          host: ${{ secrets.VPS_HOST }}
+          username: ${{ secrets.VPS_SSH_USER || 'root' }}
+          key: ${{ secrets.VPS_SSH_KEY }}
+          script: |
+            set -euo pipefail
+            cd /var/www/sdcreativ
+            git pull
+            docker compose -f docker-compose.yml -f docker-compose.prod.yml --profile prod up -d --build app
+            ./scripts/vps-post-deploy-check.sh
+
+      - name: Instructions manuelles (secrets VPS absents)
+        if: steps.vps_secrets.outputs.configured != 'true'
+        run: |
+          {
+            echo "## Déploiement production — sdcreativ.com"
+            echo ""
+            echo "Les secrets GitHub \`VPS_HOST\` et \`VPS_SSH_KEY\` ne sont pas configurés."
+            echo "Déployez manuellement sur le VPS :"
+            echo ""
+            echo '```bash'
+            echo "ssh root@VOTRE_IP_VPS"
+            echo "cd /var/www/sdcreativ"
+            echo "git pull"
+            echo "docker compose -f docker-compose.yml -f docker-compose.prod.yml --profile prod up -d --build app"
+            echo "./scripts/vps-post-deploy-check.sh"
+            echo '```'
+            echo ""
+            echo "Pour automatiser : ajoutez \`VPS_HOST\`, \`VPS_SSH_KEY\` (et optionnel \`VPS_SSH_USER\`) dans Settings → Secrets → Actions."
+          } >> "$GITHUB_STEP_SUMMARY"
