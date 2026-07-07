@@ -85,20 +85,21 @@ for i in $(seq 1 20); do
   sleep 2
 done
 
-echo ">>> Suppression certificat dummy…"
-$COMPOSE run --rm --no-deps --entrypoint "\
-  rm -Rf /etc/letsencrypt/live/${DOMAIN} && \
-  rm -Rf /etc/letsencrypt/archive/${DOMAIN} && \
-  rm -f /etc/letsencrypt/renewal/${DOMAIN}.conf" certbot
-
 echo ">>> Obtention certificat Let's Encrypt pour ${DOMAIN} et www.${DOMAIN}…"
 echo "    (le DNS doit pointer vers ce serveur)"
-$COMPOSE run --rm --no-deps --entrypoint "\
+if $COMPOSE run --rm --no-deps --entrypoint "\
   certbot certonly --webroot -w /var/www/certbot \
     ${staging_arg} \
     --email ${CERTBOT_EMAIL} \
     --agree-tos --no-eff-email \
-    -d ${DOMAIN} -d www.${DOMAIN}" certbot
+    -d ${DOMAIN} -d www.${DOMAIN}" certbot; then
+  echo ">>> Certificat obtenu — suppression éventuelle des certificats dummy…"
+  # Les certificats Let's Encrypt remplacent les dummy dans le même chemin
+else
+  echo ">>> Échec Let's Encrypt — nginx conserve les certificats dummy pour rester démarré."
+  echo "    Corrigez DNS / port 80 puis relancez ce script."
+  exit 1
+fi
 
 echo ">>> Rechargement Nginx avec certificats réels…"
 $COMPOSE exec nginx nginx -s reload

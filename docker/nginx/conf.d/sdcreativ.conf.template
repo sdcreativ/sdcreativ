@@ -1,8 +1,3 @@
-upstream nextjs_app {
-  server app:3000;
-  keepalive 32;
-}
-
 # HTTP — challenge ACME + redirection HTTPS
 server {
   listen 80;
@@ -20,8 +15,9 @@ server {
 
 # HTTPS — reverse proxy vers Next.js
 server {
-  listen 443 ssl http2;
-  listen [::]:443 ssl http2;
+  listen 443 ssl;
+  listen [::]:443 ssl;
+  http2 on;
   server_name ${DOMAIN};
 
   ssl_certificate /etc/letsencrypt/live/${DOMAIN}/fullchain.pem;
@@ -37,8 +33,12 @@ server {
   add_header X-Content-Type-Options "nosniff" always;
   add_header Referrer-Policy "strict-origin-when-cross-origin" always;
 
+  # Résolution DNS Docker au runtime (évite "host not found in upstream app:3000")
+  resolver 127.0.0.11 valid=30s ipv6=off;
+
   location / {
-    proxy_pass http://nextjs_app;
+    set $upstream_app app;
+    proxy_pass http://$upstream_app:3000;
     proxy_http_version 1.1;
     proxy_set_header Upgrade $http_upgrade;
     proxy_set_header Connection "upgrade";
@@ -54,8 +54,9 @@ server {
 
 # www → domaine nu
 server {
-  listen 443 ssl http2;
-  listen [::]:443 ssl http2;
+  listen 443 ssl;
+  listen [::]:443 ssl;
+  http2 on;
   server_name www.${DOMAIN};
 
   ssl_certificate /etc/letsencrypt/live/${DOMAIN}/fullchain.pem;
