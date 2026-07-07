@@ -137,11 +137,14 @@ fi
 
 # --- DNS (optionnel, seulement si dig disponible) ---
 if [ -n "${DOMAIN:-}" ] && command -v dig >/dev/null 2>&1; then
-  if dig +short "$DOMAIN" | grep -qE '^[0-9.]+$'; then
-    ip=$(dig +short "$DOMAIN" | head -1)
-    ok "DNS $DOMAIN → $ip"
-  else
+  mapfile -t dns_ips < <(dig +short "$DOMAIN" | grep -E '^[0-9.]+$' | sort -u)
+  if [ "${#dns_ips[@]}" -eq 0 ]; then
     warn_msg "DNS $DOMAIN ne résout pas encore vers une IP — requis avant init-letsencrypt.sh"
+  elif [ "${#dns_ips[@]}" -gt 1 ]; then
+    warn_msg "DNS $DOMAIN a plusieurs A records (${dns_ips[*]}) — gardez uniquement l'IP du VPS"
+    ok "DNS $DOMAIN → ${dns_ips[0]}"
+  else
+    ok "DNS $DOMAIN → ${dns_ips[0]}"
   fi
 fi
 

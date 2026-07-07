@@ -66,7 +66,8 @@ for i in $(seq 1 30); do
 done
 
 echo ">>> Préparation certificats dummy…"
-$COMPOSE run --rm --entrypoint "\
+# --no-deps : évite de démarrer nginx avant que les certificats existent (certbot depends_on nginx)
+$COMPOSE run --rm --no-deps --entrypoint "\
   mkdir -p /etc/letsencrypt/live/${DOMAIN} && \
   openssl req -x509 -nodes -newkey rsa:2048 -days 1 \
     -keyout /etc/letsencrypt/live/${DOMAIN}/privkey.pem \
@@ -85,14 +86,14 @@ for i in $(seq 1 20); do
 done
 
 echo ">>> Suppression certificat dummy…"
-$COMPOSE run --rm --entrypoint "\
+$COMPOSE run --rm --no-deps --entrypoint "\
   rm -Rf /etc/letsencrypt/live/${DOMAIN} && \
   rm -Rf /etc/letsencrypt/archive/${DOMAIN} && \
   rm -f /etc/letsencrypt/renewal/${DOMAIN}.conf" certbot
 
 echo ">>> Obtention certificat Let's Encrypt pour ${DOMAIN} et www.${DOMAIN}…"
 echo "    (le DNS doit pointer vers ce serveur)"
-$COMPOSE run --rm --entrypoint "\
+$COMPOSE run --rm --no-deps --entrypoint "\
   certbot certonly --webroot -w /var/www/certbot \
     ${staging_arg} \
     --email ${CERTBOT_EMAIL} \
