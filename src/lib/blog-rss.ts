@@ -1,5 +1,5 @@
 import type { BlogPost } from "@/content/blog";
-import { SITE, CONTACT } from "@/lib/constants";
+import { SITE } from "@/lib/constants";
 
 function escapeXml(value: string): string {
   return value
@@ -19,7 +19,7 @@ function stripHtml(html: string): string {
   return html.replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim();
 }
 
-export function buildBlogRssFeed(posts: BlogPost[]): string {
+export function buildBlogRssFeed(posts: BlogPost[], contactEmail: string): string {
   const items = posts
     .map((post) => {
       const link = absoluteUrl(`/blog/${post.slug}`);
@@ -52,8 +52,8 @@ export function buildBlogRssFeed(posts: BlogPost[]): string {
     <language>fr-fr</language>
     <lastBuildDate>${new Date().toUTCString()}</lastBuildDate>
     <atom:link href="${absoluteUrl("/blog/feed.xml")}" rel="self" type="application/rss+xml" />
-    <managingEditor>${escapeXml(CONTACT.email)} (${escapeXml(SITE.name)})</managingEditor>
-    <webMaster>${escapeXml(CONTACT.email)} (${escapeXml(SITE.name)})</webMaster>
+    <managingEditor>${escapeXml(contactEmail)} (${escapeXml(SITE.name)})</managingEditor>
+    <webMaster>${escapeXml(contactEmail)} (${escapeXml(SITE.name)})</webMaster>
 ${items}
   </channel>
 </rss>`;

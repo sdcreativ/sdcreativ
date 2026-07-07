@@ -1,3 +1,5 @@
+"use client";
+
 import Link from "next/link";
 import { Phone, Mail, MapPin, Clock } from "lucide-react";
 import {
@@ -10,18 +12,21 @@ import { Logo } from "@/components/ui/Logo";
 import { Button } from "@/components/ui/Button";
 import { NavGlowLink } from "@/components/ui/NavGlowLink";
 import { NewsletterSignup } from "@/components/forms/NewsletterSignup";
-import { SITE, CONTACT, SOCIAL, whatsappUrl } from "@/lib/constants";
+import { useSitePublic, useWhatsappUrl } from "@/components/site/SitePublicProvider";
+import { SITE } from "@/lib/constants";
 import { footerQuickLinks, footerServices, footerSeoLinks, legalLinks } from "@/content/navigation";
 
-const socialIcons = [
-  { href: SOCIAL.facebook, icon: FacebookIcon, label: "Facebook" },
-  { href: SOCIAL.linkedin, icon: LinkedInIcon, label: "LinkedIn" },
-  { href: SOCIAL.instagram, icon: InstagramIcon, label: "Instagram" },
-  { href: SOCIAL.youtube, icon: YouTubeIcon, label: "YouTube" },
-] as const;
-
 export function Footer() {
+  const { contact, social } = useSitePublic();
+  const waUrl = useWhatsappUrl();
   const year = new Date().getFullYear();
+
+  const socialIcons = [
+    { href: social.facebook, icon: FacebookIcon, label: "Facebook" },
+    { href: social.linkedin, icon: LinkedInIcon, label: "LinkedIn" },
+    { href: social.instagram, icon: InstagramIcon, label: "Instagram" },
+    { href: social.youtube, icon: YouTubeIcon, label: "YouTube" },
+  ] as const;
 
   return (
     <footer className="bg-dark-footer text-white">
@@ -39,7 +44,7 @@ export function Footer() {
             <Button href="/contact" size="lg">
               Demander un devis
             </Button>
-            <Button href={whatsappUrl()} external variant="outline" size="lg">
+            <Button href={waUrl} external variant="outline" size="lg">
               Parler sur WhatsApp
             </Button>
           </div>
@@ -104,29 +109,29 @@ export function Footer() {
           <ul className="space-y-4">
             <li>
               <a
-                href={CONTACT.phoneHref}
+                href={contact.phoneHref}
                 className="flex items-start gap-3 text-sm text-white/60 transition-colors hover:text-white"
               >
                 <Phone className="mt-0.5 h-4 w-4 shrink-0 text-primary-light" />
-                {CONTACT.phone}
+                {contact.phone}
               </a>
             </li>
             <li>
               <a
-                href={`mailto:${CONTACT.email}`}
+                href={`mailto:${contact.email}`}
                 className="flex items-start gap-3 text-sm text-white/60 transition-colors hover:text-white"
               >
                 <Mail className="mt-0.5 h-4 w-4 shrink-0 text-primary-light" />
-                {CONTACT.email}
+                {contact.email}
               </a>
             </li>
             <li className="flex items-start gap-3 text-sm text-white/60">
               <MapPin className="mt-0.5 h-4 w-4 shrink-0 text-primary-light" />
-              {CONTACT.address}
+              {contact.address}
             </li>
             <li className="flex items-start gap-3 text-sm text-white/60">
               <Clock className="mt-0.5 h-4 w-4 shrink-0 text-primary-light" />
-              {CONTACT.hours}
+              {contact.hours}
             </li>
           </ul>
         </div>

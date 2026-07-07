@@ -17,7 +17,8 @@ import { Button } from "@/components/ui/Button";
 import { RealisationCard } from "@/components/realisations/RealisationCard";
 import { RealisationJsonLd } from "@/components/seo/RealisationJsonLd";
 import { getRealisation, getRelatedRealisations, getRealisations } from "@/lib/cms";
-import { whatsappUrl } from "@/lib/constants";
+import { getSitePublicSettings } from "@/lib/site-public-settings";
+import { buildWhatsappUrl } from "@/lib/site-public-resolver";
 import { createMetadata } from "@/lib/metadata";
 
 type Props = { params: Promise<{ slug: string }> };
@@ -46,6 +47,8 @@ export default async function RealisationDetailPage({ params }: Props) {
   if (!project) notFound();
 
   const related = await getRelatedRealisations(slug, project.category);
+  const { contact } = await getSitePublicSettings();
+  const waUrl = buildWhatsappUrl(contact);
 
   return (
     <>
@@ -280,7 +283,7 @@ export default async function RealisationDetailPage({ params }: Props) {
               Demander un devis
               <ArrowUpRight className="h-4 w-4" aria-hidden />
             </Button>
-            <Button href={whatsappUrl()} external variant="whatsapp" size="lg">
+            <Button href={waUrl} external variant="whatsapp" size="lg">
               <MessageCircle className="h-4 w-4 text-green-400" aria-hidden />
               WhatsApp
             </Button>

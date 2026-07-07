@@ -20,6 +20,7 @@ import {
 } from "@/components/admin/CrmSettingsExtras";
 import { CrmRolesSection, PermissionsMatrix } from "@/components/admin/CrmRolesSection";
 import { CrmSecuritySection } from "@/components/admin/CrmSecuritySection";
+import { SitePublicSection } from "@/components/admin/CrmSitePublicSection";
 import type { CrmUser } from "@/lib/crm-users";
 import { fetchPortalAccounts, fetchSettingsHealth } from "@/lib/settings-api";
 import type { CrmRoleRecord } from "@/lib/crm-roles-api";
@@ -28,6 +29,7 @@ import {
   Calendar,
   CheckCircle2,
   Database,
+  Globe,
   LayoutGrid,
   Loader2,
   Mail,
@@ -38,10 +40,11 @@ import {
   XCircle,
 } from "lucide-react";
 
-type SettingsTab = "overview" | "team" | "emails" | "security" | "appearance";
+type SettingsTab = "overview" | "site" | "team" | "emails" | "security" | "appearance";
 
 const TABS: { id: SettingsTab; label: string; icon: typeof LayoutGrid }[] = [
   { id: "overview", label: "Vue d'ensemble", icon: LayoutGrid },
+  { id: "site", label: "Site public", icon: Globe },
   { id: "team", label: "Équipe", icon: Users },
   { id: "emails", label: "Emails", icon: Mail },
   { id: "security", label: "Sécurité", icon: Shield },
@@ -228,6 +231,16 @@ export function CrmSettingsView() {
                 )}
               </Section>
             </div>
+          )}
+
+          {tab === "site" && (
+            <Section
+              title="Identité & contact — site public"
+              description="Coordonnées, réseaux sociaux et mentions légales affichés sur le site vitrine."
+              icon={<Globe className="h-5 w-5 text-emerald-600" aria-hidden />}
+            >
+              <SitePublicSection />
+            </Section>
           )}
 
           {tab === "team" && (

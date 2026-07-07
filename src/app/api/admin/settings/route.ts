@@ -10,10 +10,17 @@ import {
   updateCrmEmailTemplate,
   updateEmailTemplateSchema,
 } from "@/lib/crm-settings";
+import {
+  getSitePublicSettingsForAdmin,
+  updateSitePublicSchema,
+  updateSitePublicSettings,
+} from "@/lib/site-public-settings";
+import { revalidateSitePublicPages } from "@/lib/site-revalidate";
 
 const patchSchema = z.object({
   branding: updateBrandingSchema.optional(),
   emailTemplate: updateEmailTemplateSchema.optional(),
+  sitePublic: updateSitePublicSchema.optional(),
 });
 
 async function auditFromSession(action: string, entityType: string, summary: string, entityId?: string) {
@@ -42,7 +49,8 @@ export async function GET() {
 
   try {
     const settings = await getCrmSettings();
-    return NextResponse.json({ settings });
+    const sitePublic = await getSitePublicSettingsForAdmin();
+    return NextResponse.json({ settings: { ...settings, sitePublic } });
   } catch (error) {
     console.error("[api/admin/settings] GET", error);
     return NextResponse.json({ error: "Erreur serveur." }, { status: 500 });
@@ -74,6 +82,13 @@ export async function PATCH(request: Request) {
       const template = await updateCrmEmailTemplate(parsed.data.emailTemplate);
       await auditFromSession("update", "email_template", `Modèle email « ${template.label} » modifié`, template.id);
       return NextResponse.json({ template });
+    }
+
+    if (parsed.data.sitePublic) {
+      const sitePublic = await updateSitePublicSettings(parsed.data.sitePublic);
+      revalidateSitePublicPages();
+      await auditFromSession("update", "site_public", "Coordonnées et réseaux sociaux du site mis à jour");
+      return NextResponse.json({ sitePublic });
     }
 
     return NextResponse.json({ error: "Aucune modification." }, { status: 400 });

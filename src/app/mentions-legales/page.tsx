@@ -1,5 +1,6 @@
 import { PageHero } from "@/components/ui/PageHero";
-import { CONTACT, LEGAL, SITE } from "@/lib/constants";
+import { SITE } from "@/lib/constants";
+import { getSitePublicSettings } from "@/lib/site-public-settings";
 import { createMetadata } from "@/lib/metadata";
 
 export const metadata = createMetadata({
@@ -8,7 +9,9 @@ export const metadata = createMetadata({
   path: "/mentions-legales",
 });
 
-export default function MentionsLegalesPage() {
+export default async function MentionsLegalesPage() {
+  const { contact, legal } = await getSitePublicSettings();
+
   return (
     <>
       <PageHero
@@ -26,17 +29,17 @@ export default function MentionsLegalesPage() {
           <ul>
             <li><strong>Raison sociale :</strong> {SITE.name}</li>
             <li><strong>Forme juridique :</strong> Société à responsabilité limitée (SARL) ou équivalent</li>
-            {LEGAL.rccm ? (
-              <li><strong>RCCM :</strong> {LEGAL.rccm}</li>
+            {legal.rccm ? (
+              <li><strong>RCCM :</strong> {legal.rccm}</li>
             ) : (
-              <li><strong>RCCM :</strong> [Numéro RCCM — renseigner NEXT_PUBLIC_LEGAL_RCCM]</li>
+              <li><strong>RCCM :</strong> [Numéro RCCM — renseigner dans Paramètres CRM → Site public]</li>
             )}
-            {LEGAL.ncc ? (
-              <li><strong>Compte contribuable (NCC) :</strong> {LEGAL.ncc}</li>
+            {legal.ncc ? (
+              <li><strong>Compte contribuable (NCC) :</strong> {legal.ncc}</li>
             ) : null}
-            <li><strong>Siège social :</strong> {CONTACT.address}</li>
-            <li><strong>Email :</strong> {CONTACT.email}</li>
-            <li><strong>Téléphone :</strong> {CONTACT.phone}</li>
+            <li><strong>Siège social :</strong> {contact.address}</li>
+            <li><strong>Email :</strong> {contact.email}</li>
+            <li><strong>Téléphone :</strong> {contact.phone}</li>
           </ul>
 
           <h2>Directeur de la publication</h2>
@@ -44,58 +47,49 @@ export default function MentionsLegalesPage() {
 
           <h2>Hébergement</h2>
           <p>
-            Le site est hébergé par <strong>{LEGAL.hostName}</strong>
-            {LEGAL.hostAddress ? (
+            Le site est hébergé par <strong>{legal.hostName}</strong>
+            {legal.hostAddress ? (
               <>
-                , {LEGAL.hostAddress}.
+                , {legal.hostAddress}.
               </>
             ) : (
               "."
             )}
           </p>
-          <p className="text-sm text-gray-text">
-            Les informations d&apos;hébergement peuvent être mises à jour via les variables{" "}
-            <code>NEXT_PUBLIC_HOST_NAME</code> et <code>NEXT_PUBLIC_HOST_ADDRESS</code> en
-            production.
-          </p>
 
           <h2>Propriété intellectuelle</h2>
           <p>
-            L&apos;ensemble du contenu de ce site (textes, images, logos, graphismes, icônes, sons,
-            logiciels) est la propriété exclusive de {SITE.name} ou de ses partenaires et est
-            protégé par les lois en vigueur sur la propriété intellectuelle.
-          </p>
-          <p>
-            Toute reproduction, représentation, modification ou exploitation, totale ou partielle,
-            sans autorisation préalable écrite est strictement interdite.
+            L&apos;ensemble du contenu de ce site (textes, images, graphismes, logo, icônes, sons,
+            logiciels) est la propriété exclusive de {SITE.name} ou de ses partenaires, sauf
+            mention contraire. Toute reproduction, représentation, modification, publication ou
+            adaptation de tout ou partie des éléments du site, quel que soit le moyen ou le
+            procédé utilisé, est interdite sans autorisation écrite préalable.
           </p>
 
-          <h2>Crédits</h2>
+          <h2>Données personnelles</h2>
           <p>
-            Conception, développement et maintenance du site : {SITE.name}. Icônes : Lucide Icons.
-            Polices : Poppins (Google Fonts).
+            Pour toute information relative à la collecte et au traitement de vos données
+            personnelles, consultez notre{" "}
+            <a href="/politique-confidentialite">politique de confidentialité</a>.
+          </p>
+
+          <h2>Cookies</h2>
+          <p>
+            Ce site utilise des cookies pour améliorer l&apos;expérience utilisateur et mesurer
+            l&apos;audience. Vous pouvez gérer vos préférences via la bannière cookies ou notre
+            politique de confidentialité.
           </p>
 
           <h2>Limitation de responsabilité</h2>
           <p>
             {SITE.name} s&apos;efforce d&apos;assurer l&apos;exactitude des informations diffusées
-            sur ce site. Toutefois, l&apos;éditeur ne saurait garantir l&apos;exactitude, la
-            complétude ou l&apos;actualité des informations mises à disposition.
-          </p>
-          <p>
-            Les tarifs et délais indiqués sur le site sont donnés à titre indicatif et peuvent
-            varier selon la complexité du projet.
-          </p>
-
-          <h2>Liens hypertextes</h2>
-          <p>
-            Le site peut contenir des liens vers des sites tiers. {SITE.name} n&apos;exerce aucun
-            contrôle sur ces sites et décline toute responsabilité quant à leur contenu.
+            sur ce site. Toutefois, elle ne saurait garantir l&apos;exactitude, la complétude ou
+            l&apos;actualité des informations mises à disposition.
           </p>
 
           <h2>Droit applicable</h2>
           <p>
-            Les présentes mentions légales sont soumises au droit ivoirien. En cas de litige,
+            Les présentes mentions légales sont régies par le droit ivoirien. En cas de litige,
             les tribunaux compétents d&apos;Abidjan seront seuls compétents.
           </p>
         </div>

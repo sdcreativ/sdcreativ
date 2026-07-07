@@ -375,6 +375,7 @@ async function ensureSchema(): Promise<void> {
     );
 
     ALTER TABLE crm_settings ADD COLUMN IF NOT EXISTS security JSONB NOT NULL DEFAULT '{}';
+    ALTER TABLE crm_settings ADD COLUMN IF NOT EXISTS site_public JSONB NOT NULL DEFAULT '{}';
 
     CREATE TABLE IF NOT EXISTS crm_login_logs (
       id UUID PRIMARY KEY DEFAULT gen_random_uuid(),

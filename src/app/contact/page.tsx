@@ -12,7 +12,8 @@ import { ContactForm } from "@/components/forms/ContactForm";
 import { ContactMap } from "@/components/contact/ContactMap";
 import { BookAppointment } from "@/components/booking/BookAppointment";
 import { Button } from "@/components/ui/Button";
-import { CONTACT, whatsappUrl } from "@/lib/constants";
+import { getSitePublicSettings } from "@/lib/site-public-settings";
+import { buildWhatsappUrl } from "@/lib/site-public-resolver";
 import { createMetadata } from "@/lib/metadata";
 
 export const metadata = createMetadata({
@@ -35,6 +36,8 @@ type Props = {
 
 export default async function ContactPage({ searchParams }: Props) {
   const { service } = await searchParams;
+  const { contact } = await getSitePublicSettings();
+  const waUrl = buildWhatsappUrl(contact);
   return (
     <>
       <PageHero
@@ -68,27 +71,27 @@ export default async function ContactPage({ searchParams }: Props) {
                   <ul className="mt-6 space-y-4">
                     <li>
                       <a
-                        href={CONTACT.phoneHref}
+                        href={contact.phoneHref}
                         className="group flex items-center gap-4 rounded-xl bg-white/5 p-4 transition-colors hover:bg-white/10"
                       >
                         <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-primary/20 text-primary-light transition-colors group-hover:bg-primary group-hover:text-white">
                           <Phone className="h-4 w-4" aria-hidden />
                         </span>
                         <span className="text-sm text-white/80 group-hover:text-white">
-                          {CONTACT.phone}
+                          {contact.phone}
                         </span>
                       </a>
                     </li>
                     <li>
                       <a
-                        href={`mailto:${CONTACT.email}`}
+                        href={`mailto:${contact.email}`}
                         className="group flex items-center gap-4 rounded-xl bg-white/5 p-4 transition-colors hover:bg-white/10"
                       >
                         <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-primary/20 text-primary-light transition-colors group-hover:bg-primary group-hover:text-white">
                           <Mail className="h-4 w-4" aria-hidden />
                         </span>
                         <span className="text-sm text-white/80 group-hover:text-white">
-                          {CONTACT.email}
+                          {contact.email}
                         </span>
                       </a>
                     </li>
@@ -96,17 +99,17 @@ export default async function ContactPage({ searchParams }: Props) {
                       <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-primary/20 text-primary-light">
                         <MapPin className="h-4 w-4" aria-hidden />
                       </span>
-                      <span className="text-sm text-white/80">{CONTACT.address}</span>
+                      <span className="text-sm text-white/80">{contact.address}</span>
                     </li>
                     <li className="flex items-center gap-4 rounded-xl bg-white/5 p-4">
                       <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-primary/20 text-primary-light">
                         <Clock className="h-4 w-4" aria-hidden />
                       </span>
-                      <span className="text-sm text-white/80">{CONTACT.hours}</span>
+                      <span className="text-sm text-white/80">{contact.hours}</span>
                     </li>
                   </ul>
                   <Button
-                    href={whatsappUrl()}
+                    href={waUrl}
                     external
                     variant="outline"
                     className="mt-6 w-full justify-center border-white/20 hover:bg-white/5"

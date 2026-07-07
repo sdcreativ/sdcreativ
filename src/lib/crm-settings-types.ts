@@ -14,9 +14,12 @@ export type CrmEmailTemplate = {
   description: string;
 };
 
+import type { SitePublicSettings } from "@/lib/site-public-types";
+
 export type CrmSettingsPayload = {
   branding: CrmBranding;
   emailTemplates: Record<string, CrmEmailTemplate>;
+  sitePublic?: SitePublicSettings;
   updatedAt: string | null;
 };
 

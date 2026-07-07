@@ -8,6 +8,7 @@ import { AppProviders } from "@/components/layout/AppProviders";
 import { Analytics } from "@/components/analytics/Analytics";
 import { OrganizationJsonLd, LocalBusinessJsonLd, WebSiteJsonLd } from "@/components/seo/JsonLd";
 import { SITE } from "@/lib/constants";
+import { getSitePublicSettings } from "@/lib/site-public-settings";
 import { createMetadata } from "@/lib/metadata";
 import "./globals.css";
 
@@ -23,11 +24,13 @@ export const metadata = createMetadata({
   description: SITE.description,
 });
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  const sitePublic = await getSitePublicSettings();
+
   return (
     <html lang="fr" className={`${poppins.variable} scroll-smooth`} suppressHydrationWarning>
       <head>
@@ -39,7 +42,7 @@ export default function RootLayout({
         className="min-h-screen bg-background font-sans text-foreground antialiased"
         suppressHydrationWarning
       >
-        <AppProviders>
+        <AppProviders sitePublic={sitePublic}>
           <SkipLink />
           <HeaderGate />
           <main id="main-content" className="flex-1">

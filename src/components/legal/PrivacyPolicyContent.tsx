@@ -20,7 +20,8 @@ import {
   privacyPolicyToc,
   type PrivacySection,
 } from "@/content/privacy-policy";
-import { CONTACT, SITE } from "@/lib/constants";
+import { SITE } from "@/lib/constants";
+import { getSitePublicSettings } from "@/lib/site-public-settings";
 import { cn } from "@/lib/utils";
 
 const sectionIcons: Record<string, LucideIcon> = {
@@ -36,25 +37,33 @@ const sectionIcons: Record<string, LucideIcon> = {
   modifications: FileText,
 };
 
-function ContactBlock() {
+import type { SiteContactInfo } from "@/lib/site-public-types";
+
+function ContactBlock({ contact }: { contact: SiteContactInfo }) {
   return (
     <address className="not-italic">
       <p className="font-semibold text-foreground">{SITE.name}</p>
-      <p className="mt-1 text-gray-text">{CONTACT.address}</p>
+      <p className="mt-1 text-gray-text">{contact.address}</p>
       <p className="mt-2">
         <a
-          href={`mailto:${CONTACT.email}`}
+          href={`mailto:${contact.email}`}
           className="inline-flex items-center gap-2 font-medium text-primary hover:underline"
         >
           <Mail className="h-4 w-4" aria-hidden />
-          {CONTACT.email}
+          {contact.email}
         </a>
       </p>
     </address>
   );
 }
 
-function SectionBody({ section }: { section: PrivacySection }) {
+function SectionBody({
+  section,
+  contact,
+}: {
+  section: PrivacySection;
+  contact: SiteContactInfo;
+}) {
   return (
     <div className="mt-5 space-y-5">
       {section.intro && (
@@ -68,7 +77,7 @@ function SectionBody({ section }: { section: PrivacySection }) {
               key={paragraph}
               className="rounded-xl border border-primary/15 bg-primary-light/40 p-5"
             >
-              <ContactBlock />
+              <ContactBlock contact={contact} />
             </div>
           );
         }
@@ -132,10 +141,10 @@ function SectionBody({ section }: { section: PrivacySection }) {
             <>
               Pour exercer vos droits :{" "}
               <a
-                href={`mailto:${CONTACT.email}`}
+                href={`mailto:${contact.email}`}
                 className="font-medium text-primary hover:underline"
               >
-                {CONTACT.email}
+                {contact.email}
               </a>
               . Vous pouvez également introduire une réclamation auprès de l&apos;Autorité de
               protection des données personnelles de Côte d&apos;Ivoire.
@@ -149,7 +158,9 @@ function SectionBody({ section }: { section: PrivacySection }) {
   );
 }
 
-export function PrivacyPolicyContent() {
+export async function PrivacyPolicyContent() {
+  const { contact } = await getSitePublicSettings();
+
   return (
     <>
       <section className="border-b border-gray/40 bg-gray-light py-12 md:py-16">
@@ -171,7 +182,7 @@ export function PrivacyPolicyContent() {
                 <p className="font-semibold text-foreground">Dernière mise à jour</p>
                 <p className="mt-1 text-gray-text">Juillet 2026</p>
                 <Link
-                  href={`mailto:${CONTACT.email}`}
+                  href={`mailto:${contact.email}`}
                   className="mt-3 inline-flex items-center gap-1.5 font-medium text-primary hover:underline"
                 >
                   <Mail className="h-4 w-4" aria-hidden />
@@ -247,7 +258,7 @@ export function PrivacyPolicyContent() {
                         {section.title}
                       </h2>
                     </header>
-                    <SectionBody section={section} />
+                    <SectionBody section={section} contact={contact} />
                   </article>
                 );
               })}
@@ -257,9 +268,9 @@ export function PrivacyPolicyContent() {
                 <p className="mt-3 leading-relaxed text-gray-text">
                   Pour toute question relative à cette politique ou à vos données personnelles :
                 </p>
-                <Button href={`mailto:${CONTACT.email}`} className="mt-5">
+                <Button href={`mailto:${contact.email}`} className="mt-5">
                   <Mail className="h-4 w-4" aria-hidden />
-                  {CONTACT.email}
+                  {contact.email}
                 </Button>
               </div>
             </div>

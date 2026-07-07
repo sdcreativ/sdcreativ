@@ -1,25 +1,21 @@
-import { MapPin } from "lucide-react";
-import { CONTACT } from "@/lib/constants";
+import { getSitePublicSettings } from "@/lib/site-public-settings";
 
-export function ContactMap() {
-  const query = encodeURIComponent(`${CONTACT.address}`);
+export async function ContactMap() {
+  const { contact } = await getSitePublicSettings();
+  const query = encodeURIComponent(`${contact.address}`);
+  const src = `https://maps.google.com/maps?q=${query}&t=&z=15&ie=UTF8&iwloc=&output=embed`;
 
   return (
-    <div className="overflow-hidden rounded-3xl border border-gray/60 bg-white shadow-sm">
-      <div className="flex items-center gap-3 border-b border-gray/60 px-6 py-4">
-        <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-primary-light">
-          <MapPin className="h-4 w-4 text-primary" aria-hidden />
-        </span>
-        <div>
-          <h3 className="font-bold text-foreground">Notre localisation</h3>
-          <p className="text-sm text-gray-text">{CONTACT.address}</p>
-        </div>
+    <div className="overflow-hidden rounded-3xl border border-gray/40 bg-white shadow-sm">
+      <div className="border-b border-gray/30 px-6 py-4">
+        <h2 className="text-lg font-bold text-foreground">Nous trouver</h2>
+        <p className="text-sm text-gray-text">{contact.address}</p>
       </div>
-      <div className="relative aspect-[16/9] w-full bg-gray-light md:aspect-[21/9]">
+      <div className="aspect-[16/9] w-full sm:aspect-[21/9]">
         <iframe
-          title={`Carte — ${CONTACT.address}`}
-          src={`https://maps.google.com/maps?q=${query}&z=12&output=embed`}
-          className="absolute inset-0 h-full w-full border-0"
+          src={src}
+          title={`Carte — ${contact.address}`}
+          className="h-full w-full border-0"
           loading="lazy"
           referrerPolicy="no-referrer-when-downgrade"
           allowFullScreen

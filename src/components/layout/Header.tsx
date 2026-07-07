@@ -9,11 +9,12 @@ import { NavGlowLink, isNavLinkActive } from "@/components/ui/NavGlowLink";
 import { mainNav } from "@/content/navigation";
 import { enNav } from "@/i18n/en-content";
 import { LocaleSwitcher } from "@/components/i18n/LocaleSwitcher";
-import { whatsappUrl } from "@/lib/constants";
+import { useWhatsappUrl } from "@/components/site/SitePublicProvider";
 import { cn } from "@/lib/utils";
 
 export function Header() {
   const pathname = usePathname() ?? "/";
+  const waUrl = useWhatsappUrl();
   const isEn = pathname.startsWith("/en");
   const isAdmin = pathname.startsWith("/admin");
   const nav = isEn ? enNav : mainNav;
@@ -120,7 +121,7 @@ export function Header() {
               {ctaLabel}
             </Button>
             <Button
-              href={whatsappUrl()}
+              href={waUrl}
               external
               variant="whatsappLight"
               size="sm"
@@ -202,7 +203,7 @@ export function Header() {
                   {ctaLabel}
                 </Button>
                 <Button
-                  href={whatsappUrl()}
+                  href={waUrl}
                   external
                   variant="whatsappLight"
                   className="w-full justify-center rounded-full"

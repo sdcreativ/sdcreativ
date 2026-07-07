@@ -1,6 +1,8 @@
-import { SITE, CONTACT, SOCIAL, LOGO } from "@/lib/constants";
+import { SITE, LOGO } from "@/lib/constants";
+import { getSitePublicSettings } from "@/lib/site-public-settings";
 
-export function OrganizationJsonLd() {
+export async function OrganizationJsonLd() {
+  const { contact, social } = await getSitePublicSettings();
   const schema = {
     "@context": "https://schema.org",
     "@type": "Organization",
@@ -8,14 +10,14 @@ export function OrganizationJsonLd() {
     description: SITE.description,
     url: SITE.url,
     logo: `${SITE.url}${LOGO.src}`,
-    email: CONTACT.email,
-    telephone: CONTACT.phone,
+    email: contact.email,
+    telephone: contact.phone,
     address: {
       "@type": "PostalAddress",
       addressLocality: "Abidjan",
       addressCountry: "CI",
     },
-    sameAs: [SOCIAL.facebook, SOCIAL.linkedin, SOCIAL.instagram, SOCIAL.youtube],
+    sameAs: [social.facebook, social.linkedin, social.instagram, social.youtube],
   };
 
   return (
@@ -26,7 +28,8 @@ export function OrganizationJsonLd() {
   );
 }
 
-export function LocalBusinessJsonLd() {
+export async function LocalBusinessJsonLd() {
+  const { contact, social } = await getSitePublicSettings();
   const reviewUrl = process.env.NEXT_PUBLIC_GOOGLE_REVIEW_URL;
 
   const schema = {
@@ -37,12 +40,12 @@ export function LocalBusinessJsonLd() {
     description: SITE.description,
     url: SITE.url,
     image: `${SITE.url}${LOGO.src}`,
-    telephone: CONTACT.phone,
-    email: CONTACT.email,
+    telephone: contact.phone,
+    email: contact.email,
     priceRange: "$$",
     address: {
       "@type": "PostalAddress",
-      streetAddress: CONTACT.address,
+      streetAddress: contact.address,
       addressLocality: "Abidjan",
       addressRegion: "Lagunes",
       addressCountry: "CI",
@@ -64,7 +67,7 @@ export function LocalBusinessJsonLd() {
         closes: "18:00",
       },
     ],
-    sameAs: [SOCIAL.facebook, SOCIAL.linkedin, SOCIAL.instagram, SOCIAL.youtube],
+    sameAs: [social.facebook, social.linkedin, social.instagram, social.youtube],
     ...(reviewUrl ? { hasMap: reviewUrl } : {}),
   };
 

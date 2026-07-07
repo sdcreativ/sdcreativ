@@ -1,4 +1,5 @@
 import type { CrmSettingsPayload, CrmBranding, CrmEmailTemplate } from "@/lib/crm-settings-types";
+import type { SitePublicSettings } from "@/lib/site-public-types";
 import type { CrmAuditLog } from "@/lib/crm-audit";
 import type { CrmRole } from "@/content/crm-roles";
 import type { CrmPermission } from "@/lib/crm-permissions";
@@ -56,6 +57,19 @@ export async function updateCrmEmailTemplateApi(input: {
   });
   const json = await parseJson<{ template: CrmEmailTemplate }>(res);
   return json.template;
+}
+
+export async function updateSitePublicSettingsApi(
+  sitePublic: SitePublicSettings,
+): Promise<SitePublicSettings> {
+  const res = await fetch("/api/admin/settings", {
+    method: "PATCH",
+    credentials: "include",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ sitePublic }),
+  });
+  const json = await parseJson<{ sitePublic: SitePublicSettings }>(res);
+  return json.sitePublic;
 }
 
 export async function sendTestEmailTemplateApi(templateId: string, to: string): Promise<void> {

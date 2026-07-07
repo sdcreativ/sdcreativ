@@ -1,11 +1,12 @@
 import Link from "next/link";
 import { MessageCircle } from "lucide-react";
-import { whatsappUrl } from "@/lib/constants";
+import { useWhatsappUrl } from "@/components/site/SitePublicProvider";
 
 export function WhatsAppFloat() {
+  const waUrl = useWhatsappUrl();
   return (
     <Link
-      href={whatsappUrl()}
+      href={waUrl}
       target="_blank"
       rel="noopener noreferrer"
       aria-label="Contacter SD CREATIV sur WhatsApp"

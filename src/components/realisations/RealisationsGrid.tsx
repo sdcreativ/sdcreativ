@@ -9,7 +9,7 @@ import {
   realisationCategories,
   type Realisation,
 } from "@/content/realisations";
-import { whatsappUrl } from "@/lib/constants";
+import { useWhatsappUrl } from "@/components/site/SitePublicProvider";
 import { cn } from "@/lib/utils";
 import { MessageCircle } from "lucide-react";
 
@@ -47,6 +47,7 @@ type Props = {
 };
 
 export function RealisationsGrid({ items = staticRealisations }: Props) {
+  const waUrl = useWhatsappUrl();
   const [activeCategory, setActiveCategory] = useState<string>("Tous");
 
   const filtered =
@@ -112,7 +113,7 @@ export function RealisationsGrid({ items = staticRealisations }: Props) {
             <Button href="/contact" size="lg">
               Démarrer mon projet
             </Button>
-            <Button href={whatsappUrl()} external variant="outline" size="lg">
+            <Button href={waUrl} external variant="outline" size="lg">
               <MessageCircle className="h-4 w-4 text-green-400" aria-hidden />
               Parler sur WhatsApp
             </Button>

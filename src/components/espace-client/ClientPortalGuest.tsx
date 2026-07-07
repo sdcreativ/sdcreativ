@@ -14,7 +14,7 @@ import {
 } from "lucide-react";
 import { ClientPortalLogin } from "@/components/espace-client/ClientPortalLogin";
 import { WaitlistForm } from "@/components/forms/WaitlistForm";
-import { CONTACT } from "@/lib/constants";
+import { useSitePublic } from "@/components/site/SitePublicProvider";
 import type { ClientProfileData } from "@/lib/client-portal-config";
 
 type Props = {
@@ -45,6 +45,7 @@ const FEATURES = [
 ] as const;
 
 export function ClientPortalGuest({ onSuccess }: Props) {
+  const { contact } = useSitePublic();
   return (
     <div className="flex min-h-screen bg-[#f4f7fb]">
       {/* Panneau gauche — desktop */}
@@ -147,8 +148,8 @@ export function ClientPortalGuest({ onSuccess }: Props) {
                 </li>
                 <li>
                   <span className="font-medium text-foreground">4.</span> Besoin d&apos;aide ?{" "}
-                  <a href={CONTACT.email ? `mailto:${CONTACT.email}` : "/contact"} className="text-primary hover:underline">
-                    {CONTACT.email}
+                  <a href={contact.email ? `mailto:${contact.email}` : "/contact"} className="text-primary hover:underline">
+                    {contact.email}
                   </a>
                 </li>
               </ol>

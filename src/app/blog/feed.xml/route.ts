@@ -2,6 +2,7 @@ import { buildBlogRssFeed } from "@/lib/blog-rss";
 import { listPublishedBlogPosts, toPublicBlogPost } from "@/lib/blog-posts";
 import { isDatabaseConfigured } from "@/lib/db";
 import { getBlogPosts } from "@/lib/cms";
+import { getSitePublicSettings } from "@/lib/site-public-settings";
 
 export const dynamic = "force-dynamic";
 
@@ -14,7 +15,8 @@ export async function GET() {
     posts = await getBlogPosts();
   }
 
-  const xml = buildBlogRssFeed(posts);
+  const { contact } = await getSitePublicSettings();
+  const xml = buildBlogRssFeed(posts, contact.email);
 
   return new Response(xml, {
     headers: {

@@ -16,14 +16,17 @@ import { FaqJsonLd } from "@/components/seo/JsonLd";
 import type { ServiceDetail } from "@/content/service-details";
 import { getRealisation } from "@/content/realisations";
 import type { Service } from "@/content/services";
-import { whatsappUrl } from "@/lib/constants";
+import { buildWhatsappUrl } from "@/lib/site-public-resolver";
+import { getSitePublicSettings } from "@/lib/site-public-settings";
 
 type Props = {
   service: Service;
   detail: ServiceDetail;
 };
 
-export function ServiceDetailView({ service, detail }: Props) {
+export async function ServiceDetailView({ service, detail }: Props) {
+  const { contact } = await getSitePublicSettings();
+  const waUrl = buildWhatsappUrl(contact);
   const Icon = service.icon;
   const relatedProjects = detail.relatedRealisationIds
     .map((id) => getRealisation(id))
@@ -208,7 +211,7 @@ export function ServiceDetailView({ service, detail }: Props) {
             >
               Demander un devis
             </Button>
-            <Button href={whatsappUrl()} external variant="whatsapp" size="lg">
+            <Button href={waUrl} external variant="whatsapp" size="lg">
               <MessageCircle className="h-4 w-4 text-green-400" aria-hidden />
               WhatsApp
             </Button>
