@@ -6,6 +6,14 @@
 set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "$0")/.." && pwd)"
+DEPLOY_USER="${DEPLOY_USER:-deploy}"
+
+# Toujours exécuter en deploy (le runner peut tourner sous un autre utilisateur).
+if [ "$(id -un)" != "$DEPLOY_USER" ]; then
+  echo "→ Re-exécution en ${DEPLOY_USER} (utilisateur courant : $(id -un))"
+  exec sudo -n -u "$DEPLOY_USER" bash "$ROOT_DIR/scripts/vps-deploy-pull.sh" "$@"
+fi
+
 cd "$ROOT_DIR"
 
 COMPOSE=(docker compose -f docker-compose.yml -f docker-compose.prod.yml --profile prod)
@@ -13,7 +21,15 @@ COMPOSE=(docker compose -f docker-compose.yml -f docker-compose.prod.yml --profi
 echo "=== Déploiement SD CREATIV — $(date -Iseconds) ==="
 echo "→ Répertoire : $ROOT_DIR"
 echo "→ Branche     : $(git branch --show-current 2>/dev/null || echo '?')"
+echo "→ Utilisateur : $(id -un)"
 echo
+
+if [ ! -w "$ROOT_DIR/.git/objects" ]; then
+  echo "✗ Permissions insuffisantes sur $ROOT_DIR/.git/objects"
+  echo "  Diagnostic : bash $ROOT_DIR/scripts/vps-deploy-diagnose.sh"
+  echo "  Correction : sudo bash $ROOT_DIR/scripts/vps-fix-deploy-permissions.sh"
+  exit 1
+fi
 
 echo "→ git pull"
 git pull --ff-only

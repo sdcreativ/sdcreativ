@@ -42,8 +42,8 @@ export function revalidateHeroPages() {
 }
 
 export function revalidatePricingPages() {
-  revalidateTag(PUBLIC_PRICING_PLANS_TAG);
-  revalidateTag(PUBLIC_PRICING_REASSURANCE_TAG);
+  revalidateTag(PUBLIC_PRICING_PLANS_TAG, "max");
+  revalidateTag(PUBLIC_PRICING_REASSURANCE_TAG, "max");
   revalidatePath("/", "layout");
   revalidatePath("/tarifs", "page");
   revalidatePath("/en/pricing", "page");

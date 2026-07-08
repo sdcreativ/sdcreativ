@@ -30,7 +30,12 @@ jobs:
 
     steps:
       - name: Déployer (git pull + Docker)
-        run: bash /var/www/sdcreativ/scripts/vps-deploy-pull.sh
+        run: |
+          if [ "$(id -un)" = "deploy" ]; then
+            bash /var/www/sdcreativ/scripts/vps-deploy-pull.sh
+          else
+            sudo -n -u deploy bash /var/www/sdcreativ/scripts/vps-deploy-pull.sh
+          fi
 
       - name: Résumé
         if: always()
