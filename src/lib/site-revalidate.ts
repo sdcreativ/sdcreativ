@@ -39,6 +39,9 @@ export function revalidateHeroPages() {
 
 export function revalidatePricingPages() {
   revalidatePath("/");
+  revalidatePath("/tarifs");
+  revalidatePath("/en/pricing");
+  revalidatePath("/sitemap.xml");
 }
 
 export function revalidateRealisationsPages(slug?: string) {
