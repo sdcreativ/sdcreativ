@@ -24,6 +24,8 @@ export const CRM_PERMISSIONS = [
   "documents.write",
   "blog.read",
   "blog.write",
+  "site.read",
+  "site.write",
 ] as const;
 
 export type CrmPermission = (typeof CRM_PERMISSIONS)[number];
@@ -51,6 +53,8 @@ export const CRM_PERMISSION_LABELS: Record<CrmPermission, string> = {
   "documents.write": "Gérer les documents",
   "blog.read": "Voir le blog",
   "blog.write": "Gérer le blog",
+  "site.read": "Voir le contenu du site vitrine",
+  "site.write": "Gérer le contenu du site vitrine",
 };
 
 const ALL: CrmPermission[] = [...CRM_PERMISSIONS];

@@ -2,7 +2,7 @@ import { PageHero } from "@/components/ui/PageHero";
 import { FaqSection } from "@/components/sections/FaqSection";
 import { Button } from "@/components/ui/Button";
 import { FaqJsonLd } from "@/components/seo/JsonLd";
-import { faqItems } from "@/content/faq";
+import { getFaqItems } from "@/lib/public-faq-resolver";
 import { createMetadata } from "@/lib/metadata";
 
 export const metadata = createMetadata({
@@ -12,7 +12,9 @@ export const metadata = createMetadata({
   path: "/faq",
 });
 
-export default function FaqPage() {
+export default async function FaqPage() {
+  const faqItems = await getFaqItems("fr");
+
   return (
     <>
       <FaqJsonLd items={faqItems} />
@@ -22,7 +24,7 @@ export default function FaqPage() {
         highlight="fréquentes"
         description="Tout ce que vous devez savoir avant de lancer votre projet web avec SD CREATIV."
       />
-      <FaqSection />
+      <FaqSection items={faqItems} />
       <section className="border-t border-gray/40 bg-primary-light py-16">
         <div className="container mx-auto px-4 text-center md:px-6 lg:px-8">
           <h2 className="text-2xl font-bold text-foreground">

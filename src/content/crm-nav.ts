@@ -5,6 +5,7 @@ import {
   Calendar,
   FileText,
   FolderKanban,
+  Globe,
   LayoutDashboard,
   LifeBuoy,
   Newspaper,
@@ -34,6 +35,7 @@ export const crmNavItems: CrmNavItem[] = [
   { id: "tickets", label: "Tickets support", href: "/admin/crm/tickets", icon: LifeBuoy, ready: true },
   { id: "calendar", label: "Calendrier", href: "/admin/crm/calendrier", icon: Calendar, ready: true },
   { id: "blog", label: "Blog", href: "/admin/crm/blog", icon: Newspaper, ready: true },
+  { id: "site", label: "Site vitrine", href: "/admin/crm/site", icon: Globe, ready: true },
   { id: "reports", label: "Rapports", href: "/admin/crm/rapports", icon: BarChart3, ready: true },
   { id: "settings", label: "Paramètres", href: "/admin/crm/parametres", icon: Settings, ready: true },
 ];
@@ -79,6 +81,20 @@ export function getCrmBreadcrumbs(pathname: string): CrmBreadcrumb[] {
       } else if (segment && item.id === "blog") {
         crumbs.push({
           label: segment === "nouveau" ? "Nouvel article" : "Édition",
+          href: pathname,
+        });
+      } else if (segment && item.id === "site") {
+        const siteLabels: Record<string, string> = {
+          equipe: "Équipe publique",
+          temoignages: "Témoignages",
+          faq: "FAQ",
+          hero: "Hero accueil",
+          partenaires: "Partenaires",
+          tarifs: "Tarifs",
+          realisations: "Réalisations",
+        };
+        crumbs.push({
+          label: siteLabels[segment] ?? segment,
           href: pathname,
         });
       } else if (segment) {

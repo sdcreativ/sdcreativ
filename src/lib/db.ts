@@ -511,6 +511,139 @@ async function ensureSchema(): Promise<void> {
     );
     CREATE INDEX IF NOT EXISTS idx_blog_comments_post ON blog_comments (post_id, status, created_at DESC);
     CREATE INDEX IF NOT EXISTS idx_blog_comments_moderation ON blog_comments (status, created_at DESC);
+
+    CREATE TABLE IF NOT EXISTS public_team_members (
+      id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+      slug VARCHAR(120) NOT NULL UNIQUE,
+      name VARCHAR(200) NOT NULL,
+      role VARCHAR(300) NOT NULL,
+      missions TEXT NOT NULL,
+      initials VARCHAR(8) NOT NULL,
+      image VARCHAR(512) NOT NULL,
+      image_alt VARCHAR(300) NOT NULL,
+      locale VARCHAR(5) NOT NULL DEFAULT 'fr',
+      sort_order INTEGER NOT NULL DEFAULT 0,
+      is_visible BOOLEAN NOT NULL DEFAULT true,
+      created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+      updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    );
+    CREATE INDEX IF NOT EXISTS idx_public_team_members_locale_sort
+      ON public_team_members (locale, sort_order);
+    CREATE INDEX IF NOT EXISTS idx_public_team_members_visible
+      ON public_team_members (locale, sort_order)
+      WHERE is_visible = true;
+
+    CREATE TABLE IF NOT EXISTS public_testimonials (
+      id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+      slug VARCHAR(120) NOT NULL UNIQUE,
+      quote TEXT NOT NULL,
+      author VARCHAR(160) NOT NULL,
+      role VARCHAR(160) NOT NULL,
+      company VARCHAR(200) NOT NULL,
+      locale VARCHAR(5) NOT NULL DEFAULT 'fr',
+      sort_order INTEGER NOT NULL DEFAULT 0,
+      is_visible BOOLEAN NOT NULL DEFAULT true,
+      created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+      updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    );
+    CREATE INDEX IF NOT EXISTS idx_public_testimonials_locale_sort
+      ON public_testimonials (locale, sort_order);
+    CREATE INDEX IF NOT EXISTS idx_public_testimonials_visible
+      ON public_testimonials (locale, sort_order)
+      WHERE is_visible = true;
+
+    CREATE TABLE IF NOT EXISTS public_faq_items (
+      id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+      slug VARCHAR(120) NOT NULL UNIQUE,
+      question VARCHAR(300) NOT NULL,
+      answer TEXT NOT NULL,
+      locale VARCHAR(5) NOT NULL DEFAULT 'fr',
+      sort_order INTEGER NOT NULL DEFAULT 0,
+      is_visible BOOLEAN NOT NULL DEFAULT true,
+      created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+      updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    );
+    CREATE INDEX IF NOT EXISTS idx_public_faq_items_locale_sort
+      ON public_faq_items (locale, sort_order);
+    CREATE INDEX IF NOT EXISTS idx_public_faq_items_visible
+      ON public_faq_items (locale, sort_order)
+      WHERE is_visible = true;
+
+    ALTER TABLE crm_settings ADD COLUMN IF NOT EXISTS site_hero JSONB NOT NULL DEFAULT '{}';
+
+    CREATE TABLE IF NOT EXISTS public_partners (
+      id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+      slug VARCHAR(120) NOT NULL UNIQUE,
+      name VARCHAR(120) NOT NULL,
+      category VARCHAR(80) NOT NULL,
+      locale VARCHAR(5) NOT NULL DEFAULT 'fr',
+      sort_order INTEGER NOT NULL DEFAULT 0,
+      is_visible BOOLEAN NOT NULL DEFAULT true,
+      created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+      updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    );
+    CREATE INDEX IF NOT EXISTS idx_public_partners_locale_sort ON public_partners (locale, sort_order);
+
+    CREATE TABLE IF NOT EXISTS public_pricing_plans (
+      id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+      slug VARCHAR(120) NOT NULL UNIQUE,
+      name VARCHAR(80) NOT NULL,
+      tagline VARCHAR(120) NOT NULL,
+      price_from INTEGER NOT NULL,
+      price_note VARCHAR(120),
+      features TEXT[] NOT NULL DEFAULT '{}',
+      highlighted BOOLEAN NOT NULL DEFAULT false,
+      variant VARCHAR(10) NOT NULL DEFAULT 'primary',
+      locale VARCHAR(5) NOT NULL DEFAULT 'fr',
+      sort_order INTEGER NOT NULL DEFAULT 0,
+      is_visible BOOLEAN NOT NULL DEFAULT true,
+      created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+      updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    );
+    CREATE INDEX IF NOT EXISTS idx_public_pricing_plans_locale_sort ON public_pricing_plans (locale, sort_order);
+
+    CREATE TABLE IF NOT EXISTS public_pricing_reassurance (
+      id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+      label VARCHAR(80) NOT NULL,
+      description VARCHAR(200) NOT NULL,
+      locale VARCHAR(5) NOT NULL DEFAULT 'fr',
+      sort_order INTEGER NOT NULL DEFAULT 0,
+      is_visible BOOLEAN NOT NULL DEFAULT true,
+      created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+      updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    );
+    CREATE INDEX IF NOT EXISTS idx_public_pricing_reassurance_locale_sort ON public_pricing_reassurance (locale, sort_order);
+
+    CREATE TABLE IF NOT EXISTS public_realisations (
+      id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+      slug VARCHAR(120) NOT NULL UNIQUE,
+      title VARCHAR(200) NOT NULL,
+      client VARCHAR(160) NOT NULL,
+      sector VARCHAR(120) NOT NULL,
+      location VARCHAR(160) NOT NULL,
+      year VARCHAR(10) NOT NULL,
+      duration VARCHAR(40) NOT NULL,
+      category VARCHAR(80) NOT NULL,
+      description TEXT NOT NULL,
+      tags TEXT[] NOT NULL DEFAULT '{}',
+      stack TEXT[] NOT NULL DEFAULT '{}',
+      image VARCHAR(512) NOT NULL,
+      image_alt VARCHAR(300) NOT NULL,
+      accent VARCHAR(20) NOT NULL DEFAULT '#0072B5',
+      metric_value VARCHAR(40),
+      metric_label VARCHAR(120),
+      featured BOOLEAN NOT NULL DEFAULT false,
+      case_study JSONB NOT NULL DEFAULT '{}',
+      testimonial JSONB,
+      before_after JSONB,
+      locale VARCHAR(5) NOT NULL DEFAULT 'fr',
+      sort_order INTEGER NOT NULL DEFAULT 0,
+      is_visible BOOLEAN NOT NULL DEFAULT true,
+      created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+      updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    );
+    CREATE INDEX IF NOT EXISTS idx_public_realisations_locale_sort ON public_realisations (locale, sort_order);
+    CREATE INDEX IF NOT EXISTS idx_public_realisations_visible ON public_realisations (locale, sort_order) WHERE is_visible = true;
   `);
 
   const { seedBlogCategories } = await import("@/lib/blog-categories");

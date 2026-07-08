@@ -1,9 +1,15 @@
 import Image from "next/image";
 import { AnimatedSection, AnimatedCard } from "@/components/ui/AnimatedSection";
 import { SectionHeading } from "@/components/ui/SectionHeading";
-import { teamMembers } from "@/content/team";
+import { getTeamMembers } from "@/lib/public-team";
 
-export function TeamSection() {
+type Props = {
+  locale?: "fr" | "en";
+};
+
+export async function TeamSection({ locale = "fr" }: Props) {
+  const teamMembers = await getTeamMembers(locale);
+
   return (
     <AnimatedSection className="bg-white py-20 md:py-28" id="equipe">
       <div className="container mx-auto px-4 md:px-6 lg:px-8">

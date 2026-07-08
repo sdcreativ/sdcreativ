@@ -1,0 +1,661 @@
+"use client";
+
+import { useCallback, useEffect, useRef, useState } from "react";
+import Image from "next/image";
+import {
+  ArrowDown,
+  ArrowUp,
+  Download,
+  Eye,
+  EyeOff,
+  ImagePlus,
+  Loader2,
+  Pencil,
+  Plus,
+  RefreshCw,
+  Trash2,
+  Upload,
+  Users,
+} from "lucide-react";
+import type { PublicTeamMemberRecord } from "@/lib/public-team-members";
+import {
+  createTeamMemberApi,
+  deleteTeamMemberApi,
+  fetchTeamMembersAdmin,
+  importStaticTeamMembersApi,
+  reorderTeamMemberApi,
+  updateTeamMemberApi,
+  uploadTeamMemberImageApi,
+} from "@/lib/public-team-api";
+import { useDialog } from "@/components/ui/DialogProvider";
+import { cn } from "@/lib/utils";
+
+const fieldClass =
+  "w-full rounded-xl border border-gray/60 bg-white px-3 py-2.5 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20";
+
+type MemberForm = {
+  name: string;
+  role: string;
+  missions: string;
+  initials: string;
+  image: string;
+  imageAlt: string;
+  locale: "fr" | "en";
+  isVisible: boolean;
+};
+
+const emptyForm = (): MemberForm => ({
+  name: "",
+  role: "",
+  missions: "",
+  initials: "",
+  image: "",
+  imageAlt: "",
+  locale: "fr",
+  isVisible: true,
+});
+
+function recordToForm(member: PublicTeamMemberRecord): MemberForm {
+  return {
+    name: member.name,
+    role: member.role,
+    missions: member.missions,
+    initials: member.initials,
+    image: member.image,
+    imageAlt: member.imageAlt,
+    locale: member.locale as "fr" | "en",
+    isVisible: member.isVisible,
+  };
+}
+
+function TeamMemberImageField({
+  value,
+  onChange,
+}: {
+  value: string;
+  onChange: (url: string) => void;
+}) {
+  const inputRef = useRef<HTMLInputElement>(null);
+  const [uploading, setUploading] = useState(false);
+  const [error, setError] = useState("");
+
+  async function handleFile(file: File) {
+    setUploading(true);
+    setError("");
+    try {
+      const { url } = await uploadTeamMemberImageApi(file);
+      onChange(url);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Upload impossible.");
+    } finally {
+      setUploading(false);
+    }
+  }
+
+  return (
+    <div className="space-y-2">
+      {value ? (
+        <div className="relative mx-auto h-28 w-28 overflow-hidden rounded-full ring-4 ring-primary-light">
+          <Image src={value} alt="" fill unoptimized className="object-cover object-top" />
+          <div className="absolute inset-0 flex items-end justify-center gap-1 bg-black/0 pb-2 opacity-0 transition-opacity hover:bg-black/30 hover:opacity-100">
+            <button
+              type="button"
+              onClick={() => inputRef.current?.click()}
+              disabled={uploading}
+              className="rounded-md bg-white/95 p-1.5 shadow"
+              title="Remplacer"
+            >
+              {uploading ? (
+                <Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden />
+              ) : (
+                <Upload className="h-3.5 w-3.5" aria-hidden />
+              )}
+            </button>
+            <button
+              type="button"
+              onClick={() => onChange("")}
+              className="rounded-md bg-white/95 p-1.5 text-red-600 shadow"
+              title="Retirer"
+            >
+              <Trash2 className="h-3.5 w-3.5" aria-hidden />
+            </button>
+          </div>
+        </div>
+      ) : (
+        <button
+          type="button"
+          onClick={() => inputRef.current?.click()}
+          disabled={uploading}
+          className="mx-auto flex h-28 w-28 flex-col items-center justify-center gap-1 rounded-full border border-dashed border-gray/60 bg-gray-light/40 text-xs text-gray-text hover:border-primary/40"
+        >
+          {uploading ? (
+            <Loader2 className="h-5 w-5 animate-spin text-primary" aria-hidden />
+          ) : (
+            <ImagePlus className="h-5 w-5 text-primary" aria-hidden />
+          )}
+          Photo
+        </button>
+      )}
+
+      <input
+        type="text"
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        className={fieldClass}
+        placeholder="URL de la photo"
+        aria-label="URL de la photo"
+      />
+
+      <input
+        title="Uploader une photo"
+        ref={inputRef}
+        type="file"
+        accept="image/jpeg,image/png,image/webp,image/gif"
+        className="sr-only"
+        onChange={(e) => {
+          const file = e.target.files?.[0];
+          if (file) void handleFile(file);
+          e.target.value = "";
+        }}
+      />
+
+      {error && <p className="text-xs text-red-600">{error}</p>}
+    </div>
+  );
+}
+
+export function CrmTeamMembersView() {
+  const { confirm, alert } = useDialog();
+  const [members, setMembers] = useState<PublicTeamMemberRecord[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
+  const [localeFilter, setLocaleFilter] = useState<"fr" | "en" | "all">("fr");
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [creating, setCreating] = useState(false);
+  const [form, setForm] = useState<MemberForm>(emptyForm);
+  const [saving, setSaving] = useState(false);
+  const [busyId, setBusyId] = useState<string | null>(null);
+  const [importing, setImporting] = useState(false);
+  const [message, setMessage] = useState("");
+
+  const load = useCallback(async () => {
+    setLoading(true);
+    setError("");
+    try {
+      const data = await fetchTeamMembersAdmin(
+        localeFilter === "all" ? undefined : localeFilter,
+      );
+      setMembers(data);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Impossible de charger l'équipe.");
+      setMembers([]);
+    } finally {
+      setLoading(false);
+    }
+  }, [localeFilter]);
+
+  useEffect(() => {
+    void load();
+  }, [load]);
+
+  function openCreate() {
+    setCreating(true);
+    setEditingId(null);
+    setForm(emptyForm());
+    setMessage("");
+  }
+
+  function openEdit(member: PublicTeamMemberRecord) {
+    setCreating(false);
+    setEditingId(member.id);
+    setForm(recordToForm(member));
+    setMessage("");
+  }
+
+  function closeForm() {
+    setCreating(false);
+    setEditingId(null);
+    setForm(emptyForm());
+  }
+
+  async function handleSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    setSaving(true);
+    setMessage("");
+    try {
+      if (creating) {
+        const member = await createTeamMemberApi(form);
+        setMembers((prev) => [...prev, member].sort((a, b) => a.sortOrder - b.sortOrder));
+        closeForm();
+        setMessage("Membre ajouté — le site public sera mis à jour sous quelques secondes.");
+      } else if (editingId) {
+        const member = await updateTeamMemberApi(editingId, form);
+        setMembers((prev) => prev.map((m) => (m.id === member.id ? member : m)));
+        closeForm();
+        setMessage("Membre mis à jour — le site public sera mis à jour sous quelques secondes.");
+      }
+    } catch (err) {
+      setMessage(err instanceof Error ? err.message : "Enregistrement impossible.");
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  async function handleDelete(id: string, name: string) {
+    const ok = await confirm({
+      title: "Supprimer ce membre ?",
+      message: `« ${name} » sera retiré de la section équipe du site public.`,
+      confirmLabel: "Supprimer",
+      variant: "danger",
+    });
+    if (!ok) return;
+
+    setBusyId(id);
+    try {
+      await deleteTeamMemberApi(id);
+      setMembers((prev) => prev.filter((m) => m.id !== id));
+      if (editingId === id) closeForm();
+    } catch (err) {
+      await alert({
+        title: "Erreur",
+        message: err instanceof Error ? err.message : "Suppression impossible.",
+      });
+    } finally {
+      setBusyId(null);
+    }
+  }
+
+  async function handleToggleVisible(member: PublicTeamMemberRecord) {
+    setBusyId(member.id);
+    try {
+      const updated = await updateTeamMemberApi(member.id, { isVisible: !member.isVisible });
+      setMembers((prev) => prev.map((m) => (m.id === updated.id ? updated : m)));
+    } catch (err) {
+      await alert({
+        title: "Erreur",
+        message: err instanceof Error ? err.message : "Mise à jour impossible.",
+      });
+    } finally {
+      setBusyId(null);
+    }
+  }
+
+  async function handleReorder(id: string, direction: "up" | "down") {
+    setBusyId(id);
+    try {
+      await reorderTeamMemberApi(id, direction);
+      await load();
+    } catch (err) {
+      await alert({
+        title: "Erreur",
+        message: err instanceof Error ? err.message : "Réordonnancement impossible.",
+      });
+    } finally {
+      setBusyId(null);
+    }
+  }
+
+  async function handleImportStatic() {
+    const ok = await confirm({
+      title: "Importer l'équipe statique ?",
+      message:
+        "Les 4 membres définis dans le code seront ajoutés en base (sans écraser les existants).",
+      confirmLabel: "Importer",
+    });
+    if (!ok) return;
+
+    setImporting(true);
+    setMessage("");
+    try {
+      const result = await importStaticTeamMembersApi();
+      await load();
+      setMessage(
+        `Import terminé : ${result.imported} ajouté(s), ${result.skipped} ignoré(s).`,
+      );
+    } catch (err) {
+      setMessage(err instanceof Error ? err.message : "Import impossible.");
+    } finally {
+      setImporting(false);
+    }
+  }
+
+  const showForm = creating || editingId !== null;
+
+  return (
+    <div className="space-y-6">
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+        <div>
+          <h1 className="flex items-center gap-2 text-2xl font-bold text-foreground">
+            <Users className="h-6 w-6 text-primary" aria-hidden />
+            Équipe publique
+          </h1>
+          <p className="mt-1 text-sm text-gray-text">
+            Gérez la section « Les visages derrière SD CREATIV » sur l&apos;accueil et la page À
+            propos.
+          </p>
+        </div>
+
+        <div className="flex flex-wrap gap-2">
+          <button
+            type="button"
+            onClick={() => void load()}
+            disabled={loading}
+            className="inline-flex items-center gap-1.5 rounded-xl border border-gray/60 bg-white px-3 py-2 text-sm font-medium hover:bg-gray-light disabled:opacity-60"
+          >
+            <RefreshCw className={cn("h-4 w-4", loading && "animate-spin")} aria-hidden />
+            Actualiser
+          </button>
+          <button
+            type="button"
+            onClick={() => void handleImportStatic()}
+            disabled={importing}
+            className="inline-flex items-center gap-1.5 rounded-xl border border-gray/60 bg-white px-3 py-2 text-sm font-medium hover:bg-gray-light disabled:opacity-60"
+          >
+            {importing ? (
+              <Loader2 className="h-4 w-4 animate-spin" aria-hidden />
+            ) : (
+              <Download className="h-4 w-4" aria-hidden />
+            )}
+            Importer depuis le code
+          </button>
+          <button
+            type="button"
+            onClick={openCreate}
+            className="inline-flex items-center gap-1.5 rounded-xl bg-primary px-4 py-2 text-sm font-semibold text-white hover:opacity-90"
+          >
+            <Plus className="h-4 w-4" aria-hidden />
+            Ajouter
+          </button>
+        </div>
+      </div>
+
+      <p className="rounded-xl border border-sky-200/80 bg-sky-50 px-4 py-3 text-sm text-sky-900">
+        Cette section est distincte des <strong>utilisateurs CRM</strong> (Paramètres → Équipe).
+        Ici, vous gérez uniquement les profils affichés sur le site vitrine.
+      </p>
+
+      <div className="flex gap-2">
+        {(["fr", "en", "all"] as const).map((loc) => (
+          <button
+            key={loc}
+            type="button"
+            onClick={() => setLocaleFilter(loc)}
+            className={cn(
+              "rounded-lg px-3 py-1.5 text-sm font-medium transition-colors",
+              localeFilter === loc
+                ? "bg-primary text-white"
+                : "bg-gray-light text-gray-text hover:bg-gray/20",
+            )}
+          >
+            {loc === "all" ? "Toutes langues" : loc.toUpperCase()}
+          </button>
+        ))}
+      </div>
+
+      {message && (
+        <p
+          className={cn(
+            "text-sm",
+            message.includes("Impossible") || message.includes("Erreur")
+              ? "text-red-600"
+              : "text-emerald-700",
+          )}
+          role="status"
+        >
+          {message}
+        </p>
+      )}
+
+      {error && <p className="text-sm text-red-600">{error}</p>}
+
+      {loading ? (
+        <p className="flex items-center gap-2 py-12 text-sm text-gray-text">
+          <Loader2 className="h-5 w-5 animate-spin text-primary" aria-hidden />
+          Chargement…
+        </p>
+      ) : members.length === 0 ? (
+        <div className="rounded-2xl border border-dashed border-gray/60 bg-gray-light/30 px-6 py-12 text-center">
+          <Users className="mx-auto h-10 w-10 text-gray-text/50" aria-hidden />
+          <p className="mt-3 text-sm text-gray-text">
+            Aucun membre en base. Importez l&apos;équipe statique ou ajoutez un membre manuellement.
+          </p>
+          <p className="mt-1 text-xs text-gray-text/80">
+            Tant qu&apos;aucun membre n&apos;est en base, le site affiche les données du fichier
+            code.
+          </p>
+        </div>
+      ) : (
+        <div className="grid gap-4 lg:grid-cols-2">
+          {members.map((member, index) => (
+            <article
+              key={member.id}
+              className={cn(
+                "flex gap-4 rounded-2xl border bg-white p-4 shadow-sm",
+                member.isVisible ? "border-gray/60" : "border-gray/40 opacity-70",
+              )}
+            >
+              <div className="relative h-16 w-16 shrink-0 overflow-hidden rounded-full ring-2 ring-primary-light">
+                {member.image ? (
+                  <Image
+                    src={member.image}
+                    alt=""
+                    fill
+                    unoptimized
+                    className="object-cover object-top"
+                  />
+                ) : (
+                  <div className="flex h-full w-full items-center justify-center bg-gray-light text-xs font-bold text-primary">
+                    {member.initials}
+                  </div>
+                )}
+              </div>
+
+              <div className="min-w-0 flex-1">
+                <div className="flex items-start justify-between gap-2">
+                  <div>
+                    <h2 className="font-bold text-foreground">{member.name}</h2>
+                    <p className="text-sm font-semibold text-primary">{member.role}</p>
+                    <p className="mt-1 line-clamp-2 text-xs text-gray-text">{member.missions}</p>
+                  </div>
+                  <span className="shrink-0 rounded-md bg-gray-light px-2 py-0.5 text-[10px] font-semibold uppercase text-gray-text">
+                    {member.locale}
+                  </span>
+                </div>
+
+                <div className="mt-3 flex flex-wrap gap-1.5">
+                  <button
+                    type="button"
+                    onClick={() => openEdit(member)}
+                    className="inline-flex items-center gap-1 rounded-lg border border-gray/60 px-2 py-1 text-xs font-medium hover:bg-gray-light"
+                  >
+                    <Pencil className="h-3 w-3" aria-hidden />
+                    Modifier
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => void handleToggleVisible(member)}
+                    disabled={busyId === member.id}
+                    className="inline-flex items-center gap-1 rounded-lg border border-gray/60 px-2 py-1 text-xs font-medium hover:bg-gray-light disabled:opacity-60"
+                  >
+                    {member.isVisible ? (
+                      <>
+                        <EyeOff className="h-3 w-3" aria-hidden />
+                        Masquer
+                      </>
+                    ) : (
+                      <>
+                        <Eye className="h-3 w-3" aria-hidden />
+                        Afficher
+                      </>
+                    )}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => void handleReorder(member.id, "up")}
+                    disabled={busyId === member.id || index === 0}
+                    className="inline-flex items-center gap-1 rounded-lg border border-gray/60 px-2 py-1 text-xs font-medium hover:bg-gray-light disabled:opacity-40"
+                    title="Monter"
+                  >
+                    <ArrowUp className="h-3 w-3" aria-hidden />
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => void handleReorder(member.id, "down")}
+                    disabled={busyId === member.id || index === members.length - 1}
+                    className="inline-flex items-center gap-1 rounded-lg border border-gray/60 px-2 py-1 text-xs font-medium hover:bg-gray-light disabled:opacity-40"
+                    title="Descendre"
+                  >
+                    <ArrowDown className="h-3 w-3" aria-hidden />
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => void handleDelete(member.id, member.name)}
+                    disabled={busyId === member.id}
+                    className="inline-flex items-center gap-1 rounded-lg border border-red-200 px-2 py-1 text-xs font-medium text-red-600 hover:bg-red-50 disabled:opacity-60"
+                  >
+                    <Trash2 className="h-3 w-3" aria-hidden />
+                    Supprimer
+                  </button>
+                </div>
+              </div>
+            </article>
+          ))}
+        </div>
+      )}
+
+      {showForm && (
+        <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/40 p-4 sm:items-center">
+          <div
+            className="max-h-[90vh] w-full max-w-lg overflow-y-auto rounded-2xl bg-white p-6 shadow-xl"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="team-member-form-title"
+          >
+            <h2 id="team-member-form-title" className="text-lg font-bold text-foreground">
+              {creating ? "Nouveau membre" : "Modifier le membre"}
+            </h2>
+
+            <form onSubmit={(e) => void handleSubmit(e)} className="mt-4 space-y-4">
+              <TeamMemberImageField
+                value={form.image}
+                onChange={(image) => setForm((prev) => ({ ...prev, image }))}
+              />
+
+              <label className="block">
+                <span className="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-gray-text">
+                  Nom complet
+                </span>
+                <input
+                  required
+                  value={form.name}
+                  onChange={(e) => setForm((prev) => ({ ...prev, name: e.target.value }))}
+                  className={fieldClass}
+                />
+              </label>
+
+              <label className="block">
+                <span className="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-gray-text">
+                  Rôle / titre
+                </span>
+                <input
+                  required
+                  value={form.role}
+                  onChange={(e) => setForm((prev) => ({ ...prev, role: e.target.value }))}
+                  className={fieldClass}
+                />
+              </label>
+
+              <label className="block">
+                <span className="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-gray-text">
+                  Missions / description
+                </span>
+                <textarea
+                  required
+                  rows={4}
+                  value={form.missions}
+                  onChange={(e) => setForm((prev) => ({ ...prev, missions: e.target.value }))}
+                  className={fieldClass}
+                />
+              </label>
+
+              <div className="grid gap-3 sm:grid-cols-2">
+                <label className="block">
+                  <span className="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-gray-text">
+                    Initiales (optionnel)
+                  </span>
+                  <input
+                    value={form.initials}
+                    onChange={(e) => setForm((prev) => ({ ...prev, initials: e.target.value }))}
+                    className={fieldClass}
+                    placeholder="Auto"
+                    maxLength={8}
+                  />
+                </label>
+                <label className="block">
+                  <span className="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-gray-text">
+                    Langue
+                  </span>
+                  <select
+                    value={form.locale}
+                    onChange={(e) =>
+                      setForm((prev) => ({
+                        ...prev,
+                        locale: e.target.value as "fr" | "en",
+                      }))
+                    }
+                    className={fieldClass}
+                  >
+                    <option value="fr">Français</option>
+                    <option value="en">English</option>
+                  </select>
+                </label>
+              </div>
+
+              <label className="block">
+                <span className="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-gray-text">
+                  Texte alternatif photo
+                </span>
+                <input
+                  required
+                  value={form.imageAlt}
+                  onChange={(e) => setForm((prev) => ({ ...prev, imageAlt: e.target.value }))}
+                  className={fieldClass}
+                />
+              </label>
+
+              <label className="flex items-center gap-2 text-sm">
+                <input
+                  type="checkbox"
+                  checked={form.isVisible}
+                  onChange={(e) =>
+                    setForm((prev) => ({ ...prev, isVisible: e.target.checked }))
+                  }
+                  className="rounded border-gray/60 text-primary focus:ring-primary/30"
+                />
+                Visible sur le site public
+              </label>
+
+              <div className="flex justify-end gap-2 pt-2">
+                <button
+                  type="button"
+                  onClick={closeForm}
+                  className="rounded-xl border border-gray/60 px-4 py-2 text-sm font-medium hover:bg-gray-light"
+                >
+                  Annuler
+                </button>
+                <button
+                  type="submit"
+                  disabled={saving}
+                  className="inline-flex items-center gap-2 rounded-xl bg-primary px-4 py-2 text-sm font-semibold text-white hover:opacity-90 disabled:opacity-60"
+                >
+                  {saving && <Loader2 className="h-4 w-4 animate-spin" aria-hidden />}
+                  Enregistrer
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}

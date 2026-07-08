@@ -76,6 +76,16 @@ export async function getBlogPost(
 }
 
 export async function getRealisations(): Promise<Realisation[]> {
+  if (isDatabaseConfigured()) {
+    try {
+      const { listPublicRealisations, toRealisation } = await import("@/lib/public-realisations");
+      const records = await listPublicRealisations({ locale: "fr", visibleOnly: true });
+      if (records.length > 0) return records.map(toRealisation);
+    } catch (error) {
+      console.error("[CMS] Database realisations fallback:", error);
+    }
+  }
+
   if (isSanityConfigured()) {
     try {
       const items = await fetchRealisationsFromSanity();
@@ -88,6 +98,16 @@ export async function getRealisations(): Promise<Realisation[]> {
 }
 
 export async function getRealisation(id: string): Promise<Realisation | undefined> {
+  if (isDatabaseConfigured()) {
+    try {
+      const { getPublicRealisationBySlug, toRealisation } = await import("@/lib/public-realisations");
+      const record = await getPublicRealisationBySlug(id);
+      if (record) return toRealisation(record);
+    } catch (error) {
+      console.error("[CMS] Database realisation fallback:", error);
+    }
+  }
+
   if (isSanityConfigured()) {
     try {
       const item = await fetchRealisationFromSanity(id);

@@ -26,7 +26,7 @@ export default function EnAboutPage() {
           { label: "About" },
         ]}
       />
-      <TeamSection />
+      <TeamSection locale="en" />
       <section className="py-16 text-center">
         <Button href="/en/contact" size="lg">
           Work with us

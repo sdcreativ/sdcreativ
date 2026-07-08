@@ -3,9 +3,11 @@ import Link from "next/link";
 import { ArrowRight } from "lucide-react";
 import { AnimatedSection, AnimatedCard } from "@/components/ui/AnimatedSection";
 import { SectionHeading } from "@/components/ui/SectionHeading";
-import { teamMembers } from "@/content/team";
+import { getTeamMembers } from "@/lib/public-team";
 
-export function TeamPreviewSection() {
+export async function TeamPreviewSection() {
+  const teamMembers = await getTeamMembers("fr");
+
   return (
     <AnimatedSection className="bg-gray-light py-20 md:py-28" id="equipe-apercu">
       <div className="container mx-auto px-4 md:px-6 lg:px-8">

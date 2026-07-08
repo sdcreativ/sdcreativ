@@ -2,13 +2,18 @@ import { Check, Clock, Monitor, Headphones, Target } from "lucide-react";
 import { AnimatedSection, AnimatedCard } from "@/components/ui/AnimatedSection";
 import { SectionHeading } from "@/components/ui/SectionHeading";
 import { Button } from "@/components/ui/Button";
-import { pricingPlans, pricingReassurance } from "@/content/pricing";
 import { formatPriceFrom } from "@/lib/format";
+import { getPricingPlans, getPricingReassurance } from "@/lib/public-pricing-resolver";
 import { cn } from "@/lib/utils";
 
 const reassuranceIcons = [Clock, Monitor, Headphones, Target];
 
-export function PricingSection() {
+export async function PricingSection() {
+  const [pricingPlans, pricingReassurance] = await Promise.all([
+    getPricingPlans("fr"),
+    getPricingReassurance("fr"),
+  ]);
+
   return (
     <AnimatedSection className="bg-white py-20 md:py-28" id="tarifs">
       <div className="container mx-auto px-4 md:px-6 lg:px-8">

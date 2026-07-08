@@ -2,9 +2,16 @@ import { HelpCircle } from "lucide-react";
 import { AnimatedSection } from "@/components/ui/AnimatedSection";
 import { SectionHeading } from "@/components/ui/SectionHeading";
 import { AccordionItem } from "@/components/ui/Accordion";
-import { faqItems } from "@/content/faq";
+import type { FaqItem } from "@/content/faq";
+import { getFaqItems } from "@/lib/public-faq-resolver";
 
-export function FaqSection() {
+type Props = {
+  items?: FaqItem[];
+  locale?: "fr" | "en";
+};
+
+export async function FaqSection({ items, locale = "fr" }: Props) {
+  const faqItems = items ?? (await getFaqItems(locale));
   const leftColumn = faqItems.filter((_, i) => i % 2 === 0);
   const rightColumn = faqItems.filter((_, i) => i % 2 === 1);
 

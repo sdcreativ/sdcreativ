@@ -1,8 +1,10 @@
 import { AnimatedSection } from "@/components/ui/AnimatedSection";
 import { SectionHeading } from "@/components/ui/SectionHeading";
-import { technologyPartners } from "@/content/partners";
+import { getTechnologyPartners } from "@/lib/public-partners-resolver";
 
-export function PartnersSection() {
+export async function PartnersSection() {
+  const technologyPartners = await getTechnologyPartners("fr");
+
   return (
     <AnimatedSection className="border-y border-gray/40 bg-white py-14 md:py-16">
       <div className="container mx-auto px-4 md:px-6 lg:px-8">
