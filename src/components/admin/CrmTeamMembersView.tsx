@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import Image from "next/image";
 import {
   ArrowDown,
@@ -8,13 +8,11 @@ import {
   Download,
   Eye,
   EyeOff,
-  ImagePlus,
   Loader2,
   Pencil,
   Plus,
   RefreshCw,
   Trash2,
-  Upload,
   Users,
 } from "lucide-react";
 import type { PublicTeamMemberRecord } from "@/lib/public-team-members";
@@ -25,9 +23,10 @@ import {
   importStaticTeamMembersApi,
   reorderTeamMemberApi,
   updateTeamMemberApi,
-  uploadTeamMemberImageApi,
 } from "@/lib/public-team-api";
+import { TeamMemberImageField } from "@/components/admin/TeamMemberImageField";
 import { useDialog } from "@/components/ui/DialogProvider";
+import { DEFAULT_IMAGE_POSITION, normalizeImagePosition } from "@/lib/image-position";
 import { cn } from "@/lib/utils";
 
 const fieldClass =
@@ -40,6 +39,7 @@ type MemberForm = {
   initials: string;
   image: string;
   imageAlt: string;
+  imagePosition: string;
   locale: "fr" | "en";
   isVisible: boolean;
 };
@@ -51,6 +51,7 @@ const emptyForm = (): MemberForm => ({
   initials: "",
   image: "",
   imageAlt: "",
+  imagePosition: DEFAULT_IMAGE_POSITION,
   locale: "fr",
   isVisible: true,
 });
@@ -63,105 +64,10 @@ function recordToForm(member: PublicTeamMemberRecord): MemberForm {
     initials: member.initials,
     image: member.image,
     imageAlt: member.imageAlt,
+    imagePosition: member.imagePosition,
     locale: member.locale as "fr" | "en",
     isVisible: member.isVisible,
   };
-}
-
-function TeamMemberImageField({
-  value,
-  onChange,
-}: {
-  value: string;
-  onChange: (url: string) => void;
-}) {
-  const inputRef = useRef<HTMLInputElement>(null);
-  const [uploading, setUploading] = useState(false);
-  const [error, setError] = useState("");
-
-  async function handleFile(file: File) {
-    setUploading(true);
-    setError("");
-    try {
-      const { url } = await uploadTeamMemberImageApi(file);
-      onChange(url);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Upload impossible.");
-    } finally {
-      setUploading(false);
-    }
-  }
-
-  return (
-    <div className="space-y-2">
-      {value ? (
-        <div className="relative mx-auto h-28 w-28 overflow-hidden rounded-full ring-4 ring-primary-light">
-          <Image src={value} alt="" fill unoptimized className="object-cover object-top" />
-          <div className="absolute inset-0 flex items-end justify-center gap-1 bg-black/0 pb-2 opacity-0 transition-opacity hover:bg-black/30 hover:opacity-100">
-            <button
-              type="button"
-              onClick={() => inputRef.current?.click()}
-              disabled={uploading}
-              className="rounded-md bg-white/95 p-1.5 shadow"
-              title="Remplacer"
-            >
-              {uploading ? (
-                <Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden />
-              ) : (
-                <Upload className="h-3.5 w-3.5" aria-hidden />
-              )}
-            </button>
-            <button
-              type="button"
-              onClick={() => onChange("")}
-              className="rounded-md bg-white/95 p-1.5 text-red-600 shadow"
-              title="Retirer"
-            >
-              <Trash2 className="h-3.5 w-3.5" aria-hidden />
-            </button>
-          </div>
-        </div>
-      ) : (
-        <button
-          type="button"
-          onClick={() => inputRef.current?.click()}
-          disabled={uploading}
-          className="mx-auto flex h-28 w-28 flex-col items-center justify-center gap-1 rounded-full border border-dashed border-gray/60 bg-gray-light/40 text-xs text-gray-text hover:border-primary/40"
-        >
-          {uploading ? (
-            <Loader2 className="h-5 w-5 animate-spin text-primary" aria-hidden />
-          ) : (
-            <ImagePlus className="h-5 w-5 text-primary" aria-hidden />
-          )}
-          Photo
-        </button>
-      )}
-
-      <input
-        type="text"
-        value={value}
-        onChange={(e) => onChange(e.target.value)}
-        className={fieldClass}
-        placeholder="URL de la photo"
-        aria-label="URL de la photo"
-      />
-
-      <input
-        title="Uploader une photo"
-        ref={inputRef}
-        type="file"
-        accept="image/jpeg,image/png,image/webp,image/gif"
-        className="sr-only"
-        onChange={(e) => {
-          const file = e.target.files?.[0];
-          if (file) void handleFile(file);
-          e.target.value = "";
-        }}
-      />
-
-      {error && <p className="text-xs text-red-600">{error}</p>}
-    </div>
-  );
 }
 
 export function CrmTeamMembersView() {
@@ -223,13 +129,17 @@ export function CrmTeamMembersView() {
     setSaving(true);
     setMessage("");
     try {
+      const payload = {
+        ...form,
+        imagePosition: normalizeImagePosition(form.imagePosition),
+      };
       if (creating) {
-        const member = await createTeamMemberApi(form);
+        const member = await createTeamMemberApi(payload);
         setMembers((prev) => [...prev, member].sort((a, b) => a.sortOrder - b.sortOrder));
         closeForm();
         setMessage("Membre ajouté — le site public sera mis à jour sous quelques secondes.");
       } else if (editingId) {
-        const member = await updateTeamMemberApi(editingId, form);
+        const member = await updateTeamMemberApi(editingId, payload);
         setMembers((prev) => prev.map((m) => (m.id === member.id ? member : m)));
         closeForm();
         setMessage("Membre mis à jour — le site public sera mis à jour sous quelques secondes.");
@@ -441,7 +351,8 @@ export function CrmTeamMembersView() {
                     alt=""
                     fill
                     unoptimized
-                    className="object-cover object-top"
+                    className="object-cover"
+                    style={{ objectPosition: member.imagePosition }}
                   />
                 ) : (
                   <div className="flex h-full w-full items-center justify-center bg-gray-light text-xs font-bold text-primary">
@@ -538,7 +449,11 @@ export function CrmTeamMembersView() {
             <form onSubmit={(e) => void handleSubmit(e)} className="mt-4 space-y-4">
               <TeamMemberImageField
                 value={form.image}
+                imagePosition={form.imagePosition}
                 onChange={(image) => setForm((prev) => ({ ...prev, image }))}
+                onPositionChange={(imagePosition) =>
+                  setForm((prev) => ({ ...prev, imagePosition }))
+                }
               />
 
               <label className="block">

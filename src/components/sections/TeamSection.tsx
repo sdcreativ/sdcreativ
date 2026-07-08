@@ -1,6 +1,7 @@
 import Image from "next/image";
 import { AnimatedSection, AnimatedCard } from "@/components/ui/AnimatedSection";
 import { SectionHeading } from "@/components/ui/SectionHeading";
+import { DEFAULT_IMAGE_POSITION } from "@/lib/image-position";
 import { getTeamMembers } from "@/lib/public-team";
 
 type Props = {
@@ -34,7 +35,8 @@ export async function TeamSection({ locale = "fr" }: Props) {
                   alt={member.imageAlt}
                   fill
                   sizes="128px"
-                  className="object-cover object-top"
+                  className="object-cover"
+                  style={{ objectPosition: member.imagePosition ?? DEFAULT_IMAGE_POSITION }}
                 />
               </div>
 

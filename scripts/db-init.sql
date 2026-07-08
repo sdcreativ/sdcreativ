@@ -434,6 +434,7 @@ CREATE TABLE IF NOT EXISTS public_team_members (
   initials VARCHAR(8) NOT NULL,
   image VARCHAR(512) NOT NULL,
   image_alt VARCHAR(300) NOT NULL,
+  image_position VARCHAR(20) NOT NULL DEFAULT '50% 0%',
   locale VARCHAR(5) NOT NULL DEFAULT 'fr',
   sort_order INTEGER NOT NULL DEFAULT 0,
   is_visible BOOLEAN NOT NULL DEFAULT true,

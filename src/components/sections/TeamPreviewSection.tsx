@@ -3,6 +3,7 @@ import Link from "next/link";
 import { ArrowRight } from "lucide-react";
 import { AnimatedSection, AnimatedCard } from "@/components/ui/AnimatedSection";
 import { SectionHeading } from "@/components/ui/SectionHeading";
+import { DEFAULT_IMAGE_POSITION } from "@/lib/image-position";
 import { getTeamMembers } from "@/lib/public-team";
 
 export async function TeamPreviewSection() {
@@ -32,7 +33,8 @@ export async function TeamPreviewSection() {
                   alt={member.imageAlt}
                   fill
                   sizes="80px"
-                  className="object-cover object-top"
+                  className="object-cover"
+                  style={{ objectPosition: member.imagePosition ?? DEFAULT_IMAGE_POSITION }}
                 />
               </div>
               <h3 className="text-base font-bold text-foreground">{member.name}</h3>

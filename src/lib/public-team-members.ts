@@ -2,6 +2,7 @@ import { z } from "zod";
 import { teamMembers as staticTeamMembers } from "@/content/team";
 import type { TeamMember } from "@/content/team";
 import { slugifyBlogTitle } from "@/lib/blog-posts-types";
+import { DEFAULT_IMAGE_POSITION, normalizeImagePosition } from "@/lib/image-position";
 import { isDatabaseConfigured, withDb } from "@/lib/db";
 
 export type PublicTeamMemberRecord = {
@@ -13,6 +14,7 @@ export type PublicTeamMemberRecord = {
   initials: string;
   image: string;
   imageAlt: string;
+  imagePosition: string;
   locale: string;
   sortOrder: number;
   isVisible: boolean;
@@ -29,6 +31,7 @@ type PublicTeamMemberRow = {
   initials: string;
   image: string;
   image_alt: string;
+  image_position: string;
   locale: string;
   sort_order: number;
   is_visible: boolean;
@@ -46,6 +49,7 @@ function mapRow(row: PublicTeamMemberRow): PublicTeamMemberRecord {
     initials: row.initials,
     image: row.image,
     imageAlt: row.image_alt,
+    imagePosition: normalizeImagePosition(row.image_position),
     locale: row.locale,
     sortOrder: row.sort_order,
     isVisible: row.is_visible,
@@ -63,6 +67,7 @@ export function toTeamMember(record: PublicTeamMemberRecord): TeamMember {
     initials: record.initials,
     image: record.image,
     imageAlt: record.imageAlt,
+    imagePosition: record.imagePosition,
   };
 }
 
@@ -84,6 +89,7 @@ export const createPublicTeamMemberSchema = z.object({
   initials: z.string().trim().max(8).optional(),
   image: z.string().trim().min(1).max(512),
   imageAlt: z.string().trim().min(2).max(300),
+  imagePosition: z.string().trim().max(20).optional(),
   locale: z.enum(["fr", "en"]).default("fr"),
   sortOrder: z.number().int().min(0).max(999).optional(),
   isVisible: z.boolean().default(true),
@@ -147,8 +153,8 @@ export async function createPublicTeamMember(
 
     const { rows } = await query<PublicTeamMemberRow>(
       `INSERT INTO public_team_members (
-        slug, name, role, missions, initials, image, image_alt, locale, sort_order, is_visible
-      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+        slug, name, role, missions, initials, image, image_alt, image_position, locale, sort_order, is_visible
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
       RETURNING *`,
       [
         slug,
@@ -158,6 +164,7 @@ export async function createPublicTeamMember(
         initials,
         input.image.trim(),
         input.imageAlt.trim(),
+        normalizeImagePosition(input.imagePosition),
         input.locale,
         sortOrder,
         input.isVisible,
@@ -191,9 +198,10 @@ export async function updatePublicTeamMember(
         initials = $6,
         image = $7,
         image_alt = $8,
-        locale = $9,
-        sort_order = $10,
-        is_visible = $11,
+        image_position = $9,
+        locale = $10,
+        sort_order = $11,
+        is_visible = $12,
         updated_at = NOW()
       WHERE id = $1
       RETURNING *`,
@@ -206,6 +214,9 @@ export async function updatePublicTeamMember(
         nextInitials,
         input.image?.trim() ?? existing.image,
         input.imageAlt?.trim() ?? existing.imageAlt,
+        input.imagePosition !== undefined
+          ? normalizeImagePosition(input.imagePosition)
+          : existing.imagePosition,
         input.locale ?? existing.locale,
         input.sortOrder ?? existing.sortOrder,
         input.isVisible ?? existing.isVisible,
@@ -276,8 +287,8 @@ export async function importStaticTeamMembers(): Promise<{ imported: number; ski
 
         await query(
           `INSERT INTO public_team_members (
-            slug, name, role, missions, initials, image, image_alt, locale, sort_order, is_visible
-          ) VALUES ($1, $2, $3, $4, $5, $6, $7, 'fr', $8, true)`,
+            slug, name, role, missions, initials, image, image_alt, image_position, locale, sort_order, is_visible
+          ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, 'fr', $9, true)`,
           [
             member.id,
             member.name,
@@ -286,6 +297,7 @@ export async function importStaticTeamMembers(): Promise<{ imported: number; ski
             member.initials,
             member.image,
             member.imageAlt,
+            member.imagePosition ?? DEFAULT_IMAGE_POSITION,
             i,
           ],
         );

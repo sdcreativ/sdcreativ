@@ -6,6 +6,8 @@ export type TeamMember = {
   initials: string;
   image: string;
   imageAlt: string;
+  /** object-position CSS, ex. "50% 20%" */
+  imagePosition?: string;
 };
 
 export const teamMembers: TeamMember[] = [
