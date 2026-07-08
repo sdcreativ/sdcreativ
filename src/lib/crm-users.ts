@@ -19,6 +19,7 @@ export type CrmUser = {
   role: CrmRole;
   active: boolean;
   invitationPending: boolean;
+  mustChangePassword: boolean;
   createdAt: string;
   updatedAt: string;
 };
@@ -30,6 +31,7 @@ type CrmUserRow = {
   name: string;
   role: CrmRole;
   active: boolean;
+  must_change_password: boolean;
   invite_token_hash: string | null;
   invite_token_expires_at: Date | null;
   created_at: Date;
@@ -37,7 +39,7 @@ type CrmUserRow = {
 };
 
 const USER_COLUMNS = `
-  id, email, password_hash, name, role, active,
+  id, email, password_hash, name, role, active, must_change_password,
   invite_token_hash, invite_token_expires_at,
   created_at, updated_at
 `;
@@ -50,6 +52,7 @@ function mapUser(row: CrmUserRow): CrmUser {
     role: row.role,
     active: row.active,
     invitationPending: row.password_hash === null,
+    mustChangePassword: row.must_change_password,
     createdAt: row.created_at.toISOString(),
     updatedAt: row.updated_at.toISOString(),
   };
@@ -73,6 +76,11 @@ export const updateCrmUserSchema = z.object({
 export const acceptInvitationSchema = z.object({
   token: z.string().trim().min(16).max(128),
   password: z.string().min(8).max(128),
+});
+
+export const changeOwnPasswordSchema = z.object({
+  currentPassword: z.string().min(1).max(128).optional(),
+  newPassword: z.string().min(8).max(128),
 });
 
 export type InviteValidation = {
@@ -140,6 +148,67 @@ export async function getCrmUserEmailByName(name: string): Promise<string | null
       [name.trim()],
     );
     return rows[0]?.email ?? null;
+  });
+}
+
+export async function getCrmUserById(id: string): Promise<CrmUser | null> {
+  return withDb(async (query) => {
+    const { rows } = await query<CrmUserRow>(
+      `SELECT ${USER_COLUMNS} FROM crm_users WHERE id = $1 LIMIT 1`,
+      [id],
+    );
+    return rows[0] ? mapUser(rows[0]) : null;
+  });
+}
+
+export async function changeOwnPassword(
+  userId: string,
+  input: z.infer<typeof changeOwnPasswordSchema>,
+): Promise<{ ok: boolean; error?: string; user?: CrmUser }> {
+  return withDb(async (query) => {
+    const { rows } = await query<CrmUserRow>(
+      `SELECT ${USER_COLUMNS} FROM crm_users WHERE id = $1 LIMIT 1`,
+      [userId],
+    );
+    const row = rows[0];
+    if (!row?.active) {
+      return { ok: false, error: "Compte introuvable ou inactif." };
+    }
+    if (!row.password_hash) {
+      return { ok: false, error: "Compte en attente d'activation." };
+    }
+
+    if (row.must_change_password) {
+      // Mot de passe temporaire déjà vérifié à la connexion.
+    } else {
+      if (!input.currentPassword) {
+        return { ok: false, error: "Mot de passe actuel requis." };
+      }
+      if (!(await verifyPassword(input.currentPassword, row.password_hash))) {
+        return { ok: false, error: "Mot de passe actuel incorrect." };
+      }
+    }
+
+    const adminSecret = process.env.ADMIN_SECRET;
+    if (adminSecret && input.newPassword === adminSecret) {
+      return {
+        ok: false,
+        error: "Choisissez un mot de passe différent du secret de déploiement (ADMIN_SECRET).",
+      };
+    }
+
+    const passwordHash = await hashPassword(input.newPassword);
+    const { rows: updatedRows } = await query<CrmUserRow>(
+      `UPDATE crm_users SET
+        password_hash = $2,
+        must_change_password = false,
+        updated_at = NOW()
+       WHERE id = $1
+       RETURNING ${USER_COLUMNS}`,
+      [userId, passwordHash],
+    );
+    const updated = updatedRows[0];
+    return updated ? { ok: true, user: mapUser(updated) } : { ok: false, error: "Mise à jour impossible." };
   });
 }
 
@@ -246,6 +315,7 @@ export async function acceptInvitation(
     const { rows } = await query<CrmUserRow>(
       `UPDATE crm_users SET
         password_hash = $2,
+        must_change_password = false,
         invite_token_hash = NULL,
         invite_token_expires_at = NULL,
         updated_at = NOW()
@@ -292,6 +362,7 @@ export async function updateCrmUser(
         name = $4,
         role = $5,
         active = $6,
+        must_change_password = CASE WHEN $7::varchar IS NOT NULL THEN false ELSE must_change_password END,
         invite_token_hash = CASE WHEN $7::varchar IS NOT NULL THEN NULL ELSE invite_token_hash END,
         invite_token_expires_at = CASE WHEN $7::varchar IS NOT NULL THEN NULL ELSE invite_token_expires_at END,
         updated_at = NOW()
@@ -331,8 +402,8 @@ export async function ensureBootstrapAdmin(): Promise<void> {
     const name = process.env.CRM_BOOTSTRAP_NAME ?? "Administrateur SD CREATIV";
 
     await query(
-      `INSERT INTO crm_users (email, password_hash, name, role, active)
-       VALUES ($1, $2, $3, 'admin', true)
+      `INSERT INTO crm_users (email, password_hash, name, role, active, must_change_password)
+       VALUES ($1, $2, $3, 'admin', true, true)
        ON CONFLICT (email) DO NOTHING`,
       [email.toLowerCase(), passwordHash, name],
     );

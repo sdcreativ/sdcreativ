@@ -95,15 +95,20 @@ export function CrmSidebar({ mobileOpen = false, onNavigate }: Props) {
 
       <div className="border-t border-white/10 px-4 py-4">
         {session ? (
-          <div className="flex items-center gap-3 rounded-xl bg-white/5 px-3 py-3">
+          <Link
+            href="/admin/compte"
+            onClick={onNavigate}
+            className="flex items-center gap-3 rounded-xl bg-white/5 px-3 py-3 transition-colors hover:bg-white/10"
+          >
             <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-primary text-xs font-bold">
               {userInitials(session.name)}
             </div>
             <div className="min-w-0">
               <p className="truncate text-sm font-semibold">{session.name}</p>
               <p className="truncate text-xs text-white/55">{roleLabel ?? session.role}</p>
+              <p className="truncate text-[10px] text-white/40">Mon compte</p>
             </div>
-          </div>
+          </Link>
         ) : (
           <p className="px-1 text-xs text-white/45">Session…</p>
         )}

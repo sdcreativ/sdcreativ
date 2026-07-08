@@ -63,9 +63,14 @@ export function AdminLoginView() {
   const [pendingUser, setPendingUser] = useState<{ name: string; email: string } | null>(null);
 
   async function completeLogin(res: Response) {
+    const data = (await res.json()) as { error?: string; mustChangePassword?: boolean };
     if (!res.ok) {
-      const data = (await res.json()) as { error?: string };
       throw new Error(data.error ?? "Accès refusé");
+    }
+    if (data.mustChangePassword) {
+      router.push("/admin/compte?required=1");
+      router.refresh();
+      return;
     }
     router.push(from);
     router.refresh();
@@ -96,6 +101,7 @@ export function AdminLoginView() {
       const data = (await res.json()) as {
         error?: string;
         requires2fa?: boolean;
+        mustChangePassword?: boolean;
         challengeToken?: string;
         user?: { name: string; email: string };
       };
@@ -109,6 +115,12 @@ export function AdminLoginView() {
         setPendingUser(data.user ?? null);
         setStep("2fa");
         setTotpCode("");
+        return;
+      }
+
+      if (data.mustChangePassword) {
+        router.push("/admin/compte?required=1");
+        router.refresh();
         return;
       }
 
@@ -220,8 +232,9 @@ export function AdminLoginView() {
                 type="email"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                placeholder="admin@sdcreativ.com (optionnel)"
+                placeholder="admin@sdcreativ.com"
                 autoComplete="username"
+                required
                 className={`${fieldClass} mb-4`}
                 disabled={step === "2fa"}
               />

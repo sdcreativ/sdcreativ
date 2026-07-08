@@ -18,14 +18,11 @@ const fiveSteps: ProjectStep[] = [
   { id: 5, label: "Mise en ligne", status: "upcoming" },
 ];
 
-function ticket(partial: Pick<Ticket, "id" | "status" | "category"> & Partial<Ticket>): Ticket {
+function ticket(partial: Partial<Ticket> & Pick<Ticket, "id" | "status" | "category">): Ticket {
   return {
-    id: partial.id,
-    reference: partial.reference ?? "TK-001",
-    subject: partial.subject ?? "Sujet test",
-    category: partial.category,
-    status: partial.status,
-    priority: partial.priority ?? "medium",
+    reference: "TK-001",
+    subject: "Sujet test",
+    priority: "normal",
     clientId: null,
     portalClientId: "demo",
     clientName: "Client",
@@ -39,7 +36,7 @@ function ticket(partial: Pick<Ticket, "id" | "status" | "category"> & Partial<Ti
     lastMessageAt: null,
     metadata: {},
     createdAt: "2026-01-01T00:00:00.000Z",
-    updatedAt: partial.updatedAt ?? "2026-06-01T12:00:00.000Z",
+    updatedAt: "2026-06-01T12:00:00.000Z",
     ...partial,
   };
 }

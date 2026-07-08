@@ -6,6 +6,7 @@ export type TotpChallengePayload = {
   email: string;
   name: string;
   role: CrmRole;
+  mustChangePassword?: boolean;
   exp: number;
 };
 

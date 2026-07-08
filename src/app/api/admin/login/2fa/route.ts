@@ -8,6 +8,7 @@ import { getSessionMaxAgeSeconds } from "@/lib/crm-security-settings";
 import { logAdminLogin } from "@/lib/crm-login-logs";
 import { verifyTotpChallenge } from "@/lib/crm-totp-challenge";
 import { getTotpAuthState, verifyTotpCode } from "@/lib/crm-totp";
+import { getCrmUserById } from "@/lib/crm-users";
 
 function clientIp(request: Request): string | null {
   return (
@@ -49,6 +50,9 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Code 2FA invalide." }, { status: 401 });
     }
 
+    const user = await getCrmUserById(payload.userId);
+    const mustChangePassword = user?.mustChangePassword ?? payload.mustChangePassword ?? false;
+
     const maxAge = await getSessionMaxAgeSeconds();
     const session = await buildCrmSessionCookie(
       {
@@ -56,6 +60,7 @@ export async function POST(request: Request) {
         email: payload.email,
         name: payload.name,
         role: payload.role,
+        mustChangePassword,
       },
       secret,
       maxAge,
@@ -72,6 +77,7 @@ export async function POST(request: Request) {
 
     const response = NextResponse.json({
       success: true,
+      mustChangePassword,
       user: { name: payload.name, email: payload.email, role: payload.role },
     });
     response.cookies.set(ADMIN_SESSION_COOKIE, session.value, {

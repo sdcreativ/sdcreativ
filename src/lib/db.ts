@@ -257,6 +257,33 @@ async function ensureSchema(): Promise<void> {
     CREATE INDEX IF NOT EXISTS idx_calendar_events_starts ON calendar_events (starts_at);
     CREATE INDEX IF NOT EXISTS idx_calendar_events_assignee ON calendar_events (assignee);
 
+    CREATE TABLE IF NOT EXISTS crm_users (
+      id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+      email VARCHAR(255) NOT NULL UNIQUE,
+      password_hash VARCHAR(255) NOT NULL,
+      name VARCHAR(160) NOT NULL,
+      role VARCHAR(30) NOT NULL DEFAULT 'commercial',
+      active BOOLEAN NOT NULL DEFAULT true,
+      created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+      updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    );
+    CREATE INDEX IF NOT EXISTS idx_crm_users_role ON crm_users (role);
+    CREATE INDEX IF NOT EXISTS idx_crm_users_active ON crm_users (active);
+
+    CREATE TABLE IF NOT EXISTS crm_roles (
+      id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+      slug VARCHAR(50) NOT NULL UNIQUE,
+      label VARCHAR(100) NOT NULL,
+      permissions JSONB NOT NULL DEFAULT '[]',
+      is_system BOOLEAN NOT NULL DEFAULT false,
+      created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+      updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    );
+    CREATE INDEX IF NOT EXISTS idx_crm_roles_slug ON crm_roles (slug);
+
+    ALTER TABLE crm_users ALTER COLUMN role TYPE VARCHAR(50);
+    ALTER TABLE crm_users ADD COLUMN IF NOT EXISTS preferences JSONB NOT NULL DEFAULT '{}';
+
     CREATE TABLE IF NOT EXISTS calendar_oauth_connections (
       id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
       user_id UUID NOT NULL REFERENCES crm_users(id) ON DELETE CASCADE,
@@ -284,8 +311,6 @@ async function ensureSchema(): Promise<void> {
     );
     CREATE INDEX IF NOT EXISTS idx_calendar_participants_event ON calendar_event_participants (event_id);
 
-    ALTER TABLE crm_users ADD COLUMN IF NOT EXISTS preferences JSONB NOT NULL DEFAULT '{}';
-
     CREATE TABLE IF NOT EXISTS crm_reminder_logs (
       reminder_key VARCHAR(160) PRIMARY KEY,
       item_id VARCHAR(64) NOT NULL,
@@ -311,32 +336,6 @@ async function ensureSchema(): Promise<void> {
       created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
     );
     CREATE INDEX IF NOT EXISTS idx_lead_activities_lead ON lead_activities (lead_id, created_at DESC);
-
-    CREATE TABLE IF NOT EXISTS crm_users (
-      id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-      email VARCHAR(255) NOT NULL UNIQUE,
-      password_hash VARCHAR(255) NOT NULL,
-      name VARCHAR(160) NOT NULL,
-      role VARCHAR(30) NOT NULL DEFAULT 'commercial',
-      active BOOLEAN NOT NULL DEFAULT true,
-      created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-      updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
-    );
-    CREATE INDEX IF NOT EXISTS idx_crm_users_role ON crm_users (role);
-    CREATE INDEX IF NOT EXISTS idx_crm_users_active ON crm_users (active);
-
-    CREATE TABLE IF NOT EXISTS crm_roles (
-      id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-      slug VARCHAR(50) NOT NULL UNIQUE,
-      label VARCHAR(100) NOT NULL,
-      permissions JSONB NOT NULL DEFAULT '[]',
-      is_system BOOLEAN NOT NULL DEFAULT false,
-      created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-      updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
-    );
-    CREATE INDEX IF NOT EXISTS idx_crm_roles_slug ON crm_roles (slug);
-
-    ALTER TABLE crm_users ALTER COLUMN role TYPE VARCHAR(50);
 
     CREATE TABLE IF NOT EXISTS invoices (
       id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -394,6 +393,7 @@ async function ensureSchema(): Promise<void> {
     ALTER TABLE crm_users ALTER COLUMN password_hash DROP NOT NULL;
     ALTER TABLE crm_users ADD COLUMN IF NOT EXISTS invite_token_hash VARCHAR(64);
     ALTER TABLE crm_users ADD COLUMN IF NOT EXISTS invite_token_expires_at TIMESTAMPTZ;
+    ALTER TABLE crm_users ADD COLUMN IF NOT EXISTS must_change_password BOOLEAN NOT NULL DEFAULT false;
     CREATE INDEX IF NOT EXISTS idx_crm_users_invite_token ON crm_users (invite_token_hash)
       WHERE invite_token_hash IS NOT NULL;
 
@@ -524,6 +524,25 @@ async function ensureSchema(): Promise<void> {
     const result = await client.query(text, params);
     return { rows: result.rows as never[], rowCount: result.rowCount };
   });
+
+  const adminSecret = process.env.ADMIN_SECRET;
+  if (adminSecret) {
+    const { rows: countRows } = await client.query<{ count: string }>(
+      `SELECT COUNT(*)::text AS count FROM crm_users`,
+    );
+    if (Number(countRows[0]?.count ?? 0) === 0) {
+      const { hashPassword } = await import("@/lib/crm-password");
+      const passwordHash = await hashPassword(adminSecret);
+      const email = (process.env.CRM_BOOTSTRAP_EMAIL ?? "admin@sdcreativ.com").toLowerCase();
+      const name = process.env.CRM_BOOTSTRAP_NAME ?? "Administrateur SD CREATIV";
+      await client.query(
+        `INSERT INTO crm_users (email, password_hash, name, role, active, must_change_password)
+         VALUES ($1, $2, $3, 'admin', true, true)
+         ON CONFLICT (email) DO NOTHING`,
+        [email, passwordHash, name],
+      );
+    }
+  }
 }
 
 export async function withDb<T>(

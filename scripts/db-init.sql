@@ -261,6 +261,21 @@ CREATE TABLE IF NOT EXISTS calendar_events (
 CREATE INDEX IF NOT EXISTS idx_calendar_events_starts ON calendar_events (starts_at);
 CREATE INDEX IF NOT EXISTS idx_calendar_events_assignee ON calendar_events (assignee);
 
+CREATE TABLE IF NOT EXISTS crm_users (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  email VARCHAR(255) NOT NULL UNIQUE,
+  password_hash VARCHAR(255) NOT NULL,
+  name VARCHAR(160) NOT NULL,
+  role VARCHAR(30) NOT NULL DEFAULT 'commercial',
+  active BOOLEAN NOT NULL DEFAULT true,
+  preferences JSONB NOT NULL DEFAULT '{}',
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_crm_users_role ON crm_users (role);
+CREATE INDEX IF NOT EXISTS idx_crm_users_active ON crm_users (active);
+
 CREATE TABLE IF NOT EXISTS calendar_oauth_connections (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   user_id UUID NOT NULL REFERENCES crm_users(id) ON DELETE CASCADE,
@@ -301,21 +316,6 @@ CREATE TABLE IF NOT EXISTS crm_reminder_logs (
 );
 
 CREATE INDEX IF NOT EXISTS idx_crm_reminder_logs_trigger ON crm_reminder_logs (trigger_at DESC);
-
-CREATE TABLE IF NOT EXISTS crm_users (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  email VARCHAR(255) NOT NULL UNIQUE,
-  password_hash VARCHAR(255) NOT NULL,
-  name VARCHAR(160) NOT NULL,
-  role VARCHAR(30) NOT NULL DEFAULT 'commercial',
-  active BOOLEAN NOT NULL DEFAULT true,
-  preferences JSONB NOT NULL DEFAULT '{}',
-  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
-);
-
-CREATE INDEX IF NOT EXISTS idx_crm_users_role ON crm_users (role);
-CREATE INDEX IF NOT EXISTS idx_crm_users_active ON crm_users (active);
 
 CREATE TABLE IF NOT EXISTS invoices (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -371,6 +371,7 @@ CREATE INDEX IF NOT EXISTS idx_crm_login_logs_created ON crm_login_logs (created
 
 ALTER TABLE crm_users ADD COLUMN IF NOT EXISTS totp_secret VARCHAR(64);
 ALTER TABLE crm_users ADD COLUMN IF NOT EXISTS totp_enabled BOOLEAN NOT NULL DEFAULT false;
+ALTER TABLE crm_users ADD COLUMN IF NOT EXISTS must_change_password BOOLEAN NOT NULL DEFAULT false;
 
 CREATE INDEX IF NOT EXISTS idx_clients_updated_at ON clients (updated_at DESC);
 CREATE INDEX IF NOT EXISTS idx_projects_updated_at ON projects (updated_at DESC);

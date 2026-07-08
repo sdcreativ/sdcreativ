@@ -56,6 +56,7 @@ jobs:
             cd /var/www/sdcreativ
             git pull
             docker compose -f docker-compose.yml -f docker-compose.prod.yml --profile prod up -d --build app
+            ./scripts/bootstrap-crm-admin.sh
             ./scripts/vps-post-deploy-check.sh
 
       - name: Instructions manuelles (secrets VPS absents)

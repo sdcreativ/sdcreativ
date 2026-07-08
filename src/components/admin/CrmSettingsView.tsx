@@ -530,9 +530,7 @@ function CrmUsersSection({ roles }: { roles: CrmRoleRecord[] }) {
     <div className="space-y-4">
       <p className="text-sm text-gray-text">
         Invitez un collaborateur par email : il recevra un lien sécurisé pour définir son mot de
-        passe (valable 72 h). Le mot de passe legacy{" "}
-        <code className="rounded-md bg-gray-light px-1.5 py-0.5 text-xs">ADMIN_SECRET</code> reste
-        valide pour la connexion rapide sans email.
+        passe (valable 72 h).
       </p>
 
       {success && (

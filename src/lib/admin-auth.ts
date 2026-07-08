@@ -20,17 +20,6 @@ export async function getAdminSession(): Promise<CrmSessionPayload | null> {
   if (!secret) return null;
 
   const cookieStore = await cookies();
-  const legacy = cookieStore.get(LEGACY_ADMIN_COOKIE)?.value;
-  if (legacy === secret) {
-    return {
-      userId: "legacy",
-      email: "admin@sdcreativ.com",
-      name: "Administrateur",
-      role: "admin",
-      exp: Date.now() + 86_400_000,
-    };
-  }
-
   const sessionToken = cookieStore.get(ADMIN_SESSION_COOKIE)?.value;
   if (!sessionToken) return null;
   return await verifyCrmSession(sessionToken, secret);
@@ -44,6 +33,8 @@ export async function requireAdminAuth(options?: {
   roles?: CrmRole[];
   write?: boolean;
   permission?: CrmPermission;
+  /** Autorise l'accès alors que mustChangePassword est actif (changement de mot de passe). */
+  allowPasswordChange?: boolean;
 }): Promise<Response | null> {
   await ensureCrmRolesCache();
 
@@ -55,6 +46,13 @@ export async function requireAdminAuth(options?: {
   const session = await getAdminSession();
   if (!session) {
     return Response.json({ error: "Non autorisé." }, { status: 401 });
+  }
+
+  if (session.mustChangePassword && !options?.allowPasswordChange) {
+    return Response.json(
+      { error: "Définissez votre mot de passe personnel.", mustChangePassword: true },
+      { status: 403 },
+    );
   }
 
   if (options?.roles && !options.roles.includes(session.role)) {

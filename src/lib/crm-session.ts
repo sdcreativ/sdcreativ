@@ -1,6 +1,7 @@
 import type { CrmRole } from "@/content/crm-roles";
 
 export const ADMIN_SESSION_COOKIE = "sdcreativ_admin_session";
+/** @deprecated Cookie legacy supprimé — conservé pour nettoyage à la déconnexion. */
 export const LEGACY_ADMIN_COOKIE = "sdcreativ_admin";
 
 export type CrmSessionPayload = {
@@ -9,6 +10,7 @@ export type CrmSessionPayload = {
   name: string;
   role: CrmRole;
   exp: number;
+  mustChangePassword?: boolean;
 };
 
 function base64UrlEncode(bytes: Uint8Array): string {
