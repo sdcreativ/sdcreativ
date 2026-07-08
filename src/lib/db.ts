@@ -592,7 +592,7 @@ async function ensureSchema(): Promise<void> {
       slug VARCHAR(120) NOT NULL UNIQUE,
       name VARCHAR(80) NOT NULL,
       tagline VARCHAR(120) NOT NULL,
-      price_from INTEGER NOT NULL,
+      price_from INTEGER,
       price_note VARCHAR(120),
       features TEXT[] NOT NULL DEFAULT '{}',
       highlighted BOOLEAN NOT NULL DEFAULT false,
@@ -604,6 +604,7 @@ async function ensureSchema(): Promise<void> {
       updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
     );
     CREATE INDEX IF NOT EXISTS idx_public_pricing_plans_locale_sort ON public_pricing_plans (locale, sort_order);
+    ALTER TABLE public_pricing_plans ALTER COLUMN price_from DROP NOT NULL;
 
     CREATE TABLE IF NOT EXISTS public_pricing_reassurance (
       id UUID PRIMARY KEY DEFAULT gen_random_uuid(),

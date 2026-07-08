@@ -12,7 +12,7 @@ export type PublicPricingPlanRecord = {
   slug: string;
   name: string;
   tagline: string;
-  priceFrom: number;
+  priceFrom: number | null;
   priceNote: string | null;
   features: string[];
   highlighted: boolean;
@@ -40,7 +40,7 @@ type PlanRow = {
   slug: string;
   name: string;
   tagline: string;
-  price_from: number;
+  price_from: number | null;
   price_note: string | null;
   features: string[];
   highlighted: boolean;
@@ -100,7 +100,7 @@ export function toPricingPlan(record: PublicPricingPlanRecord): PricingPlan {
     id: record.slug,
     name: record.name,
     tagline: record.tagline,
-    priceFrom: record.priceFrom,
+    priceFrom: record.priceFrom ?? undefined,
     priceNote: record.priceNote ?? undefined,
     features: record.features,
     highlighted: record.highlighted || undefined,
@@ -111,7 +111,7 @@ export function toPricingPlan(record: PublicPricingPlanRecord): PricingPlan {
 export const createPublicPricingPlanSchema = z.object({
   name: z.string().trim().min(2).max(80),
   tagline: z.string().trim().min(2).max(120),
-  priceFrom: z.number().int().min(0),
+  priceFrom: z.number().int().min(0).nullable().optional(),
   priceNote: z.string().trim().max(120).optional(),
   features: z.array(z.string().trim().min(1).max(200)).min(1).max(20),
   highlighted: z.boolean().default(false),
@@ -216,7 +216,7 @@ export async function createPublicPricingPlan(
         slug,
         input.name.trim(),
         input.tagline.trim(),
-        input.priceFrom,
+        input.priceFrom ?? null,
         input.priceNote?.trim() || null,
         input.features,
         input.highlighted,
@@ -249,7 +249,7 @@ export async function updatePublicPricingPlan(
         nextSlug,
         nextName,
         input.tagline?.trim() ?? existing.tagline,
-        input.priceFrom ?? existing.priceFrom,
+        input.priceFrom !== undefined ? input.priceFrom : existing.priceFrom,
         input.priceNote !== undefined ? input.priceNote?.trim() || null : existing.priceNote,
         input.features ?? existing.features,
         input.highlighted ?? existing.highlighted,

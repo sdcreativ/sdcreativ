@@ -44,16 +44,20 @@ export async function PricingSection() {
               )}
               <h3 className="text-2xl font-bold uppercase text-foreground">{plan.name}</h3>
               <p className="mt-1 text-gray-text">{plan.tagline}</p>
-              <p
-                className={cn(
-                  "mt-4 text-2xl font-bold",
-                  plan.variant === "accent" ? "text-accent" : "text-primary",
-                )}
-              >
-                {formatPriceFrom(plan.priceFrom)}
-              </p>
+              {plan.priceFrom != null && (
+                <p
+                  className={cn(
+                    "mt-4 text-2xl font-bold",
+                    plan.variant === "accent" ? "text-accent" : "text-primary",
+                  )}
+                >
+                  {formatPriceFrom(plan.priceFrom)}
+                </p>
+              )}
               {plan.priceNote && (
-                <p className="mt-1 text-xs text-gray-text">{plan.priceNote}</p>
+                <p className={cn("text-xs text-gray-text", plan.priceFrom != null ? "mt-1" : "mt-4 text-base font-semibold text-foreground")}>
+                  {plan.priceNote}
+                </p>
               )}
               <ul className="mt-8 flex-1 space-y-3">
                 {plan.features.map((feature) => (

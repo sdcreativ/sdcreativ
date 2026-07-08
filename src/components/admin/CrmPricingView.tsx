@@ -79,7 +79,7 @@ function planToForm(r: PublicPricingPlanRecord): PlanForm {
   return {
     name: r.name,
     tagline: r.tagline,
-    priceFrom: String(r.priceFrom),
+    priceFrom: r.priceFrom != null ? String(r.priceFrom) : "",
     priceNote: r.priceNote ?? "",
     features: r.features.join("\n"),
     highlighted: r.highlighted,
@@ -102,7 +102,7 @@ function planFormToPayload(form: PlanForm) {
   return {
     name: form.name,
     tagline: form.tagline,
-    priceFrom: Number(form.priceFrom),
+    priceFrom: form.priceFrom.trim() === "" ? null : Number(form.priceFrom),
     priceNote: form.priceNote.trim() || undefined,
     features: form.features
       .split("\n")
@@ -427,7 +427,13 @@ export function CrmPricingView() {
                       {item.highlighted && <span className="ml-2 rounded-full bg-primary/10 px-2 py-0.5 text-xs font-medium text-primary">Mise en avant</span>}
                     </h3>
                     <p className="mt-1 text-sm text-gray-text">{item.tagline}</p>
-                    <p className="mt-1 text-sm font-medium">{item.priceFrom.toLocaleString("fr-FR")} FCFA{item.priceNote ? ` · ${item.priceNote}` : ""}</p>
+                    {(item.priceFrom != null || item.priceNote) && (
+                      <p className="mt-1 text-sm font-medium">
+                        {[item.priceFrom != null ? `${item.priceFrom.toLocaleString("fr-FR")} FCFA` : null, item.priceNote]
+                          .filter(Boolean)
+                          .join(" · ")}
+                      </p>
+                    )}
                     <ul className="mt-2 list-inside list-disc text-xs text-gray-text">
                       {item.features.slice(0, 3).map((f) => (
                         <li key={f}>{f}</li>
@@ -498,8 +504,8 @@ export function CrmPricingView() {
                 <input required value={planForm.tagline} onChange={(e) => setPlanForm((p) => ({ ...p, tagline: e.target.value }))} className={fieldClass} />
               </label>
               <label className="block">
-                <span className="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-gray-text">Prix à partir de (FCFA)</span>
-                <input required type="number" min={0} value={planForm.priceFrom} onChange={(e) => setPlanForm((p) => ({ ...p, priceFrom: e.target.value }))} className={fieldClass} />
+                <span className="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-gray-text">Prix à partir de (FCFA, optionnel)</span>
+                <input type="number" min={0} value={planForm.priceFrom} onChange={(e) => setPlanForm((p) => ({ ...p, priceFrom: e.target.value }))} className={fieldClass} placeholder="Laisser vide si sur devis" />
               </label>
               <label className="block">
                 <span className="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-gray-text">Note de prix</span>

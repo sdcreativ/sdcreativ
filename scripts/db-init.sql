@@ -503,7 +503,7 @@ CREATE TABLE IF NOT EXISTS public_pricing_plans (
   slug VARCHAR(120) NOT NULL UNIQUE,
   name VARCHAR(80) NOT NULL,
   tagline VARCHAR(120) NOT NULL,
-  price_from INTEGER NOT NULL,
+  price_from INTEGER,
   price_note VARCHAR(120),
   features TEXT[] NOT NULL DEFAULT '{}',
   highlighted BOOLEAN NOT NULL DEFAULT false,

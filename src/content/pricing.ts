@@ -2,8 +2,8 @@ export type PricingPlan = {
   id: string;
   name: string;
   tagline: string;
-  /** Prix de départ en FCFA (HT) */
-  priceFrom: number;
+  /** Prix de départ en FCFA (HT), omis si sur devis uniquement */
+  priceFrom?: number;
   priceNote?: string;
   features: string[];
   highlighted?: boolean;
