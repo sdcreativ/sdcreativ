@@ -5,6 +5,8 @@ import { BookAppointment } from "@/components/booking/BookAppointment";
 import { Button } from "@/components/ui/Button";
 import { createMetadata } from "@/lib/metadata";
 
+export const dynamic = "force-dynamic";
+
 export const metadata = createMetadata({
   title: "Tarifs & Offres",
   description:

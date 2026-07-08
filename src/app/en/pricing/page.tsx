@@ -5,6 +5,8 @@ import { Button } from "@/components/ui/Button";
 import { enPricing } from "@/i18n/en-content";
 import { createMetadata } from "@/lib/metadata";
 
+export const dynamic = "force-dynamic";
+
 export const metadata = createMetadata({
   title: "Pricing",
   description: "Essentiel, Professional and Business packages — web solutions adapted to your growth stage.",

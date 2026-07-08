@@ -9,8 +9,13 @@ import {
   toPricingPlan,
 } from "@/lib/public-pricing";
 import type { PricingPlan } from "@/content/pricing";
+import { connection } from "next/server";
+
+export const PUBLIC_PRICING_PLANS_TAG = "public-pricing-plans";
+export const PUBLIC_PRICING_REASSURANCE_TAG = "public-pricing-reassurance";
 
 export async function getPricingPlans(locale = "fr"): Promise<PricingPlan[]> {
+  await connection();
   if (!isDatabaseConfigured()) return staticPlans;
 
   try {
@@ -24,6 +29,7 @@ export async function getPricingPlans(locale = "fr"): Promise<PricingPlan[]> {
 }
 
 export async function getPricingReassurance(locale = "fr") {
+  await connection();
   if (!isDatabaseConfigured()) return staticReassurance;
 
   try {

@@ -1,4 +1,8 @@
-import { revalidatePath } from "next/cache";
+import { revalidatePath, revalidateTag } from "next/cache";
+import {
+  PUBLIC_PRICING_PLANS_TAG,
+  PUBLIC_PRICING_REASSURANCE_TAG,
+} from "@/lib/public-pricing-resolver";
 
 /** Invalide les pages publiques après modification des coordonnées / réseaux sociaux. */
 export function revalidateSitePublicPages() {
@@ -38,9 +42,11 @@ export function revalidateHeroPages() {
 }
 
 export function revalidatePricingPages() {
-  revalidatePath("/");
-  revalidatePath("/tarifs");
-  revalidatePath("/en/pricing");
+  revalidateTag(PUBLIC_PRICING_PLANS_TAG);
+  revalidateTag(PUBLIC_PRICING_REASSURANCE_TAG);
+  revalidatePath("/", "layout");
+  revalidatePath("/tarifs", "page");
+  revalidatePath("/en/pricing", "page");
   revalidatePath("/sitemap.xml");
 }
 
