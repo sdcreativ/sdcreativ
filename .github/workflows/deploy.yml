@@ -1,11 +1,10 @@
 name: Deploy
 
 # Production : VPS Hostinger + Docker (pas Vercel).
-# Voir docs/DEPLOIEMENT-SDCREATIV-COM.md
+# Voir docs/DEPLOIEMENT-SDCREATIV-COM.md et docs/GITHUB-ACTIONS-RUNNER.md
 #
-# Qualité automatique : workflow ci.yml (lint, build, tests) sur chaque push/PR.
-# Secrets requis : VPS_HOST, VPS_SSH_KEY
-# Optionnel : VPS_SSH_USER (défaut : deploy — utilisateur non-root sur le VPS)
+# Déploiement via runner self-hosted sur le VPS (pas de SSH entrant depuis GitHub cloud).
+# Installation one-shot : scripts/install-github-runner.sh
 
 on:
   workflow_dispatch:
@@ -22,62 +21,24 @@ concurrency:
 jobs:
   deploy-vps:
     name: Deploy VPS (Docker)
-    runs-on: ubuntu-latest
+    # Runner installé sur le VPS — labels définis dans install-github-runner.sh
+    runs-on: [self-hosted, linux, sdcreativ-vps]
     if: github.event.inputs.confirm == 'deploy'
     environment:
       name: production
       url: https://sdcreativ.com
 
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
+      - name: Déployer (git pull + Docker)
+        run: bash /var/www/sdcreativ/scripts/vps-deploy-pull.sh
 
-      # secrets.* n'est pas autorisé dans les `if:` — on teste via env + output
-      - name: Vérifier secrets VPS
-        id: vps_secrets
-        env:
-          VPS_HOST: ${{ secrets.VPS_HOST }}
-          VPS_SSH_KEY: ${{ secrets.VPS_SSH_KEY }}
-        run: |
-          if [ -n "${VPS_HOST}" ] && [ -n "${VPS_SSH_KEY}" ]; then
-            echo "configured=true" >> "$GITHUB_OUTPUT"
-          else
-            echo "configured=false" >> "$GITHUB_OUTPUT"
-          fi
-
-      - name: Déploiement SSH
-        if: steps.vps_secrets.outputs.configured == 'true'
-        uses: appleboy/ssh-action@v1.2.0
-        with:
-          host: ${{ secrets.VPS_HOST }}
-          username: ${{ secrets.VPS_SSH_USER || 'deploy' }}
-          key: ${{ secrets.VPS_SSH_KEY }}
-          command_timeout: 30m
-          script: |
-            set -euo pipefail
-            cd /var/www/sdcreativ
-            git pull
-            docker compose -f docker-compose.yml -f docker-compose.prod.yml --profile prod up -d --build app
-            ./scripts/bootstrap-crm-admin.sh
-            ./scripts/vps-post-deploy-check.sh
-
-      - name: Instructions manuelles (secrets VPS absents)
-        if: steps.vps_secrets.outputs.configured != 'true'
+      - name: Résumé
+        if: always()
         run: |
           {
             echo "## Déploiement production — sdcreativ.com"
             echo ""
-            echo "Les secrets GitHub \`VPS_HOST\` et \`VPS_SSH_KEY\` ne sont pas configurés."
-            echo "Déployez manuellement sur le VPS :"
-            echo ""
-            echo '```bash'
-            echo "ssh deploy@VOTRE_IP_VPS"
-            echo "cd /var/www/sdcreativ"
-            echo "git pull"
-            echo "docker compose -f docker-compose.yml -f docker-compose.prod.yml --profile prod up -d --build app"
-            echo "./scripts/bootstrap-crm-admin.sh"
-            echo "./scripts/vps-post-deploy-check.sh"
-            echo '```'
-            echo ""
-            echo "Pour automatiser : ajoutez \`VPS_HOST\`, \`VPS_SSH_KEY\` et optionnellement \`VPS_SSH_USER\` (défaut \`deploy\`) dans Settings → Secrets → Actions."
+            echo "Runner : self-hosted (\`sdcreativ-vps\`)"
+            echo "Commit : \`${{ github.sha }}\`"
+            echo "Statut : ${{ job.status }}"
           } >> "$GITHUB_STEP_SUMMARY"
