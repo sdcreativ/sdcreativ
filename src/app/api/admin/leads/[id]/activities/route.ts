@@ -1,6 +1,6 @@
+import { crmApiAuth } from "@/lib/crm-api-auth";
 import { NextResponse } from "next/server";
 import { z } from "zod";
-import { requireAdminAuth } from "@/lib/admin-auth";
 import { getAdminSession } from "@/lib/admin-auth";
 import { isDatabaseConfigured } from "@/lib/db";
 import { createLeadActivity, listLeadActivities } from "@/lib/lead-activities";
@@ -14,7 +14,7 @@ const noteSchema = z.object({
 });
 
 export async function GET(_request: Request, context: RouteContext) {
-  const authError = await requireAdminAuth();
+  const authError = await crmApiAuth.leads.read();
   if (authError) return authError;
 
   if (!isDatabaseConfigured()) {
@@ -35,7 +35,7 @@ export async function GET(_request: Request, context: RouteContext) {
 }
 
 export async function POST(request: Request, context: RouteContext) {
-  const authError = await requireAdminAuth();
+  const authError = await crmApiAuth.leads.write();
   if (authError) return authError;
 
   if (!isDatabaseConfigured()) {

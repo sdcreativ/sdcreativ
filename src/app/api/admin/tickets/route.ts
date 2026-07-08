@@ -1,11 +1,11 @@
+import { crmApiAuth } from "@/lib/crm-api-auth";
 import { NextResponse } from "next/server";
-import { requireAdminAuth } from "@/lib/admin-auth";
 import { isDatabaseConfigured } from "@/lib/db";
 import { createTicket, createTicketSchema, listTickets } from "@/lib/tickets";
 import type { TicketPriority, TicketStatus } from "@/content/tickets-labels";
 
 export async function GET(request: Request) {
-  const authError = await requireAdminAuth();
+  const authError = await crmApiAuth.tickets.read();
   if (authError) return authError;
 
   if (!isDatabaseConfigured()) {
@@ -35,7 +35,7 @@ export async function GET(request: Request) {
 }
 
 export async function POST(request: Request) {
-  const authError = await requireAdminAuth();
+  const authError = await crmApiAuth.tickets.write();
   if (authError) return authError;
 
   if (!isDatabaseConfigured()) {

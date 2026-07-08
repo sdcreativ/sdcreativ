@@ -38,6 +38,13 @@ import {
   type DashboardWidgetId,
 } from "@/lib/dashboard-config";
 import { fetchCrmSession } from "@/lib/crm-settings-api";
+import {
+  canShowDashboardWidget,
+  filterDashboardActivities,
+  filterDashboardKpis,
+  filterDashboardWidgets,
+  hasCrmPermission,
+} from "@/lib/crm-access";
 import { fetchLeads } from "@/lib/leads-api";
 import { fetchProjects } from "@/lib/projects-api";
 import { fetchQuotes } from "@/lib/quotes-api";
@@ -45,6 +52,7 @@ import { fetchReportsSummary, getReportsExportUrl } from "@/lib/reports-api";
 import type { ReportsSummary } from "@/lib/reports";
 import { fetchTasks, updateTaskApi } from "@/lib/tasks-api";
 import { useCrmAssignees } from "@/hooks/useCrmTeamMembers";
+import { useCrmPermissions } from "@/hooks/useCrmPermissions";
 import {
   buildActivities,
   buildDashboardKpis,
@@ -76,6 +84,14 @@ type DashboardFilters = {
 
 export function CrmDashboard() {
   const assignees = useCrmAssignees();
+  const { permissions } = useCrmPermissions();
+  const canLeads = hasCrmPermission(permissions, "leads.read");
+  const canProjects = hasCrmPermission(permissions, "projects.read");
+  const canTasks = hasCrmPermission(permissions, "tasks.read");
+  const canTasksWrite = hasCrmPermission(permissions, "tasks.write");
+  const canQuotes = hasCrmPermission(permissions, "quotes.read");
+  const canReports = hasCrmPermission(permissions, "reports.view");
+  const canClients = hasCrmPermission(permissions, "clients.read");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [kpis, setKpis] = useState<DashboardKpi[]>([]);
@@ -99,10 +115,14 @@ export function CrmDashboard() {
         setLayout(loadDashboardLayout(s.role));
       })
       .catch(() => setLayout(loadDashboardLayout("admin")));
-    void fetchCrmClients()
-      .then(setClients)
-      .catch(() => setClients([]));
-  }, []);
+    if (canClients) {
+      void fetchCrmClients()
+        .then(setClients)
+        .catch(() => setClients([]));
+    } else {
+      setClients([]);
+    }
+  }, [canClients]);
 
   const apiFilters = useMemo(
     () => ({
@@ -117,40 +137,55 @@ export function CrmDashboard() {
     setError("");
     try {
       const [leads, allProjects, allTasks, quotes, reportsData] = await Promise.all([
-        fetchLeads(),
-        fetchProjects(),
-        fetchTasks(),
-        fetchQuotes(),
-        fetchReportsSummary(period, apiFilters),
+        canLeads ? fetchLeads() : Promise.resolve([]),
+        canProjects ? fetchProjects() : Promise.resolve([]),
+        canTasks ? fetchTasks() : Promise.resolve([]),
+        canQuotes ? fetchQuotes() : Promise.resolve([]),
+        canReports ? fetchReportsSummary(period, apiFilters) : Promise.resolve(null),
       ]);
 
       const filteredLeads = filterLeadsByDashboard(leads, apiFilters);
       const filteredProjects = filterProjectsByDashboard(allProjects, apiFilters);
       const filteredTasks = filterTasksByDashboard(allTasks, apiFilters);
 
-      setReports(reportsData.summary);
-      setKpis(
-        buildDashboardKpis({
-          reports: reportsData.summary.kpis,
-          periodLabel: reportsData.summary.period.label,
-        }),
+      if (reportsData) {
+        setReports(reportsData.summary);
+        setKpis(
+          filterDashboardKpis(
+            buildDashboardKpis({
+              reports: reportsData.summary.kpis,
+              periodLabel: reportsData.summary.period.label,
+            }),
+            permissions,
+          ),
+        );
+      } else {
+        setReports(null);
+        setKpis([]);
+      }
+
+      setPipeline(canLeads ? buildLeadPipeline(filteredLeads) : []);
+      setTasks(canTasks ? buildOpenTasks(filteredTasks) : []);
+      setProjects(canProjects ? buildRecentProjects(filteredProjects) : []);
+      setActivities(
+        filterDashboardActivities(
+          buildActivities(filteredLeads, filteredProjects, quotes, filteredTasks),
+          permissions,
+        ),
       );
-      setPipeline(buildLeadPipeline(filteredLeads));
-      setTasks(buildOpenTasks(filteredTasks));
-      setProjects(buildRecentProjects(filteredProjects));
-      setActivities(buildActivities(filteredLeads, filteredProjects, quotes, filteredTasks));
     } catch (err) {
       setError(err instanceof Error ? err.message : "Impossible de charger le tableau de bord.");
     } finally {
       setLoading(false);
     }
-  }, [period, apiFilters]);
+  }, [period, apiFilters, permissions, canLeads, canProjects, canTasks, canQuotes, canReports]);
 
   useEffect(() => {
     void load();
   }, [load]);
 
   async function toggleTask(task: OpenTask) {
+    if (!canTasksWrite) return;
     setTogglingTask(task.id);
     try {
       await updateTaskApi(task.id, { status: "done" });
@@ -289,7 +324,7 @@ export function CrmDashboard() {
                     <input
                       type="checkbox"
                       checked={task.done}
-                      disabled={togglingTask === task.id}
+                      disabled={!canTasksWrite || togglingTask === task.id}
                       onChange={() => void toggleTask(task)}
                       aria-label={task.label}
                       className="mt-1 h-4 w-4 rounded border-gray/60 text-primary disabled:opacity-50"
@@ -421,7 +456,7 @@ export function CrmDashboard() {
     }
   }
 
-  if (loading && !reports) {
+  if (loading && !reports && canReports) {
     return (
       <div className="flex items-center justify-center gap-2 py-24 text-sm text-gray-text">
         <Loader2 className="h-5 w-5 animate-spin text-primary" aria-hidden />
@@ -430,7 +465,11 @@ export function CrmDashboard() {
     );
   }
 
-  const visibleWidgets = layout?.order ?? ["kpis", "charts", "pipeline", "tasks", "projects", "activity"];
+  const visibleWidgets = filterDashboardWidgets(
+    layout?.order ?? ["kpis", "charts", "pipeline", "tasks", "projects", "activity"],
+    permissions,
+    kpis.length,
+  );
 
   return (
     <div className="space-y-6">
@@ -460,22 +499,26 @@ export function CrmDashboard() {
               </button>
             ))}
           </div>
-          <a
-            href={getReportsExportUrl()}
-            className="inline-flex items-center gap-2 rounded-xl border border-gray/60 bg-white px-3 py-2 text-sm font-medium text-gray-text hover:text-foreground"
-          >
-            <Download className="h-4 w-4" aria-hidden />
-            <span className="hidden sm:inline">CSV</span>
-          </a>
-          <a
-            href={exportPdfUrl}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="inline-flex items-center gap-2 rounded-xl border border-primary/30 bg-white px-3 py-2 text-sm font-medium text-primary hover:bg-primary-light/30"
-          >
-            <Download className="h-4 w-4" aria-hidden />
-            <span className="hidden sm:inline">PDF</span>
-          </a>
+          {canReports && (
+            <>
+              <a
+                href={getReportsExportUrl()}
+                className="inline-flex items-center gap-2 rounded-xl border border-gray/60 bg-white px-3 py-2 text-sm font-medium text-gray-text hover:text-foreground"
+              >
+                <Download className="h-4 w-4" aria-hidden />
+                <span className="hidden sm:inline">CSV</span>
+              </a>
+              <a
+                href={exportPdfUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-2 rounded-xl border border-primary/30 bg-white px-3 py-2 text-sm font-medium text-primary hover:bg-primary-light/30"
+              >
+                <Download className="h-4 w-4" aria-hidden />
+                <span className="hidden sm:inline">PDF</span>
+              </a>
+            </>
+          )}
           <button
             type="button"
             onClick={() => setCustomizeOpen((v) => !v)}
@@ -511,6 +554,7 @@ export function CrmDashboard() {
             ))}
           </select>
         </label>
+        {canClients && (
         <label className="text-sm">
           <span className="mb-1 block text-xs font-semibold uppercase tracking-wide text-gray-text">Client</span>
           <select
@@ -524,6 +568,7 @@ export function CrmDashboard() {
             ))}
           </select>
         </label>
+        )}
         {(filters.assignee || filters.clientId) && (
           <button
             type="button"
@@ -542,7 +587,9 @@ export function CrmDashboard() {
             <h3 className="text-sm font-bold text-foreground">Personnaliser les widgets</h3>
           </div>
           <ul className="space-y-2">
-            {layout.order.map((widgetId, index) => (
+            {layout.order
+              .filter((widgetId) => canShowDashboardWidget(widgetId, permissions, kpis.length))
+              .map((widgetId, index) => (
               <li
                 key={widgetId}
                 className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-gray/30 bg-gray-light/20 px-3 py-2"

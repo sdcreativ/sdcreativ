@@ -1,6 +1,6 @@
+import { crmApiAuth } from "@/lib/crm-api-auth";
 import { NextResponse } from "next/server";
 import { z } from "zod";
-import { requireAdminAuth } from "@/lib/admin-auth";
 import { revalidateBlogPaths } from "@/lib/blog-revalidate";
 import { bulkBlogPostAction } from "@/lib/blog-posts";
 import { isDatabaseConfigured } from "@/lib/db";
@@ -11,7 +11,7 @@ const bulkSchema = z.object({
 });
 
 export async function POST(request: Request) {
-  const authError = await requireAdminAuth({ write: true });
+  const authError = await crmApiAuth.blog.write();
   if (authError) return authError;
 
   if (!isDatabaseConfigured()) {

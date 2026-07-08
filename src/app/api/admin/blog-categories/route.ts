@@ -1,5 +1,5 @@
+import { crmApiAuth } from "@/lib/crm-api-auth";
 import { NextResponse } from "next/server";
-import { requireAdminAuth } from "@/lib/admin-auth";
 import {
   createBlogCategory,
   createBlogCategorySchema,
@@ -8,7 +8,7 @@ import {
 import { isDatabaseConfigured } from "@/lib/db";
 
 export async function GET() {
-  const authError = await requireAdminAuth();
+  const authError = await crmApiAuth.blog.read();
   if (authError) return authError;
 
   if (!isDatabaseConfigured()) {
@@ -25,7 +25,7 @@ export async function GET() {
 }
 
 export async function POST(request: Request) {
-  const authError = await requireAdminAuth({ write: true });
+  const authError = await crmApiAuth.blog.write();
   if (authError) return authError;
 
   if (!isDatabaseConfigured()) {

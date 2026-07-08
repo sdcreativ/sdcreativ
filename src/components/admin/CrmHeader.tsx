@@ -2,8 +2,9 @@
 
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
-import { fetchCrmSession, type CrmSessionInfo } from "@/lib/crm-settings-api";
+import { CRM_NEW_ITEM_PERMISSIONS, hasCrmPermission } from "@/lib/crm-access";
 import { CRM_ROLE_LABELS } from "@/content/crm-roles";
+import { useCrmPermissions } from "@/hooks/useCrmPermissions";
 import { useCrmFetch } from "@/hooks/useCrmFetch";
 import type { CalendarReminder } from "@/lib/calendar-reminders";
 import { cn } from "@/lib/utils";
@@ -49,13 +50,32 @@ export function CrmHeader({
 }: Props) {
   const [newOpen, setNewOpen] = useState(false);
   const [notifOpen, setNotifOpen] = useState(false);
-  const { data: taskStats } = useCrmFetch("crm-task-stats", () =>
-    fetch("/api/admin/tasks/stats", { credentials: "include" }).then((r) => r.json()),
+  const { session, permissions } = useCrmPermissions();
+  const canTasks = hasCrmPermission(permissions, "tasks.read");
+  const canTickets = hasCrmPermission(permissions, "tickets.read");
+  const canSearch = hasCrmPermission(permissions, [
+    "leads.read",
+    "clients.read",
+    "projects.read",
+    "quotes.read",
+  ]);
+  const newItems = NEW_ITEMS.filter((item) =>
+    hasCrmPermission(permissions, CRM_NEW_ITEM_PERMISSIONS[item.label]),
   );
-  const { data: ticketStats } = useCrmFetch("crm-ticket-stats", () =>
-    fetch("/api/admin/tickets/stats", { credentials: "include" }).then((r) => r.json()),
+  const { data: taskStats } = useCrmFetch(
+    canTasks ? "crm-task-stats" : "crm-task-stats-off",
+    () =>
+      canTasks
+        ? fetch("/api/admin/tasks/stats", { credentials: "include" }).then((r) => r.json())
+        : Promise.resolve(null),
   );
-  const [session, setSession] = useState<CrmSessionInfo | null>(null);
+  const { data: ticketStats } = useCrmFetch(
+    canTickets ? "crm-ticket-stats" : "crm-ticket-stats-off",
+    () =>
+      canTickets
+        ? fetch("/api/admin/tickets/stats", { credentials: "include" }).then((r) => r.json())
+        : Promise.resolve(null),
+  );
   const newRef = useRef<HTMLDivElement>(null);
   const notifRef = useRef<HTMLDivElement>(null);
   const notifBtnRef = useRef<HTMLButtonElement>(null);
@@ -66,18 +86,12 @@ export function CrmHeader({
     function onKeyDown(e: KeyboardEvent) {
       if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "k") {
         e.preventDefault();
-        searchRef.current?.focus();
+        if (canSearch) searchRef.current?.focus();
       }
     }
     document.addEventListener("keydown", onKeyDown);
     return () => document.removeEventListener("keydown", onKeyDown);
-  }, []);
-
-  useEffect(() => {
-    void fetchCrmSession()
-      .then(setSession)
-      .catch(() => setSession(null));
-  }, []);
+  }, [canSearch]);
 
   useEffect(() => {
     function onClickOutside(e: MouseEvent) {
@@ -88,9 +102,9 @@ export function CrmHeader({
     return () => document.removeEventListener("mousedown", onClickOutside);
   }, []);
 
-  const overdueTasks = taskStats?.overdue ?? 0;
-  const slaBreached = ticketStats?.slaBreached ?? 0;
-  const openTickets = (ticketStats?.open ?? 0) + (ticketStats?.inProgress ?? 0);
+  const overdueTasks = canTasks ? (taskStats?.overdue ?? 0) : 0;
+  const slaBreached = canTickets ? (ticketStats?.slaBreached ?? 0) : 0;
+  const openTickets = canTickets ? (ticketStats?.open ?? 0) + (ticketStats?.inProgress ?? 0) : 0;
   const alertCount = overdueTasks + slaBreached + calendarReminders.length;
   const [hydrated, setHydrated] = useState(false);
 
@@ -132,7 +146,7 @@ export function CrmHeader({
         </div>
 
         <div className="flex flex-wrap items-center gap-3">
-          <CrmGlobalSearch ref={searchRef} />
+          {canSearch && <CrmGlobalSearch ref={searchRef} />}
 
           <div className="relative" ref={notifRef}>
             <button
@@ -178,7 +192,7 @@ export function CrmHeader({
                         ))}
                       </li>
                     )}
-                    {overdueTasks > 0 && (
+                    {canTasks && overdueTasks > 0 && (
                       <li>
                         <Link
                           href="/admin/crm/taches"
@@ -191,7 +205,7 @@ export function CrmHeader({
                         </Link>
                       </li>
                     )}
-                    {slaBreached > 0 && (
+                    {canTickets && slaBreached > 0 && (
                       <li>
                         <Link
                           href="/admin/crm/tickets"
@@ -204,7 +218,7 @@ export function CrmHeader({
                         </Link>
                       </li>
                     )}
-                    {openTickets > 0 && (
+                    {canTickets && openTickets > 0 && (
                       <li>
                         <Link
                           href="/admin/crm/tickets"
@@ -223,7 +237,7 @@ export function CrmHeader({
             )}
           </div>
 
-          {showNewButton && (
+          {showNewButton && newItems.length > 0 && (
             <div className="relative" ref={newRef}>
               <button
                 ref={newBtnRef}
@@ -242,7 +256,7 @@ export function CrmHeader({
 
               {newOpen && (
                 <div className="absolute right-0 top-full z-20 mt-2 w-48 rounded-xl border border-gray/40 bg-white py-1 shadow-xl">
-                  {NEW_ITEMS.map(({ label, href, icon: Icon }) => (
+                  {newItems.map(({ label, href, icon: Icon }) => (
                     <Link
                       key={href}
                       href={href}

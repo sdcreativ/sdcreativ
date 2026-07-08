@@ -1,5 +1,5 @@
+import { crmApiAuth } from "@/lib/crm-api-auth";
 import { NextResponse } from "next/server";
-import { requireAdminAuth } from "@/lib/admin-auth";
 import { isDatabaseConfigured } from "@/lib/db";
 import {
   addClientInteraction,
@@ -13,7 +13,7 @@ type Props = {
 };
 
 export async function GET(_request: Request, { params }: Props) {
-  const authError = await requireAdminAuth();
+  const authError = await crmApiAuth.clients.read();
   if (authError) return authError;
 
   if (!isDatabaseConfigured()) {
@@ -36,7 +36,7 @@ export async function GET(_request: Request, { params }: Props) {
 }
 
 export async function POST(request: Request, { params }: Props) {
-  const authError = await requireAdminAuth();
+  const authError = await crmApiAuth.clients.write();
   if (authError) return authError;
 
   if (!isDatabaseConfigured()) {

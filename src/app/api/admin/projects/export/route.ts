@@ -1,10 +1,10 @@
+import { crmApiAuth } from "@/lib/crm-api-auth";
 import { NextResponse } from "next/server";
-import { requireAdminAuth } from "@/lib/admin-auth";
 import { listProjects } from "@/lib/projects";
 import { buildProjectsCsv, buildProjectsPdfHtml } from "@/lib/projects-export";
 
 export async function GET(request: Request) {
-  const authError = await requireAdminAuth({ permission: "projects.read" });
+  const authError = await crmApiAuth.projects.read();
   if (authError) return authError;
 
   try {

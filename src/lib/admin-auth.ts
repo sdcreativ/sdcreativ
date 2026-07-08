@@ -33,6 +33,8 @@ export async function requireAdminAuth(options?: {
   roles?: CrmRole[];
   write?: boolean;
   permission?: CrmPermission;
+  /** Au moins une de ces permissions suffit. */
+  anyPermission?: CrmPermission[];
   /** Autorise l'accès alors que mustChangePassword est actif (changement de mot de passe). */
   allowPasswordChange?: boolean;
 }): Promise<Response | null> {
@@ -60,6 +62,13 @@ export async function requireAdminAuth(options?: {
   }
 
   if (options?.permission && !roleHasPermission(session.role, options.permission)) {
+    return Response.json({ error: "Permissions insuffisantes." }, { status: 403 });
+  }
+
+  if (
+    options?.anyPermission &&
+    !options.anyPermission.some((perm) => roleHasPermission(session.role, perm))
+  ) {
     return Response.json({ error: "Permissions insuffisantes." }, { status: 403 });
   }
 

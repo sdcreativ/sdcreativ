@@ -1,9 +1,9 @@
+import { crmApiAuth } from "@/lib/crm-api-auth";
 import { NextResponse } from "next/server";
-import { requireAdminAuth } from "@/lib/admin-auth";
 import { uploadBlogImage } from "@/lib/blog-media";
 
 export async function POST(request: Request) {
-  const authError = await requireAdminAuth({ write: true });
+  const authError = await crmApiAuth.blog.write();
   if (authError) return authError;
 
   try {

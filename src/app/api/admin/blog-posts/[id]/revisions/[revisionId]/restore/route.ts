@@ -1,5 +1,6 @@
+import { getAdminSession } from "@/lib/admin-auth";
+import { crmApiAuth } from "@/lib/crm-api-auth";
 import { NextResponse } from "next/server";
-import { getAdminSession, requireAdminAuth } from "@/lib/admin-auth";
 import { revalidateBlogPaths } from "@/lib/blog-revalidate";
 import { getBlogPostById } from "@/lib/blog-posts";
 import { restoreBlogRevision } from "@/lib/blog-revisions";
@@ -10,7 +11,7 @@ type Props = {
 };
 
 export async function POST(_request: Request, { params }: Props) {
-  const authError = await requireAdminAuth({ write: true });
+  const authError = await crmApiAuth.blog.write();
   if (authError) return authError;
 
   if (!isDatabaseConfigured()) {

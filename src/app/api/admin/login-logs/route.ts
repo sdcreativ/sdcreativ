@@ -1,10 +1,10 @@
+import { crmApiAuth } from "@/lib/crm-api-auth";
 import { NextResponse } from "next/server";
-import { requireAdminAuth } from "@/lib/admin-auth";
 import { isDatabaseConfigured } from "@/lib/db";
 import { listAdminLoginLogs } from "@/lib/crm-login-logs";
 
 export async function GET(request: Request) {
-  const authError = await requireAdminAuth({ roles: ["admin"] });
+  const authError = await crmApiAuth.users.read();
   if (authError) return authError;
 
   if (!isDatabaseConfigured()) {

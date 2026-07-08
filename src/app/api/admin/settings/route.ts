@@ -1,6 +1,7 @@
+import { getAdminSession } from "@/lib/admin-auth";
+import { crmApiAuth } from "@/lib/crm-api-auth";
 import { NextResponse } from "next/server";
 import { z } from "zod";
-import { getAdminSession, requireAdminAuth } from "@/lib/admin-auth";
 import { isDatabaseConfigured } from "@/lib/db";
 import { logCrmAudit } from "@/lib/crm-audit";
 import {
@@ -40,7 +41,7 @@ async function auditFromSession(action: string, entityType: string, summary: str
 }
 
 export async function GET() {
-  const authError = await requireAdminAuth();
+  const authError = await crmApiAuth.settingsAccess();
   if (authError) return authError;
 
   if (!isDatabaseConfigured()) {
@@ -58,7 +59,7 @@ export async function GET() {
 }
 
 export async function PATCH(request: Request) {
-  const authError = await requireAdminAuth({ permission: "settings.manage" });
+  const authError = await crmApiAuth.settings.write();
   if (authError) return authError;
 
   if (!isDatabaseConfigured()) {

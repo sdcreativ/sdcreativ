@@ -1,9 +1,10 @@
+import { getAdminSession } from "@/lib/admin-auth";
+import { crmApiAuth } from "@/lib/crm-api-auth";
 import { NextResponse } from "next/server";
-import { getAdminSession, requireAdminAuth } from "@/lib/admin-auth";
 import { getSettingsHealth } from "@/lib/settings-health";
 
 export async function GET() {
-  const authError = await requireAdminAuth();
+  const authError = await crmApiAuth.settingsAccess();
   if (authError) return authError;
 
   try {

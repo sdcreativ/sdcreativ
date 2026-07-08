@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { CrmAccessGuard } from "@/components/admin/CrmAccessGuard";
 import { CrmBreadcrumbs } from "@/components/admin/CrmBreadcrumbs";
 import { CrmBrandingProvider } from "@/components/admin/CrmBrandingProvider";
 import { CrmBrandingStyles } from "@/components/admin/CrmBrandingStyles";
@@ -49,7 +50,7 @@ export function CrmShell({ children, subtitle, showNewButton }: Props) {
           />
           <div className={cn("flex-1 overflow-auto p-4 md:p-6 lg:p-8")}>
             <CrmBreadcrumbs />
-            {children}
+            <CrmAccessGuard>{children}</CrmAccessGuard>
           </div>
         </div>
 

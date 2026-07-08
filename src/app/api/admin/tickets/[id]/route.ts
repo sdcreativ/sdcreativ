@@ -1,5 +1,5 @@
+import { crmApiAuth } from "@/lib/crm-api-auth";
 import { NextResponse } from "next/server";
-import { requireAdminAuth } from "@/lib/admin-auth";
 import { isDatabaseConfigured } from "@/lib/db";
 import {
   deleteTicket,
@@ -11,7 +11,7 @@ import {
 type Props = { params: Promise<{ id: string }> };
 
 export async function GET(_request: Request, { params }: Props) {
-  const authError = await requireAdminAuth();
+  const authError = await crmApiAuth.tickets.read();
   if (authError) return authError;
 
   if (!isDatabaseConfigured()) {
@@ -30,7 +30,7 @@ export async function GET(_request: Request, { params }: Props) {
 }
 
 export async function PATCH(request: Request, { params }: Props) {
-  const authError = await requireAdminAuth();
+  const authError = await crmApiAuth.tickets.write();
   if (authError) return authError;
 
   if (!isDatabaseConfigured()) {
@@ -57,7 +57,7 @@ export async function PATCH(request: Request, { params }: Props) {
 }
 
 export async function DELETE(_request: Request, { params }: Props) {
-  const authError = await requireAdminAuth();
+  const authError = await crmApiAuth.tickets.write();
   if (authError) return authError;
 
   if (!isDatabaseConfigured()) {

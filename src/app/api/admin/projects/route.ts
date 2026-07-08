@@ -1,5 +1,5 @@
+import { crmApiAuth } from "@/lib/crm-api-auth";
 import { NextResponse } from "next/server";
-import { requireAdminAuth } from "@/lib/admin-auth";
 import { isDatabaseConfigured } from "@/lib/db";
 import {
   createProject,
@@ -10,7 +10,7 @@ import {
 import type { ProjectStatus } from "@/content/projects-labels";
 
 export async function GET(request: Request) {
-  const authError = await requireAdminAuth();
+  const authError = await crmApiAuth.projects.read();
   if (authError) return authError;
 
   if (!isDatabaseConfigured()) {
@@ -44,7 +44,7 @@ export async function GET(request: Request) {
 }
 
 export async function POST(request: Request) {
-  const authError = await requireAdminAuth();
+  const authError = await crmApiAuth.projects.write();
   if (authError) return authError;
 
   if (!isDatabaseConfigured()) {

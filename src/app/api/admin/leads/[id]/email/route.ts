@@ -1,6 +1,7 @@
+import { getAdminSession } from "@/lib/admin-auth";
+import { crmApiAuth } from "@/lib/crm-api-auth";
 import { NextResponse } from "next/server";
 import { z } from "zod";
-import { requireAdminAuth, getAdminSession } from "@/lib/admin-auth";
 import { isDatabaseConfigured } from "@/lib/db";
 import { createLeadActivity } from "@/lib/lead-activities";
 import { escapeHtml, sendEmail } from "@/lib/email";
@@ -14,7 +15,7 @@ const emailSchema = z.object({
 });
 
 export async function POST(request: Request, context: RouteContext) {
-  const authError = await requireAdminAuth();
+  const authError = await crmApiAuth.leads.write();
   if (authError) return authError;
 
   if (!isDatabaseConfigured()) {

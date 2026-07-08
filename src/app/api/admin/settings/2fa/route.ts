@@ -1,5 +1,6 @@
+import { getAdminSession } from "@/lib/admin-auth";
+import { crmApiAuth } from "@/lib/crm-api-auth";
 import { NextResponse } from "next/server";
-import { getAdminSession, requireAdminAuth } from "@/lib/admin-auth";
 import { isDatabaseConfigured } from "@/lib/db";
 import {
   beginTotpSetup,
@@ -12,7 +13,7 @@ import {
 } from "@/lib/crm-totp";
 
 export async function GET() {
-  const authError = await requireAdminAuth();
+  const authError = await crmApiAuth.settings.read();
   if (authError) return authError;
 
   if (!isDatabaseConfigured()) {
@@ -34,7 +35,7 @@ export async function GET() {
 }
 
 export async function POST(request: Request) {
-  const authError = await requireAdminAuth({ write: true });
+  const authError = await crmApiAuth.settings.write();
   if (authError) return authError;
 
   if (!isDatabaseConfigured()) {

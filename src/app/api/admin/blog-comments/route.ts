@@ -1,5 +1,5 @@
+import { crmApiAuth } from "@/lib/crm-api-auth";
 import { NextResponse } from "next/server";
-import { requireAdminAuth } from "@/lib/admin-auth";
 import {
   countPendingBlogComments,
   listBlogCommentsForModeration,
@@ -8,7 +8,7 @@ import {
 import { isDatabaseConfigured } from "@/lib/db";
 
 export async function GET(request: Request) {
-  const authError = await requireAdminAuth();
+  const authError = await crmApiAuth.blog.read();
   if (authError) return authError;
 
   if (!isDatabaseConfigured()) {

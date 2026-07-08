@@ -1,5 +1,5 @@
+import { crmApiAuth } from "@/lib/crm-api-auth";
 import { NextResponse } from "next/server";
-import { requireAdminAuth } from "@/lib/admin-auth";
 import { isDatabaseConfigured } from "@/lib/db";
 import {
   deleteCrmRole,
@@ -10,7 +10,7 @@ import {
 type Params = { params: Promise<{ id: string }> };
 
 export async function PATCH(request: Request, { params }: Params) {
-  const authError = await requireAdminAuth({ permission: "users.manage" });
+  const authError = await crmApiAuth.users.read();
   if (authError) return authError;
 
   if (!isDatabaseConfigured()) {
@@ -38,7 +38,7 @@ export async function PATCH(request: Request, { params }: Params) {
 }
 
 export async function DELETE(_request: Request, { params }: Params) {
-  const authError = await requireAdminAuth({ permission: "users.manage" });
+  const authError = await crmApiAuth.users.read();
   if (authError) return authError;
 
   if (!isDatabaseConfigured()) {

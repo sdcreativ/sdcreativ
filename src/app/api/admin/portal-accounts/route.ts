@@ -1,5 +1,5 @@
+import { crmApiAuth } from "@/lib/crm-api-auth";
 import { NextResponse } from "next/server";
-import { requireAdminAuth } from "@/lib/admin-auth";
 import {
   listClientPortalAccounts,
   parseClientPortalConfig,
@@ -21,7 +21,7 @@ export type PortalAccountStatus = {
 
 /** Comptes espace client (env + CRM) — pour documents S3 et état de sync. */
 export async function GET() {
-  const authError = await requireAdminAuth();
+  const authError = await crmApiAuth.settings.read();
   if (authError) return authError;
 
   const envConfig = parseClientPortalConfig();

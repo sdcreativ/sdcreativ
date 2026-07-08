@@ -1,5 +1,5 @@
+import { crmApiAuth } from "@/lib/crm-api-auth";
 import { NextResponse } from "next/server";
-import { requireAdminAuth } from "@/lib/admin-auth";
 import { isDatabaseConfigured } from "@/lib/db";
 import { REPORT_PERIODS, type ReportPeriod } from "@/content/reports-labels";
 import { LEAD_SOURCES } from "@/lib/leads";
@@ -12,7 +12,7 @@ import {
 const ENTITIES: DrilldownEntity[] = ["leads", "quotes", "projects", "tasks"];
 
 export async function GET(request: Request) {
-  const authError = await requireAdminAuth();
+  const authError = await crmApiAuth.reports.read();
   if (authError) return authError;
 
   if (!isDatabaseConfigured()) {

@@ -1,5 +1,6 @@
+import { getAdminSession } from "@/lib/admin-auth";
+import { crmApiAuth } from "@/lib/crm-api-auth";
 import { NextResponse } from "next/server";
-import { getAdminSession, requireAdminAuth } from "@/lib/admin-auth";
 import { isDatabaseConfigured } from "@/lib/db";
 import { logCrmAudit } from "@/lib/crm-audit";
 import { sendEmailDetailed } from "@/lib/email";
@@ -10,7 +11,7 @@ import {
 } from "@/lib/crm-settings";
 
 export async function POST(request: Request) {
-  const authError = await requireAdminAuth({ permission: "settings.manage" });
+  const authError = await crmApiAuth.settings.write();
   if (authError) return authError;
 
   if (!isDatabaseConfigured()) {

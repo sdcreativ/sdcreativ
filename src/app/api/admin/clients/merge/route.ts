@@ -1,6 +1,6 @@
+import { crmApiAuth } from "@/lib/crm-api-auth";
 import { NextResponse } from "next/server";
 import { z } from "zod";
-import { requireAdminAuth } from "@/lib/admin-auth";
 import { isDatabaseConfigured } from "@/lib/db";
 import { mergeClients } from "@/lib/clients";
 
@@ -10,7 +10,7 @@ const mergeSchema = z.object({
 });
 
 export async function POST(request: Request) {
-  const authError = await requireAdminAuth({ write: true });
+  const authError = await crmApiAuth.clients.write();
   if (authError) return authError;
 
   if (!isDatabaseConfigured()) {

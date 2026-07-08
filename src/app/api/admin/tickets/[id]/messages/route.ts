@@ -1,5 +1,6 @@
+import { getAdminSession } from "@/lib/admin-auth";
+import { crmApiAuth } from "@/lib/crm-api-auth";
 import { NextResponse } from "next/server";
-import { requireAdminAuth, getAdminSession } from "@/lib/admin-auth";
 import { isDatabaseConfigured } from "@/lib/db";
 import {
   addTicketMessage,
@@ -12,7 +13,7 @@ import { notifyTicketClientOfReply } from "@/lib/ticket-notifications";
 type Props = { params: Promise<{ id: string }> };
 
 export async function GET(_request: Request, { params }: Props) {
-  const authError = await requireAdminAuth();
+  const authError = await crmApiAuth.tickets.read();
   if (authError) return authError;
 
   if (!isDatabaseConfigured()) {
@@ -33,7 +34,7 @@ export async function GET(_request: Request, { params }: Props) {
 }
 
 export async function POST(request: Request, { params }: Props) {
-  const authError = await requireAdminAuth();
+  const authError = await crmApiAuth.tickets.write();
   if (authError) return authError;
 
   if (!isDatabaseConfigured()) {

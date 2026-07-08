@@ -82,7 +82,28 @@ export async function refreshCrmRolesCache(): Promise<void> {
 export async function ensureCrmRolesCache(): Promise<void> {
   if (!permissionsCache) {
     await refreshCrmRolesCache();
+    await mergeAdminPermissionsCatalog();
   }
+}
+
+/** Ajoute les nouvelles permissions du catalogue au rôle admin en base. */
+async function mergeAdminPermissionsCatalog(): Promise<void> {
+  await withDb(async (query) => {
+    const { rows } = await query<{ permissions: CrmPermission[] }>(
+      `SELECT permissions FROM crm_roles WHERE slug = 'admin' LIMIT 1`,
+    );
+    const row = rows[0];
+    if (!row) return;
+
+    const merged = [...new Set([...(row.permissions ?? []), ...CRM_PERMISSIONS])];
+    if (merged.length === (row.permissions ?? []).length) return;
+
+    await query(`UPDATE crm_roles SET permissions = $1::jsonb, updated_at = NOW() WHERE slug = 'admin'`, [
+      JSON.stringify(merged),
+    ]);
+    invalidateCrmRolesCache();
+    await refreshCrmRolesCache();
+  });
 }
 
 export function getCachedRolePermissions(slug: string): CrmPermission[] {

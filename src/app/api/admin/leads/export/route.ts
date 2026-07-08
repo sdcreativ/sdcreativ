@@ -1,11 +1,11 @@
+import { crmApiAuth } from "@/lib/crm-api-auth";
 import { NextResponse } from "next/server";
-import { requireAdminAuth } from "@/lib/admin-auth";
 import { isDatabaseConfigured } from "@/lib/db";
 import { buildLeadsCsv, buildLeadsPdfHtml } from "@/lib/leads-export";
 import { LEAD_SOURCES, LEAD_STATUSES, listAllLeadsForExport, type LeadSource, type LeadStatus } from "@/lib/leads";
 
 export async function GET(request: Request) {
-  const authError = await requireAdminAuth({ permission: "leads.read" });
+  const authError = await crmApiAuth.leads.read();
   if (authError) return authError;
 
   if (!isDatabaseConfigured()) {

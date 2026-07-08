@@ -1,10 +1,15 @@
 import { withDb, isDatabaseConfigured } from "@/lib/db";
+import type { CrmPermission } from "@/lib/crm-permissions";
 import type { CrmSearchResult } from "@/lib/crm-search-types";
 
 export type { CrmSearchResult, CrmSearchResultType } from "@/lib/crm-search-types";
 export { getCrmSearchTypeLabel } from "@/lib/crm-search-types";
 
-export async function searchCrm(query: string, limit = 10): Promise<CrmSearchResult[]> {
+export async function searchCrm(
+  query: string,
+  limit = 10,
+  permissions: CrmPermission[] | null = null,
+): Promise<CrmSearchResult[]> {
   if (!isDatabaseConfigured()) return [];
 
   const q = query.trim();
@@ -107,6 +112,13 @@ export async function searchCrm(query: string, limit = 10): Promise<CrmSearchRes
       });
     }
 
-    return results.slice(0, limit);
+    return results.slice(0, limit).filter((result) => {
+      if (!permissions) return true;
+      if (result.type === "lead") return permissions.includes("leads.read");
+      if (result.type === "client") return permissions.includes("clients.read");
+      if (result.type === "project") return permissions.includes("projects.read");
+      if (result.type === "quote") return permissions.includes("quotes.read");
+      return true;
+    });
   });
 }

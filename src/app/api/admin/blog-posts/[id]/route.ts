@@ -1,5 +1,6 @@
+import { getAdminSession } from "@/lib/admin-auth";
+import { crmApiAuth } from "@/lib/crm-api-auth";
 import { NextResponse } from "next/server";
-import { requireAdminAuth, getAdminSession } from "@/lib/admin-auth";
 import { revalidateBlogPaths } from "@/lib/blog-revalidate";
 import {
   getBlogPostById,
@@ -16,7 +17,7 @@ type Props = {
 };
 
 export async function GET(_request: Request, { params }: Props) {
-  const authError = await requireAdminAuth();
+  const authError = await crmApiAuth.blog.read();
   if (authError) return authError;
 
   if (!isDatabaseConfigured()) {
@@ -41,7 +42,7 @@ export async function GET(_request: Request, { params }: Props) {
 }
 
 export async function PATCH(request: Request, { params }: Props) {
-  const authError = await requireAdminAuth({ write: true });
+  const authError = await crmApiAuth.blog.write();
   if (authError) return authError;
 
   if (!isDatabaseConfigured()) {
@@ -85,7 +86,7 @@ export async function PATCH(request: Request, { params }: Props) {
 }
 
 export async function DELETE(request: Request, { params }: Props) {
-  const authError = await requireAdminAuth({ write: true });
+  const authError = await crmApiAuth.blog.write();
   if (authError) return authError;
 
   if (!isDatabaseConfigured()) {

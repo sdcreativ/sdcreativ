@@ -1,5 +1,5 @@
+import { crmApiAuth } from "@/lib/crm-api-auth";
 import { NextResponse } from "next/server";
-import { requireAdminAuth } from "@/lib/admin-auth";
 import { getOrCreatePreviewToken } from "@/lib/blog-posts";
 import { isDatabaseConfigured } from "@/lib/db";
 
@@ -8,7 +8,7 @@ type Props = {
 };
 
 export async function GET(_request: Request, { params }: Props) {
-  const authError = await requireAdminAuth();
+  const authError = await crmApiAuth.blog.read();
   if (authError) return authError;
 
   if (!isDatabaseConfigured()) {

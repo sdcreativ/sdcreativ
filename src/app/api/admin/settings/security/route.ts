@@ -1,5 +1,5 @@
+import { crmApiAuth } from "@/lib/crm-api-auth";
 import { NextResponse } from "next/server";
-import { requireAdminAuth } from "@/lib/admin-auth";
 import { isDatabaseConfigured } from "@/lib/db";
 import {
   getCrmSecuritySettings,
@@ -8,7 +8,7 @@ import {
 } from "@/lib/crm-security-settings";
 
 export async function GET() {
-  const authError = await requireAdminAuth({ roles: ["admin"] });
+  const authError = await crmApiAuth.settings.read();
   if (authError) return authError;
 
   if (!isDatabaseConfigured()) {
@@ -25,7 +25,7 @@ export async function GET() {
 }
 
 export async function PATCH(request: Request) {
-  const authError = await requireAdminAuth({ roles: ["admin"], write: true });
+  const authError = await crmApiAuth.settings.write();
   if (authError) return authError;
 
   if (!isDatabaseConfigured()) {

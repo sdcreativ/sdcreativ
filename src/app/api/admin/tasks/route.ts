@@ -1,12 +1,12 @@
+import { crmApiAuth } from "@/lib/crm-api-auth";
 import { NextResponse } from "next/server";
-import { requireAdminAuth } from "@/lib/admin-auth";
 import { isDatabaseConfigured } from "@/lib/db";
 import { createTask, createTaskSchema, listTasks } from "@/lib/tasks";
 import type { TaskStatus } from "@/content/tasks-labels";
 import { notifyTaskAssignee } from "@/lib/task-notifications";
 
 export async function GET(request: Request) {
-  const authError = await requireAdminAuth();
+  const authError = await crmApiAuth.tasks.read();
   if (authError) return authError;
 
   if (!isDatabaseConfigured()) {
@@ -35,7 +35,7 @@ export async function GET(request: Request) {
 }
 
 export async function POST(request: Request) {
-  const authError = await requireAdminAuth();
+  const authError = await crmApiAuth.tasks.write();
   if (authError) return authError;
 
   if (!isDatabaseConfigured()) {

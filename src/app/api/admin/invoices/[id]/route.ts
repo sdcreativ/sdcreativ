@@ -1,12 +1,12 @@
+import { crmApiAuth } from "@/lib/crm-api-auth";
 import { NextResponse } from "next/server";
-import { requireAdminAuth } from "@/lib/admin-auth";
 import { isDatabaseConfigured } from "@/lib/db";
 import { deleteInvoice, getInvoiceById, updateInvoice, updateInvoiceSchema } from "@/lib/invoices";
 
 type RouteContext = { params: Promise<{ id: string }> };
 
 export async function GET(_request: Request, context: RouteContext) {
-  const authError = await requireAdminAuth();
+  const authError = await crmApiAuth.invoices.read();
   if (authError) return authError;
 
   if (!isDatabaseConfigured()) {
@@ -27,7 +27,7 @@ export async function GET(_request: Request, context: RouteContext) {
 }
 
 export async function PATCH(request: Request, context: RouteContext) {
-  const authError = await requireAdminAuth({ write: true });
+  const authError = await crmApiAuth.invoices.write();
   if (authError) return authError;
 
   if (!isDatabaseConfigured()) {
@@ -55,7 +55,7 @@ export async function PATCH(request: Request, context: RouteContext) {
 }
 
 export async function DELETE(_request: Request, context: RouteContext) {
-  const authError = await requireAdminAuth({ write: true, roles: ["admin", "commercial"] });
+  const authError = await crmApiAuth.invoices.write();
   if (authError) return authError;
 
   if (!isDatabaseConfigured()) {

@@ -1,5 +1,5 @@
+import { crmApiAuth } from "@/lib/crm-api-auth";
 import { NextResponse } from "next/server";
-import { requireAdminAuth } from "@/lib/admin-auth";
 import { isDatabaseConfigured } from "@/lib/db";
 import { getQuoteById } from "@/lib/quotes";
 import { buildQuotePdfHtml } from "@/lib/quote-pdf";
@@ -7,7 +7,7 @@ import { buildQuotePdfHtml } from "@/lib/quote-pdf";
 type RouteContext = { params: Promise<{ id: string }> };
 
 export async function GET(_request: Request, context: RouteContext) {
-  const authError = await requireAdminAuth();
+  const authError = await crmApiAuth.quotes.read();
   if (authError) return authError;
 
   if (!isDatabaseConfigured()) {

@@ -7,6 +7,7 @@ import { CrmLogo } from "@/components/admin/CrmLogo";
 import { CRM_ROLE_LABELS } from "@/content/crm-roles";
 import { crmNavItems } from "@/content/crm-nav";
 import { fetchCrmSession, type CrmSessionInfo } from "@/lib/crm-settings-api";
+import { filterCrmNavItems } from "@/lib/crm-access";
 import { cn } from "@/lib/utils";
 
 type Props = {
@@ -51,6 +52,10 @@ export function CrmSidebar({ mobileOpen = false, onNavigate }: Props) {
     session?.roleLabel ??
     (session ? CRM_ROLE_LABELS[session.role as keyof typeof CRM_ROLE_LABELS] : null);
 
+  const visibleNavItems = session
+    ? filterCrmNavItems(crmNavItems, session.permissions)
+    : crmNavItems;
+
   return (
     <aside
       className={cn(
@@ -72,7 +77,7 @@ export function CrmSidebar({ mobileOpen = false, onNavigate }: Props) {
       </div>
 
       <nav className="flex-1 space-y-0.5 overflow-y-auto px-3 py-4">
-        {crmNavItems.map(({ label, href, icon: Icon }) => {
+        {visibleNavItems.map(({ label, href, icon: Icon }) => {
           const active = activeHref === href;
           return (
             <Link

@@ -1,6 +1,6 @@
+import { crmApiAuth } from "@/lib/crm-api-auth";
 import { NextResponse } from "next/server";
 import { z } from "zod";
-import { requireAdminAuth } from "@/lib/admin-auth";
 import { isDatabaseConfigured } from "@/lib/db";
 import { buildInvoiceEmailHtml } from "@/lib/invoice-email";
 import { sendEmail } from "@/lib/email";
@@ -14,7 +14,7 @@ const emailSchema = z.object({
 });
 
 export async function POST(request: Request, context: RouteContext) {
-  const authError = await requireAdminAuth({ write: true });
+  const authError = await crmApiAuth.invoices.write();
   if (authError) return authError;
 
   if (!isDatabaseConfigured()) {

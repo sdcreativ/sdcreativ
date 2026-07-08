@@ -1,5 +1,6 @@
+import { getAdminSession } from "@/lib/admin-auth";
+import { crmApiAuth } from "@/lib/crm-api-auth";
 import { NextResponse } from "next/server";
-import { requireAdminAuth, getAdminSession } from "@/lib/admin-auth";
 import { isDatabaseConfigured } from "@/lib/db";
 import {
   countLeadsByStatus,
@@ -13,7 +14,7 @@ import {
 } from "@/lib/leads";
 
 export async function GET(request: Request) {
-  const authError = await requireAdminAuth();
+  const authError = await crmApiAuth.leads.read();
   if (authError) return authError;
 
   if (!isDatabaseConfigured()) {
@@ -62,7 +63,7 @@ export async function GET(request: Request) {
 }
 
 export async function POST(request: Request) {
-  const authError = await requireAdminAuth();
+  const authError = await crmApiAuth.leads.write();
   if (authError) return authError;
 
   if (!isDatabaseConfigured()) {
