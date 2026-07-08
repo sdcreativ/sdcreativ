@@ -4,15 +4,13 @@
 #
 # Usage :
 #   ./scripts/bootstrap-crm-admin.sh
-#   COMPOSE_FILES="-f docker-compose.yml -f docker-compose.prod.yml" ./scripts/bootstrap-crm-admin.sh
 
 set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "$0")/.." && pwd)"
 cd "$ROOT_DIR"
 
-COMPOSE_FILES="${COMPOSE_FILES:--f docker-compose.yml -f docker-compose.prod.yml}"
-COMPOSE=(docker compose "${COMPOSE_FILES[@]}" --profile prod)
+COMPOSE=(docker compose -f docker-compose.yml -f docker-compose.prod.yml --profile prod)
 
 env_val() {
   local file=$1 key=$2
@@ -29,6 +27,8 @@ fi
 ADMIN_SECRET="$(env_val .env.docker ADMIN_SECRET)"
 BOOTSTRAP_EMAIL="$(env_val .env.docker CRM_BOOTSTRAP_EMAIL)"
 BOOTSTRAP_EMAIL="${BOOTSTRAP_EMAIL:-admin@sdcreativ.com}"
+DOMAIN="$(env_val .env DOMAIN)"
+DOMAIN="${DOMAIN:-sdcreativ.com}"
 
 if [ -z "${ADMIN_SECRET:-}" ]; then
   echo "✗ ADMIN_SECRET manquant dans .env.docker"
