@@ -2,6 +2,7 @@
 #   docker compose -f docker-compose.yml -f docker-compose.prod.yml --profile prod up -d --build
 #
 # L'app n'expose pas de port hôte (expose: 3000 réseau interne uniquement).
+# PostgreSQL et Redis : réseau Docker interne uniquement (pas de 5433 sur 0.0.0.0).
 # NEXT_PUBLIC_SITE_URL doit être https://DOMAIN dans .env.docker.
 
 services: {}

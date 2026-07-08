@@ -4,7 +4,8 @@ name: Deploy
 # Voir docs/DEPLOIEMENT-SDCREATIV-COM.md
 #
 # Qualité automatique : workflow ci.yml (lint, build, tests) sur chaque push/PR.
-# Ce workflow sert au déploiement manuel ou futur déploiement SSH automatisé.
+# Secrets requis : VPS_HOST, VPS_SSH_KEY
+# Optionnel : VPS_SSH_USER (défaut : deploy — utilisateur non-root sur le VPS)
 
 on:
   workflow_dispatch:
@@ -49,8 +50,9 @@ jobs:
         uses: appleboy/ssh-action@v1.2.0
         with:
           host: ${{ secrets.VPS_HOST }}
-          username: ${{ secrets.VPS_SSH_USER || 'root' }}
+          username: ${{ secrets.VPS_SSH_USER || 'deploy' }}
           key: ${{ secrets.VPS_SSH_KEY }}
+          command_timeout: 30m
           script: |
             set -euo pipefail
             cd /var/www/sdcreativ
@@ -69,12 +71,13 @@ jobs:
             echo "Déployez manuellement sur le VPS :"
             echo ""
             echo '```bash'
-            echo "ssh root@VOTRE_IP_VPS"
+            echo "ssh deploy@VOTRE_IP_VPS"
             echo "cd /var/www/sdcreativ"
             echo "git pull"
             echo "docker compose -f docker-compose.yml -f docker-compose.prod.yml --profile prod up -d --build app"
+            echo "./scripts/bootstrap-crm-admin.sh"
             echo "./scripts/vps-post-deploy-check.sh"
             echo '```'
             echo ""
-            echo "Pour automatiser : ajoutez \`VPS_HOST\`, \`VPS_SSH_KEY\` (et optionnel \`VPS_SSH_USER\`) dans Settings → Secrets → Actions."
+            echo "Pour automatiser : ajoutez \`VPS_HOST\`, \`VPS_SSH_KEY\` et optionnellement \`VPS_SSH_USER\` (défaut \`deploy\`) dans Settings → Secrets → Actions."
           } >> "$GITHUB_STEP_SUMMARY"

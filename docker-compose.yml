@@ -58,9 +58,8 @@ services:
       interval: 5s
       timeout: 5s
       retries: 10
-    ports:
-      # 5433 par défaut : accès depuis l'hôte (pg_dump, npm run dev) sans conflit avec PostgreSQL local :5432
-      - "${POSTGRES_PORT:-5433}:5432"
+    # Port hôte en dev uniquement : docker-compose.override.yml (5433 → outils locaux)
+    # Prod : pas de port exposé — accès via docker compose exec postgres
     networks:
       - sdcreativ
 
