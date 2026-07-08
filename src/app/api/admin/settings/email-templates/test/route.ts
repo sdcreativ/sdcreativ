@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { getAdminSession, requireAdminAuth } from "@/lib/admin-auth";
 import { isDatabaseConfigured } from "@/lib/db";
 import { logCrmAudit } from "@/lib/crm-audit";
-import { sendEmail } from "@/lib/email";
+import { sendEmailDetailed } from "@/lib/email";
 import {
   getCrmSettings,
   renderEmailTemplate,
@@ -34,11 +34,18 @@ export async function POST(request: Request) {
       name: "Test CRM",
     });
 
-    await sendEmail({
+    const result = await sendEmailDetailed({
       subject: `[TEST CRM] ${subject}`,
       html: `<p><em>Envoi test depuis les paramètres CRM.</em></p>${html}`,
       to: parsed.data.to,
     });
+
+    if (!result.ok) {
+      return NextResponse.json(
+        { error: result.error ?? "Envoi impossible." },
+        { status: result.status === 403 ? 403 : 502 },
+      );
+    }
 
     const session = await getAdminSession();
     if (session) {
