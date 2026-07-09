@@ -1,5 +1,6 @@
 "use client";
 
+import { cloneElement, isValidElement, useId, type ReactElement } from "react";
 import { Plus, Trash2, type LucideIcon } from "lucide-react";
 import { LUCIDE_ICON_NAMES, type LucideIconName } from "@/lib/lucide-icon-map";
 import { cn } from "@/lib/utils";
@@ -16,13 +17,35 @@ type FieldProps = {
 };
 
 export function CrmFormField({ label, hint, htmlFor, className, children }: FieldProps) {
+  const generatedId = useId();
+  const childId =
+    htmlFor ??
+    (isValidElement(children) && typeof (children as ReactElement<{ id?: string }>).props.id === "string"
+      ? (children as ReactElement<{ id?: string }>).props.id
+      : generatedId);
+
+  const resolvedId =
+    isValidElement(children) && typeof (children as ReactElement<{ id?: string }>).props.id === "string"
+      ? (children as ReactElement<{ id?: string }>).props.id
+      : childId;
+
+  const field =
+    isValidElement(children)
+      ? cloneElement(children as ReactElement<{ id?: string; "aria-label"?: string }>, {
+          id: resolvedId,
+          ...(!(children as ReactElement<{ "aria-label"?: string }>).props["aria-label"]
+            ? { "aria-label": label }
+            : {}),
+        })
+      : children;
+
   return (
     <div className={className}>
-      <label htmlFor={htmlFor} className="mb-1.5 block text-sm font-medium text-foreground">
+      <label htmlFor={resolvedId} className="mb-1.5 block text-sm font-medium text-foreground">
         {label}
       </label>
       {hint && <p className="mb-2 text-xs leading-relaxed text-gray-text">{hint}</p>}
-      {children}
+      {field}
     </div>
   );
 }
@@ -127,6 +150,8 @@ export function CrmLineListEditor({
   addLabel = "Ajouter une ligne",
   minItems = 0,
 }: LineListProps) {
+  const baseId = useId();
+
   function update(index: number, value: string) {
     const next = [...values];
     next[index] = value;
@@ -143,15 +168,21 @@ export function CrmLineListEditor({
   }
 
   return (
-    <CrmFormField label={label} hint={hint}>
-      <div className="space-y-2">
+    <div className="space-y-2">
+      <p id={`${baseId}-legend`} className="mb-1.5 block text-sm font-medium text-foreground">
+        {label}
+      </p>
+      {hint && <p className="mb-2 text-xs leading-relaxed text-gray-text">{hint}</p>}
+      <div className="space-y-2" role="group" aria-labelledby={`${baseId}-legend`}>
         {values.map((value, index) => (
           <div key={index} className="flex gap-2">
             <input
+              id={`${baseId}-row-${index}`}
               value={value}
               onChange={(e) => update(index, e.target.value)}
               className={crmFieldClass}
               placeholder={placeholder}
+              aria-label={`${label} ${index + 1}`}
             />
             <button
               type="button"
@@ -173,7 +204,7 @@ export function CrmLineListEditor({
           {addLabel}
         </button>
       </div>
-    </CrmFormField>
+    </div>
   );
 }
 
@@ -184,9 +215,11 @@ type IconSelectProps = {
 };
 
 export function CrmIconSelect({ label = "Icône", value, onChange }: IconSelectProps) {
+  const fieldId = useId();
   return (
-    <CrmFormField label={label}>
+    <CrmFormField label={label} htmlFor={fieldId}>
       <select
+        id={fieldId}
         value={value}
         onChange={(e) => onChange(e.target.value as LucideIconName)}
         className={crmFieldClass}

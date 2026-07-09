@@ -4,7 +4,9 @@ import { motion, useReducedMotion, type Variants } from "framer-motion";
 import { cn } from "@/lib/utils";
 
 const fadeUpVariants: Variants = {
-  hidden: { opacity: 0, y: 32 },
+  // Opacity reste à 1 : si IntersectionObserver ne se déclenche pas (Safari iOS),
+  // le contenu reste visible au lieu d'un écran blanc.
+  hidden: { opacity: 1, y: 32 },
   visible: { opacity: 1, y: 0 },
 };
 
@@ -35,7 +37,7 @@ export function AnimatedSection({
       className={cn(className)}
       initial={reduceMotion ? false : "hidden"}
       whileInView={reduceMotion ? undefined : "visible"}
-      viewport={{ once: true, margin: "-80px" }}
+      viewport={{ once: true, amount: 0.12, margin: "0px 0px -5% 0px" }}
       transition={{ duration: 0.55, delay, ease: [0.22, 1, 0.36, 1] }}
       variants={variants}
     >
@@ -59,7 +61,7 @@ export function AnimatedCard({ children, className, delay = 0 }: AnimatedCardPro
       className={cn(className)}
       initial={reduceMotion ? false : "hidden"}
       whileInView={reduceMotion ? undefined : "visible"}
-      viewport={{ once: true, margin: "-40px" }}
+      viewport={{ once: true, amount: 0.12, margin: "0px 0px -5% 0px" }}
       transition={{ duration: 0.45, delay, ease: [0.22, 1, 0.36, 1] }}
       variants={variants}
       whileHover={reduceMotion ? undefined : { y: -4, transition: { duration: 0.2 } }}

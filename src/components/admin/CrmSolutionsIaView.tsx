@@ -131,6 +131,7 @@ export function CrmSolutionsIaView() {
           <CrmFormSection title="Section démo" description="Encart invitant à tester le chatbot intégré au site.">
             <CrmFormField label="Titre">
               <input
+                aria-label="Titre"
                 value={form.demoSection.title}
                 onChange={(e) => setForm({ ...form, demoSection: { ...form.demoSection, title: e.target.value } })}
                 className={crmFieldClass}
@@ -138,6 +139,7 @@ export function CrmSolutionsIaView() {
             </CrmFormField>
             <CrmFormField label="Description">
               <textarea
+                aria-label="Description"
                 value={form.demoSection.description}
                 onChange={(e) => setForm({ ...form, demoSection: { ...form.demoSection, description: e.target.value } })}
                 className={crmFieldClass}
@@ -146,6 +148,7 @@ export function CrmSolutionsIaView() {
             </CrmFormField>
             <CrmFormField label="Indication" hint="Texte d'aide affiché sous la description.">
               <input
+                aria-label="Indication"
                 value={form.demoSection.hint}
                 onChange={(e) => setForm({ ...form, demoSection: { ...form.demoSection, hint: e.target.value } })}
                 className={crmFieldClass}
@@ -160,7 +163,8 @@ export function CrmSolutionsIaView() {
               <CrmFormSection key={pack.id} title={`Pack : ${pack.name}`} description="Offre tarifaire affichée sur la page.">
                 <div className="grid gap-4 sm:grid-cols-2">
                   <CrmFormField label="Nom du pack">
-                    <input
+                    <input  
+                      aria-label="Nom du pack"
                       value={pack.name}
                       onChange={(e) => {
                         const packs = [...form.packs];
@@ -172,6 +176,7 @@ export function CrmSolutionsIaView() {
                   </CrmFormField>
                   <CrmFormField label="Prix à partir de (FCFA)" hint="Montant en francs CFA, sans séparateur.">
                     <input
+                      aria-label="Prix à partir de (FCFA)"
                       type="number"
                       min={0}
                       step={1000}
@@ -186,6 +191,7 @@ export function CrmSolutionsIaView() {
                   </CrmFormField>
                   <CrmFormField label="Accroche" className="sm:col-span-2">
                     <input
+                      aria-label="Accroche"
                       value={pack.tagline}
                       onChange={(e) => {
                         const packs = [...form.packs];
@@ -232,6 +238,7 @@ export function CrmSolutionsIaView() {
                 <CrmRepeaterCard key={i} title="Question" index={i}>
                   <CrmFormField label="Question">
                     <input
+                      aria-label="Question"
                       value={item.question}
                       onChange={(e) => {
                         const faq = [...form.faq];
@@ -243,6 +250,7 @@ export function CrmSolutionsIaView() {
                   </CrmFormField>
                   <CrmFormField label="Réponse">
                     <textarea
+                      aria-label="Réponse"
                       value={item.answer}
                       onChange={(e) => {
                         const faq = [...form.faq];
@@ -267,6 +275,7 @@ export function CrmSolutionsIaView() {
                   <div className="grid gap-3 sm:grid-cols-2">
                     <CrmFormField label="Titre">
                       <input
+                        aria-label="Titre"
                         value={useCase.title}
                         onChange={(e) => {
                           const useCases = [...form.useCases];
@@ -287,6 +296,7 @@ export function CrmSolutionsIaView() {
                   </div>
                   <CrmFormField label="Description">
                     <textarea
+                      aria-label="Description"
                       value={useCase.description}
                       onChange={(e) => {
                         const useCases = [...form.useCases];
@@ -318,6 +328,7 @@ export function CrmSolutionsIaView() {
           <CrmFormSection title="Appel à l'action" description="Bloc de conversion en bas de la page Solutions IA.">
             <CrmFormField label="Titre">
               <input
+                aria-label="Titre"
                 value={form.ctaSection.title}
                 onChange={(e) => setForm({ ...form, ctaSection: { ...form.ctaSection, title: e.target.value } })}
                 className={crmFieldClass}
@@ -325,6 +336,7 @@ export function CrmSolutionsIaView() {
             </CrmFormField>
             <CrmFormField label="Description">
               <textarea
+                aria-label="Description"
                 value={form.ctaSection.description}
                 onChange={(e) => setForm({ ...form, ctaSection: { ...form.ctaSection, description: e.target.value } })}
                 className={crmFieldClass}

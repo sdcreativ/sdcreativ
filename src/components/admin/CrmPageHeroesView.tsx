@@ -128,6 +128,7 @@ export function CrmPageHeroesView() {
           <div className="grid gap-4 sm:grid-cols-2">
             <CrmFormField label="Surtitre" className="sm:col-span-2">
               <input
+                title="Surtitre"
                 value={hero.eyebrow ?? ""}
                 onChange={(e) => setForm({ ...form, [activeKey]: { ...hero, eyebrow: e.target.value } })}
                 className={crmFieldClass}
@@ -135,6 +136,7 @@ export function CrmPageHeroesView() {
             </CrmFormField>
             <CrmFormField label="Titre">
               <input
+                title="Titre"
                 value={hero.title}
                 onChange={(e) => setForm({ ...form, [activeKey]: { ...hero, title: e.target.value } })}
                 className={crmFieldClass}
@@ -143,6 +145,7 @@ export function CrmPageHeroesView() {
             </CrmFormField>
             <CrmFormField label="Mot en surbrillance">
               <input
+                title="Mot en surbrillance"
                 value={hero.highlight ?? ""}
                 onChange={(e) => setForm({ ...form, [activeKey]: { ...hero, highlight: e.target.value } })}
                 className={crmFieldClass}
@@ -150,6 +153,7 @@ export function CrmPageHeroesView() {
             </CrmFormField>
             <CrmFormField label="Description" className="sm:col-span-2">
               <textarea
+                title="Description"
                 value={hero.description ?? ""}
                 onChange={(e) => setForm({ ...form, [activeKey]: { ...hero, description: e.target.value } })}
                 className={crmFieldClass}
@@ -158,6 +162,7 @@ export function CrmPageHeroesView() {
             </CrmFormField>
             <CrmFormField label="Image de fond (URL)" hint="Chemin relatif depuis /public." className="sm:col-span-2">
               <input
+                title="Image de fond (URL)"
                 value={hero.backgroundImage ?? ""}
                 onChange={(e) => setForm({ ...form, [activeKey]: { ...hero, backgroundImage: e.target.value } })}
                 className={crmFieldClass}
@@ -165,6 +170,7 @@ export function CrmPageHeroesView() {
             </CrmFormField>
             <CrmFormField label="Texte alternatif de l'image" hint="Description pour l'accessibilité et le référencement." className="sm:col-span-2">
               <input
+                title="Texte alternatif de l'image"
                 value={hero.backgroundAlt ?? ""}
                 onChange={(e) => setForm({ ...form, [activeKey]: { ...hero, backgroundAlt: e.target.value } })}
                 className={crmFieldClass}

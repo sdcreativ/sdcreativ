@@ -32,9 +32,12 @@ export const updateSiteHeroSchema = z.object({
 
 function mergeHeroSettings(raw: Partial<SiteHeroSettings> | null): SiteHeroSettings {
   if (!raw) return defaultSiteHeroSettings;
+  const backgroundImage =
+    raw.backgroundImage?.trim() || defaultSiteHeroSettings.backgroundImage;
   return {
     ...defaultSiteHeroSettings,
     ...raw,
+    backgroundImage,
     features: raw.features?.length ? raw.features : defaultSiteHeroSettings.features,
     highlights: raw.highlights?.length ? raw.highlights : defaultSiteHeroSettings.highlights,
   };

@@ -25,6 +25,7 @@ import {
   updateTeamMemberApi,
 } from "@/lib/public-team-api";
 import { TeamMemberImageField } from "@/components/admin/TeamMemberImageField";
+import { CrmFormField, crmFieldClass } from "@/components/admin/crm-site-form-ui";
 import { useDialog } from "@/components/ui/DialogProvider";
 import { DEFAULT_IMAGE_POSITION, normalizeImagePosition } from "@/lib/image-position";
 import { cn } from "@/lib/utils";
@@ -456,61 +457,51 @@ export function CrmTeamMembersView() {
                 }
               />
 
-              <label className="block">
-                <span className="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-gray-text">
-                  Nom complet
-                </span>
+              <CrmFormField label="Nom complet">
                 <input
                   required
+                  aria-label="Nom complet"
                   value={form.name}
                   onChange={(e) => setForm((prev) => ({ ...prev, name: e.target.value }))}
-                  className={fieldClass}
+                  className={crmFieldClass}
                 />
-              </label>
+              </CrmFormField>
 
-              <label className="block">
-                <span className="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-gray-text">
-                  Rôle / titre
-                </span>
+              <CrmFormField label="Rôle / titre">
                 <input
                   required
+                  aria-label="Rôle / titre"
                   value={form.role}
                   onChange={(e) => setForm((prev) => ({ ...prev, role: e.target.value }))}
-                  className={fieldClass}
+                  className={crmFieldClass}
                 />
-              </label>
+              </CrmFormField>
 
-              <label className="block">
-                <span className="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-gray-text">
-                  Missions / description
-                </span>
+              <CrmFormField label="Missions / description">
                 <textarea
                   required
+                  aria-label="Missions / description"
                   rows={4}
                   value={form.missions}
                   onChange={(e) => setForm((prev) => ({ ...prev, missions: e.target.value }))}
-                  className={fieldClass}
+                  className={crmFieldClass}
                 />
-              </label>
+              </CrmFormField>
 
               <div className="grid gap-3 sm:grid-cols-2">
-                <label className="block">
-                  <span className="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-gray-text">
-                    Initiales (optionnel)
-                  </span>
+                <CrmFormField label="Initiales (optionnel)">
                   <input
+                    aria-label="Initiales (optionnel)"
                     value={form.initials}
                     onChange={(e) => setForm((prev) => ({ ...prev, initials: e.target.value }))}
-                    className={fieldClass}
+                    className={crmFieldClass}
                     placeholder="Auto"
                     maxLength={8}
                   />
-                </label>
-                <label className="block">
-                  <span className="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-gray-text">
-                    Langue
-                  </span>
+                </CrmFormField>
+                <CrmFormField label="Langue">
                   <select
+                    aria-label="Langue"
                     value={form.locale}
                     onChange={(e) =>
                       setForm((prev) => ({
@@ -518,28 +509,27 @@ export function CrmTeamMembersView() {
                         locale: e.target.value as "fr" | "en",
                       }))
                     }
-                    className={fieldClass}
+                    className={crmFieldClass}
                   >
                     <option value="fr">Français</option>
                     <option value="en">English</option>
                   </select>
-                </label>
+                </CrmFormField>
               </div>
 
-              <label className="block">
-                <span className="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-gray-text">
-                  Texte alternatif photo
-                </span>
+              <CrmFormField label="Texte alternatif photo">
                 <input
                   required
+                  aria-label="Texte alternatif photo"
                   value={form.imageAlt}
                   onChange={(e) => setForm((prev) => ({ ...prev, imageAlt: e.target.value }))}
-                  className={fieldClass}
+                  className={crmFieldClass}
                 />
-              </label>
+              </CrmFormField>
 
-              <label className="flex items-center gap-2 text-sm">
+              <label htmlFor="team-member-visible" className="flex items-center gap-2 text-sm">
                 <input
+                  id="team-member-visible"
                   type="checkbox"
                   checked={form.isVisible}
                   onChange={(e) =>

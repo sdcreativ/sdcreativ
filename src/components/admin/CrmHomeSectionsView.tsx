@@ -134,16 +134,16 @@ export function CrmHomeSectionsView() {
         <CrmFormSection title="Pourquoi nous choisir" description="Bloc d'arguments avec icônes sur la page d'accueil.">
           <div className="grid gap-4 sm:grid-cols-2">
             <CrmFormField label="Surtitre" className="sm:col-span-2">
-              <input value={whyUs.eyebrow} onChange={(e) => setWhyUs({ ...whyUs, eyebrow: e.target.value })} className={crmFieldClass} required />
+              <input title="Surtitre" value={whyUs.eyebrow} onChange={(e) => setWhyUs({ ...whyUs, eyebrow: e.target.value })} className={crmFieldClass} required />
             </CrmFormField>
             <CrmFormField label="Titre">
-              <input value={whyUs.title} onChange={(e) => setWhyUs({ ...whyUs, title: e.target.value })} className={crmFieldClass} required />
+              <input title="Titre" value={whyUs.title} onChange={(e) => setWhyUs({ ...whyUs, title: e.target.value })} className={crmFieldClass} required />
             </CrmFormField>
             <CrmFormField label="Mot en surbrillance">
-              <input value={whyUs.highlight} onChange={(e) => setWhyUs({ ...whyUs, highlight: e.target.value })} className={crmFieldClass} required />
+              <input title="Mot en surbrillance" value={whyUs.highlight} onChange={(e) => setWhyUs({ ...whyUs, highlight: e.target.value })} className={crmFieldClass} required />
             </CrmFormField>
             <CrmFormField label="Introduction" className="sm:col-span-2">
-              <textarea value={whyUs.intro} onChange={(e) => setWhyUs({ ...whyUs, intro: e.target.value })} className={crmFieldClass} rows={3} required />
+              <textarea title="Introduction" value={whyUs.intro} onChange={(e) => setWhyUs({ ...whyUs, intro: e.target.value })} className={crmFieldClass} rows={3} required />
             </CrmFormField>
           </div>
 
@@ -164,7 +164,8 @@ export function CrmHomeSectionsView() {
                     }}
                   />
                   <CrmFormField label="Titre">
-                    <input
+                    <input 
+                      title="Titre"
                       value={item.title}
                       onChange={(e) => {
                         const items = [...whyUs.items];
@@ -175,7 +176,7 @@ export function CrmHomeSectionsView() {
                     />
                   </CrmFormField>
                   <CrmFormField label="Description" className="sm:col-span-2">
-                    <textarea
+                    <textarea title="Description"
                       value={item.description}
                       onChange={(e) => {
                         const items = [...whyUs.items];
@@ -195,13 +196,13 @@ export function CrmHomeSectionsView() {
         <CrmFormSection title="Notre méthode" description="Étapes numérotées présentant votre processus.">
           <div className="grid gap-4 sm:grid-cols-3">
             <CrmFormField label="Surtitre" className="sm:col-span-3">
-              <input value={method.eyebrow} onChange={(e) => setMethod({ ...method, eyebrow: e.target.value })} className={crmFieldClass} required />
+              <input title="Surtitre" value={method.eyebrow} onChange={(e) => setMethod({ ...method, eyebrow: e.target.value })} className={crmFieldClass} required />
             </CrmFormField>
             <CrmFormField label="Titre">
-              <input value={method.title} onChange={(e) => setMethod({ ...method, title: e.target.value })} className={crmFieldClass} required />
+              <input title="Titre" value={method.title} onChange={(e) => setMethod({ ...method, title: e.target.value })} className={crmFieldClass} required />
             </CrmFormField>
             <CrmFormField label="Mot en surbrillance" className="sm:col-span-2">
-              <input value={method.highlight} onChange={(e) => setMethod({ ...method, highlight: e.target.value })} className={crmFieldClass} required />
+              <input title="Mot en surbrillance" value={method.highlight} onChange={(e) => setMethod({ ...method, highlight: e.target.value })} className={crmFieldClass} required />
             </CrmFormField>
           </div>
 
@@ -211,6 +212,7 @@ export function CrmHomeSectionsView() {
                 <div className="grid gap-3 sm:grid-cols-4">
                   <CrmFormField label="Numéro">
                     <input
+                      title="Numéro"
                       value={step.number}
                       onChange={(e) => {
                         const steps = [...method.steps];
@@ -230,6 +232,7 @@ export function CrmHomeSectionsView() {
                   />
                   <CrmFormField label="Titre" className="sm:col-span-2">
                     <input
+                      title="Titre"
                       value={step.title}
                       onChange={(e) => {
                         const steps = [...method.steps];
@@ -241,6 +244,7 @@ export function CrmHomeSectionsView() {
                   </CrmFormField>
                   <CrmFormField label="Description" className="sm:col-span-4">
                     <textarea
+                      title="Description"
                       value={step.description}
                       onChange={(e) => {
                         const steps = [...method.steps];

@@ -224,6 +224,7 @@ export function CrmCarrieresView() {
             <div className="grid gap-4 sm:grid-cols-2">
               <CrmFormField label="Intitulé du poste">
                 <input
+                  aria-label="Intitulé du poste"
                   value={form.title}
                   onChange={(e) => setForm({ ...form, title: e.target.value })}
                   className={crmFieldClass}
@@ -232,6 +233,7 @@ export function CrmCarrieresView() {
               </CrmFormField>
               <CrmFormField label="Slug URL" hint="Généré automatiquement depuis le titre si laissé vide.">
                 <input
+                  aria-label="Slug URL"
                   value={form.slug}
                   onChange={(e) => setForm({ ...form, slug: e.target.value })}
                   onBlur={() => {
@@ -245,6 +247,7 @@ export function CrmCarrieresView() {
               </CrmFormField>
               <CrmFormField label="Type de contrat">
                 <input
+                  aria-label="Type de contrat"
                   value={form.type}
                   onChange={(e) => setForm({ ...form, type: e.target.value })}
                   className={crmFieldClass}
@@ -253,6 +256,7 @@ export function CrmCarrieresView() {
               </CrmFormField>
               <CrmFormField label="Lieu">
                 <input
+                  aria-label="Lieu"
                   value={form.location}
                   onChange={(e) => setForm({ ...form, location: e.target.value })}
                   className={crmFieldClass}
@@ -261,14 +265,17 @@ export function CrmCarrieresView() {
               </CrmFormField>
               <CrmFormField label="Département" className="sm:col-span-2">
                 <input
+                  aria-label="Département"
                   value={form.department}
                   onChange={(e) => setForm({ ...form, department: e.target.value })}
                   className={crmFieldClass}
                 />
               </CrmFormField>
-              <label className="flex items-center gap-2 rounded-xl border border-gray/40 bg-gray-light/30 px-3 py-2.5 text-sm sm:col-span-2">
+              <label htmlFor="job-offer-visible" className="flex items-center gap-2 rounded-xl border border-gray/40 bg-gray-light/30 px-3 py-2.5 text-sm sm:col-span-2">
                 <input
+                  id="job-offer-visible"
                   type="checkbox"
+                  aria-label="Publier l'offre sur le site"
                   checked={form.isVisible}
                   onChange={(e) => setForm({ ...form, isVisible: e.target.checked })}
                   className="rounded border-gray/60"
@@ -277,6 +284,7 @@ export function CrmCarrieresView() {
               </label>
               <CrmFormField label="Description courte" className="sm:col-span-2">
                 <textarea
+                  aria-label="Description courte"
                   value={form.description}
                   onChange={(e) => setForm({ ...form, description: e.target.value })}
                   className={crmFieldClass}

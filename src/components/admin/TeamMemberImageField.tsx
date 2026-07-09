@@ -199,11 +199,11 @@ export function TeamMemberImageField({
       />
 
       <input
-        title="Uploader une photo"
         ref={inputRef}
         type="file"
         accept="image/jpeg,image/png,image/webp,image/gif"
         className="sr-only"
+        aria-label="Uploader une photo"
         onChange={(e) => {
           const file = e.target.files?.[0];
           if (file) void handleFile(file);

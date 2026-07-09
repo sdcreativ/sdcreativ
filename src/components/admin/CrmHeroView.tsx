@@ -129,6 +129,7 @@ export function CrmHeroView() {
             <div className="grid gap-4 sm:grid-cols-2">
               <CrmFormField label="Surtitre" className="sm:col-span-2">
                 <input
+                  title="Surtitre"
                   value={form.eyebrow}
                   onChange={(e) => setForm({ ...form, eyebrow: e.target.value })}
                   className={crmFieldClass}
@@ -137,6 +138,7 @@ export function CrmHeroView() {
               </CrmFormField>
               <CrmFormField label="Titre (avant surbrillance)">
                 <input
+                  title="Titre (avant surbrillance)"
                   value={form.titleBefore}
                   onChange={(e) => setForm({ ...form, titleBefore: e.target.value })}
                   className={crmFieldClass}
@@ -145,6 +147,7 @@ export function CrmHeroView() {
               </CrmFormField>
               <CrmFormField label="Mot en surbrillance">
                 <input
+                  title="Mot en surbrillance"
                   value={form.titleHighlight}
                   onChange={(e) => setForm({ ...form, titleHighlight: e.target.value })}
                   className={crmFieldClass}
@@ -153,6 +156,7 @@ export function CrmHeroView() {
               </CrmFormField>
               <CrmFormField label="Titre (après surbrillance)" className="sm:col-span-2">
                 <input
+                  title="Titre (après surbrillance)"
                   value={form.titleAfter}
                   onChange={(e) => setForm({ ...form, titleAfter: e.target.value })}
                   className={crmFieldClass}
@@ -160,6 +164,7 @@ export function CrmHeroView() {
               </CrmFormField>
               <CrmFormField label="Description" className="sm:col-span-2">
                 <textarea
+                  title="Description"
                   value={form.description}
                   onChange={(e) => setForm({ ...form, description: e.target.value })}
                   className={crmFieldClass}
@@ -173,6 +178,7 @@ export function CrmHeroView() {
           <CrmFormSection title="Média & badges" description="Image de fond et liste des services mis en avant.">
             <CrmFormField label="Image de fond (URL)" hint="Chemin relatif depuis /public, ex. /images/services/services-hero-bg.png">
               <input
+                title="Image de fond (URL)"
                 value={form.backgroundImage}
                 onChange={(e) => setForm({ ...form, backgroundImage: e.target.value })}
                 className={crmFieldClass}
@@ -205,6 +211,7 @@ export function CrmHeroView() {
                   <div className="grid gap-3 sm:grid-cols-2">
                     <CrmFormField label="Label">
                       <input
+                        title="Label"
                         value={h.label}
                         onChange={(e) => {
                           const highlights = [...form.highlights];
@@ -216,6 +223,7 @@ export function CrmHeroView() {
                     </CrmFormField>
                     <CrmFormField label="Description">
                       <input
+                        title="Description"
                         value={h.description}
                         onChange={(e) => {
                           const highlights = [...form.highlights];
@@ -243,6 +251,7 @@ export function CrmHeroView() {
             <div className="grid gap-4 sm:grid-cols-2">
               <CrmFormField label="Bouton principal">
                 <input
+                  title="Bouton principal"
                   value={form.ctaPrimaryLabel}
                   onChange={(e) => setForm({ ...form, ctaPrimaryLabel: e.target.value })}
                   className={crmFieldClass}
@@ -251,6 +260,7 @@ export function CrmHeroView() {
               </CrmFormField>
               <CrmFormField label="Lien bouton principal">
                 <input
+                  title="Lien bouton principal"
                   value={form.ctaPrimaryHref}
                   onChange={(e) => setForm({ ...form, ctaPrimaryHref: e.target.value })}
                   className={crmFieldClass}
@@ -259,6 +269,7 @@ export function CrmHeroView() {
               </CrmFormField>
               <CrmFormField label="Bouton secondaire">
                 <input
+                  title="Bouton secondaire"
                   value={form.ctaSecondaryLabel}
                   onChange={(e) => setForm({ ...form, ctaSecondaryLabel: e.target.value })}
                   className={crmFieldClass}
@@ -267,6 +278,7 @@ export function CrmHeroView() {
               </CrmFormField>
               <CrmFormField label="Lien bouton secondaire">
                 <input
+                  title="Lien bouton secondaire"
                   value={form.ctaSecondaryHref}
                   onChange={(e) => setForm({ ...form, ctaSecondaryHref: e.target.value })}
                   className={crmFieldClass}
