@@ -1,14 +1,22 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import { LayoutTemplate, Loader2, RotateCcw } from "lucide-react";
+import { LayoutTemplate, Loader2, Plus, RotateCcw } from "lucide-react";
 import type { SiteHeroSettings } from "@/lib/site-hero-types";
 import { parseFetchJson } from "@/lib/fetch-json";
-import { cn } from "@/lib/utils";
 import { useDialog } from "@/components/ui/DialogProvider";
-
-const fieldClass =
-  "w-full rounded-xl border border-gray/60 bg-white px-3 py-2.5 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20";
+import {
+  CrmFormActions,
+  CrmFormField,
+  CrmFormHeader,
+  CrmFormSection,
+  CrmFormStatus,
+  CrmHeroPreview,
+  CrmLineListEditor,
+  CrmRepeaterCard,
+  CrmSecondaryButton,
+  crmFieldClass,
+} from "@/components/admin/crm-site-form-ui";
 
 async function fetchHeroAdmin(): Promise<SiteHeroSettings> {
   const res = await fetch("/api/admin/site-hero", { credentials: "include" });
@@ -101,121 +109,187 @@ export function CrmHeroView() {
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
-        <div>
-          <h1 className="flex items-center gap-2 text-2xl font-bold text-foreground">
-            <LayoutTemplate className="h-6 w-6 text-primary" aria-hidden />
-            Hero accueil
-          </h1>
-          <p className="mt-1 text-sm text-gray-text">Bannière principale de la page d&apos;accueil.</p>
-        </div>
-        <button
-          type="button"
-          onClick={() => void handleReset()}
-          disabled={saving}
-          className="inline-flex items-center gap-1.5 rounded-xl border border-gray/60 bg-white px-3 py-2 text-sm font-medium hover:bg-gray-light disabled:opacity-60"
-        >
-          <RotateCcw className="h-4 w-4" aria-hidden />
-          Réinitialiser
-        </button>
-      </div>
+      <CrmFormHeader
+        icon={LayoutTemplate}
+        title="Hero accueil"
+        description="Bannière principale de la page d'accueil."
+        actions={
+          <CrmSecondaryButton onClick={() => void handleReset()} disabled={saving}>
+            <RotateCcw className="h-4 w-4" aria-hidden />
+            Réinitialiser
+          </CrmSecondaryButton>
+        }
+      />
 
-      {message && (
-        <p className={cn("text-sm", message.includes("Impossible") ? "text-red-600" : "text-emerald-700")} role="status">
-          {message}
-        </p>
-      )}
+      <CrmFormStatus message={message} />
 
-      <form onSubmit={(e) => void handleSubmit(e)} className="max-w-3xl space-y-6">
-        <fieldset className="grid gap-4 sm:grid-cols-2">
-          <label className="block sm:col-span-2">
-            <span className="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-gray-text">Surtitre</span>
-            <input value={form.eyebrow} onChange={(e) => setForm({ ...form, eyebrow: e.target.value })} className={fieldClass} required />
-          </label>
-          <label className="block">
-            <span className="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-gray-text">Titre (avant surbrillance)</span>
-            <input value={form.titleBefore} onChange={(e) => setForm({ ...form, titleBefore: e.target.value })} className={fieldClass} required />
-          </label>
-          <label className="block">
-            <span className="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-gray-text">Mot en surbrillance</span>
-            <input value={form.titleHighlight} onChange={(e) => setForm({ ...form, titleHighlight: e.target.value })} className={fieldClass} required />
-          </label>
-          <label className="block sm:col-span-2">
-            <span className="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-gray-text">Titre (après surbrillance)</span>
-            <input value={form.titleAfter} onChange={(e) => setForm({ ...form, titleAfter: e.target.value })} className={fieldClass} />
-          </label>
-          <label className="block sm:col-span-2">
-            <span className="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-gray-text">Description</span>
-            <textarea value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} className={fieldClass} rows={3} required />
-          </label>
-          <label className="block sm:col-span-2">
-            <span className="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-gray-text">Image de fond (URL)</span>
-            <input value={form.backgroundImage} onChange={(e) => setForm({ ...form, backgroundImage: e.target.value })} className={fieldClass} required />
-          </label>
-        </fieldset>
-
-        <fieldset className="space-y-3">
-          <legend className="text-sm font-semibold text-foreground">Badges services (liste)</legend>
-          <textarea
-            value={form.features.join("\n")}
-            onChange={(e) => setForm({ ...form, features: e.target.value.split("\n").map((s) => s.trim()).filter(Boolean) })}
-            className={fieldClass}
-            rows={5}
-            placeholder="Un service par ligne"
-          />
-        </fieldset>
-
-        <fieldset className="space-y-3">
-          <legend className="text-sm font-semibold text-foreground">Encarts latéraux (label + description, une paire par bloc)</legend>
-          {form.highlights.map((h, i) => (
-            <div key={i} className="grid gap-2 sm:grid-cols-2">
-              <input
-                value={h.label}
-                onChange={(e) => {
-                  const highlights = [...form.highlights];
-                  highlights[i] = { ...highlights[i]!, label: e.target.value };
-                  setForm({ ...form, highlights });
-                }}
-                className={fieldClass}
-                placeholder="Label"
-              />
-              <input
-                value={h.description}
-                onChange={(e) => {
-                  const highlights = [...form.highlights];
-                  highlights[i] = { ...highlights[i]!, description: e.target.value };
-                  setForm({ ...form, highlights });
-                }}
-                className={fieldClass}
-                placeholder="Description"
-              />
+      <form id="crm-hero-form" onSubmit={(e) => void handleSubmit(e)} className="grid gap-6 xl:grid-cols-[1fr_320px]">
+        <div className="space-y-6">
+          <CrmFormSection title="Textes principaux" description="Surtitre, titre et description affichés en haut de l'accueil.">
+            <div className="grid gap-4 sm:grid-cols-2">
+              <CrmFormField label="Surtitre" className="sm:col-span-2">
+                <input
+                  value={form.eyebrow}
+                  onChange={(e) => setForm({ ...form, eyebrow: e.target.value })}
+                  className={crmFieldClass}
+                  required
+                />
+              </CrmFormField>
+              <CrmFormField label="Titre (avant surbrillance)">
+                <input
+                  value={form.titleBefore}
+                  onChange={(e) => setForm({ ...form, titleBefore: e.target.value })}
+                  className={crmFieldClass}
+                  required
+                />
+              </CrmFormField>
+              <CrmFormField label="Mot en surbrillance">
+                <input
+                  value={form.titleHighlight}
+                  onChange={(e) => setForm({ ...form, titleHighlight: e.target.value })}
+                  className={crmFieldClass}
+                  required
+                />
+              </CrmFormField>
+              <CrmFormField label="Titre (après surbrillance)" className="sm:col-span-2">
+                <input
+                  value={form.titleAfter}
+                  onChange={(e) => setForm({ ...form, titleAfter: e.target.value })}
+                  className={crmFieldClass}
+                />
+              </CrmFormField>
+              <CrmFormField label="Description" className="sm:col-span-2">
+                <textarea
+                  value={form.description}
+                  onChange={(e) => setForm({ ...form, description: e.target.value })}
+                  className={crmFieldClass}
+                  rows={3}
+                  required
+                />
+              </CrmFormField>
             </div>
-          ))}
-        </fieldset>
+          </CrmFormSection>
 
-        <fieldset className="grid gap-4 sm:grid-cols-2">
-          <label className="block">
-            <span className="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-gray-text">Bouton principal</span>
-            <input value={form.ctaPrimaryLabel} onChange={(e) => setForm({ ...form, ctaPrimaryLabel: e.target.value })} className={fieldClass} required />
-          </label>
-          <label className="block">
-            <span className="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-gray-text">Lien bouton principal</span>
-            <input value={form.ctaPrimaryHref} onChange={(e) => setForm({ ...form, ctaPrimaryHref: e.target.value })} className={fieldClass} required />
-          </label>
-          <label className="block">
-            <span className="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-gray-text">Bouton secondaire</span>
-            <input value={form.ctaSecondaryLabel} onChange={(e) => setForm({ ...form, ctaSecondaryLabel: e.target.value })} className={fieldClass} required />
-          </label>
-          <label className="block">
-            <span className="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-gray-text">Lien bouton secondaire</span>
-            <input value={form.ctaSecondaryHref} onChange={(e) => setForm({ ...form, ctaSecondaryHref: e.target.value })} className={fieldClass} required />
-          </label>
-        </fieldset>
+          <CrmFormSection title="Média & badges" description="Image de fond et liste des services mis en avant.">
+            <CrmFormField label="Image de fond (URL)" hint="Chemin relatif depuis /public, ex. /images/services/services-hero-bg.png">
+              <input
+                value={form.backgroundImage}
+                onChange={(e) => setForm({ ...form, backgroundImage: e.target.value })}
+                className={crmFieldClass}
+                required
+              />
+            </CrmFormField>
+            <CrmLineListEditor
+              label="Badges services"
+              hint="Chaque ligne apparaît comme un badge sous le hero."
+              values={form.features}
+              onChange={(features) => setForm({ ...form, features: features.filter(Boolean) })}
+              placeholder="Ex. Sites vitrines"
+              addLabel="Ajouter un badge"
+            />
+          </CrmFormSection>
 
-        <button type="submit" disabled={saving} className="inline-flex items-center gap-2 rounded-xl bg-primary px-5 py-2.5 text-sm font-semibold text-white disabled:opacity-60">
-          {saving && <Loader2 className="h-4 w-4 animate-spin" aria-hidden />}
-          Enregistrer
-        </button>
+          <CrmFormSection title="Encarts latéraux" description="Points forts affichés à droite du hero sur grand écran.">
+            <div className="space-y-3">
+              {form.highlights.map((h, i) => (
+                <CrmRepeaterCard
+                  key={i}
+                  title="Encart"
+                  index={i}
+                  onRemove={
+                    form.highlights.length > 1
+                      ? () => setForm({ ...form, highlights: form.highlights.filter((_, idx) => idx !== i) })
+                      : undefined
+                  }
+                >
+                  <div className="grid gap-3 sm:grid-cols-2">
+                    <CrmFormField label="Label">
+                      <input
+                        value={h.label}
+                        onChange={(e) => {
+                          const highlights = [...form.highlights];
+                          highlights[i] = { ...highlights[i]!, label: e.target.value };
+                          setForm({ ...form, highlights });
+                        }}
+                        className={crmFieldClass}
+                      />
+                    </CrmFormField>
+                    <CrmFormField label="Description">
+                      <input
+                        value={h.description}
+                        onChange={(e) => {
+                          const highlights = [...form.highlights];
+                          highlights[i] = { ...highlights[i]!, description: e.target.value };
+                          setForm({ ...form, highlights });
+                        }}
+                        className={crmFieldClass}
+                      />
+                    </CrmFormField>
+                  </div>
+                </CrmRepeaterCard>
+              ))}
+              <button
+                type="button"
+                onClick={() => setForm({ ...form, highlights: [...form.highlights, { label: "", description: "" }] })}
+                className="inline-flex items-center gap-1.5 rounded-xl border border-dashed border-gray/60 px-3 py-2 text-sm font-medium text-gray-text hover:border-primary/40 hover:text-primary"
+              >
+                <Plus className="h-4 w-4" aria-hidden />
+                Ajouter un encart
+              </button>
+            </div>
+          </CrmFormSection>
+
+          <CrmFormSection title="Boutons d'action" description="Liens des deux boutons sous la description.">
+            <div className="grid gap-4 sm:grid-cols-2">
+              <CrmFormField label="Bouton principal">
+                <input
+                  value={form.ctaPrimaryLabel}
+                  onChange={(e) => setForm({ ...form, ctaPrimaryLabel: e.target.value })}
+                  className={crmFieldClass}
+                  required
+                />
+              </CrmFormField>
+              <CrmFormField label="Lien bouton principal">
+                <input
+                  value={form.ctaPrimaryHref}
+                  onChange={(e) => setForm({ ...form, ctaPrimaryHref: e.target.value })}
+                  className={crmFieldClass}
+                  required
+                />
+              </CrmFormField>
+              <CrmFormField label="Bouton secondaire">
+                <input
+                  value={form.ctaSecondaryLabel}
+                  onChange={(e) => setForm({ ...form, ctaSecondaryLabel: e.target.value })}
+                  className={crmFieldClass}
+                  required
+                />
+              </CrmFormField>
+              <CrmFormField label="Lien bouton secondaire">
+                <input
+                  value={form.ctaSecondaryHref}
+                  onChange={(e) => setForm({ ...form, ctaSecondaryHref: e.target.value })}
+                  className={crmFieldClass}
+                  required
+                />
+              </CrmFormField>
+            </div>
+          </CrmFormSection>
+        </div>
+
+        <aside className="xl:sticky xl:top-4 xl:self-start">
+          <CrmHeroPreview
+            eyebrow={form.eyebrow}
+            title={form.titleBefore}
+            highlight={form.titleHighlight}
+            titleAfter={form.titleAfter}
+            description={form.description}
+          />
+        </aside>
+
+        <div className="xl:col-span-2">
+          <CrmFormActions saving={saving} formId="crm-hero-form" />
+        </div>
       </form>
     </div>
   );

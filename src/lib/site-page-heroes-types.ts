@@ -32,6 +32,21 @@ export const PAGE_HERO_KEYS = [
 
 export type PageHeroKey = (typeof PAGE_HERO_KEYS)[number];
 
+export const PAGE_HERO_GROUPS: { label: string; keys: PageHeroKey[] }[] = [
+  {
+    label: "Commercial",
+    keys: ["contact", "tarifs", "devis", "services", "solutions-ia", "audit-gratuit"],
+  },
+  {
+    label: "Contenu",
+    keys: ["faq", "carrieres", "a-propos", "maintenance", "realisations", "blog"],
+  },
+  {
+    label: "Légal",
+    keys: ["mentions-legales", "politique-confidentialite"],
+  },
+];
+
 export const PAGE_HERO_LABELS: Record<PageHeroKey, string> = {
   contact: "Contact",
   tarifs: "Tarifs",

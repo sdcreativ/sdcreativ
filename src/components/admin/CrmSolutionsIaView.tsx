@@ -3,17 +3,36 @@
 import { useCallback, useEffect, useState } from "react";
 import { Bot, Loader2, RotateCcw } from "lucide-react";
 import type { SiteSolutionsIaSettings } from "@/lib/site-solutions-ia-types";
-import { LUCIDE_ICON_NAMES, type LucideIconName } from "@/lib/lucide-icon-map";
 import { parseFetchJson } from "@/lib/fetch-json";
-import { cn } from "@/lib/utils";
 import { useDialog } from "@/components/ui/DialogProvider";
+import {
+  CrmFormActions,
+  CrmFormField,
+  CrmFormHeader,
+  CrmFormSection,
+  CrmFormStatus,
+  CrmIconSelect,
+  CrmLineListEditor,
+  CrmRepeaterCard,
+  CrmSecondaryButton,
+  CrmSectionTabs,
+  crmFieldClass,
+} from "@/components/admin/crm-site-form-ui";
 
-const fieldClass =
-  "w-full rounded-xl border border-gray/60 bg-white px-3 py-2.5 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20";
+type SolutionsTab = "demo" | "packs" | "faq" | "use-cases" | "cta";
+
+const SOLUTIONS_TABS: { id: SolutionsTab; label: string }[] = [
+  { id: "demo", label: "Démo" },
+  { id: "packs", label: "Packs" },
+  { id: "faq", label: "FAQ" },
+  { id: "use-cases", label: "Cas d'usage" },
+  { id: "cta", label: "CTA" },
+];
 
 export function CrmSolutionsIaView() {
   const { confirm } = useDialog();
   const [form, setForm] = useState<SiteSolutionsIaSettings | null>(null);
+  const [activeTab, setActiveTab] = useState<SolutionsTab>("demo");
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState("");
@@ -89,92 +108,233 @@ export function CrmSolutionsIaView() {
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
-        <div>
-          <h1 className="flex items-center gap-2 text-2xl font-bold text-foreground">
-            <Bot className="h-6 w-6 text-primary" aria-hidden />
-            Solutions IA
-          </h1>
-          <p className="mt-1 text-sm text-gray-text">Contenu complet de la page /solutions-ia.</p>
+      <CrmFormHeader
+        icon={Bot}
+        title="Solutions IA"
+        description="Contenu complet de la page /solutions-ia : démo, offres, FAQ et cas d'usage."
+        actions={
+          <CrmSecondaryButton onClick={() => void handleReset()} disabled={saving}>
+            <RotateCcw className="h-4 w-4" aria-hidden />
+            Réinitialiser
+          </CrmSecondaryButton>
+        }
+      />
+
+      <CrmFormStatus message={message} />
+
+      <form id="crm-solutions-ia-form" onSubmit={(e) => void handleSubmit(e)} className="max-w-5xl space-y-6">
+        <div className="rounded-2xl border border-gray/40 bg-white p-4 shadow-sm">
+          <CrmSectionTabs tabs={SOLUTIONS_TABS} active={activeTab} onChange={setActiveTab} />
         </div>
-        <button type="button" onClick={() => void handleReset()} disabled={saving} className="inline-flex items-center gap-1.5 rounded-xl border border-gray/60 bg-white px-3 py-2 text-sm font-medium hover:bg-gray-light disabled:opacity-60">
-          <RotateCcw className="h-4 w-4" aria-hidden />
-          Réinitialiser
-        </button>
-      </div>
 
-      {message && (
-        <p className={cn("text-sm", message.includes("Impossible") ? "text-red-600" : "text-emerald-700")} role="status">
-          {message}
-        </p>
-      )}
+        {activeTab === "demo" && (
+          <CrmFormSection title="Section démo" description="Encart invitant à tester le chatbot intégré au site.">
+            <CrmFormField label="Titre">
+              <input
+                value={form.demoSection.title}
+                onChange={(e) => setForm({ ...form, demoSection: { ...form.demoSection, title: e.target.value } })}
+                className={crmFieldClass}
+              />
+            </CrmFormField>
+            <CrmFormField label="Description">
+              <textarea
+                value={form.demoSection.description}
+                onChange={(e) => setForm({ ...form, demoSection: { ...form.demoSection, description: e.target.value } })}
+                className={crmFieldClass}
+                rows={3}
+              />
+            </CrmFormField>
+            <CrmFormField label="Indication" hint="Texte d'aide affiché sous la description.">
+              <input
+                value={form.demoSection.hint}
+                onChange={(e) => setForm({ ...form, demoSection: { ...form.demoSection, hint: e.target.value } })}
+                className={crmFieldClass}
+              />
+            </CrmFormField>
+          </CrmFormSection>
+        )}
 
-      <form onSubmit={(e) => void handleSubmit(e)} className="max-w-4xl space-y-8">
-        <fieldset className="space-y-3 rounded-2xl border border-gray/40 p-6">
-          <legend className="px-2 font-semibold">Section démo</legend>
-          <input value={form.demoSection.title} onChange={(e) => setForm({ ...form, demoSection: { ...form.demoSection, title: e.target.value } })} className={fieldClass} placeholder="Titre" />
-          <textarea value={form.demoSection.description} onChange={(e) => setForm({ ...form, demoSection: { ...form.demoSection, description: e.target.value } })} className={fieldClass} rows={2} title="Description" />
-          <input value={form.demoSection.hint} onChange={(e) => setForm({ ...form, demoSection: { ...form.demoSection, hint: e.target.value } })} className={fieldClass} placeholder="Indication" />
-        </fieldset>
+        {activeTab === "packs" && (
+          <div className="space-y-4">
+            {form.packs.map((pack, i) => (
+              <CrmFormSection key={pack.id} title={`Pack : ${pack.name}`} description="Offre tarifaire affichée sur la page.">
+                <div className="grid gap-4 sm:grid-cols-2">
+                  <CrmFormField label="Nom du pack">
+                    <input
+                      value={pack.name}
+                      onChange={(e) => {
+                        const packs = [...form.packs];
+                        packs[i] = { ...packs[i]!, name: e.target.value };
+                        setForm({ ...form, packs });
+                      }}
+                      className={crmFieldClass}
+                    />
+                  </CrmFormField>
+                  <CrmFormField label="Prix à partir de (FCFA)" hint="Montant en francs CFA, sans séparateur.">
+                    <input
+                      type="number"
+                      min={0}
+                      step={1000}
+                      value={pack.priceFrom}
+                      onChange={(e) => {
+                        const packs = [...form.packs];
+                        packs[i] = { ...packs[i]!, priceFrom: Number(e.target.value) };
+                        setForm({ ...form, packs });
+                      }}
+                      className={crmFieldClass}
+                    />
+                  </CrmFormField>
+                  <CrmFormField label="Accroche" className="sm:col-span-2">
+                    <input
+                      value={pack.tagline}
+                      onChange={(e) => {
+                        const packs = [...form.packs];
+                        packs[i] = { ...packs[i]!, tagline: e.target.value };
+                        setForm({ ...form, packs });
+                      }}
+                      className={crmFieldClass}
+                    />
+                  </CrmFormField>
+                  <label className="flex items-center gap-2 rounded-xl border border-gray/40 bg-gray-light/30 px-3 py-2.5 text-sm sm:col-span-2">
+                    <input
+                      type="checkbox"
+                      checked={pack.highlighted ?? false}
+                      onChange={(e) => {
+                        const packs = [...form.packs];
+                        packs[i] = { ...packs[i]!, highlighted: e.target.checked };
+                        setForm({ ...form, packs });
+                      }}
+                      className="rounded border-gray/60"
+                    />
+                    Mettre ce pack en avant sur la page
+                  </label>
+                </div>
+                <CrmLineListEditor
+                  label="Fonctionnalités incluses"
+                  values={pack.features}
+                  onChange={(features) => {
+                    const packs = [...form.packs];
+                    packs[i] = { ...packs[i]!, features: features.filter(Boolean) };
+                    setForm({ ...form, packs });
+                  }}
+                  placeholder="Ex. Chatbot personnalisé"
+                  addLabel="Ajouter une fonctionnalité"
+                />
+              </CrmFormSection>
+            ))}
+          </div>
+        )}
 
-        {form.packs.map((pack, i) => (
-          <fieldset key={pack.id} className="space-y-3 rounded-2xl border border-gray/40 p-6">
-            <legend className="px-2 font-semibold">Pack {pack.name}</legend>
-            <div className="grid gap-3 sm:grid-cols-2">
-              <input value={pack.name} onChange={(e) => { const packs = [...form.packs]; packs[i] = { ...packs[i]!, name: e.target.value }; setForm({ ...form, packs }); }} className={fieldClass} title="Nom" />
-              <input type="number" value={pack.priceFrom} onChange={(e) => { const packs = [...form.packs]; packs[i] = { ...packs[i]!, priceFrom: Number(e.target.value) }; setForm({ ...form, packs }); }} className={fieldClass} title="Prix" />
-              <input value={pack.tagline} onChange={(e) => { const packs = [...form.packs]; packs[i] = { ...packs[i]!, tagline: e.target.value }; setForm({ ...form, packs }); }} className={fieldClass} placeholder="Tagline" />
-              <label className="flex items-center gap-2 text-sm">
-                <input type="checkbox" checked={pack.highlighted ?? false} onChange={(e) => { const packs = [...form.packs]; packs[i] = { ...packs[i]!, highlighted: e.target.checked }; setForm({ ...form, packs }); }} />
-                Mis en avant
-              </label>
+        {activeTab === "faq" && (
+          <CrmFormSection title="FAQ IA" description="Questions fréquentes sur vos solutions d'intelligence artificielle.">
+            <div className="space-y-3">
+              {form.faq.map((item, i) => (
+                <CrmRepeaterCard key={i} title="Question" index={i}>
+                  <CrmFormField label="Question">
+                    <input
+                      value={item.question}
+                      onChange={(e) => {
+                        const faq = [...form.faq];
+                        faq[i] = { ...faq[i]!, question: e.target.value };
+                        setForm({ ...form, faq });
+                      }}
+                      className={crmFieldClass}
+                    />
+                  </CrmFormField>
+                  <CrmFormField label="Réponse">
+                    <textarea
+                      value={item.answer}
+                      onChange={(e) => {
+                        const faq = [...form.faq];
+                        faq[i] = { ...faq[i]!, answer: e.target.value };
+                        setForm({ ...form, faq });
+                      }}
+                      className={crmFieldClass}
+                      rows={3}
+                    />
+                  </CrmFormField>
+                </CrmRepeaterCard>
+              ))}
             </div>
-            <textarea
-              value={pack.features.join("\n")}
-              onChange={(e) => { const packs = [...form.packs]; packs[i] = { ...packs[i]!, features: e.target.value.split("\n").map((s) => s.trim()).filter(Boolean) }; setForm({ ...form, packs }); }}
-              className={fieldClass}
-              rows={4}
-              placeholder="Fonctionnalités (une par ligne)"
-            />
-          </fieldset>
-        ))}
+          </CrmFormSection>
+        )}
 
-        <fieldset className="space-y-3 rounded-2xl border border-gray/40 p-6">
-          <legend className="px-2 font-semibold">FAQ IA</legend>
-          {form.faq.map((item, i) => (
-            <div key={i} className="space-y-2 rounded-xl border border-gray/30 p-3">
-              <input value={item.question} onChange={(e) => { const faq = [...form.faq]; faq[i] = { ...faq[i]!, question: e.target.value }; setForm({ ...form, faq }); }} className={fieldClass} placeholder="Question" />
-              <textarea value={item.answer} onChange={(e) => { const faq = [...form.faq]; faq[i] = { ...faq[i]!, answer: e.target.value }; setForm({ ...form, faq }); }} className={fieldClass} rows={2} placeholder="Réponse" />
+        {activeTab === "use-cases" && (
+          <CrmFormSection title="Cas d'usage" description="Exemples concrets d'application de l'IA pour vos clients.">
+            <div className="space-y-3">
+              {form.useCases.map((useCase, i) => (
+                <CrmRepeaterCard key={useCase.id} title="Cas d'usage" index={i}>
+                  <div className="grid gap-3 sm:grid-cols-2">
+                    <CrmFormField label="Titre">
+                      <input
+                        value={useCase.title}
+                        onChange={(e) => {
+                          const useCases = [...form.useCases];
+                          useCases[i] = { ...useCases[i]!, title: e.target.value };
+                          setForm({ ...form, useCases });
+                        }}
+                        className={crmFieldClass}
+                      />
+                    </CrmFormField>
+                    <CrmIconSelect
+                      value={useCase.icon}
+                      onChange={(icon) => {
+                        const useCases = [...form.useCases];
+                        useCases[i] = { ...useCases[i]!, icon };
+                        setForm({ ...form, useCases });
+                      }}
+                    />
+                  </div>
+                  <CrmFormField label="Description">
+                    <textarea
+                      value={useCase.description}
+                      onChange={(e) => {
+                        const useCases = [...form.useCases];
+                        useCases[i] = { ...useCases[i]!, description: e.target.value };
+                        setForm({ ...form, useCases });
+                      }}
+                      className={crmFieldClass}
+                      rows={2}
+                    />
+                  </CrmFormField>
+                  <CrmLineListEditor
+                    label="Bénéfices"
+                    values={useCase.benefits}
+                    onChange={(benefits) => {
+                      const useCases = [...form.useCases];
+                      useCases[i] = { ...useCases[i]!, benefits: benefits.filter(Boolean) };
+                      setForm({ ...form, useCases });
+                    }}
+                    placeholder="Ex. Réduction du temps de réponse"
+                    addLabel="Ajouter un bénéfice"
+                  />
+                </CrmRepeaterCard>
+              ))}
             </div>
-          ))}
-        </fieldset>
+          </CrmFormSection>
+        )}
 
-        <fieldset className="space-y-3 rounded-2xl border border-gray/40 p-6">
-          <legend className="px-2 font-semibold">Cas d&apos;usage</legend>
-          {form.useCases.map((useCase, i) => (
-            <div key={useCase.id} className="space-y-2 rounded-xl border border-gray/30 p-3">
-              <div className="grid gap-2 sm:grid-cols-2">
-                <input value={useCase.title} onChange={(e) => { const useCases = [...form.useCases]; useCases[i] = { ...useCases[i]!, title: e.target.value }; setForm({ ...form, useCases }); }} className={fieldClass} title="Titre" />
-                <select title="Icône" value={useCase.icon} onChange={(e) => { const useCases = [...form.useCases]; useCases[i] = { ...useCases[i]!, icon: e.target.value as LucideIconName }; setForm({ ...form, useCases }); }} className={fieldClass}>
-                  {LUCIDE_ICON_NAMES.map((name) => <option key={name} value={name}>{name}</option>)}
-                </select>
-              </div>
-              <textarea value={useCase.description} onChange={(e) => { const useCases = [...form.useCases]; useCases[i] = { ...useCases[i]!, description: e.target.value }; setForm({ ...form, useCases }); }} className={fieldClass} rows={2} title="Description" />
-              <textarea value={useCase.benefits.join("\n")} onChange={(e) => { const useCases = [...form.useCases]; useCases[i] = { ...useCases[i]!, benefits: e.target.value.split("\n").map((s) => s.trim()).filter(Boolean) }; setForm({ ...form, useCases }); }} className={fieldClass} rows={3} placeholder="Bénéfices" />
-            </div>
-          ))}
-        </fieldset>
+        {activeTab === "cta" && (
+          <CrmFormSection title="Appel à l'action" description="Bloc de conversion en bas de la page Solutions IA.">
+            <CrmFormField label="Titre">
+              <input
+                value={form.ctaSection.title}
+                onChange={(e) => setForm({ ...form, ctaSection: { ...form.ctaSection, title: e.target.value } })}
+                className={crmFieldClass}
+              />
+            </CrmFormField>
+            <CrmFormField label="Description">
+              <textarea
+                value={form.ctaSection.description}
+                onChange={(e) => setForm({ ...form, ctaSection: { ...form.ctaSection, description: e.target.value } })}
+                className={crmFieldClass}
+                rows={3}
+              />
+            </CrmFormField>
+          </CrmFormSection>
+        )}
 
-        <fieldset className="space-y-3 rounded-2xl border border-gray/40 p-6">
-          <legend className="px-2 font-semibold">CTA bas de page</legend>
-          <input title="Titre" value={form.ctaSection.title} onChange={(e) => setForm({ ...form, ctaSection: { ...form.ctaSection, title: e.target.value } })} className={fieldClass} />
-          <textarea title="Description" value={form.ctaSection.description} onChange={(e) => setForm({ ...form, ctaSection: { ...form.ctaSection, description: e.target.value } })} className={fieldClass} rows={2} />
-        </fieldset>
-
-        <button type="submit" disabled={saving} className="inline-flex items-center gap-2 rounded-xl bg-primary px-5 py-2.5 text-sm font-semibold text-white disabled:opacity-60">
-          {saving && <Loader2 className="h-4 w-4 animate-spin" aria-hidden />}
-          Enregistrer
-        </button>
+        <CrmFormActions saving={saving} formId="crm-solutions-ia-form" />
       </form>
     </div>
   );

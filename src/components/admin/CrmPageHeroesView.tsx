@@ -3,13 +3,20 @@
 import { useCallback, useEffect, useState } from "react";
 import { LayoutTemplate, Loader2, RotateCcw } from "lucide-react";
 import type { PageHeroKey, SitePageHeroesSettings } from "@/lib/site-page-heroes-types";
-import { PAGE_HERO_KEYS, PAGE_HERO_LABELS } from "@/lib/site-page-heroes-types";
+import { PAGE_HERO_GROUPS, PAGE_HERO_LABELS } from "@/lib/site-page-heroes-types";
 import { parseFetchJson } from "@/lib/fetch-json";
-import { cn } from "@/lib/utils";
 import { useDialog } from "@/components/ui/DialogProvider";
-
-const fieldClass =
-  "w-full rounded-xl border border-gray/60 bg-white px-3 py-2.5 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20";
+import {
+  CrmFormActions,
+  CrmFormField,
+  CrmFormHeader,
+  CrmFormSection,
+  CrmFormStatus,
+  CrmGroupedTabs,
+  CrmHeroPreview,
+  CrmSecondaryButton,
+  crmFieldClass,
+} from "@/components/admin/crm-site-form-ui";
 
 export function CrmPageHeroesView() {
   const { confirm } = useDialog();
@@ -92,101 +99,92 @@ export function CrmPageHeroesView() {
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
-        <div>
-          <h1 className="flex items-center gap-2 text-2xl font-bold text-foreground">
-            <LayoutTemplate className="h-6 w-6 text-primary" aria-hidden />
-            Heroes des pages
-          </h1>
-          <p className="mt-1 text-sm text-gray-text">Bannières des pages internes (hors accueil et fiches service).</p>
+      <CrmFormHeader
+        icon={LayoutTemplate}
+        title="Heroes des pages"
+        description="Bannières des pages internes (hors accueil et fiches service). Les modifications s'appliquent à toutes les pages en une seule sauvegarde."
+        actions={
+          <CrmSecondaryButton onClick={() => void handleReset()} disabled={saving}>
+            <RotateCcw className="h-4 w-4" aria-hidden />
+            Réinitialiser
+          </CrmSecondaryButton>
+        }
+      />
+
+      <CrmFormStatus message={message} />
+
+      <CrmGroupedTabs
+        groups={PAGE_HERO_GROUPS}
+        labels={PAGE_HERO_LABELS}
+        activeKey={activeKey}
+        onSelect={setActiveKey}
+      />
+
+      <form id="crm-page-heroes-form" onSubmit={(e) => void handleSubmit(e)} className="grid gap-6 xl:grid-cols-[1fr_320px]">
+        <CrmFormSection
+          title={`Page : ${PAGE_HERO_LABELS[activeKey]}`}
+          description="Textes et visuel du bandeau en tête de page."
+        >
+          <div className="grid gap-4 sm:grid-cols-2">
+            <CrmFormField label="Surtitre" className="sm:col-span-2">
+              <input
+                value={hero.eyebrow ?? ""}
+                onChange={(e) => setForm({ ...form, [activeKey]: { ...hero, eyebrow: e.target.value } })}
+                className={crmFieldClass}
+              />
+            </CrmFormField>
+            <CrmFormField label="Titre">
+              <input
+                value={hero.title}
+                onChange={(e) => setForm({ ...form, [activeKey]: { ...hero, title: e.target.value } })}
+                className={crmFieldClass}
+                required
+              />
+            </CrmFormField>
+            <CrmFormField label="Mot en surbrillance">
+              <input
+                value={hero.highlight ?? ""}
+                onChange={(e) => setForm({ ...form, [activeKey]: { ...hero, highlight: e.target.value } })}
+                className={crmFieldClass}
+              />
+            </CrmFormField>
+            <CrmFormField label="Description" className="sm:col-span-2">
+              <textarea
+                value={hero.description ?? ""}
+                onChange={(e) => setForm({ ...form, [activeKey]: { ...hero, description: e.target.value } })}
+                className={crmFieldClass}
+                rows={3}
+              />
+            </CrmFormField>
+            <CrmFormField label="Image de fond (URL)" hint="Chemin relatif depuis /public." className="sm:col-span-2">
+              <input
+                value={hero.backgroundImage ?? ""}
+                onChange={(e) => setForm({ ...form, [activeKey]: { ...hero, backgroundImage: e.target.value } })}
+                className={crmFieldClass}
+              />
+            </CrmFormField>
+            <CrmFormField label="Texte alternatif de l'image" hint="Description pour l'accessibilité et le référencement." className="sm:col-span-2">
+              <input
+                value={hero.backgroundAlt ?? ""}
+                onChange={(e) => setForm({ ...form, [activeKey]: { ...hero, backgroundAlt: e.target.value } })}
+                className={crmFieldClass}
+              />
+            </CrmFormField>
+          </div>
+        </CrmFormSection>
+
+        <aside className="xl:sticky xl:top-4 xl:self-start">
+          <CrmHeroPreview
+            eyebrow={hero.eyebrow}
+            title={hero.title}
+            highlight={hero.highlight}
+            description={hero.description}
+          />
+        </aside>
+
+        <div className="xl:col-span-2">
+          <CrmFormActions saving={saving} label="Enregistrer toutes les pages" formId="crm-page-heroes-form" />
         </div>
-        <button type="button" onClick={() => void handleReset()} disabled={saving} className="inline-flex items-center gap-1.5 rounded-xl border border-gray/60 bg-white px-3 py-2 text-sm font-medium hover:bg-gray-light disabled:opacity-60">
-          <RotateCcw className="h-4 w-4" aria-hidden />
-          Réinitialiser
-        </button>
-      </div>
-
-      {message && (
-        <p className={cn("text-sm", message.includes("Impossible") ? "text-red-600" : "text-emerald-700")} role="status">
-          {message}
-        </p>
-      )}
-
-      <div className="flex flex-wrap gap-2">
-        {PAGE_HERO_KEYS.map((key) => (
-          <button
-            key={key}
-            type="button"
-            onClick={() => setActiveKey(key)}
-            className={cn(
-              "rounded-lg px-3 py-1.5 text-xs font-medium transition-colors",
-              activeKey === key ? "bg-primary text-white" : "bg-gray-light text-gray-text hover:bg-gray/20",
-            )}
-          >
-            {PAGE_HERO_LABELS[key]}
-          </button>
-        ))}
-      </div>
-
-      <form onSubmit={(e) => void handleSubmit(e)} className="max-w-3xl space-y-4">
-        <p className="text-sm font-semibold text-foreground">Page : {PAGE_HERO_LABELS[activeKey]}</p>
-        <div className="grid gap-4 sm:grid-cols-2">
-          <label className="block sm:col-span-2">
-            <span className="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-gray-text">Surtitre</span>
-            <input
-              value={hero.eyebrow ?? ""}
-              onChange={(e) => setForm({ ...form, [activeKey]: { ...hero, eyebrow: e.target.value } })}
-              className={fieldClass}
-            />
-          </label>
-          <label className="block">
-            <span className="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-gray-text">Titre</span>
-            <input
-              value={hero.title}
-              onChange={(e) => setForm({ ...form, [activeKey]: { ...hero, title: e.target.value } })}
-              className={fieldClass}
-              required
-            />
-          </label>
-          <label className="block">
-            <span className="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-gray-text">Surbrillance</span>
-            <input
-              value={hero.highlight ?? ""}
-              onChange={(e) => setForm({ ...form, [activeKey]: { ...hero, highlight: e.target.value } })}
-              className={fieldClass}
-            />
-          </label>
-          <label className="block sm:col-span-2">
-            <span className="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-gray-text">Description</span>
-            <textarea
-              value={hero.description ?? ""}
-              onChange={(e) => setForm({ ...form, [activeKey]: { ...hero, description: e.target.value } })}
-              className={fieldClass}
-              rows={3}
-            />
-          </label>
-          <label className="block sm:col-span-2">
-            <span className="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-gray-text">Image de fond (URL)</span>
-            <input
-              value={hero.backgroundImage ?? ""}
-              onChange={(e) => setForm({ ...form, [activeKey]: { ...hero, backgroundImage: e.target.value } })}
-              className={fieldClass}
-            />
-          </label>
-          <label className="block sm:col-span-2">
-            <span className="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-gray-text">Alt image</span>
-            <input
-              value={hero.backgroundAlt ?? ""}
-              onChange={(e) => setForm({ ...form, [activeKey]: { ...hero, backgroundAlt: e.target.value } })}
-              className={fieldClass}
-            />
-          </label>
-        </div>
-
-        <button type="submit" disabled={saving} className="inline-flex items-center gap-2 rounded-xl bg-primary px-5 py-2.5 text-sm font-semibold text-white disabled:opacity-60">
-          {saving && <Loader2 className="h-4 w-4 animate-spin" aria-hidden />}
-          Enregistrer toutes les pages
-        </button>
       </form>
     </div>
   );
