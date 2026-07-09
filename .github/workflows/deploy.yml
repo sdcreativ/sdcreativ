@@ -1,12 +1,19 @@
 name: Deploy
 
 # Production : VPS Hostinger + Docker (pas Vercel).
-# Voir docs/DEPLOIEMENT-SDCREATIV-COM.md et docs/GITHUB-ACTIONS-RUNNER.md
 #
-# Déploiement via runner self-hosted sur le VPS (pas de SSH entrant depuis GitHub cloud).
-# Installation one-shot : scripts/install-github-runner.sh
+# Déploiement automatique : push sur main → CI réussie → rebuild Docker sur le VPS.
+# Déploiement manuel : Actions → Deploy → Run workflow (saisir « deploy »).
+#
+# Prérequis VPS : runner self-hosted (scripts/install-github-runner.sh)
 
 on:
+  # Auto : après CI verte sur main
+  workflow_run:
+    workflows: ["CI"]
+    types: [completed]
+    branches: [main]
+  # Manuel : secours ou hotfix
   workflow_dispatch:
     inputs:
       confirm:
@@ -21,9 +28,10 @@ concurrency:
 jobs:
   deploy-vps:
     name: Deploy VPS (Docker)
-    # Runner installé sur le VPS — labels définis dans install-github-runner.sh
     runs-on: [self-hosted, linux, sdcreativ-vps]
-    if: github.event.inputs.confirm == 'deploy'
+    if: |
+      (github.event_name == 'workflow_dispatch' && github.event.inputs.confirm == 'deploy') ||
+      (github.event_name == 'workflow_run' && github.event.workflow_run.conclusion == 'success')
     environment:
       name: production
       url: https://sdcreativ.com
@@ -40,10 +48,18 @@ jobs:
       - name: Résumé
         if: always()
         run: |
+          if [ "${{ github.event_name }}" = "workflow_run" ]; then
+            COMMIT="${{ github.event.workflow_run.head_sha }}"
+            TRIGGER="auto (CI main)"
+          else
+            COMMIT="${{ github.sha }}"
+            TRIGGER="manuel"
+          fi
           {
             echo "## Déploiement production — sdcreativ.com"
             echo ""
+            echo "Déclencheur : ${TRIGGER}"
             echo "Runner : self-hosted (\`sdcreativ-vps\`)"
-            echo "Commit : \`${{ github.sha }}\`"
+            echo "Commit : \`${COMMIT}\`"
             echo "Statut : ${{ job.status }}"
           } >> "$GITHUB_STEP_SUMMARY"
