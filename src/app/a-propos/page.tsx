@@ -1,5 +1,5 @@
 import { Target, Users, Lightbulb, Award } from "lucide-react";
-import { PageHero } from "@/components/ui/PageHero";
+import { SitePageHero } from "@/components/ui/SitePageHero";
 import { AnimatedCard } from "@/components/ui/AnimatedSection";
 import { Button } from "@/components/ui/Button";
 import { MethodSection } from "@/components/sections/MethodSection";
@@ -43,12 +43,7 @@ const values = [
 export default function AboutPage() {
   return (
     <>
-      <PageHero
-        eyebrow="À propos"
-        title="Votre partenaire digital"
-        highlight="à Abidjan"
-        description="SD CREATIV accompagne les PME, entrepreneurs et organisations dans leur transformation digitale avec des solutions web modernes, performantes et accessibles."
-      />
+      <SitePageHero pageKey="a-propos" />
 
       <section className="py-20 md:py-28">
         <div className="container mx-auto grid items-center gap-12 px-4 md:px-6 lg:grid-cols-2 lg:px-8">

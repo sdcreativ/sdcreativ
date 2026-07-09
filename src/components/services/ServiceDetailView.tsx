@@ -15,12 +15,12 @@ import { RealisationCard } from "@/components/realisations/RealisationCard";
 import { FaqJsonLd } from "@/components/seo/JsonLd";
 import type { ServiceDetail } from "@/content/service-details";
 import { getRealisation } from "@/content/realisations";
-import type { Service } from "@/content/services";
+import type { ResolvedService } from "@/lib/public-services-types";
 import { buildWhatsappUrl } from "@/lib/site-public-resolver";
 import { getSitePublicSettings } from "@/lib/site-public-settings";
 
 type Props = {
-  service: Service;
+  service: ResolvedService;
   detail: ServiceDetail;
 };
 

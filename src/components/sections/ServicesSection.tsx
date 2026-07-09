@@ -2,10 +2,18 @@ import Link from "next/link";
 import { ArrowRight } from "lucide-react";
 import { AnimatedSection, AnimatedCard } from "@/components/ui/AnimatedSection";
 import { SectionHeading } from "@/components/ui/SectionHeading";
-import { services } from "@/content/services";
-import { getServiceHref, getServiceHubLinkLabel } from "@/lib/services";
+import { getServiceHref, getServiceHubLinkLabel, getServices } from "@/lib/services";
 
-export function ServicesSection() {
+export async function ServicesSection() {
+  const services = await getServices();
+  const itemsWithLinks = await Promise.all(
+    services.map(async (service) => ({
+      service,
+      href: await getServiceHref(service),
+      linkLabel: await getServiceHubLinkLabel(service),
+    })),
+  );
+
   return (
     <AnimatedSection className="bg-gray-light py-20 md:py-28" id="services">
       <div className="container mx-auto px-4 md:px-6 lg:px-8">
@@ -17,7 +25,7 @@ export function ServicesSection() {
         />
 
         <div className="grid gap-6 md:grid-cols-2 xl:grid-cols-3">
-          {services.map((service, i) => {
+          {itemsWithLinks.map(({ service, href, linkLabel }, i) => {
             const Icon = service.icon;
             return (
               <AnimatedCard
@@ -42,10 +50,10 @@ export function ServicesSection() {
                   ))}
                 </ul>
                 <Link
-                  href={getServiceHref(service)}
+                  href={href}
                   className="mt-6 inline-flex items-center gap-1 text-sm font-semibold text-primary transition-colors hover:text-primary-dark"
                 >
-                  {getServiceHubLinkLabel(service)}
+                  {linkLabel}
                   <ArrowRight className="h-4 w-4" aria-hidden />
                 </Link>
               </AnimatedCard>

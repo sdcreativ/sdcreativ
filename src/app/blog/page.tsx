@@ -1,7 +1,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import { ArrowRight, Calendar, Clock, Star } from "lucide-react";
-import { PageHero } from "@/components/ui/PageHero";
+import { SitePageHero } from "@/components/ui/SitePageHero";
 import { AnimatedCard } from "@/components/ui/AnimatedSection";
 import type { BlogPost } from "@/content/blog";
 import { getBlogPosts } from "@/lib/cms";
@@ -106,16 +106,7 @@ export default async function BlogPage() {
 
   return (
     <>
-      <PageHero
-        eyebrow="Blog & Conseils"
-        title="Actualités &"
-        highlight="expertise digitale"
-        description="Des articles pratiques pour vous aider à développer votre présence en ligne et atteindre vos objectifs business."
-        breadcrumb={[
-          { label: "Accueil", href: "/" },
-          { label: "Blog" },
-        ]}
-      />
+      <SitePageHero pageKey="blog" />
 
       <section className="py-20 md:py-28">
         <div className="container mx-auto px-4 md:px-6 lg:px-8">

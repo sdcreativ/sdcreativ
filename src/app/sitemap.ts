@@ -1,7 +1,7 @@
 import type { MetadataRoute } from "next";
 import { SITE } from "@/lib/constants";
 import { localSeoPages } from "@/content/local-seo";
-import { getServiceDetailSlugs } from "@/content/service-details";
+import { getServiceDetailSlugs } from "@/lib/public-services-resolver";
 import { getBlogPosts, getRealisations } from "@/lib/cms";
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
@@ -47,7 +47,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     priority: 0.7,
   }));
 
-  const serviceDetailEntries = getServiceDetailSlugs().map((slug) => ({
+  const serviceDetailEntries = (await getServiceDetailSlugs()).map((slug) => ({
     url: `${SITE.url}/services/${slug}`,
     lastModified: new Date(),
     changeFrequency: "monthly" as const,

@@ -1,20 +1,13 @@
 import Link from "next/link";
 import { CheckCircle2, Bot } from "lucide-react";
-import { PageHero } from "@/components/ui/PageHero";
+import { SitePageHero } from "@/components/ui/SitePageHero";
 import { Button } from "@/components/ui/Button";
 import { AccordionItem } from "@/components/ui/Accordion";
 import { AnimatedSection, AnimatedCard } from "@/components/ui/AnimatedSection";
 import { SectionHeading } from "@/components/ui/SectionHeading";
 import { FaqJsonLd } from "@/components/seo/JsonLd";
-import {
-  iaUseCases,
-  iaStack,
-  iaProcess,
-  iaPacks,
-  iaFaq,
-  iaDemoHighlights,
-} from "@/content/solutions-ia";
 import { formatPriceFrom } from "@/lib/format";
+import { getSolutionsIaContent } from "@/lib/solutions-ia-resolver";
 import { createMetadata } from "@/lib/metadata";
 import { cn } from "@/lib/utils";
 
@@ -25,20 +18,13 @@ export const metadata = createMetadata({
   path: "/solutions-ia",
 });
 
-export default function SolutionsIaPage() {
+export default async function SolutionsIaPage() {
+  const content = await getSolutionsIaContent();
+
   return (
     <>
-      <FaqJsonLd items={[...iaFaq]} />
-      <PageHero
-        eyebrow="Intelligence artificielle"
-        title="Solutions IA"
-        highlight="sur mesure"
-        description="Support client, qualification de leads, automatisation métier — nous concevons et déployons des agents intelligents adaptés au contexte ivoirien."
-        breadcrumb={[
-          { label: "Accueil", href: "/" },
-          { label: "Solutions IA" },
-        ]}
-      />
+      <FaqJsonLd items={content.faq} />
+      <SitePageHero pageKey="solutions-ia" />
 
       <AnimatedSection className="border-b border-gray/40 bg-primary-light py-12 md:py-16">
         <div className="container mx-auto px-4 md:px-6 lg:px-8">
@@ -47,15 +33,10 @@ export default function SolutionsIaPage() {
               <Bot className="h-7 w-7" aria-hidden />
             </div>
             <h2 className="text-xl font-bold text-foreground md:text-2xl">
-              Démo live : testez notre assistant IA
+              {content.demoSection.title}
             </h2>
-            <p className="mt-3 text-gray-text">
-              Le chatbot en bas à gauche de ce site est une démonstration concrète de notre
-              savoir-faire. Posez-lui vos questions sur nos services, tarifs et délais.
-            </p>
-            <p className="mt-4 text-sm font-semibold text-primary">
-              Cliquez sur « Assistant IA » pour l&apos;essayer →
-            </p>
+            <p className="mt-3 text-gray-text">{content.demoSection.description}</p>
+            <p className="mt-4 text-sm font-semibold text-primary">{content.demoSection.hint}</p>
           </div>
         </div>
       </AnimatedSection>
@@ -63,13 +44,13 @@ export default function SolutionsIaPage() {
       <AnimatedSection className="bg-white py-20 md:py-28">
         <div className="container mx-auto px-4 md:px-6 lg:px-8">
           <SectionHeading
-            eyebrow="Cas d'usage"
-            title="Des agents IA"
-            highlight="orientés résultats"
+            eyebrow={content.headings.useCases.eyebrow}
+            title={content.headings.useCases.title}
+            highlight={content.headings.useCases.highlight}
             className="mb-14"
           />
           <div className="grid gap-8 lg:grid-cols-3">
-            {iaUseCases.map((useCase, i) => {
+            {content.useCases.map((useCase, i) => {
               const Icon = useCase.icon;
               return (
                 <AnimatedCard
@@ -102,14 +83,14 @@ export default function SolutionsIaPage() {
       <AnimatedSection className="bg-gray-light py-20 md:py-28">
         <div className="container mx-auto px-4 md:px-6 lg:px-8">
           <SectionHeading
-            eyebrow="Stack technique"
-            title="Technologies"
-            highlight="éprouvées"
-            description="Nous sélectionnons les outils les plus adaptés à votre budget, vos contraintes de sécurité et votre écosystème existant."
+            eyebrow={content.headings.stack.eyebrow}
+            title={content.headings.stack.title}
+            highlight={content.headings.stack.highlight}
+            description={content.headings.stack.description}
             className="mb-14"
           />
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-            {iaStack.map((item, i) => (
+            {content.stack.map((item, i) => (
               <AnimatedCard
                 key={item.name}
                 delay={i * 0.05}
@@ -125,7 +106,7 @@ export default function SolutionsIaPage() {
           </div>
 
           <div className="mt-12 flex flex-wrap justify-center gap-6">
-            {iaDemoHighlights.map(({ icon: Icon, label, detail }) => (
+            {content.demoHighlights.map(({ icon: Icon, label, detail }) => (
               <div key={label} className="flex items-center gap-3 rounded-xl bg-white px-4 py-3 shadow-sm">
                 <Icon className="h-5 w-5 text-primary" aria-hidden />
                 <div>
@@ -141,13 +122,13 @@ export default function SolutionsIaPage() {
       <AnimatedSection className="bg-white py-20 md:py-28">
         <div className="container mx-auto px-4 md:px-6 lg:px-8">
           <SectionHeading
-            eyebrow="Notre méthode"
-            title="Processus"
-            highlight="en 5 étapes"
+            eyebrow={content.headings.process.eyebrow}
+            title={content.headings.process.title}
+            highlight={content.headings.process.highlight}
             className="mb-14"
           />
           <div className="mx-auto max-w-3xl space-y-6">
-            {iaProcess.map((step, i) => (
+            {content.process.map((step, i) => (
               <AnimatedCard
                 key={step.step}
                 delay={i * 0.06}
@@ -169,14 +150,14 @@ export default function SolutionsIaPage() {
       <AnimatedSection className="bg-gray-light py-20 md:py-28">
         <div className="container mx-auto px-4 md:px-6 lg:px-8">
           <SectionHeading
-            eyebrow="Packs indicatifs"
-            title="Tarifs"
-            highlight="en FCFA"
-            description="Prix de départ HT. Chaque projet fait l'objet d'un devis personnalisé après audit."
+            eyebrow={content.headings.packs.eyebrow}
+            title={content.headings.packs.title}
+            highlight={content.headings.packs.highlight}
+            description={content.headings.packs.description}
             className="mb-14"
           />
           <div className="grid gap-8 lg:grid-cols-3">
-            {iaPacks.map((pack, i) => (
+            {content.packs.map((pack, i) => (
               <AnimatedCard
                 key={pack.id}
                 delay={i * 0.1}
@@ -215,7 +196,7 @@ export default function SolutionsIaPage() {
       <section className="border-t border-gray/40 bg-white py-16 md:py-20">
         <div className="container mx-auto max-w-3xl px-4 md:px-6 lg:px-8">
           <h2 className="mb-8 text-2xl font-bold text-foreground">Questions fréquentes</h2>
-          {iaFaq.map((item) => (
+          {content.faq.map((item) => (
             <AccordionItem key={item.question} question={item.question} answer={item.answer} />
           ))}
         </div>
@@ -223,12 +204,8 @@ export default function SolutionsIaPage() {
 
       <section className="bg-dark py-16 text-center md:py-20">
         <div className="container mx-auto px-4 md:px-6 lg:px-8">
-          <h2 className="text-2xl font-bold text-white md:text-3xl">
-            Prêt à déployer votre agent IA ?
-          </h2>
-          <p className="mx-auto mt-3 max-w-xl text-white/70">
-            Discutons de votre cas d&apos;usage et obtenez un devis personnalisé en FCFA.
-          </p>
+          <h2 className="text-2xl font-bold text-white md:text-3xl">{content.ctaSection.title}</h2>
+          <p className="mx-auto mt-3 max-w-xl text-white/70">{content.ctaSection.description}</p>
           <div className="mt-8 flex flex-col items-center justify-center gap-4 sm:flex-row">
             <Button href="/devis?type=agents-ia" size="lg">
               Configurateur de devis

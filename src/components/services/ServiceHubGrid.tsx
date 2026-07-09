@@ -1,27 +1,29 @@
 import Link from "next/link";
 import { ArrowRight } from "lucide-react";
 import { AnimatedCard } from "@/components/ui/AnimatedSection";
-import { services } from "@/content/services";
-import { getServiceHref, getServiceHubLinkLabel } from "@/lib/services";
+import { getServiceHref, getServiceHubLinkLabel, getServices } from "@/lib/services";
 
 type Props = {
   limit?: number;
   className?: string;
 };
 
-export function ServiceHubGrid({ limit, className }: Props) {
-  const items = limit ? services.slice(0, limit) : services;
+export async function ServiceHubGrid({ limit, className }: Props) {
+  const allServices = await getServices();
+  const items = limit ? allServices.slice(0, limit) : allServices;
+
+  const itemsWithLinks = await Promise.all(
+    items.map(async (service) => ({
+      service,
+      href: await getServiceHref(service),
+      linkLabel: await getServiceHubLinkLabel(service),
+    })),
+  );
 
   return (
-    <div
-      className={
-        className ??
-        "grid gap-6 md:grid-cols-2 xl:grid-cols-3"
-      }
-    >
-      {items.map((service, i) => {
+    <div className={className ?? "grid gap-6 md:grid-cols-2 xl:grid-cols-3"}>
+      {itemsWithLinks.map(({ service, href, linkLabel }, i) => {
         const Icon = service.icon;
-        const href = getServiceHref(service);
         return (
           <AnimatedCard
             key={service.id}
@@ -50,7 +52,7 @@ export function ServiceHubGrid({ limit, className }: Props) {
               href={href}
               className="mt-6 inline-flex items-center gap-1.5 text-sm font-semibold text-primary-dark transition-colors hover:text-primary"
             >
-              {getServiceHubLinkLabel(service)}
+              {linkLabel}
               <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-0.5" aria-hidden />
             </Link>
           </AnimatedCard>

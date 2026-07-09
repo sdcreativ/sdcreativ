@@ -1,9 +1,6 @@
 import { NextResponse } from "next/server";
-import {
-  getAvailabilityLabel,
-  getExperienceLabel,
-  getJobLabel,
-} from "@/content/carrieres";
+import { getAvailabilityLabel, getExperienceLabel } from "@/content/carrieres";
+import { getJobLabel, getJobSelectOptions } from "@/lib/public-careers-resolver";
 import { htmlRow, sendEmail } from "@/lib/email";
 import { rejectIfBot } from "@/lib/form-guard";
 import { carriereSchema } from "@/lib/validations/carriere";
@@ -53,13 +50,17 @@ export async function POST(request: Request) {
     }
 
     const data = parsed.data;
+    const validJobIds = (await getJobSelectOptions()).map((o) => o.value);
+    if (!validJobIds.includes(data.jobId)) {
+      return NextResponse.json({ error: "Poste invalide." }, { status: 400 });
+    }
 
     const sent = await sendEmail({
       replyTo: data.email,
-      subject: `[SD CREATIV] Candidature — ${getJobLabel(data.jobId)} — ${data.name}`,
+      subject: `[SD CREATIV] Candidature — ${await getJobLabel(data.jobId)} — ${data.name}`,
       html: `
         <h2>Nouvelle candidature</h2>
-        ${htmlRow("Poste", getJobLabel(data.jobId))}
+        ${htmlRow("Poste", await getJobLabel(data.jobId))}
         ${htmlRow("Nom", data.name)}
         ${htmlRow("Email", data.email)}
         ${htmlRow("Téléphone", data.phone)}

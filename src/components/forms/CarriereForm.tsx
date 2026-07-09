@@ -24,7 +24,7 @@ import { HoneypotField } from "@/components/forms/HoneypotField";
 import { TurnstileWidget } from "@/components/forms/TurnstileWidget";
 import { useFormTurnstile } from "@/components/forms/useFormTurnstile";
 import {
-  jobSelectOptions,
+  jobSelectOptions as staticJobSelectOptions,
   experienceOptions,
   availabilityOptions,
 } from "@/content/carrieres";
@@ -35,6 +35,7 @@ type FormState = "idle" | "loading" | "success" | "error";
 type Props = {
   className?: string;
   defaultJobId?: string;
+  jobSelectOptions?: ReadonlyArray<{ value: string; label: string }>;
 };
 
 type FormFieldProps = {
@@ -75,7 +76,11 @@ function SelectChevron() {
   );
 }
 
-export function CarriereForm({ className, defaultJobId = "" }: Props) {
+export function CarriereForm({
+  className,
+  defaultJobId = "",
+  jobSelectOptions = staticJobSelectOptions,
+}: Props) {
   const searchParams = useSearchParams();
   const [jobId, setJobId] = useState(defaultJobId);
   const [state, setState] = useState<FormState>("idle");

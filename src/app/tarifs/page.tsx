@@ -1,4 +1,4 @@
-import { PageHero } from "@/components/ui/PageHero";
+import { SitePageHero } from "@/components/ui/SitePageHero";
 import { PricingSection } from "@/components/sections/PricingSection";
 import { FaqSection } from "@/components/sections/FaqSection";
 import { BookAppointment } from "@/components/booking/BookAppointment";
@@ -17,16 +17,7 @@ export const metadata = createMetadata({
 export default function TarifsPage() {
   return (
     <>
-      <PageHero
-        eyebrow="Nos offres"
-        title="Tarifs transparents,"
-        highlight="résultats concrets"
-        description="Choisissez la formule qui correspond à vos ambitions. Chaque projet fait l'objet d'un devis personnalisé gratuit."
-        breadcrumb={[
-          { label: "Accueil", href: "/" },
-          { label: "Tarifs" },
-        ]}
-      />
+      <SitePageHero pageKey="tarifs" />
       <PricingSection />
       <section className="border-t border-gray/40 bg-gray-light py-16 md:py-20">
         <div className="container mx-auto grid gap-10 px-4 md:grid-cols-2 md:items-center md:px-6 lg:px-8">

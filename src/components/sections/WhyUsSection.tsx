@@ -1,25 +1,28 @@
 import { AnimatedSection, AnimatedCard } from "@/components/ui/AnimatedSection";
 import { SectionHeading } from "@/components/ui/SectionHeading";
-import { whyUsItems, whyUsIntro } from "@/content/why-us";
+import { getLucideIcon } from "@/lib/lucide-icon-map";
+import { getSiteWhyUsSettings } from "@/lib/site-why-us-settings";
 
-export function WhyUsSection() {
+export async function WhyUsSection() {
+  const { eyebrow, title, highlight, intro, items } = await getSiteWhyUsSettings();
+
   return (
     <AnimatedSection className="bg-white py-20 md:py-28" id="pourquoi">
       <div className="container mx-auto px-4 md:px-6 lg:px-8">
         <div className="grid gap-12 lg:grid-cols-2 lg:gap-16">
           <div>
             <SectionHeading
-              eyebrow="Pourquoi choisir SD CREATIV ?"
-              title="Bien plus"
-              highlight="qu'un site web."
+              eyebrow={eyebrow}
+              title={title}
+              highlight={highlight}
               align="left"
             />
-            <p className="mt-6 text-lg leading-relaxed text-gray-text">{whyUsIntro}</p>
+            <p className="mt-6 text-lg leading-relaxed text-gray-text">{intro}</p>
           </div>
 
           <div className="grid gap-6 sm:grid-cols-2">
-            {whyUsItems.map((item, i) => {
-              const Icon = item.icon;
+            {items.map((item, i) => {
+              const Icon = getLucideIcon(item.icon);
               return (
                 <AnimatedCard
                   key={item.title}

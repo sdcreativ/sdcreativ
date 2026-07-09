@@ -7,13 +7,14 @@ import {
   MessageCircle,
   CheckCircle2,
 } from "lucide-react";
-import { PageHero } from "@/components/ui/PageHero";
+import { SitePageHero } from "@/components/ui/SitePageHero";
 import { ContactForm } from "@/components/forms/ContactForm";
 import { ContactMap } from "@/components/contact/ContactMap";
 import { BookAppointment } from "@/components/booking/BookAppointment";
 import { Button } from "@/components/ui/Button";
 import { getSitePublicSettings } from "@/lib/site-public-settings";
 import { buildWhatsappUrl } from "@/lib/site-public-resolver";
+import { getServices } from "@/lib/services";
 import { createMetadata } from "@/lib/metadata";
 
 export const metadata = createMetadata({
@@ -38,16 +39,11 @@ export default async function ContactPage({ searchParams }: Props) {
   const { service } = await searchParams;
   const { contact } = await getSitePublicSettings();
   const waUrl = buildWhatsappUrl(contact);
+  const services = await getServices();
+  const serviceSelectOptions = services.map(({ id, title }) => ({ value: id, label: title }));
   return (
     <>
-      <PageHero
-        eyebrow="Contact"
-        title="Parlons de"
-        highlight="votre projet"
-        description="Remplissez le formulaire ou contactez-nous directement. Nous vous répondons sous 24 à 48 heures."
-        backgroundImage="/images/contact/contact-hero-bg.png"
-        backgroundAlt="Équipe SD CREATIV au travail dans un bureau moderne"
-      />
+      <SitePageHero pageKey="contact" />
 
       <section className="relative overflow-hidden bg-gray-light py-20 md:py-28">
         <div className="pointer-events-none absolute -left-32 top-20 h-64 w-64 rounded-full bg-primary/5 blur-3xl" />
@@ -55,7 +51,7 @@ export default async function ContactPage({ searchParams }: Props) {
 
         <div className="container relative mx-auto grid gap-10 px-4 lg:grid-cols-5 lg:gap-12 md:px-6 lg:px-8">
           <div className="lg:col-span-3">
-            <ContactForm defaultService={service ?? ""} />
+            <ContactForm defaultService={service ?? ""} serviceSelectOptions={serviceSelectOptions} />
           </div>
 
           <div className="lg:col-span-2">

@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { Wrench, Shield, Clock, RefreshCw } from "lucide-react";
-import { PageHero } from "@/components/ui/PageHero";
+import { SitePageHero } from "@/components/ui/SitePageHero";
 import { Button } from "@/components/ui/Button";
 import { AccordionItem } from "@/components/ui/Accordion";
 import { MaintenancePlansSection } from "@/components/sections/MaintenancePlansSection";
@@ -46,16 +46,7 @@ export default function MaintenancePage() {
   return (
     <>
       <FaqJsonLd items={[...maintenanceFaq]} />
-      <PageHero
-        eyebrow="Accompagnement continu"
-        title="Maintenance"
-        highlight="& SLA"
-        description="Gardez votre site rapide, sécurisé et à jour. Formules mensuelles ou annuelles en FCFA — revenus récurrents, sérénité garantie."
-        breadcrumb={[
-          { label: "Accueil", href: "/" },
-          { label: "Maintenance & SLA" },
-        ]}
-      />
+      <SitePageHero pageKey="maintenance" />
 
       <section className="py-16 md:py-20">
         <div className="container mx-auto px-4 md:px-6 lg:px-8">

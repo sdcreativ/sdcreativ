@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { CheckCircle2, Search, Gauge, Smartphone, Shield } from "lucide-react";
-import { PageHero } from "@/components/ui/PageHero";
+import { SitePageHero } from "@/components/ui/SitePageHero";
 import { Button } from "@/components/ui/Button";
 import { ContactForm } from "@/components/forms/ContactForm";
 import { FaqJsonLd } from "@/components/seo/JsonLd";
@@ -53,16 +53,7 @@ export default function AuditGratuitPage() {
   return (
     <>
       <FaqJsonLd items={auditFaq} />
-      <PageHero
-        eyebrow="Diagnostic gratuit"
-        title="Audit web"
-        highlight="gratuit"
-        description="Découvrez les forces et faiblesses de votre site actuel. Nous vous remettons un rapport clair avec un plan d'action concret."
-        breadcrumb={[
-          { label: "Accueil", href: "/" },
-          { label: "Audit gratuit" },
-        ]}
-      />
+      <SitePageHero pageKey="audit-gratuit" />
 
       <section className="py-16 md:py-20">
         <div className="container mx-auto px-4 md:px-6 lg:px-8">

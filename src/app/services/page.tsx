@@ -1,4 +1,4 @@
-import { PageHero } from "@/components/ui/PageHero";
+import { SitePageHero } from "@/components/ui/SitePageHero";
 import { Button } from "@/components/ui/Button";
 import { ServiceHubGrid } from "@/components/services/ServiceHubGrid";
 import { createMetadata } from "@/lib/metadata";
@@ -13,18 +13,7 @@ export const metadata = createMetadata({
 export default function ServicesPage() {
   return (
     <>
-      <PageHero
-        eyebrow="Nos services"
-        title="Des solutions digitales"
-        highlight="adaptées à votre activité"
-        description="De la création de site vitrine aux applications mobiles et plateformes sur mesure — explorez nos offres et accédez aux fiches détaillées."
-        backgroundImage="/images/services/services-hero-bg.png"
-        backgroundAlt="Solutions digitales SD CREATIV — création de sites web et services en ligne"
-        breadcrumb={[
-          { label: "Accueil", href: "/" },
-          { label: "Services" },
-        ]}
-      />
+      <SitePageHero pageKey="services" />
 
       <section className="bg-white py-20 md:py-28">
         <div className="container mx-auto px-4 md:px-6 lg:px-8">

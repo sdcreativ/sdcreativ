@@ -1,4 +1,4 @@
-import { PageHero } from "@/components/ui/PageHero";
+import { SitePageHero } from "@/components/ui/SitePageHero";
 import { FaqSection } from "@/components/sections/FaqSection";
 import { Button } from "@/components/ui/Button";
 import { FaqJsonLd } from "@/components/seo/JsonLd";
@@ -18,12 +18,7 @@ export default async function FaqPage() {
   return (
     <>
       <FaqJsonLd items={faqItems} />
-      <PageHero
-        eyebrow="Support"
-        title="Questions"
-        highlight="fréquentes"
-        description="Tout ce que vous devez savoir avant de lancer votre projet web avec SD CREATIV."
-      />
+      <SitePageHero pageKey="faq" />
       <FaqSection items={faqItems} />
       <section className="border-t border-gray/40 bg-primary-light py-16">
         <div className="container mx-auto px-4 text-center md:px-6 lg:px-8">

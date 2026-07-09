@@ -1,14 +1,11 @@
 import { z } from "zod";
-import { jobSelectOptions } from "@/content/carrieres";
-
-const jobIds = jobSelectOptions.map((o) => o.value) as [string, ...string[]];
 
 export const carriereSchema = z.object({
   name: z.string().trim().min(2, "Nom requis").max(100),
   email: z.string().trim().email("Email invalide"),
   phone: z.string().trim().min(8, "Téléphone requis").max(20),
   city: z.string().trim().min(2, "Ville ou zone requise").max(100),
-  jobId: z.enum(jobIds, { message: "Choisissez un poste" }),
+  jobId: z.string().trim().min(1, "Choisissez un poste"),
   experience: z.enum(["debutant", "1-3", "3-5", "5-plus"], {
     message: "Indiquez votre expérience",
   }),

@@ -1,10 +1,10 @@
 import Link from "next/link";
 import { Suspense } from "react";
 import { CheckCircle2, Briefcase, MapPin, Users } from "lucide-react";
-import { PageHero } from "@/components/ui/PageHero";
+import { SitePageHero } from "@/components/ui/SitePageHero";
 import { Button } from "@/components/ui/Button";
 import { CarriereForm } from "@/components/forms/CarriereForm";
-import { careerBenefits, jobOffers } from "@/content/carrieres";
+import { getCareerBenefits, getJobOffers, getJobSelectOptions } from "@/lib/public-careers-resolver";
 import { createMetadata } from "@/lib/metadata";
 
 export const metadata = createMetadata({
@@ -14,19 +14,16 @@ export const metadata = createMetadata({
   path: "/carrieres",
 });
 
-export default function CarrieresPage() {
+export default async function CarrieresPage() {
+  const [careerBenefits, jobOffers, jobSelectOptions] = await Promise.all([
+    getCareerBenefits(),
+    getJobOffers(),
+    getJobSelectOptions(),
+  ]);
+
   return (
     <>
-      <PageHero
-        eyebrow="Recrutement"
-        title="Rejoignez"
-        highlight="SD CREATIV"
-        description="Nous recrutons des commerciaux terrain pour développer notre présence en Côte d'Ivoire et auprès de la diaspora."
-        breadcrumb={[
-          { label: "Accueil", href: "/" },
-          { label: "Carrières" },
-        ]}
-      />
+      <SitePageHero pageKey="carrieres" />
 
       <section className="py-16 md:py-20">
         <div className="container mx-auto px-4 md:px-6 lg:px-8">
@@ -106,7 +103,7 @@ export default function CarrieresPage() {
       >
         <div className="container mx-auto max-w-3xl px-4 md:px-6 lg:px-8">
           <Suspense fallback={<p className="text-center text-gray-text">Chargement…</p>}>
-            <CarriereForm />
+            <CarriereForm jobSelectOptions={jobSelectOptions} />
           </Suspense>
           <p className="mt-8 text-center text-sm text-gray-text">
             Une question ?{" "}

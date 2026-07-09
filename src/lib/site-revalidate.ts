@@ -59,3 +59,51 @@ export function revalidateRealisationsPages(slug?: string) {
   if (slug) revalidatePath(`/realisations/${slug}`);
   revalidatePath("/sitemap.xml");
 }
+
+export function revalidateWhyUsPages() {
+  revalidatePath("/");
+}
+
+export function revalidateMethodPages() {
+  revalidatePath("/");
+  revalidatePath("/a-propos");
+}
+
+export function revalidateHomeSectionsPages() {
+  revalidateWhyUsPages();
+  revalidateMethodPages();
+}
+
+export function revalidatePageHeroesPages() {
+  revalidatePath("/contact");
+  revalidatePath("/tarifs");
+  revalidatePath("/devis");
+  revalidatePath("/faq");
+  revalidatePath("/services");
+  revalidatePath("/solutions-ia");
+  revalidatePath("/carrieres");
+  revalidatePath("/a-propos");
+  revalidatePath("/maintenance");
+  revalidatePath("/realisations");
+  revalidatePath("/blog");
+  revalidatePath("/audit-gratuit");
+  revalidatePath("/mentions-legales");
+  revalidatePath("/politique-confidentialite");
+}
+
+export function revalidateSolutionsIaPages() {
+  revalidatePath("/solutions-ia");
+  revalidatePath("/sitemap.xml");
+}
+
+export function revalidateServicesPages(slug?: string) {
+  revalidatePath("/");
+  revalidatePath("/services");
+  if (slug) revalidatePath(`/services/${slug}`);
+  revalidatePath("/sitemap.xml");
+}
+
+export function revalidateCareersPages() {
+  revalidatePath("/carrieres");
+  revalidatePath("/sitemap.xml");
+}

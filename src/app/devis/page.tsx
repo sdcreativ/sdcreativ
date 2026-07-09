@@ -1,5 +1,5 @@
 import { Suspense } from "react";
-import { PageHero } from "@/components/ui/PageHero";
+import { SitePageHero } from "@/components/ui/SitePageHero";
 import { QuoteConfigurator } from "@/components/forms/QuoteConfigurator";
 import { BookAppointment } from "@/components/booking/BookAppointment";
 import { Button } from "@/components/ui/Button";
@@ -20,12 +20,7 @@ export default async function DevisPage() {
 
   return (
     <>
-      <PageHero
-        eyebrow="Configurateur"
-        title="Estimez votre projet"
-        highlight="en quelques clics"
-        description="Choisissez votre type de projet, le nombre de pages et les options. Obtenez une estimation en FCFA et recevez-la par email."
-      />
+      <SitePageHero pageKey="devis" />
 
       <section className="bg-gray-light py-20 md:py-28">
         <div className="container mx-auto px-4 md:px-6 lg:px-8">

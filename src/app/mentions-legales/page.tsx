@@ -1,4 +1,4 @@
-import { PageHero } from "@/components/ui/PageHero";
+import { SitePageHero } from "@/components/ui/SitePageHero";
 import { SITE } from "@/lib/constants";
 import { getSitePublicSettings } from "@/lib/site-public-settings";
 import { createMetadata } from "@/lib/metadata";
@@ -14,11 +14,7 @@ export default async function MentionsLegalesPage() {
 
   return (
     <>
-      <PageHero
-        eyebrow="Informations légales"
-        title="Mentions"
-        highlight="légales"
-      />
+      <SitePageHero pageKey="mentions-legales" />
 
       <section className="py-16 md:py-20">
         <div className="container mx-auto max-w-3xl px-4 prose prose-neutral md:px-6 lg:px-8">

@@ -485,6 +485,49 @@ CREATE INDEX IF NOT EXISTS idx_public_faq_items_visible
 
 ALTER TABLE crm_settings ADD COLUMN IF NOT EXISTS site_hero JSONB NOT NULL DEFAULT '{}';
 ALTER TABLE crm_settings ADD COLUMN IF NOT EXISTS site_quote_config JSONB NOT NULL DEFAULT '{}';
+ALTER TABLE crm_settings ADD COLUMN IF NOT EXISTS site_why_us JSONB NOT NULL DEFAULT '{}';
+ALTER TABLE crm_settings ADD COLUMN IF NOT EXISTS site_method JSONB NOT NULL DEFAULT '{}';
+ALTER TABLE crm_settings ADD COLUMN IF NOT EXISTS site_page_heroes JSONB NOT NULL DEFAULT '{}';
+ALTER TABLE crm_settings ADD COLUMN IF NOT EXISTS site_solutions_ia JSONB NOT NULL DEFAULT '{}';
+ALTER TABLE crm_settings ADD COLUMN IF NOT EXISTS site_careers JSONB NOT NULL DEFAULT '{}';
+
+CREATE TABLE IF NOT EXISTS public_services (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  slug VARCHAR(120) NOT NULL UNIQUE,
+  icon VARCHAR(80) NOT NULL,
+  title VARCHAR(200) NOT NULL,
+  description TEXT NOT NULL,
+  features TEXT[] NOT NULL DEFAULT '{}',
+  image VARCHAR(512),
+  image_alt VARCHAR(300),
+  detail_href VARCHAR(200),
+  detail_label VARCHAR(120),
+  detail JSONB,
+  sort_order INTEGER NOT NULL DEFAULT 0,
+  is_visible BOOLEAN NOT NULL DEFAULT true,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+CREATE INDEX IF NOT EXISTS idx_public_services_sort ON public_services (sort_order);
+CREATE INDEX IF NOT EXISTS idx_public_services_visible ON public_services (sort_order) WHERE is_visible = true;
+
+CREATE TABLE IF NOT EXISTS public_job_offers (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  slug VARCHAR(120) NOT NULL UNIQUE,
+  title VARCHAR(200) NOT NULL,
+  type VARCHAR(80) NOT NULL,
+  location VARCHAR(160) NOT NULL,
+  department VARCHAR(80) NOT NULL,
+  description TEXT NOT NULL,
+  missions TEXT[] NOT NULL DEFAULT '{}',
+  profile TEXT[] NOT NULL DEFAULT '{}',
+  sort_order INTEGER NOT NULL DEFAULT 0,
+  is_visible BOOLEAN NOT NULL DEFAULT true,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+CREATE INDEX IF NOT EXISTS idx_public_job_offers_sort ON public_job_offers (sort_order);
+CREATE INDEX IF NOT EXISTS idx_public_job_offers_visible ON public_job_offers (sort_order) WHERE is_visible = true;
 
 CREATE TABLE IF NOT EXISTS public_partners (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),

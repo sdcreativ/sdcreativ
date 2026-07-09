@@ -1,4 +1,4 @@
-import { PageHero } from "@/components/ui/PageHero";
+import { SitePageHero } from "@/components/ui/SitePageHero";
 import { RealisationsGrid } from "@/components/realisations/RealisationsGrid";
 import { getRealisations } from "@/lib/cms";
 import { createMetadata } from "@/lib/metadata";
@@ -14,12 +14,7 @@ export default async function RealisationsPage() {
   const items = await getRealisations();
   return (
     <>
-      <PageHero
-        eyebrow="Portfolio"
-        title="Nos"
-        highlight="réalisations"
-        description="Des projets concrets, pensés pour la performance, la conversion et l'image de marque de nos clients."
-      />
+      <SitePageHero pageKey="realisations" />
 
       <section className="py-20 md:py-28">
         <div className="container mx-auto px-4 md:px-6 lg:px-8">

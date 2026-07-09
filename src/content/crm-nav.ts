@@ -89,9 +89,14 @@ export function getCrmBreadcrumbs(pathname: string): CrmBreadcrumb[] {
           temoignages: "Témoignages",
           faq: "FAQ",
           hero: "Hero accueil",
+          heroes: "Heroes des pages",
+          accueil: "Pourquoi nous & Méthode",
+          services: "Services",
           partenaires: "Partenaires",
           tarifs: "Tarifs",
           devis: "Configurateur de devis",
+          "solutions-ia": "Solutions IA",
+          carrieres: "Carrières",
           realisations: "Réalisations",
         };
         crumbs.push({

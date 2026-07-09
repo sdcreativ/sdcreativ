@@ -24,7 +24,7 @@ import { TurnstileWidget } from "@/components/forms/TurnstileWidget";
 import { useFormTurnstile } from "@/components/forms/useFormTurnstile";
 import {
   budgetOptions,
-  serviceSelectOptions,
+  serviceSelectOptions as staticServiceSelectOptions,
   timelineOptions,
 } from "@/content/contact-options";
 import { cn } from "@/lib/utils";
@@ -34,6 +34,7 @@ type FormState = "idle" | "loading" | "success" | "error";
 type ContactFormProps = {
   className?: string;
   defaultService?: string;
+  serviceSelectOptions?: ReadonlyArray<{ value: string; label: string }>;
 };
 
 type FormFieldProps = {
@@ -65,7 +66,11 @@ function FormField({ id, label, required, icon, children }: FormFieldProps) {
 const fieldClass =
   "w-full rounded-xl border border-gray/80 bg-white px-4 py-3.5 text-sm text-foreground shadow-sm transition-all duration-200 placeholder:text-gray-text/50 hover:border-primary/30 hover:shadow-md focus:border-primary focus:bg-white focus:outline-none focus:ring-4 focus:ring-primary/10";
 
-export function ContactForm({ className, defaultService = "" }: ContactFormProps) {
+export function ContactForm({
+  className,
+  defaultService = "",
+  serviceSelectOptions = staticServiceSelectOptions,
+}: ContactFormProps) {
   const [state, setState] = useState<FormState>("idle");
   const [errorMessage, setErrorMessage] = useState("");
   const { turnstileToken, setTurnstileToken, validate, reset, required } = useFormTurnstile();

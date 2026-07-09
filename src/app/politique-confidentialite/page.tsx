@@ -1,5 +1,5 @@
 import { PrivacyPolicyContent } from "@/components/legal/PrivacyPolicyContent";
-import { PageHero } from "@/components/ui/PageHero";
+import { SitePageHero } from "@/components/ui/SitePageHero";
 import { Button } from "@/components/ui/Button";
 import { createMetadata } from "@/lib/metadata";
 
@@ -13,12 +13,7 @@ export const metadata = createMetadata({
 export default function PolitiqueConfidentialitePage() {
   return (
     <>
-      <PageHero
-        eyebrow="Protection des données"
-        title="Politique de"
-        highlight="confidentialité"
-        description="Transparence sur la collecte, l'utilisation et la protection de vos données personnelles."
-      />
+      <SitePageHero pageKey="politique-confidentialite" />
 
       <PrivacyPolicyContent />
 

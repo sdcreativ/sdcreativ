@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
-import { getBudgetLabel, getServiceLabel, getTimelineLabel } from "@/content/contact-options";
+import { getBudgetLabel, getTimelineLabel } from "@/content/contact-options";
+import { getServices } from "@/lib/services";
 import { htmlRow, sendEmail } from "@/lib/email";
 import { safeCreateLead } from "@/lib/leads";
 import { rejectIfBot } from "@/lib/form-guard";
@@ -50,7 +51,13 @@ export async function POST(request: Request) {
     const { name, email, phone, company, service, budget, timeline, message } =
       parsed.data;
 
-    const serviceLabel = getServiceLabel(service);
+    const services = await getServices();
+    const serviceRecord = services.find((s) => s.id === service);
+    if (!serviceRecord) {
+      return NextResponse.json({ error: "Service invalide." }, { status: 400 });
+    }
+
+    const serviceLabel = serviceRecord.title;
     const sent = await sendEmail({
       replyTo: email,
       subject: `[SD CREATIV] Contact — ${serviceLabel} — ${name}`,
