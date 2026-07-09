@@ -91,6 +91,7 @@ export function getCrmBreadcrumbs(pathname: string): CrmBreadcrumb[] {
           hero: "Hero accueil",
           partenaires: "Partenaires",
           tarifs: "Tarifs",
+          devis: "Configurateur de devis",
           realisations: "Réalisations",
         };
         crumbs.push({

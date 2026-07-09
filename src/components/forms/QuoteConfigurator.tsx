@@ -19,10 +19,7 @@ import {
   budgetOptions,
   timelineOptions,
 } from "@/content/contact-options";
-import {
-  quotePageTiers,
-  quoteProjectTypes,
-} from "@/content/quote-config";
+import type { SiteQuoteConfigSettings } from "@/lib/site-quote-config-types";
 import {
   calculateQuote,
   getAvailableAddons,
@@ -35,10 +32,14 @@ type FormState = "idle" | "loading" | "success" | "error";
 const fieldClass =
   "w-full rounded-xl border border-gray/80 bg-white px-4 py-3.5 text-sm text-foreground shadow-sm transition-all placeholder:text-gray-text/50 focus:border-primary focus:outline-none focus:ring-4 focus:ring-primary/10";
 
-export function QuoteConfigurator() {
+type Props = {
+  config: SiteQuoteConfigSettings;
+};
+
+export function QuoteConfigurator({ config }: Props) {
   const searchParams = useSearchParams();
-  const [projectTypeId, setProjectTypeId] = useState(quoteProjectTypes[0]?.id ?? "");
-  const [pageTierId, setPageTierId] = useState("1-5");
+  const [projectTypeId, setProjectTypeId] = useState(config.projectTypes[0]?.id ?? "");
+  const [pageTierId, setPageTierId] = useState(config.pageTiers[0]?.id ?? "1-5");
   const [addonIds, setAddonIds] = useState<string[]>([]);
   const [state, setState] = useState<FormState>("idle");
   const [errorMessage, setErrorMessage] = useState("");
@@ -46,25 +47,38 @@ export function QuoteConfigurator() {
 
   useEffect(() => {
     const type = searchParams.get("type");
-    if (type && quoteProjectTypes.some((t) => t.id === type)) {
+    if (type && config.projectTypes.some((t) => t.id === type)) {
       setProjectTypeId(type);
     }
-  }, [searchParams]);
+  }, [searchParams, config.projectTypes]);
 
-  const project = getProjectType(projectTypeId);
+  const calculatorConfig = useMemo(
+    () => ({
+      projectTypes: config.projectTypes,
+      pageTiers: config.pageTiers,
+      addons: config.addons,
+      estimateNote: config.estimateNote,
+    }),
+    [config],
+  );
+
+  const project = getProjectType(projectTypeId, calculatorConfig);
   const availableAddons = useMemo(
-    () => getAvailableAddons(projectTypeId),
-    [projectTypeId],
+    () => getAvailableAddons(projectTypeId, calculatorConfig),
+    [projectTypeId, calculatorConfig],
   );
 
   const quote = useMemo(
     () =>
-      calculateQuote({
-        projectTypeId,
-        pageTierId: project?.supportsPages ? pageTierId : undefined,
-        addonIds,
-      }),
-    [projectTypeId, pageTierId, addonIds, project?.supportsPages],
+      calculateQuote(
+        {
+          projectTypeId,
+          pageTierId: project?.supportsPages ? pageTierId : undefined,
+          addonIds,
+        },
+        calculatorConfig,
+      ),
+    [projectTypeId, pageTierId, addonIds, project?.supportsPages, calculatorConfig],
   );
 
   function toggleAddon(id: string) {
@@ -152,10 +166,10 @@ export function QuoteConfigurator() {
         <HoneypotField />
         <div>
           <h2 className="text-xl font-bold text-foreground md:text-2xl">
-            Configurez votre projet
+            {config.formTitle}
           </h2>
           <p className="mt-2 text-sm text-gray-text">
-            Sélectionnez vos options — l&apos;estimation se met à jour en temps réel.
+            {config.formSubtitle}
           </p>
         </div>
 
@@ -173,7 +187,7 @@ export function QuoteConfigurator() {
               }}
               className={cn(fieldClass, "cursor-pointer appearance-none pr-10")}
             >
-              {quoteProjectTypes.map((type) => (
+              {config.projectTypes.map((type) => (
                 <option key={type.id} value={type.id}>
                   {type.label}
                 </option>
@@ -195,7 +209,7 @@ export function QuoteConfigurator() {
                 onChange={(e) => setPageTierId(e.target.value)}
                 className={cn(fieldClass, "cursor-pointer appearance-none pr-10")}
               >
-                {quotePageTiers.map((tier) => (
+                {config.pageTiers.map((tier) => (
                   <option key={tier.id} value={tier.id}>
                     {tier.label}
                     {tier.extraPrice > 0

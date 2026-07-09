@@ -3,13 +3,13 @@ import {
   getBudgetLabel,
   getTimelineLabel,
 } from "@/content/contact-options";
-import { quoteAddons, quotePageTiers } from "@/content/quote-config";
 import { calculateQuote } from "@/lib/quote-calculator";
+import { getSiteQuoteConfigSettings } from "@/lib/site-quote-config-settings";
 import { htmlRow, sendEmail } from "@/lib/email";
 import { createLead } from "@/lib/leads";
 import { createQuoteFromDevis } from "@/lib/quotes";
 import { rejectIfBot } from "@/lib/form-guard";
-import { devisSchema } from "@/lib/validations/devis";
+import { createDevisSchema } from "@/lib/validations/devis";
 
 const rateLimit = new Map<string, { count: number; resetAt: number }>();
 const RATE_LIMIT = 5;
@@ -46,6 +46,8 @@ export async function POST(request: Request) {
     const rejected = await rejectIfBot(body);
     if (rejected) return rejected;
 
+    const quoteConfig = await getSiteQuoteConfigSettings();
+    const devisSchema = createDevisSchema(quoteConfig);
     const parsed = devisSchema.safeParse(body);
 
     if (!parsed.success) {
@@ -54,19 +56,28 @@ export async function POST(request: Request) {
     }
 
     const data = parsed.data;
-    const quote = calculateQuote({
-      projectTypeId: data.projectTypeId,
-      pageTierId: data.pageTierId,
-      addonIds: data.addonIds,
-    });
+    const calculatorConfig = {
+      projectTypes: quoteConfig.projectTypes,
+      pageTiers: quoteConfig.pageTiers,
+      addons: quoteConfig.addons,
+      estimateNote: quoteConfig.estimateNote,
+    };
+    const quote = calculateQuote(
+      {
+        projectTypeId: data.projectTypeId,
+        pageTierId: data.pageTierId,
+        addonIds: data.addonIds,
+      },
+      calculatorConfig,
+    );
 
     if (!quote) {
       return NextResponse.json({ error: "Type de projet invalide." }, { status: 400 });
     }
 
-    const pageTier = quotePageTiers.find((t) => t.id === data.pageTierId);
+    const pageTier = quoteConfig.pageTiers.find((t) => t.id === data.pageTierId);
     const addonLabels = data.addonIds
-      .map((id) => quoteAddons.find((a) => a.id === id)?.label)
+      .map((id) => quoteConfig.addons.find((a) => a.id === id)?.label)
       .filter(Boolean)
       .join(", ");
 

@@ -1,9 +1,10 @@
+import type { QuoteAddon, QuotePageTier, QuoteProjectType } from "@/content/quote-config";
 import {
   quoteAddons,
   quotePageTiers,
   quoteProjectTypes,
-  type QuoteAddon,
 } from "@/content/quote-config";
+import type { SiteQuoteConfigSettings } from "@/lib/site-quote-config-types";
 import { formatFcfa } from "@/lib/format";
 
 export type QuoteInput = {
@@ -28,20 +29,39 @@ export type QuoteResult = {
   note: string;
 };
 
+export type QuoteCalculatorConfig = Pick<
+  SiteQuoteConfigSettings,
+  "projectTypes" | "pageTiers" | "addons" | "estimateNote"
+>;
+
 const RANGE_MARGIN = 0.12;
 
-export function getProjectType(id: string) {
-  return quoteProjectTypes.find((p) => p.id === id);
+export const defaultQuoteCalculatorConfig: QuoteCalculatorConfig = {
+  projectTypes: quoteProjectTypes,
+  pageTiers: quotePageTiers,
+  addons: quoteAddons,
+  estimateNote:
+    "Estimation indicative HT. Un devis définitif vous sera transmis après étude de votre projet.",
+};
+
+export function getProjectType(id: string, config: QuoteCalculatorConfig = defaultQuoteCalculatorConfig) {
+  return config.projectTypes.find((p) => p.id === id);
 }
 
-export function getAvailableAddons(projectTypeId: string): QuoteAddon[] {
-  return quoteAddons.filter(
+export function getAvailableAddons(
+  projectTypeId: string,
+  config: QuoteCalculatorConfig = defaultQuoteCalculatorConfig,
+): QuoteAddon[] {
+  return config.addons.filter(
     (addon) => !addon.forProjects || addon.forProjects.includes(projectTypeId),
   );
 }
 
-export function calculateQuote(input: QuoteInput): QuoteResult | null {
-  const project = getProjectType(input.projectTypeId);
+export function calculateQuote(
+  input: QuoteInput,
+  config: QuoteCalculatorConfig = defaultQuoteCalculatorConfig,
+): QuoteResult | null {
+  const project = getProjectType(input.projectTypeId, config);
   if (!project) return null;
 
   const lines: QuoteLine[] = [
@@ -49,14 +69,14 @@ export function calculateQuote(input: QuoteInput): QuoteResult | null {
   ];
 
   if (project.supportsPages && input.pageTierId) {
-    const tier = quotePageTiers.find((t) => t.id === input.pageTierId);
+    const tier = config.pageTiers.find((t) => t.id === input.pageTierId);
     if (tier && tier.extraPrice > 0) {
       lines.push({ label: tier.label, amount: tier.extraPrice });
     }
   }
 
   for (const addonId of input.addonIds) {
-    const addon = quoteAddons.find((a) => a.id === addonId);
+    const addon = config.addons.find((a) => a.id === addonId);
     if (!addon) continue;
     if (addon.forProjects && !addon.forProjects.includes(project.id)) continue;
     lines.push({ label: addon.label, amount: addon.price });
@@ -74,6 +94,6 @@ export function calculateQuote(input: QuoteInput): QuoteResult | null {
     estimateMax,
     formattedSubtotal: `${formatFcfa(subtotal)} FCFA`,
     formattedRange: `${formatFcfa(estimateMin)} – ${formatFcfa(estimateMax)} FCFA`,
-    note: "Estimation indicative HT. Un devis définitif vous sera transmis après étude de votre projet.",
+    note: config.estimateNote,
   };
 }

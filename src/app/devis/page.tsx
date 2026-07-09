@@ -4,6 +4,9 @@ import { QuoteConfigurator } from "@/components/forms/QuoteConfigurator";
 import { BookAppointment } from "@/components/booking/BookAppointment";
 import { Button } from "@/components/ui/Button";
 import { createMetadata } from "@/lib/metadata";
+import { getQuoteConfig } from "@/lib/quote-config-resolver";
+
+export const dynamic = "force-dynamic";
 
 export const metadata = createMetadata({
   title: "Devis en ligne",
@@ -12,7 +15,9 @@ export const metadata = createMetadata({
   path: "/devis",
 });
 
-export default function DevisPage() {
+export default async function DevisPage() {
+  const config = await getQuoteConfig();
+
   return (
     <>
       <PageHero
@@ -25,7 +30,7 @@ export default function DevisPage() {
       <section className="bg-gray-light py-20 md:py-28">
         <div className="container mx-auto px-4 md:px-6 lg:px-8">
           <Suspense fallback={<p className="text-center text-gray-text">Chargement…</p>}>
-            <QuoteConfigurator />
+            <QuoteConfigurator config={config} />
           </Suspense>
         </div>
       </section>

@@ -41,6 +41,10 @@ export function revalidateHeroPages() {
   revalidatePath("/");
 }
 
+export function revalidateDevisPages() {
+  revalidatePath("/devis");
+}
+
 export function revalidatePricingPages() {
   revalidateTag(PUBLIC_PRICING_PLANS_TAG, "max");
   revalidateTag(PUBLIC_PRICING_REASSURANCE_TAG, "max");
