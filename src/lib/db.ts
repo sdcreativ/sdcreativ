@@ -604,7 +604,15 @@ async function ensureSchema(): Promise<void> {
       updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
     );
     CREATE INDEX IF NOT EXISTS idx_public_pricing_plans_locale_sort ON public_pricing_plans (locale, sort_order);
-    ALTER TABLE public_pricing_plans ALTER COLUMN price_from DROP NOT NULL;
+    DO $$ BEGIN
+      IF EXISTS (
+        SELECT 1 FROM information_schema.columns
+        WHERE table_schema = 'public' AND table_name = 'public_pricing_plans'
+          AND column_name = 'price_from' AND is_nullable = 'NO'
+      ) THEN
+        ALTER TABLE public_pricing_plans ALTER COLUMN price_from DROP NOT NULL;
+      END IF;
+    END $$;
 
     CREATE TABLE IF NOT EXISTS public_pricing_reassurance (
       id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -693,7 +701,10 @@ export async function withDb<T>(
   }
 
   if (!schemaReady) {
-    schemaReady = ensureSchema();
+    schemaReady = ensureSchema().catch((error) => {
+      schemaReady = null;
+      throw error;
+    });
   }
   await schemaReady;
 
