@@ -653,7 +653,7 @@ function ClientDetailPanel({
                 <ExternalLink className="h-3 w-3" aria-hidden />
               </Link>
               <p className="mt-1 text-[11px] text-gray-text">
-                Ajoutez ce slug dans CLIENT_PORTAL_TOKENS pour activer l&apos;accès.
+                Partagez cet identifiant avec le client pour accéder à son espace.
               </p>
             </div>
           )}

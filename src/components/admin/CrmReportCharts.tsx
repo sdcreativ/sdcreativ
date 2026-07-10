@@ -6,14 +6,14 @@ import {
   Bar,
   BarChart,
   CartesianGrid,
-  Cell,
   Legend,
   Line,
-  LineChart,
+  Rectangle,
   ResponsiveContainer,
   Tooltip,
   XAxis,
   YAxis,
+  type BarShapeProps,
 } from "recharts";
 import { LEAD_SOURCE_LABELS, LEAD_STATUS_LABELS } from "@/content/leads-labels";
 import { formatReportAmount, formatReportMonth } from "@/content/reports-labels";
@@ -29,6 +29,11 @@ type Props = {
 };
 
 const PIPELINE_COLORS = ["#1e40af", "#2563eb", "#3b82f6", "#6366f1", "#059669"];
+
+function SourceBarShape(props: BarShapeProps) {
+  const fill = (props.payload as { fill?: string }).fill ?? "#1e40af";
+  return <Rectangle {...props} fill={fill} />;
+}
 
 export function CrmRevenueChart({ summary, compact }: Props) {
   const data = summary.monthlyTrend.map((row) => ({
@@ -91,16 +96,21 @@ export function CrmPipelineChart({ summary, onPipelineClick }: Props) {
             ]}
           />
           <Legend />
-          <Bar dataKey="count" name="Leads" fill="#1e40af" radius={[4, 4, 0, 0]}>
-            {data.map((entry) => (
-              <Cell
-                key={entry.status}
-                fill="#1e40af"
-                cursor={onPipelineClick ? "pointer" : "default"}
-                onClick={() => onPipelineClick?.(entry.status, entry.name)}
-              />
-            ))}
-          </Bar>
+          <Bar
+            dataKey="count"
+            name="Leads"
+            fill="#1e40af"
+            radius={[4, 4, 0, 0]}
+            cursor={onPipelineClick ? "pointer" : undefined}
+            onClick={
+              onPipelineClick
+                ? (bar) => {
+                    const payload = bar.payload as { status: LeadStatus; name: string };
+                    onPipelineClick(payload.status, payload.name);
+                  }
+                : undefined
+            }
+          />
         </BarChart>
       </ResponsiveContainer>
       {onPipelineClick && (
@@ -189,16 +199,20 @@ export function CrmSourcesChart({ summary, onSourceClick }: SourceChartProps) {
           <XAxis type="number" tick={{ fontSize: 11 }} />
           <YAxis type="category" dataKey="name" width={100} tick={{ fontSize: 10 }} />
           <Tooltip formatter={(value) => [value, "Leads"]} />
-          <Bar dataKey="count" radius={[0, 4, 4, 0]}>
-            {data.map((entry) => (
-              <Cell
-                key={entry.source}
-                fill={entry.fill}
-                cursor={onSourceClick ? "pointer" : "default"}
-                onClick={() => onSourceClick?.(entry.source, entry.name)}
-              />
-            ))}
-          </Bar>
+          <Bar
+            dataKey="count"
+            radius={[0, 4, 4, 0]}
+            shape={SourceBarShape}
+            cursor={onSourceClick ? "pointer" : undefined}
+            onClick={
+              onSourceClick
+                ? (bar) => {
+                    const payload = bar.payload as { source: string; name: string };
+                    onSourceClick(payload.source, payload.name);
+                  }
+                : undefined
+            }
+          />
         </BarChart>
       </ResponsiveContainer>
     </div>

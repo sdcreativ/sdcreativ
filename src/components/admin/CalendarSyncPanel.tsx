@@ -189,8 +189,8 @@ export function CalendarSyncPanel() {
           <div className="min-w-0 flex-1">
             <p className="font-semibold text-foreground">Flux iCal (lecture seule)</p>
             <p className="mt-0.5 text-sm text-gray-text">
-              Abonnez-vous au flux iCal (événements CRM + deadlines agrégées).
-              Configurez <code className="rounded bg-gray-light px-1">ICAL_FEED_TOKEN</code> dans le VPS.
+              Abonnez-vous au flux iCal pour afficher les événements CRM et les échéances dans votre
+              agenda externe.
             </p>
 
             <div className="mt-3 flex flex-wrap items-center gap-2">

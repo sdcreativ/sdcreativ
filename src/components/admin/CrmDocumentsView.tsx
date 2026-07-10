@@ -97,9 +97,7 @@ export function CrmDocumentsView() {
         <Users className="mx-auto h-10 w-10 text-gray-text/40" aria-hidden />
         <p className="mt-4 font-semibold text-foreground">Aucun client configuré</p>
         <p className="mx-auto mt-2 max-w-md text-sm text-gray-text">
-          Créez un client dans le CRM ou ajoutez une entrée dans{" "}
-          <code className="rounded bg-gray-light px-1.5 py-0.5 text-xs">CLIENT_PORTAL_TOKENS</code>{" "}
-          pour publier des documents.
+          Créez un client dans le CRM pour publier des documents dans l&apos;espace client.
         </p>
         <div className="mt-6 flex flex-wrap justify-center gap-3">
           <Link

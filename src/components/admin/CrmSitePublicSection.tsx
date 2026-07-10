@@ -66,10 +66,7 @@ export function SitePublicSection() {
         <Globe className="mt-0.5 h-4 w-4 shrink-0" aria-hidden />
         <span>
           Ces informations apparaissent sur le footer, la page contact, les mentions légales et le
-          référencement (JSON-LD). Les variables{" "}
-          <code className="rounded bg-white/80 px-1 text-xs">NEXT_PUBLIC_CONTACT_*</code> du fichier{" "}
-          <code className="rounded bg-white/80 px-1 text-xs">.env.docker</code> ne servent que de
-          valeurs par défaut si rien n&apos;est enregistré ici.
+          référencement (JSON-LD).
         </span>
       </p>
 

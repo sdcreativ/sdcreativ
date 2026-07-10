@@ -190,17 +190,6 @@ export function CrmSettingsView() {
                     <IntegrationCard key={item.id} item={item} />
                   ))}
                 </div>
-                <p className="mt-5 rounded-xl bg-gray-light/50 px-4 py-3 text-xs leading-relaxed text-gray-text">
-                  Configurez les variables dans{" "}
-                  <code className="rounded-md bg-white px-1.5 py-0.5 font-mono text-[11px]">
-                    .env.local
-                  </code>{" "}
-                  ou sur le VPS. Voir{" "}
-                  <code className="rounded-md bg-white px-1.5 py-0.5 font-mono text-[11px]">
-                    docs/DEPLOIEMENT.md
-                  </code>
-                  .
-                </p>
               </Section>
 
               <Section
@@ -209,11 +198,7 @@ export function CrmSettingsView() {
                 icon={<Users className="h-5 w-5 text-violet-600" aria-hidden />}
               >
                 {portalAccounts.length === 0 ? (
-                  <EmptyState>
-                    Aucun compte. Définissez{" "}
-                    <code className="rounded bg-gray-light px-1">CLIENT_PORTAL_TOKENS</code> dans
-                    l&apos;environnement.
-                  </EmptyState>
+                  <EmptyState>Aucun compte portail configuré.</EmptyState>
                 ) : (
                   <ul className="divide-y divide-gray/20 overflow-hidden rounded-xl border border-gray/30">
                     {portalAccounts.map((account) => (
@@ -327,9 +312,8 @@ export function CrmSettingsView() {
                     : "/api/calendar/feed?token=ICAL_FEED_TOKEN"}
                 </code>
                 <p className="mt-3 text-xs leading-relaxed text-gray-text">
-                  Variable{" "}
-                  <code className="rounded bg-gray-light px-1">ICAL_FEED_TOKEN</code> (ou{" "}
-                  <code className="rounded bg-gray-light px-1">CRON_SECRET</code>) requise.
+                  Remplacez le jeton par celui configuré sur le serveur, puis ajoutez cette URL dans
+                  Google Calendar, Outlook ou Apple Calendrier.
                 </p>
               </Section>
             </div>
@@ -451,9 +435,6 @@ function IntegrationCard({ item }: { item: IntegrationHealth }) {
       {item.hint && (
         <p className="mt-2 text-xs leading-relaxed text-gray-text/75">{item.hint}</p>
       )}
-      <p className="mt-3 truncate font-mono text-[10px] text-gray-text/60">
-        {item.envVars.join(" · ")}
-      </p>
     </div>
   );
 }

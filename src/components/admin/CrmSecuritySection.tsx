@@ -88,9 +88,6 @@ export function CrmSecuritySection() {
             className={`${fieldClass} mt-1`}
             disabled={saving}
           />
-          <span className="mt-1 block text-xs text-gray-text">
-            Surchargeable via <code className="rounded bg-gray-light px-1">ADMIN_SESSION_MAX_HOURS</code> sur le VPS.
-          </span>
         </label>
       </div>
 
@@ -160,10 +157,6 @@ export function CrmSecuritySection() {
             SLA ticket dépassé
           </label>
         </div>
-        <p className="mt-2 text-xs text-gray-text">
-          Cal.com entrant : POST <code className="rounded bg-gray-light px-1">/api/webhooks/calcom</code> avec{" "}
-          <code className="rounded bg-gray-light px-1">Authorization: Bearer CALCOM_WEBHOOK_SECRET</code>
-        </p>
       </div>
 
       <div>
