@@ -28,6 +28,7 @@ import { TeamMemberImageField } from "@/components/admin/TeamMemberImageField";
 import { CrmFormField, crmFieldClass } from "@/components/admin/crm-site-form-ui";
 import { useDialog } from "@/components/ui/DialogProvider";
 import { DEFAULT_IMAGE_POSITION, normalizeImagePosition } from "@/lib/image-position";
+import { resolveImageDisplayUrl } from "@/lib/image-url";
 import { cn } from "@/lib/utils";
 
 const fieldClass =
@@ -348,7 +349,7 @@ export function CrmTeamMembersView() {
               <div className="relative h-16 w-16 shrink-0 overflow-hidden rounded-full ring-2 ring-primary-light">
                 {member.image ? (
                   <Image
-                    src={member.image}
+                    src={resolveImageDisplayUrl(member.image)}
                     alt=""
                     fill
                     unoptimized

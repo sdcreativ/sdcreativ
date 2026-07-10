@@ -1,13 +1,13 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import Image from "next/image";
 import { ImagePlus, Loader2, Move, Trash2, Upload } from "lucide-react";
 import {
   DEFAULT_IMAGE_POSITION,
   formatImagePosition,
   parseImagePosition,
 } from "@/lib/image-position";
+import { resolveImageDisplayUrl } from "@/lib/image-url";
 import { uploadTeamMemberImageApi } from "@/lib/public-team-api";
 import { cn } from "@/lib/utils";
 
@@ -51,6 +51,29 @@ export function TeamMemberImageField({
   }, [value]);
 
   useEffect(() => {
+    if (!localPreview || !value) return;
+
+    let cancelled = false;
+    const probe = new window.Image();
+    probe.onload = () => {
+      if (!cancelled) {
+        clearLocalPreview();
+        setLoadError(false);
+      }
+    };
+    probe.onerror = () => {
+      if (!cancelled) setLoadError(true);
+    };
+    probe.src = resolveImageDisplayUrl(value);
+
+    return () => {
+      cancelled = true;
+      probe.onload = null;
+      probe.onerror = null;
+    };
+  }, [localPreview, value]);
+
+  useEffect(() => {
     return () => {
       if (localPreview) URL.revokeObjectURL(localPreview);
     };
@@ -91,8 +114,12 @@ export function TeamMemberImageField({
     onPositionChange(formatImagePosition(next.x, next.y));
   }
 
+  const objectPosition = formatImagePosition(focal.x, focal.y);
+  const displaySrc = localPreview ?? (value ? resolveImageDisplayUrl(value) : "");
+  const showPreview = Boolean(displaySrc);
+
   function handlePointerDown(e: React.PointerEvent<HTMLDivElement>) {
-    if (!value) return;
+    if (!displaySrc) return;
     e.preventDefault();
     e.currentTarget.setPointerCapture(e.pointerId);
     dragging.current = true;
@@ -129,12 +156,7 @@ export function TeamMemberImageField({
     }
   }
 
-  const objectPosition = formatImagePosition(focal.x, focal.y);
-  const displaySrc = localPreview ?? value;
-  const showPreview = Boolean(displaySrc);
-
   function handlePreviewLoad() {
-    if (localPreview && value) clearLocalPreview();
     setLoadError(false);
   }
 
@@ -160,14 +182,13 @@ export function TeamMemberImageField({
             onPointerCancel={handlePointerUp}
             title="Glissez la photo pour ajuster le cadrage"
           >
-            <Image
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
               key={displaySrc}
               src={displaySrc}
               alt=""
-              fill
-              unoptimized
               draggable={false}
-              className="pointer-events-none object-cover"
+              className="pointer-events-none absolute inset-0 h-full w-full object-cover"
               style={{ objectPosition }}
               onLoad={handlePreviewLoad}
               onError={handlePreviewError}

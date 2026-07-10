@@ -4,6 +4,7 @@ import { ArrowRight } from "lucide-react";
 import { AnimatedSection, AnimatedCard } from "@/components/ui/AnimatedSection";
 import { SectionHeading } from "@/components/ui/SectionHeading";
 import { DEFAULT_IMAGE_POSITION } from "@/lib/image-position";
+import { resolveImageDisplayUrl } from "@/lib/image-url";
 import { getTeamMembers } from "@/lib/public-team";
 
 export async function TeamPreviewSection() {
@@ -29,7 +30,7 @@ export async function TeamPreviewSection() {
             >
               <div className="relative mb-4 h-20 w-20 overflow-hidden rounded-full ring-4 ring-primary-light">
                 <Image
-                  src={member.image}
+                  src={resolveImageDisplayUrl(member.image)}
                   alt={member.imageAlt}
                   fill
                   sizes="80px"
