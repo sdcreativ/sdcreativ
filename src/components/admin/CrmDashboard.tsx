@@ -26,6 +26,7 @@ import {
   CrmPipelineChart,
   CrmRevenueChart,
 } from "@/components/admin/CrmReportCharts";
+import { CrmInfraHealthWidget } from "@/components/admin/CrmInfraHealthWidget";
 import { fetchCrmClients } from "@/lib/clients-api";
 import type { Client } from "@/lib/clients";
 import {
@@ -40,11 +41,14 @@ import {
 import { fetchCrmSession } from "@/lib/crm-settings-api";
 import {
   canShowDashboardWidget,
+  CRM_SETTINGS_ACCESS_PERMISSIONS,
   filterDashboardActivities,
   filterDashboardKpis,
   filterDashboardWidgets,
   hasCrmPermission,
 } from "@/lib/crm-access";
+import { fetchInfraHealth } from "@/lib/infra-api";
+import type { InfraHealth } from "@/lib/infra-health-types";
 import { fetchLeads } from "@/lib/leads-api";
 import { fetchProjects } from "@/lib/projects-api";
 import { fetchQuotes } from "@/lib/quotes-api";
@@ -92,6 +96,7 @@ export function CrmDashboard() {
   const canQuotes = hasCrmPermission(permissions, "quotes.read");
   const canReports = hasCrmPermission(permissions, "reports.view");
   const canClients = hasCrmPermission(permissions, "clients.read");
+  const canInfra = hasCrmPermission(permissions, CRM_SETTINGS_ACCESS_PERMISSIONS);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [kpis, setKpis] = useState<DashboardKpi[]>([]);
@@ -107,6 +112,9 @@ export function CrmDashboard() {
   const [layout, setLayout] = useState<DashboardLayout | null>(null);
   const [customizeOpen, setCustomizeOpen] = useState(false);
   const [roleLabel, setRoleLabel] = useState<string | null>(null);
+  const [infraHealth, setInfraHealth] = useState<InfraHealth | null>(null);
+  const [infraLoading, setInfraLoading] = useState(false);
+  const [infraError, setInfraError] = useState("");
 
   useEffect(() => {
     void fetchCrmSession()
@@ -132,9 +140,24 @@ export function CrmDashboard() {
     [filters],
   );
 
+  const loadInfra = useCallback(async () => {
+    if (!canInfra) return;
+    setInfraLoading(true);
+    setInfraError("");
+    try {
+      setInfraHealth(await fetchInfraHealth());
+    } catch (err) {
+      setInfraError(err instanceof Error ? err.message : "Impossible de charger l'état infra.");
+      setInfraHealth(null);
+    } finally {
+      setInfraLoading(false);
+    }
+  }, [canInfra]);
+
   const load = useCallback(async () => {
     setLoading(true);
     setError("");
+    void loadInfra();
     try {
       const [leads, allProjects, allTasks, quotes, reportsData] = await Promise.all([
         canLeads ? fetchLeads() : Promise.resolve([]),
@@ -178,7 +201,7 @@ export function CrmDashboard() {
     } finally {
       setLoading(false);
     }
-  }, [period, apiFilters, permissions, canLeads, canProjects, canTasks, canQuotes, canReports]);
+  }, [period, apiFilters, permissions, canLeads, canProjects, canTasks, canQuotes, canReports, loadInfra]);
 
   useEffect(() => {
     void load();
@@ -211,6 +234,17 @@ export function CrmDashboard() {
 
   function renderWidget(id: DashboardWidgetId) {
     switch (id) {
+      case "infra":
+        return canInfra ? (
+          <CrmInfraHealthWidget
+            key="infra"
+            health={infraHealth}
+            loading={infraLoading}
+            error={infraError}
+            onRefresh={() => void loadInfra()}
+          />
+        ) : null;
+
       case "kpis":
         return (
           <div key="kpis" className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-5">

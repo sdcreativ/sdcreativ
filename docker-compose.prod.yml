@@ -5,4 +5,7 @@
 # PostgreSQL et Redis : réseau Docker interne uniquement (pas de 5433 sur 0.0.0.0).
 # NEXT_PUBLIC_SITE_URL doit être https://DOMAIN dans .env.docker.
 
-services: {}
+services:
+  app:
+    volumes:
+      - /var/backups/sdcreativ:/app/data/backups:ro

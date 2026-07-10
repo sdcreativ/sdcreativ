@@ -27,6 +27,7 @@ fi
 DOMAIN="${DOMAIN:-sdcreativ.com}"
 COMPOSE="docker compose -f docker-compose.yml -f docker-compose.prod.yml --profile prod"
 BACKUP_DIR="${BACKUP_DIR:-/var/backups/sdcreativ}"
+DEPLOY_USER="${DEPLOY_USER:-deploy}"
 
 echo "=== Checklist post-déploiement — SD CREATIV ==="
 echo "Domaine : ${DOMAIN}"
@@ -139,10 +140,22 @@ else
   warn_msg "Aucune sauvegarde dans ${BACKUP_DIR} — lancez ./scripts/db-backup.sh et installez le cron"
 fi
 
-if crontab -l 2>/dev/null | grep -qF 'db-backup.sh'; then
-  ok "Cron sauvegarde installé"
+if crontab -u "$DEPLOY_USER" -l 2>/dev/null | grep -qF 'db-backup.sh'; then
+  ok "Cron sauvegarde installé (${DEPLOY_USER}, 3h)"
 else
   warn_msg "Cron sauvegarde absent — ./scripts/install-backup-cron.sh"
+fi
+
+if crontab -u "$DEPLOY_USER" -l 2>/dev/null | grep -qF 'infra-status-export.sh'; then
+  ok "Cron infra CRM installé (${DEPLOY_USER}, /15 min)"
+else
+  warn_msg "Cron infra absent — ./scripts/install-backup-cron.sh"
+fi
+
+if [ -f "${BACKUP_DIR}/infra-status.json" ]; then
+  ok "Statut infra CRM : ${BACKUP_DIR}/infra-status.json"
+else
+  warn_msg "Statut infra absent — ./scripts/infra-status-export.sh"
 fi
 
 # --- S3 sauvegardes ---

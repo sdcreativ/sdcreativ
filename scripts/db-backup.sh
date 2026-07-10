@@ -105,3 +105,9 @@ echo "Conservation : ${RETENTION_DAYS} jours (${REMAINING} dump(s) restant(s))"
 echo
 echo "Restauration :"
 echo "  ./scripts/db-restore.sh ${DUMP_FILE}"
+
+if [ -x "${ROOT_DIR}/scripts/infra-status-export.sh" ]; then
+  echo
+  echo ">>> Mise à jour statut infra CRM…"
+  BACKUP_DIR="$BACKUP_DIR" COMPOSE_FILES="$COMPOSE_FILES" "${ROOT_DIR}/scripts/infra-status-export.sh" || true
+fi

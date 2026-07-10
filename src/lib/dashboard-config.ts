@@ -1,6 +1,7 @@
 import type { CrmRole, SystemCrmRole } from "@/content/crm-roles";
 
 export const DASHBOARD_WIDGETS = [
+  "infra",
   "kpis",
   "charts",
   "pipeline",
@@ -12,6 +13,7 @@ export const DASHBOARD_WIDGETS = [
 export type DashboardWidgetId = (typeof DASHBOARD_WIDGETS)[number];
 
 export const DASHBOARD_WIDGET_LABELS: Record<DashboardWidgetId, string> = {
+  infra: "Santé infra VPS",
   kpis: "Indicateurs clés",
   charts: "Graphiques",
   pipeline: "Pipeline commercial",
@@ -22,7 +24,7 @@ export const DASHBOARD_WIDGET_LABELS: Record<DashboardWidgetId, string> = {
 
 /** Widgets visibles par défaut selon le rôle système. */
 export const ROLE_DASHBOARD_WIDGETS: Record<SystemCrmRole, DashboardWidgetId[]> = {
-  admin: ["kpis", "charts", "pipeline", "tasks", "projects", "activity"],
+  admin: ["infra", "kpis", "charts", "pipeline", "tasks", "projects", "activity"],
   commercial: ["kpis", "pipeline", "charts", "activity"],
   project_manager: ["kpis", "tasks", "projects", "charts"],
   readonly: ["kpis", "charts", "pipeline", "projects", "activity"],
@@ -59,10 +61,28 @@ export function loadDashboardLayout(role: CrmRole): DashboardLayout {
       (DASHBOARD_WIDGETS as readonly string[]).includes(id),
     ) as DashboardWidgetId[];
     if (validOrder.length === 0) return getDefaultDashboardLayout(role);
-    return { order: validOrder, hidden: validHidden ?? [] };
+    return mergeDashboardLayout({ order: validOrder, hidden: validHidden ?? [] }, role);
   } catch {
     return getDefaultDashboardLayout(role);
   }
+}
+
+function mergeDashboardLayout(layout: DashboardLayout, role: CrmRole): DashboardLayout {
+  const defaults = getDefaultDashboardLayout(role);
+  const known = new Set([...layout.order, ...layout.hidden]);
+  const missing = DASHBOARD_WIDGETS.filter((id) => !known.has(id));
+  if (missing.length === 0) return layout;
+
+  const defaultOrder = new Set(defaults.order);
+  const order = [...layout.order];
+  const hidden = [...layout.hidden];
+
+  for (const id of missing) {
+    if (defaultOrder.has(id)) order.unshift(id);
+    else hidden.push(id);
+  }
+
+  return { order, hidden };
 }
 
 export function saveDashboardLayout(layout: DashboardLayout): void {
