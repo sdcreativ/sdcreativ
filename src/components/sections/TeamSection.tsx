@@ -2,7 +2,7 @@ import Image from "next/image";
 import { AnimatedSection, AnimatedCard } from "@/components/ui/AnimatedSection";
 import { SectionHeading } from "@/components/ui/SectionHeading";
 import { DEFAULT_IMAGE_POSITION } from "@/lib/image-position";
-import { resolveImageDisplayUrl } from "@/lib/image-url";
+import { resolveImageDisplayUrl, isProxiedMediaUrl } from "@/lib/image-url";
 import { getTeamMembers } from "@/lib/public-team";
 
 type Props = {
@@ -24,7 +24,9 @@ export async function TeamSection({ locale = "fr" }: Props) {
         />
 
         <div className="grid gap-6 sm:grid-cols-2 xl:grid-cols-4">
-          {teamMembers.map((member, i) => (
+          {teamMembers.map((member, i) => {
+            const imageSrc = resolveImageDisplayUrl(member.image);
+            return (
             <AnimatedCard
               key={member.id}
               delay={i * 0.08}
@@ -32,10 +34,11 @@ export async function TeamSection({ locale = "fr" }: Props) {
             >
               <div className="relative mb-5 h-28 w-28 shrink-0 overflow-hidden rounded-full bg-gray-light ring-4 ring-primary-light shadow-md transition-transform duration-300 group-hover:scale-105 md:h-32 md:w-32">
                 <Image
-                  src={resolveImageDisplayUrl(member.image)}
+                  src={imageSrc}
                   alt={member.imageAlt}
                   fill
                   sizes="128px"
+                  unoptimized={isProxiedMediaUrl(imageSrc)}
                   className="object-cover"
                   style={{ objectPosition: member.imagePosition ?? DEFAULT_IMAGE_POSITION }}
                 />
@@ -49,7 +52,8 @@ export async function TeamSection({ locale = "fr" }: Props) {
                 {member.missions}
               </p>
             </AnimatedCard>
-          ))}
+            );
+          })}
         </div>
       </div>
     </AnimatedSection>

@@ -4,7 +4,7 @@ import { ArrowRight } from "lucide-react";
 import { AnimatedSection, AnimatedCard } from "@/components/ui/AnimatedSection";
 import { SectionHeading } from "@/components/ui/SectionHeading";
 import { DEFAULT_IMAGE_POSITION } from "@/lib/image-position";
-import { resolveImageDisplayUrl } from "@/lib/image-url";
+import { resolveImageDisplayUrl, isProxiedMediaUrl } from "@/lib/image-url";
 import { getTeamMembers } from "@/lib/public-team";
 
 export async function TeamPreviewSection() {
@@ -22,7 +22,9 @@ export async function TeamPreviewSection() {
         />
 
         <div className="grid gap-6 sm:grid-cols-2 xl:grid-cols-4">
-          {teamMembers.map((member, i) => (
+          {teamMembers.map((member, i) => {
+            const imageSrc = resolveImageDisplayUrl(member.image);
+            return (
             <AnimatedCard
               key={member.id}
               delay={i * 0.06}
@@ -30,10 +32,11 @@ export async function TeamPreviewSection() {
             >
               <div className="relative mb-4 h-20 w-20 overflow-hidden rounded-full ring-4 ring-primary-light">
                 <Image
-                  src={resolveImageDisplayUrl(member.image)}
+                  src={imageSrc}
                   alt={member.imageAlt}
                   fill
                   sizes="80px"
+                  unoptimized={isProxiedMediaUrl(imageSrc)}
                   className="object-cover"
                   style={{ objectPosition: member.imagePosition ?? DEFAULT_IMAGE_POSITION }}
                 />
@@ -41,7 +44,8 @@ export async function TeamPreviewSection() {
               <h3 className="text-base font-bold text-foreground">{member.name}</h3>
               <p className="mt-1 text-xs font-semibold text-primary">{member.role}</p>
             </AnimatedCard>
-          ))}
+            );
+          })}
         </div>
 
         <p className="mt-10 text-center">

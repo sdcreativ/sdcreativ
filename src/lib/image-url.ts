@@ -44,3 +44,8 @@ export function resolveImageDisplayUrl(url: string): string {
   }
   return url;
 }
+
+/** next/image ne peut pas optimiser /api/media?url=… (retourne 400 via _next/image). */
+export function isProxiedMediaUrl(resolvedUrl: string): boolean {
+  return resolvedUrl.startsWith("/api/media");
+}
