@@ -3,7 +3,7 @@ import { crmApiAuth } from "@/lib/crm-api-auth";
 import { getInfraHealth } from "@/lib/infra-health";
 
 export async function GET() {
-  const authError = await crmApiAuth.settingsAccess();
+  const authError = await crmApiAuth.infra.read();
   if (authError) return authError;
 
   try {

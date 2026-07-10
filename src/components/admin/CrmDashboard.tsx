@@ -41,7 +41,6 @@ import {
 import { fetchCrmSession } from "@/lib/crm-settings-api";
 import {
   canShowDashboardWidget,
-  CRM_SETTINGS_ACCESS_PERMISSIONS,
   filterDashboardActivities,
   filterDashboardKpis,
   filterDashboardWidgets,
@@ -96,7 +95,7 @@ export function CrmDashboard() {
   const canQuotes = hasCrmPermission(permissions, "quotes.read");
   const canReports = hasCrmPermission(permissions, "reports.view");
   const canClients = hasCrmPermission(permissions, "clients.read");
-  const canInfra = hasCrmPermission(permissions, CRM_SETTINGS_ACCESS_PERMISSIONS);
+  const canInfra = hasCrmPermission(permissions, "infra.view");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [kpis, setKpis] = useState<DashboardKpi[]>([]);

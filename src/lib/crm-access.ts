@@ -47,7 +47,7 @@ export const CRM_WIDGET_PERMISSIONS: Record<
   DashboardWidgetId,
   CrmPermission | CrmPermission[] | null
 > = {
-  infra: ["settings.manage", "users.manage", "audit.view"],
+  infra: "infra.view",
   kpis: null,
   charts: "reports.view",
   pipeline: "leads.read",
