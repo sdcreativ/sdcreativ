@@ -111,6 +111,16 @@ if [ -f .env.docker ]; then
   else
     fail "DATABASE_URL doit utiliser @postgres:5432 dans .env.docker"
   fi
+
+  turnstile_site="$(env_val .env.docker NEXT_PUBLIC_TURNSTILE_SITE_KEY)"
+  turnstile_secret="$(env_val .env.docker TURNSTILE_SECRET_KEY)"
+  if [ -n "${turnstile_site:-}" ] && [ -n "${turnstile_secret:-}" ]; then
+    ok "Turnstile configuré (anti-bot formulaires publics)"
+  elif [ -n "${turnstile_site:-}" ] || [ -n "${turnstile_secret:-}" ]; then
+    fail "Turnstile incomplet — renseignez NEXT_PUBLIC_TURNSTILE_SITE_KEY et TURNSTILE_SECRET_KEY"
+  else
+    warn_msg "Turnstile absent — formulaires publics sans captcha Cloudflare"
+  fi
 fi
 
 # --- Docker ---

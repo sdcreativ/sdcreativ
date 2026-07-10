@@ -9,13 +9,17 @@ import { getSessionMaxAgeSeconds } from "@/lib/crm-security-settings";
 import { logAdminLogin } from "@/lib/crm-login-logs";
 import { getTotpAuthState } from "@/lib/crm-totp";
 import { signTotpChallenge } from "@/lib/crm-totp-challenge";
+import {
+  ADMIN_LOGIN_RATE_LIMIT,
+  clearRateLimit,
+  getClientIp,
+  getRateLimitStatus,
+  rateLimitExceededResponse,
+  recordRateLimitFailure,
+} from "@/lib/rate-limit";
 
-function clientIp(request: Request): string | null {
-  return (
-    request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ??
-    request.headers.get("x-real-ip") ??
-    null
-  );
+function loginRateLimitKey(request: Request, email: string): string {
+  return `${getClientIp(request)}:${email.trim().toLowerCase()}`;
 }
 
 export async function POST(request: Request) {
@@ -40,13 +44,20 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Mot de passe requis" }, { status: 400 });
     }
 
+    const rateKey = loginRateLimitKey(request, email);
+    const rateStatus = getRateLimitStatus("admin-login", rateKey, ADMIN_LOGIN_RATE_LIMIT);
+    if (rateStatus.limited) {
+      return rateLimitExceededResponse(rateStatus.retryAfterSec);
+    }
+
     await ensureBootstrapAdmin();
 
     const user = await authenticateCrmUser(email, password);
     if (user === "pending") {
+      recordRateLimitFailure("admin-login", rateKey, ADMIN_LOGIN_RATE_LIMIT);
       void logAdminLogin({
         email: email.trim(),
-        ipAddress: clientIp(request),
+        ipAddress: getClientIp(request),
         userAgent: request.headers.get("user-agent"),
         success: false,
       });
@@ -59,9 +70,10 @@ export async function POST(request: Request) {
       );
     }
     if (!user) {
+      recordRateLimitFailure("admin-login", rateKey, ADMIN_LOGIN_RATE_LIMIT);
       void logAdminLogin({
         email: email.trim(),
-        ipAddress: clientIp(request),
+        ipAddress: getClientIp(request),
         userAgent: request.headers.get("user-agent"),
         success: false,
       });
@@ -70,6 +82,7 @@ export async function POST(request: Request) {
 
     const totp = await getTotpAuthState(user.id);
     if (totp?.enabled) {
+      clearRateLimit("admin-login", rateKey);
       const challengeToken = signTotpChallenge({
         userId: user.id,
         email: user.email,
@@ -102,10 +115,12 @@ export async function POST(request: Request) {
       userId: user.id,
       email: user.email,
       name: user.name,
-      ipAddress: clientIp(request),
+      ipAddress: getClientIp(request),
       userAgent: request.headers.get("user-agent"),
       success: true,
     });
+
+    clearRateLimit("admin-login", rateKey);
 
     const response = NextResponse.json({
       success: true,

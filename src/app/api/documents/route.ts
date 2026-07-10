@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import {
   canAccessClient,
+  canAccessDocumentKey,
   isClientUploadCategory,
   verifyDocumentsAuth,
 } from "@/lib/documents-auth";
@@ -66,7 +67,7 @@ export async function GET(request: Request) {
       );
     }
 
-    const auth = await verifyDocumentsAuth(request);
+    const auth = await verifyDocumentsAuth(request, { adminPermission: "documents.read" });
     if (!auth) return unauthorizedResponse();
 
     const { searchParams } = new URL(request.url);
@@ -109,7 +110,7 @@ export async function POST(request: Request) {
       );
     }
 
-    const auth = await verifyDocumentsAuth(request);
+    const auth = await verifyDocumentsAuth(request, { adminPermission: "documents.write" });
     if (!auth) return unauthorizedResponse();
 
     const body = await request.json();
@@ -155,7 +156,7 @@ export async function DELETE(request: Request) {
   try {
     if (!isS3Configured()) return s3UnavailableResponse();
 
-    const auth = await verifyDocumentsAuth(request);
+    const auth = await verifyDocumentsAuth(request, { adminPermission: "documents.write" });
     if (!auth || auth.role !== "admin") {
       return NextResponse.json({ error: "Accès réservé à l'équipe." }, { status: 403 });
     }
@@ -166,6 +167,10 @@ export async function DELETE(request: Request) {
     if (!parsed.success) {
       const firstError = parsed.error.issues[0]?.message ?? "Données invalides.";
       return NextResponse.json({ error: firstError }, { status: 400 });
+    }
+
+    if (!canAccessDocumentKey(auth, parsed.data.key)) {
+      return unauthorizedResponse();
     }
 
     await deleteDocument(parsed.data.key);

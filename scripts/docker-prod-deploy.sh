@@ -56,8 +56,19 @@ if [ -f .env.docker ]; then
   fi
 fi
 
+# --- Build : variables publiques (.env.docker) ---
+load_env_docker_for_build() {
+  if [ -f .env.docker ]; then
+    set -a
+    # shellcheck disable=SC1091
+    source .env.docker
+    set +a
+  fi
+}
+
 # --- Build image app ---
 echo ">>> Build de l'image Next.js…"
+load_env_docker_for_build
 $COMPOSE build app
 
 # --- SSL + Nginx (init ou renouvellement config) ---

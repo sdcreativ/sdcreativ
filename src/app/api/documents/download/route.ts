@@ -26,7 +26,7 @@ export async function GET(request: Request) {
   try {
     if (!isS3Configured()) return s3UnavailableResponse();
 
-    const auth = await verifyDocumentsAuth(request);
+    const auth = await verifyDocumentsAuth(request, { adminPermission: "documents.read" });
     if (!auth) return unauthorizedResponse();
 
     const { searchParams } = new URL(request.url);

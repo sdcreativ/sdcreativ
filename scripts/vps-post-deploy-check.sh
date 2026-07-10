@@ -78,6 +78,13 @@ else
   fail "CRM /admin/login : code ${ADMIN_CODE}"
 fi
 
+HSTS_HEADER="$(curl -sSI --max-time 15 "https://${DOMAIN}/" 2>/dev/null | grep -i '^strict-transport-security:' || true)"
+if [ -n "$HSTS_HEADER" ]; then
+  ok "HSTS actif"
+else
+  fail "HSTS absent — regénérez Nginx depuis sdcreativ.conf.template et rechargez"
+fi
+
 RSS_CODE="$(curl -sS -o /dev/null -w '%{http_code}' --max-time 15 "https://${DOMAIN}/blog/feed.xml" 2>/dev/null || echo "000")"
 if [ "$RSS_CODE" = "200" ]; then
   ok "Flux RSS /blog/feed.xml : 200"
@@ -99,6 +106,18 @@ if [ -f .env.docker ]; then
   fi
 else
   fail ".env.docker manquant"
+fi
+
+if [ -f .env.docker ]; then
+  turnstile_site="$(grep -E '^NEXT_PUBLIC_TURNSTILE_SITE_KEY=' .env.docker 2>/dev/null | cut -d= -f2- | sed 's/^["'\''"]//; s/["'\''"]$//' || true)"
+  turnstile_secret="$(grep -E '^TURNSTILE_SECRET_KEY=' .env.docker 2>/dev/null | cut -d= -f2- | sed 's/^["'\''"]//; s/["'\''"]$//' || true)"
+  if [ -n "${turnstile_site:-}" ] && [ -n "${turnstile_secret:-}" ]; then
+    ok "Turnstile configuré"
+  elif [ -n "${turnstile_site:-}" ] || [ -n "${turnstile_secret:-}" ]; then
+    fail "Turnstile incomplet — les deux clés sont requises dans .env.docker"
+  else
+    warn_msg "Turnstile absent — activez Cloudflare Turnstile pour les formulaires publics"
+  fi
 fi
 
 # --- Disque ---

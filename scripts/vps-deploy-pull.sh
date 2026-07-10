@@ -34,6 +34,13 @@ fi
 echo "→ git pull"
 git pull --ff-only
 
+if [ -f .env.docker ]; then
+  set -a
+  # shellcheck disable=SC1091
+  source .env.docker
+  set +a
+fi
+
 echo "→ Rebuild & redémarrage app"
 "${COMPOSE[@]}" up -d --build app
 

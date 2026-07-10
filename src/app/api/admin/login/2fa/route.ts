@@ -9,13 +9,17 @@ import { logAdminLogin } from "@/lib/crm-login-logs";
 import { verifyTotpChallenge } from "@/lib/crm-totp-challenge";
 import { getTotpAuthState, verifyTotpCode } from "@/lib/crm-totp";
 import { getCrmUserById } from "@/lib/crm-users";
+import {
+  ADMIN_2FA_RATE_LIMIT,
+  clearRateLimit,
+  getClientIp,
+  getRateLimitStatus,
+  rateLimitExceededResponse,
+  recordRateLimitFailure,
+} from "@/lib/rate-limit";
 
-function clientIp(request: Request): string | null {
-  return (
-    request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ??
-    request.headers.get("x-real-ip") ??
-    null
-  );
+function twoFaRateLimitKey(request: Request, userId: string): string {
+  return `${getClientIp(request)}:${userId}`;
 }
 
 export async function POST(request: Request) {
@@ -37,13 +41,20 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Session 2FA expirée. Reconnectez-vous." }, { status: 401 });
     }
 
+    const rateKey = twoFaRateLimitKey(request, payload.userId);
+    const rateStatus = getRateLimitStatus("admin-login-2fa", rateKey, ADMIN_2FA_RATE_LIMIT);
+    if (rateStatus.limited) {
+      return rateLimitExceededResponse(rateStatus.retryAfterSec);
+    }
+
     const totp = await getTotpAuthState(payload.userId);
     if (!totp?.enabled || !totp.secret || !verifyTotpCode(totp.secret, code)) {
+      recordRateLimitFailure("admin-login-2fa", rateKey, ADMIN_2FA_RATE_LIMIT);
       void logAdminLogin({
         userId: payload.userId,
         email: payload.email,
         name: payload.name,
-        ipAddress: clientIp(request),
+        ipAddress: getClientIp(request),
         userAgent: request.headers.get("user-agent"),
         success: false,
       });
@@ -70,10 +81,12 @@ export async function POST(request: Request) {
       userId: payload.userId,
       email: payload.email,
       name: payload.name,
-      ipAddress: clientIp(request),
+      ipAddress: getClientIp(request),
       userAgent: request.headers.get("user-agent"),
       success: true,
     });
+
+    clearRateLimit("admin-login-2fa", rateKey);
 
     const response = NextResponse.json({
       success: true,
