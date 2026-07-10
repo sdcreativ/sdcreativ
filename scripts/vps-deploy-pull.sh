@@ -41,6 +41,27 @@ if [ -f .env.docker ]; then
   set +a
 fi
 
+if [ -f .env ]; then
+  set -a
+  # shellcheck disable=SC1091
+  source .env
+  set +a
+fi
+
+DOMAIN="${DOMAIN:-sdcreativ.com}"
+NGINX_CONF="docker/nginx/conf.d/sdcreativ.conf"
+NGINX_TEMPLATE="docker/nginx/conf.d/sdcreativ.conf.template"
+
+if [ -f "$NGINX_TEMPLATE" ]; then
+  echo "→ Regénération config Nginx (HSTS, uploads…)"
+  export DOMAIN
+  envsubst '${DOMAIN}' < "$NGINX_TEMPLATE" > "$NGINX_CONF"
+  if "${COMPOSE[@]}" ps --status running nginx 2>/dev/null | grep -q nginx; then
+    "${COMPOSE[@]}" exec nginx nginx -s reload
+    echo "✓ Nginx rechargé"
+  fi
+fi
+
 echo "→ Rebuild & redémarrage app"
 "${COMPOSE[@]}" up -d --build app
 
