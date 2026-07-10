@@ -36,6 +36,14 @@ server {
   # Résolution DNS Docker au runtime (évite "host not found in upstream app:3000")
   resolver 127.0.0.11 valid=30s ipv6=off;
 
+  # Fichiers uploadés (blog, équipe…) — volume partagé avec le conteneur app
+  location /uploads/ {
+    alias /var/www/uploads/;
+    expires 30d;
+    add_header Cache-Control "public";
+    access_log off;
+  }
+
   location / {
     set $upstream_app app;
     proxy_pass http://$upstream_app:3000;

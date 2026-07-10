@@ -35,6 +35,8 @@ export function TeamMemberImageField({
 
   const [uploading, setUploading] = useState(false);
   const [error, setError] = useState("");
+  const [loadError, setLoadError] = useState(false);
+  const [localPreview, setLocalPreview] = useState<string | null>(null);
   const [focal, setFocal] = useState(() => parseImagePosition(imagePosition));
   const [isDragging, setIsDragging] = useState(false);
 
@@ -44,9 +46,30 @@ export function TeamMemberImageField({
     setFocal(parsed);
   }, [imagePosition]);
 
+  useEffect(() => {
+    setLoadError(false);
+  }, [value]);
+
+  useEffect(() => {
+    return () => {
+      if (localPreview) URL.revokeObjectURL(localPreview);
+    };
+  }, [localPreview]);
+
+  function clearLocalPreview() {
+    setLocalPreview((current) => {
+      if (current) URL.revokeObjectURL(current);
+      return null;
+    });
+  }
+
   async function handleFile(file: File) {
     setUploading(true);
     setError("");
+    setLoadError(false);
+    clearLocalPreview();
+    const previewUrl = URL.createObjectURL(file);
+    setLocalPreview(previewUrl);
     try {
       const { url } = await uploadTeamMemberImageApi(file);
       onChange(url);
@@ -55,6 +78,7 @@ export function TeamMemberImageField({
       focalRef.current = reset;
       setFocal(reset);
     } catch (err) {
+      clearLocalPreview();
       setError(err instanceof Error ? err.message : "Upload impossible.");
     } finally {
       setUploading(false);
@@ -106,16 +130,29 @@ export function TeamMemberImageField({
   }
 
   const objectPosition = formatImagePosition(focal.x, focal.y);
+  const displaySrc = localPreview ?? value;
+  const showPreview = Boolean(displaySrc);
+
+  function handlePreviewLoad() {
+    if (localPreview && value) clearLocalPreview();
+    setLoadError(false);
+  }
+
+  function handlePreviewError() {
+    if (localPreview) return;
+    setLoadError(true);
+  }
 
   return (
     <div className="space-y-2">
-      {value ? (
+      {showPreview ? (
         <div className="space-y-2">
           <div
             ref={frameRef}
             className={cn(
               "relative mx-auto h-28 w-28 touch-none overflow-hidden rounded-full ring-4 ring-primary-light select-none",
               isDragging ? "cursor-grabbing ring-primary/40" : "cursor-grab",
+              loadError && !localPreview && "ring-red-200",
             )}
             onPointerDown={handlePointerDown}
             onPointerMove={handlePointerMove}
@@ -124,13 +161,16 @@ export function TeamMemberImageField({
             title="Glissez la photo pour ajuster le cadrage"
           >
             <Image
-              src={value}
+              key={displaySrc}
+              src={displaySrc}
               alt=""
               fill
               unoptimized
               draggable={false}
               className="pointer-events-none object-cover"
               style={{ objectPosition }}
+              onLoad={handlePreviewLoad}
+              onError={handlePreviewError}
             />
             {!isDragging && (
               <div className="pointer-events-none absolute inset-x-0 bottom-0 flex justify-center bg-gradient-to-t from-black/45 to-transparent pb-1.5 pt-6 opacity-0 transition-opacity hover:opacity-100">
@@ -163,8 +203,10 @@ export function TeamMemberImageField({
             <button
               type="button"
               onClick={() => {
+                clearLocalPreview();
                 onChange("");
                 onPositionChange(DEFAULT_IMAGE_POSITION);
+                setLoadError(false);
               }}
               className="inline-flex items-center gap-1.5 rounded-lg border border-red-200 bg-white px-3 py-1.5 text-xs font-medium text-red-600 hover:bg-red-50"
             >
@@ -210,6 +252,13 @@ export function TeamMemberImageField({
           e.target.value = "";
         }}
       />
+
+      {loadError && !localPreview && (
+        <p className="text-center text-xs text-red-600">
+          L&apos;aperçu ne charge pas — le fichier n&apos;est peut-être pas encore accessible sur le
+          serveur. Réessayez l&apos;upload puis enregistrez.
+        </p>
+      )}
 
       {error && <p className="text-xs text-red-600">{error}</p>}
     </div>

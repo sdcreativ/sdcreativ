@@ -36,6 +36,8 @@ services:
       timeout: 10s
       retries: 3
       start_period: 60s
+    volumes:
+      - uploads_data:/app/public/uploads
     networks:
       - sdcreativ
     expose:
@@ -99,6 +101,7 @@ services:
       - ./docker/nginx/conf.d:/etc/nginx/conf.d:ro
       - certbot_www:/var/www/certbot:ro
       - certbot_certs:/etc/letsencrypt:ro
+      - uploads_data:/var/www/uploads:ro
     networks:
       - sdcreativ
 
@@ -126,3 +129,4 @@ volumes:
   redis_data:
   certbot_www:
   certbot_certs:
+  uploads_data:
