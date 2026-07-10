@@ -64,7 +64,7 @@ export function AdminAccountView() {
       }
     }
     void load();
-  }, []);
+  }, [required, router]);
 
   async function logout() {
     await fetch("/api/admin/login", { method: "DELETE" });
