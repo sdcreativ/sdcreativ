@@ -12,6 +12,7 @@ import {
   Receipt,
   Settings,
   Target,
+  Tablet,
   Users,
 } from "lucide-react";
 
@@ -26,6 +27,7 @@ export type CrmNavItem = {
 export const crmNavItems: CrmNavItem[] = [
   { id: "dashboard", label: "Tableau de bord", href: "/admin/crm", icon: LayoutDashboard, ready: true },
   { id: "leads", label: "Leads", href: "/admin/crm/leads", icon: Target, ready: true },
+  { id: "presentation", label: "Présentation tablette", href: "/presentation", icon: Tablet, ready: true },
   { id: "clients", label: "Clients", href: "/admin/crm/clients", icon: Users, ready: true },
   { id: "projects", label: "Projets", href: "/admin/crm/projets", icon: FolderKanban, ready: true },
   { id: "quotes", label: "Devis", href: "/admin/crm/devis", icon: FileText, ready: true },

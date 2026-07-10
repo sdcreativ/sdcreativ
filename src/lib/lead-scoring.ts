@@ -2,6 +2,7 @@ import type { Lead, LeadSource, LeadStatus } from "@/lib/leads";
 
 const SOURCE_SCORE: Record<LeadSource, number> = {
   devis: 28,
+  presentation_tablet: 30,
   contact: 24,
   whatsapp: 20,
   manual: 14,

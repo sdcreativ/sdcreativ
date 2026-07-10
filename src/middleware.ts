@@ -21,19 +21,29 @@ async function getSession(request: NextRequest) {
   return verifyCrmSession(sessionToken, secret);
 }
 
+function redirectToLogin(request: NextRequest, from: string) {
+  const login = new URL("/admin/login", request.url);
+  login.searchParams.set("from", from);
+  return NextResponse.redirect(login);
+}
+
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
-  if (!pathname.startsWith("/admin")) {
+  const isAdmin = pathname.startsWith("/admin");
+  const isPresentation = pathname.startsWith("/presentation");
+
+  if (!isAdmin && !isPresentation) {
     return NextResponse.next();
   }
 
-  const isPublic = PUBLIC_ADMIN_PATHS.some(
-    (path) => pathname === path || pathname.startsWith(`${path}/`),
-  );
-
-  if (isPublic) {
-    return NextResponse.next();
+  if (isAdmin) {
+    const isPublic = PUBLIC_ADMIN_PATHS.some(
+      (path) => pathname === path || pathname.startsWith(`${path}/`),
+    );
+    if (isPublic) {
+      return NextResponse.next();
+    }
   }
 
   if (!process.env.ADMIN_SECRET) {
@@ -42,9 +52,7 @@ export async function middleware(request: NextRequest) {
 
   const session = await getSession(request);
   if (!session) {
-    const login = new URL("/admin/login", request.url);
-    login.searchParams.set("from", pathname);
-    return NextResponse.redirect(login);
+    return redirectToLogin(request, pathname);
   }
 
   if (
@@ -61,5 +69,5 @@ export async function middleware(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ["/admin/:path*"],
+  matcher: ["/admin/:path*", "/presentation/:path*"],
 };

@@ -20,6 +20,7 @@ import {
   timelineOptions,
 } from "@/content/contact-options";
 import type { SiteQuoteConfigSettings } from "@/lib/site-quote-config-types";
+import type { PresentationContext } from "@/lib/presentation-types";
 import {
   calculateQuote,
   getAvailableAddons,
@@ -32,18 +33,35 @@ type FormState = "idle" | "loading" | "success" | "error";
 const fieldClass =
   "w-full rounded-xl border border-gray/80 bg-white px-4 py-3.5 text-sm text-foreground shadow-sm transition-all placeholder:text-gray-text/50 focus:border-primary focus:outline-none focus:ring-4 focus:ring-primary/10";
 
+type PresentationMetaInput = Omit<
+  PresentationContext,
+  "validatedAt" | "clientValidatedOrally"
+>;
+
 type Props = {
   config: SiteQuoteConfigSettings;
+  variant?: "public" | "presentation";
+  presentationMeta?: PresentationMetaInput;
+  onPresentationSuccess?: (leadId: string | null) => void;
 };
 
-export function QuoteConfigurator({ config }: Props) {
+export function QuoteConfigurator({
+  config,
+  variant = "public",
+  presentationMeta,
+  onPresentationSuccess,
+}: Props) {
   const searchParams = useSearchParams();
   const [projectTypeId, setProjectTypeId] = useState(config.projectTypes[0]?.id ?? "");
   const [pageTierId, setPageTierId] = useState(config.pageTiers[0]?.id ?? "1-5");
   const [addonIds, setAddonIds] = useState<string[]>([]);
   const [state, setState] = useState<FormState>("idle");
   const [errorMessage, setErrorMessage] = useState("");
-  const { turnstileToken, setTurnstileToken, validate, reset, required } = useFormTurnstile();
+  const [clientValidatedOrally, setClientValidatedOrally] = useState(false);
+  const isPresentation = variant === "presentation";
+  const { turnstileToken, setTurnstileToken, validate, reset, required } = useFormTurnstile({
+    skip: isPresentation,
+  });
 
   useEffect(() => {
     const type = searchParams.get("type");
@@ -102,24 +120,71 @@ export function QuoteConfigurator({ config }: Props) {
     const form = e.currentTarget;
     const data = new FormData(form);
 
+    const payload = {
+      name: data.get("name"),
+      email: data.get("email"),
+      phone: data.get("phone"),
+      company: data.get("company"),
+      projectTypeId,
+      pageTierId: project?.supportsPages ? pageTierId : undefined,
+      addonIds,
+      budget: data.get("budget"),
+      timeline: data.get("timeline"),
+      message: data.get("message"),
+      _hp: data.get("_hp"),
+      turnstileToken: turnstileToken || undefined,
+    };
+
+    if (isPresentation) {
+      if (!presentationMeta) {
+        setErrorMessage("Session présentation invalide.");
+        setState("error");
+        return;
+      }
+      if (!clientValidatedOrally) {
+        setErrorMessage("Confirmez que le client a validé ce brief oralement.");
+        setState("error");
+        return;
+      }
+
+      try {
+        const res = await fetch("/api/presentation/devis", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            ...payload,
+            presentation: {
+              ...presentationMeta,
+              validatedAt: new Date().toISOString(),
+              clientValidatedOrally: true,
+            },
+          }),
+        });
+
+        const json = await res.json();
+        if (!res.ok) throw new Error(json.error ?? "Une erreur est survenue.");
+
+        if (onPresentationSuccess) {
+          onPresentationSuccess(json.leadId ?? null);
+          return;
+        }
+
+        setState("success");
+        form.reset();
+        setAddonIds([]);
+        setClientValidatedOrally(false);
+      } catch (err) {
+        setState("error");
+        setErrorMessage(err instanceof Error ? err.message : "Une erreur est survenue.");
+      }
+      return;
+    }
+
     try {
       const res = await fetch("/api/devis", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          name: data.get("name"),
-          email: data.get("email"),
-          phone: data.get("phone"),
-          company: data.get("company"),
-          projectTypeId,
-          pageTierId: project?.supportsPages ? pageTierId : undefined,
-          addonIds,
-          budget: data.get("budget"),
-          timeline: data.get("timeline"),
-          message: data.get("message"),
-          _hp: data.get("_hp"),
-          turnstileToken: turnstileToken || undefined,
-        }),
+        body: JSON.stringify(payload),
       });
 
       const json = await res.json();
@@ -166,10 +231,12 @@ export function QuoteConfigurator({ config }: Props) {
         <HoneypotField />
         <div>
           <h2 className="text-xl font-bold text-foreground md:text-2xl">
-            {config.formTitle}
+            {isPresentation ? "Brief projet client" : config.formTitle}
           </h2>
           <p className="mt-2 text-sm text-gray-text">
-            {config.formSubtitle}
+            {isPresentation
+              ? "Complétez le configurateur avec le client, puis validez le brief pour l'enregistrer au CRM."
+              : config.formSubtitle}
           </p>
         </div>
 
@@ -329,16 +396,37 @@ export function QuoteConfigurator({ config }: Props) {
           />
         )}
 
+        {isPresentation && (
+          <label className="flex items-start gap-3 rounded-xl border border-primary/20 bg-primary/5 p-4 text-sm text-foreground">
+            <input
+              type="checkbox"
+              checked={clientValidatedOrally}
+              onChange={(e) => setClientValidatedOrally(e.target.checked)}
+              className="mt-0.5 h-4 w-4 rounded border-gray/60 text-primary focus:ring-primary/30"
+            />
+            <span>
+              Le client confirme oralement ce brief et accepte que SD CREATIV le traite pour
+              établir un devis personnalisé.
+            </span>
+          </label>
+        )}
+
         <div className="flex flex-col gap-5 border-t border-gray/60 pt-6 sm:flex-row sm:items-center sm:justify-between">
           <p className="max-w-md text-xs leading-relaxed text-gray-text">
-            En soumettant ce formulaire, vous acceptez notre{" "}
-            <a
-              href="/politique-confidentialite"
-              className="font-medium text-primary underline underline-offset-2"
-            >
-              politique de confidentialité
-            </a>
-            . Vos données servent uniquement à établir votre devis.
+            {isPresentation ? (
+              <>Brief interne — enregistré au CRM SD CREATIV avec la source « Présentation tablette ».</>
+            ) : (
+              <>
+                En soumettant ce formulaire, vous acceptez notre{" "}
+                <a
+                  href="/politique-confidentialite"
+                  className="font-medium text-primary underline underline-offset-2"
+                >
+                  politique de confidentialité
+                </a>
+                . Vos données servent uniquement à établir votre devis.
+              </>
+            )}
           </p>
 
           <Button type="submit" size="lg" disabled={state === "loading"} className="w-full shrink-0 justify-center sm:w-auto">
@@ -346,6 +434,11 @@ export function QuoteConfigurator({ config }: Props) {
             <>
               <Loader2 className="h-4 w-4 animate-spin" aria-hidden />
               Envoi en cours...
+            </>
+          ) : isPresentation ? (
+            <>
+              Valider et envoyer au CRM
+              <Send className="h-4 w-4" aria-hidden />
             </>
           ) : (
             <>

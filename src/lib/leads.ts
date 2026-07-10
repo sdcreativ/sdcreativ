@@ -14,6 +14,7 @@ export const LEAD_STATUSES = [
 export const LEAD_SOURCES = [
   "contact",
   "devis",
+  "presentation_tablet",
   "waitlist",
   "manual",
   "whatsapp",

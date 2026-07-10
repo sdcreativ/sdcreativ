@@ -29,6 +29,8 @@ import { KanbanDropColumn, KANBAN_DRAG_MIME } from "@/lib/kanban-dnd";
 import { useCrmAssignees } from "@/hooks/useCrmTeamMembers";
 import { LeadActivityTimeline } from "@/components/admin/LeadActivityTimeline";
 import { LeadEmailComposer } from "@/components/admin/LeadEmailComposer";
+import { getLeadPresentationMeta } from "@/lib/presentation-lead-meta";
+import { PRESENTATION_LOCATION_LABELS } from "@/lib/presentation-slides";
 import { cn } from "@/lib/utils";
 import { useDialog } from "@/components/ui/DialogProvider";
 import {
@@ -623,6 +625,7 @@ function LeadDetailPanel({
 
   const score = computeLeadScore(lead);
   const tier = getLeadScoreTier(score);
+  const presentationMeta = getLeadPresentationMeta(lead);
 
   async function handleConvert() {
     setConverting(true);
@@ -668,6 +671,52 @@ function LeadDetailPanel({
             )}
             {lead.company && <DetailRow label="Entreprise" value={lead.company} />}
             <DetailRow label="Source" value={LEAD_SOURCE_LABELS[lead.source]} />
+            {presentationMeta && (
+              <div className="rounded-xl border border-primary/15 bg-primary/5 p-3">
+                <p className="text-xs font-semibold uppercase tracking-wide text-primary">
+                  Session tablette
+                </p>
+                <dl className="mt-2 space-y-1.5 text-sm">
+                  <div className="flex justify-between gap-3">
+                    <dt className="text-gray-text">Parcours</dt>
+                    <dd className="font-medium text-foreground">
+                      {presentationMeta.track === "salon" ? "Salon" : "Bureau"}
+                    </dd>
+                  </div>
+                  <div className="flex justify-between gap-3">
+                    <dt className="text-gray-text">Lieu</dt>
+                    <dd className="text-right font-medium text-foreground">
+                      {PRESENTATION_LOCATION_LABELS[presentationMeta.location]}
+                      {presentationMeta.locationNote ? ` — ${presentationMeta.locationNote}` : ""}
+                    </dd>
+                  </div>
+                  <div className="flex justify-between gap-3">
+                    <dt className="text-gray-text">Présentateur</dt>
+                    <dd className="font-medium text-foreground">{presentationMeta.presenterName}</dd>
+                  </div>
+                  {presentationMeta.clientSector && (
+                    <div className="flex justify-between gap-3">
+                      <dt className="text-gray-text">Secteur</dt>
+                      <dd className="font-medium text-foreground">{presentationMeta.clientSector}</dd>
+                    </div>
+                  )}
+                  <div>
+                    <dt className="text-gray-text">Slides vues</dt>
+                    <dd className="mt-1 text-xs leading-relaxed text-foreground">
+                      {presentationMeta.slidesCompleted.join(", ")}
+                    </dd>
+                  </div>
+                  {presentationMeta.presenterNotes && (
+                    <div>
+                      <dt className="text-gray-text">Notes présentateur</dt>
+                      <dd className="mt-1 whitespace-pre-wrap text-xs leading-relaxed text-foreground">
+                        {presentationMeta.presenterNotes}
+                      </dd>
+                    </div>
+                  )}
+                </dl>
+              </div>
+            )}
             <DetailRow label="Service / projet" value={lead.service ?? "—"} />
             <DetailRow label="Budget" value={lead.budget ?? "—"} />
             <DetailRow label="Délai" value={lead.timeline ?? "—"} />

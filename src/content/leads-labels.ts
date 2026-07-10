@@ -15,6 +15,7 @@ export const LEAD_SOURCE_LABELS: Record<
 > = {
   contact: "Site web — Contact",
   devis: "Devis en ligne",
+  presentation_tablet: "Présentation tablette",
   waitlist: "Liste d'attente",
   manual: "Manuel",
   whatsapp: "WhatsApp",

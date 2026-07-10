@@ -7,6 +7,7 @@ import type { DashboardKpi } from "@/lib/dashboard-utils";
 export const CRM_NAV_PERMISSIONS: Record<string, CrmPermission | CrmPermission[] | null> = {
   dashboard: null,
   leads: "leads.read",
+  presentation: "leads.write",
   clients: "clients.read",
   projects: "projects.read",
   quotes: "quotes.read",
