@@ -7,6 +7,7 @@ import { CRM_ROLE_LABELS } from "@/content/crm-roles";
 import { useCrmPermissions } from "@/hooks/useCrmPermissions";
 import { useCrmFetch } from "@/hooks/useCrmFetch";
 import type { CalendarReminder } from "@/lib/calendar-reminders";
+import type { CrmNotification } from "@/lib/billing/notifications";
 import { cn } from "@/lib/utils";
 import { CrmUserAvatar } from "@/components/admin/CrmUserAvatar";
 import { CrmGlobalSearch, type CrmGlobalSearchHandle } from "@/components/admin/CrmGlobalSearch";
@@ -14,6 +15,7 @@ import {
   Bell,
   CalendarClock,
   ChevronDown,
+  FileSignature,
   FileText,
   FolderKanban,
   LifeBuoy,
@@ -39,6 +41,7 @@ type Props = {
   subtitle?: string;
   showNewButton?: boolean;
   calendarReminders?: CalendarReminder[];
+  billingNotifications?: CrmNotification[];
   onMenuClick?: () => void;
 };
 
@@ -47,6 +50,7 @@ export function CrmHeader({
   subtitle,
   showNewButton = true,
   calendarReminders = [],
+  billingNotifications = [],
   onMenuClick,
 }: Props) {
   const [newOpen, setNewOpen] = useState(false);
@@ -106,7 +110,7 @@ export function CrmHeader({
   const overdueTasks = canTasks ? (taskStats?.overdue ?? 0) : 0;
   const slaBreached = canTickets ? (ticketStats?.slaBreached ?? 0) : 0;
   const openTickets = canTickets ? (ticketStats?.open ?? 0) + (ticketStats?.inProgress ?? 0) : 0;
-  const alertCount = overdueTasks + slaBreached + calendarReminders.length;
+  const alertCount = overdueTasks + slaBreached + calendarReminders.length + billingNotifications.length;
   const [hydrated, setHydrated] = useState(false);
 
   useEffect(() => {
@@ -189,6 +193,27 @@ export function CrmHeader({
                           >
                             <CalendarClock className="mt-0.5 h-4 w-4 shrink-0 text-primary" aria-hidden />
                             <span className="font-medium text-foreground">{r.message}</span>
+                          </Link>
+                        ))}
+                      </li>
+                    )}
+                    {billingNotifications.length > 0 && (
+                      <li>
+                        <p className="px-4 py-2 text-[10px] font-bold uppercase tracking-wide text-emerald-700">
+                          Facturation
+                        </p>
+                        {billingNotifications.slice(0, 5).map((n) => (
+                          <Link
+                            key={n.id}
+                            href={n.linkHref ?? "/admin/crm/devis"}
+                            onClick={() => setNotifOpen(false)}
+                            className="flex items-start gap-2 px-4 py-2.5 text-sm hover:bg-gray-light/50"
+                          >
+                            <FileSignature className="mt-0.5 h-4 w-4 shrink-0 text-emerald-700" aria-hidden />
+                            <span>
+                              <span className="block font-medium text-foreground">{n.title}</span>
+                              <span className="block text-xs text-gray-text">{n.message}</span>
+                            </span>
                           </Link>
                         ))}
                       </li>

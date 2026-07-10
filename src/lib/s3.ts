@@ -245,3 +245,31 @@ export async function deleteDocument(key: string): Promise<void> {
     }),
   );
 }
+
+export function buildBillingDocumentKey(
+  portalClientId: string,
+  quoteId: string,
+  kind: string,
+  filename: string,
+): string {
+  const safeClient = portalClientId.replace(/[^a-zA-Z0-9_-]/g, "");
+  const safeQuote = quoteId.replace(/[^a-zA-Z0-9_-]/g, "");
+  const safeKind = kind.replace(/[^a-zA-Z0-9_-]/g, "");
+  const safeName = sanitizeFilename(filename);
+  return `clients/${safeClient}/contracts/billing/${safeQuote}/${safeKind}-${crypto.randomUUID()}-${safeName}`;
+}
+
+export async function uploadObjectBuffer(
+  key: string,
+  body: Buffer,
+  contentType: string,
+): Promise<void> {
+  await getClient().send(
+    new PutObjectCommand({
+      Bucket: getBucket(),
+      Key: key,
+      Body: body,
+      ContentType: contentType,
+    }),
+  );
+}

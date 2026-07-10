@@ -4,8 +4,14 @@ import {
   formatInvoiceDate,
   INVOICE_STATUS_LABELS,
 } from "@/content/invoices-labels";
+import type { PdfVerification } from "@/lib/billing/verification-html";
+import { injectVerificationBlock } from "@/lib/billing/verification-html";
 
-export function buildInvoicePdfHtml(invoice: Invoice, siteUrl: string): string {
+export function buildInvoicePdfHtml(
+  invoice: Invoice,
+  siteUrl: string,
+  options?: { forArchive?: boolean; verification?: PdfVerification },
+): string {
   const lines = invoice.lines.length
     ? invoice.lines
         .map(
@@ -17,7 +23,7 @@ export function buildInvoicePdfHtml(invoice: Invoice, siteUrl: string): string {
 
   const remaining = invoice.total - invoice.paidAmount;
 
-  return `<!DOCTYPE html>
+  const html = `<!DOCTYPE html>
 <html lang="fr">
 <head>
   <meta charset="utf-8" />
@@ -61,9 +67,11 @@ export function buildInvoicePdfHtml(invoice: Invoice, siteUrl: string): string {
   <div class="footer">
     SD CREATIV — Merci pour votre confiance. Règlement par virement ou mobile money sur demande.
   </div>
-  <script>window.onload=function(){window.print()}</script>
+  ${options?.forArchive ? "" : "<script>window.onload=function(){window.print()}</script>"}
 </body>
 </html>`;
+
+  return injectVerificationBlock(html, options?.verification);
 }
 
 function escapeHtml(value: string): string {

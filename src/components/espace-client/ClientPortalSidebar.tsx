@@ -12,6 +12,8 @@ type Props = {
   section: ClientPortalSection;
   openTicketCount: number;
   messagesBadgeCount: number;
+  quotesPendingCount: number;
+  invoicesUnpaidCount: number;
   mobileOpen?: boolean;
   onSectionChange: (section: ClientPortalSection) => void;
   onLogout: () => void;
@@ -22,6 +24,8 @@ export function ClientPortalSidebar({
   section,
   openTicketCount,
   messagesBadgeCount,
+  quotesPendingCount,
+  invoicesUnpaidCount,
   mobileOpen = false,
   onSectionChange,
   onLogout,
@@ -65,7 +69,11 @@ export function ClientPortalSidebar({
               ? openTicketCount
               : id === "messages" && messagesBadgeCount > 0
                 ? messagesBadgeCount
-                : undefined;
+                : id === "quotes" && quotesPendingCount > 0
+                  ? quotesPendingCount
+                  : id === "invoices" && invoicesUnpaidCount > 0
+                    ? invoicesUnpaidCount
+                    : undefined;
 
           return (
             <button

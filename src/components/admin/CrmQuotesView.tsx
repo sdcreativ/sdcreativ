@@ -19,13 +19,17 @@ import type { Quote } from "@/lib/quotes";
 import {
   createQuoteApi,
   deleteQuoteApi,
+  fetchQuoteDocuments,
   fetchQuoteStats,
+  fetchQuoteTimeline,
   fetchQuotes,
   getQuotePdfUrl,
+  publishQuoteApi,
   updateQuoteApi,
+  validateQuoteApi,
+  generateInvoiceFromQuoteApi,
   type QuoteListFilters,
 } from "@/lib/quotes-api";
-import { createInvoiceFromQuoteApi } from "@/lib/invoices-api";
 import { fetchCrmClients } from "@/lib/clients-api";
 import type { Client } from "@/lib/clients";
 import { QuoteEmailComposer } from "@/components/admin/QuoteEmailComposer";
@@ -41,6 +45,8 @@ import {
   Plus,
   Receipt,
   RefreshCw,
+  Send,
+  ShieldCheck,
   Trash2,
   TrendingUp,
   X,
@@ -495,6 +501,8 @@ function QuoteCard({
   );
 }
 
+const PUBLISHABLE_STATUSES: QuoteStatus[] = ["draft", "sent", "follow_up", "negotiation"];
+
 function QuoteDetailPanel({
   quote,
   saving,
@@ -511,16 +519,99 @@ function QuoteDetailPanel({
   const [notes, setNotes] = useState(quote.notes ?? "");
   const [showEmail, setShowEmail] = useState(false);
   const [creatingInvoice, setCreatingInvoice] = useState(false);
+  const [validating, setValidating] = useState(false);
   const [invoiceError, setInvoiceError] = useState("");
+  const [publishing, setPublishing] = useState(false);
+  const [publishMessage, setPublishMessage] = useState("");
+  const [publishError, setPublishError] = useState("");
+  const [timeline, setTimeline] = useState<
+    Array<{ id: string; summary: string; createdAt: string; actorName: string | null }>
+  >([]);
+  const [documents, setDocuments] = useState<
+    Array<{ id: string; fileName: string; kind: string; downloadUrl: string | null; createdAt: string }>
+  >([]);
 
-  async function handleCreateInvoice() {
+  const canPublish = PUBLISHABLE_STATUSES.includes(quote.status);
+
+  const loadBillingMeta = useCallback(async () => {
+    try {
+      const [timelineData, documentsData] = await Promise.all([
+        fetchQuoteTimeline(quote.id),
+        fetchQuoteDocuments(quote.id),
+      ]);
+      setTimeline(timelineData.events);
+      setDocuments(documentsData.documents);
+    } catch {
+      setTimeline([]);
+      setDocuments([]);
+    }
+  }, [quote.id]);
+
+  useEffect(() => {
+    void loadBillingMeta();
+  }, [loadBillingMeta]);
+
+  async function handlePublish() {
+    setPublishing(true);
+    setPublishError("");
+    setPublishMessage("");
+    try {
+      const result = await publishQuoteApi(quote.id, { sendEmail: true });
+      onUpdated(result.quote);
+      setPublishMessage(
+        result.emailSent
+          ? "Devis publié, archivé sur S3 et envoyé par email."
+          : "Devis publié et archivé sur S3 (email non envoyé).",
+      );
+      await loadBillingMeta();
+    } catch (err) {
+      setPublishError(err instanceof Error ? err.message : "Publication impossible.");
+    } finally {
+      setPublishing(false);
+    }
+  }
+
+  async function handleValidate() {
+    setValidating(true);
+    setInvoiceError("");
+    try {
+      const result = await validateQuoteApi(quote.id);
+      onUpdated(result.quote);
+      if (result.invoice) {
+        setPublishMessage(
+          result.invoiceGenerated
+            ? result.emailSent
+              ? `Devis validé — facture ${result.invoice.reference} générée, archivée et envoyée au client.`
+              : `Devis validé — facture ${result.invoice.reference} générée et archivée (email non envoyé).`
+            : `Devis validé — facture ${result.invoice.reference} déjà existante.`,
+        );
+      } else {
+        setPublishMessage("Devis validé.");
+      }
+      await loadBillingMeta();
+    } catch (err) {
+      setInvoiceError(err instanceof Error ? err.message : "Validation impossible.");
+    } finally {
+      setValidating(false);
+    }
+  }
+
+  async function handleGenerateInvoice() {
     setCreatingInvoice(true);
     setInvoiceError("");
     try {
-      const invoice = await createInvoiceFromQuoteApi(quote.id);
-      window.location.href = `/admin/crm/factures?ref=${encodeURIComponent(invoice.reference)}`;
+      const result = await generateInvoiceFromQuoteApi(quote.id, { sendEmail: true });
+      onUpdated(result.quote);
+      setPublishMessage(
+        result.alreadyExists
+          ? `Facture ${result.invoice.reference} déjà existante pour ce devis.`
+          : result.emailSent
+            ? `Facture ${result.invoice.reference} générée, archivée et envoyée au client.`
+            : `Facture ${result.invoice.reference} générée et archivée (email non envoyé).`,
+      );
+      await loadBillingMeta();
     } catch (err) {
-      setInvoiceError(err instanceof Error ? err.message : "Création de facture impossible.");
+      setInvoiceError(err instanceof Error ? err.message : "Génération de facture impossible.");
     } finally {
       setCreatingInvoice(false);
     }
@@ -619,10 +710,84 @@ function QuoteDetailPanel({
               <dd className="mt-0.5 font-medium">{formatQuoteDate(quote.sentAt ?? quote.createdAt)}</dd>
             </div>
             <div>
+              <dt className="text-xs font-semibold uppercase tracking-wide text-gray-text">Validité</dt>
+              <dd className="mt-0.5 font-medium">{formatQuoteDate(quote.validUntil)}</dd>
+            </div>
+            <div>
               <dt className="text-xs font-semibold uppercase tracking-wide text-gray-text">Relance</dt>
               <dd className="mt-0.5 font-medium">{formatQuoteDate(quote.followUpAt)}</dd>
             </div>
           </dl>
+
+          {(publishMessage || publishError) && (
+            <p
+              className={cn(
+                "rounded-xl px-3 py-2 text-xs",
+                publishError ? "border border-accent/30 bg-accent/5 text-accent" : "border border-emerald-200 bg-emerald-50 text-emerald-800",
+              )}
+            >
+              {publishError || publishMessage}
+            </p>
+          )}
+
+          {canPublish && (
+            <button
+              type="button"
+              disabled={saving || publishing}
+              onClick={() => void handlePublish()}
+              className="inline-flex w-full items-center justify-center gap-2 rounded-xl bg-primary py-3 text-sm font-semibold text-white hover:bg-primary-dark disabled:opacity-50"
+            >
+              {publishing ? (
+                <Loader2 className="h-4 w-4 animate-spin" aria-hidden />
+              ) : (
+                <Send className="h-4 w-4" aria-hidden />
+              )}
+              Publier le devis (PDF S3 + email + portail)
+            </button>
+          )}
+
+          {documents.length > 0 && (
+            <div>
+              <p className="text-xs font-semibold uppercase tracking-wide text-gray-text">Documents archivés</p>
+              <ul className="mt-2 space-y-2">
+                {documents.map((doc) => (
+                  <li key={doc.id} className="flex items-center justify-between gap-2 rounded-xl border border-gray/30 px-3 py-2">
+                    <div>
+                      <p className="text-sm font-medium text-foreground">{doc.fileName}</p>
+                      <p className="text-[10px] text-gray-text">{doc.kind} · {formatQuoteDate(doc.createdAt)}</p>
+                    </div>
+                    {doc.downloadUrl ? (
+                      <a
+                        href={doc.downloadUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-xs font-semibold text-primary hover:underline"
+                      >
+                        Télécharger
+                      </a>
+                    ) : null}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
+
+          {timeline.length > 0 && (
+            <div>
+              <p className="text-xs font-semibold uppercase tracking-wide text-gray-text">Historique</p>
+              <ul className="mt-2 space-y-2 border-l-2 border-primary/20 pl-3">
+                {timeline.map((event) => (
+                  <li key={event.id} className="text-xs">
+                    <p className="font-medium text-foreground">{event.summary}</p>
+                    <p className="text-gray-text">
+                      {formatQuoteDate(event.createdAt)}
+                      {event.actorName ? ` · ${event.actorName}` : ""}
+                    </p>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
 
           {quote.message && (
             <div>
@@ -653,15 +818,41 @@ function QuoteDetailPanel({
           </div>
         </div>
 
-        {quote.status === "accepted" && (
+        {(quote.status === "signed" || quote.status === "accepted") && (
           <div className="border-t border-gray/40 px-5 py-3">
             {invoiceError && (
               <p className="mb-2 text-xs text-accent">{invoiceError}</p>
             )}
             <button
               type="button"
+              disabled={saving || validating}
+              onClick={() => void handleValidate()}
+              className="inline-flex w-full items-center justify-center gap-2 rounded-xl border border-emerald-500/40 bg-emerald-50 py-2.5 text-sm font-semibold text-emerald-800 hover:bg-emerald-100 disabled:opacity-50"
+            >
+              {validating ? (
+                <Loader2 className="h-4 w-4 animate-spin" aria-hidden />
+              ) : (
+                <ShieldCheck className="h-4 w-4" aria-hidden />
+              )}
+              Valider et émettre la facture
+            </button>
+          </div>
+        )}
+
+        {(quote.status === "accepted" || quote.status === "validated") && (
+          <div className="border-t border-gray/40 px-5 py-3">
+            {invoiceError && (
+              <p className="mb-2 text-xs text-accent">{invoiceError}</p>
+            )}
+            <p className="mb-2 text-xs text-gray-text">
+              {quote.status === "validated"
+                ? "La génération automatique a échoué — émettez la facture manuellement."
+                : "Devis accepté sans validation — émettez la facture manuellement."}
+            </p>
+            <button
+              type="button"
               disabled={saving || creatingInvoice}
-              onClick={() => void handleCreateInvoice()}
+              onClick={() => void handleGenerateInvoice()}
               className="inline-flex w-full items-center justify-center gap-2 rounded-xl bg-primary py-2.5 text-sm font-semibold text-white hover:bg-primary-dark disabled:opacity-50"
             >
               {creatingInvoice ? (
@@ -669,8 +860,20 @@ function QuoteDetailPanel({
               ) : (
                 <Receipt className="h-4 w-4" aria-hidden />
               )}
-              Créer une facture
+              Générer la facture
             </button>
+          </div>
+        )}
+
+        {quote.status === "invoiced" && (
+          <div className="border-t border-gray/40 px-5 py-3">
+            <Link
+              href="/admin/crm/factures"
+              className="inline-flex w-full items-center justify-center gap-2 rounded-xl border border-primary/30 py-2.5 text-sm font-semibold text-primary hover:bg-primary-light/30"
+            >
+              <Receipt className="h-4 w-4" aria-hidden />
+              Voir les factures CRM
+            </Link>
           </div>
         )}
 

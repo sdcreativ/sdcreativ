@@ -175,6 +175,47 @@ export async function getInvoiceById(id: string): Promise<Invoice | null> {
   });
 }
 
+export async function getInvoiceByQuoteId(quoteId: string): Promise<Invoice | null> {
+  return withDb(async (query) => {
+    const { rows } = await query<InvoiceRow>(
+      `${listSelect} WHERE i.quote_id = $1 ORDER BY i.created_at DESC LIMIT 1`,
+      [quoteId],
+    );
+    return rows[0] ? mapInvoice(rows[0]) : null;
+  });
+}
+
+export async function listInvoicesForPortalClient(portalClientId: string): Promise<Invoice[]> {
+  return withDb(async (query) => {
+    await syncOverdueInvoices(query);
+    const { rows } = await query<InvoiceRow>(
+      `${listSelect}
+       INNER JOIN clients c ON c.id = i.client_id
+       WHERE c.portal_client_id = $1
+         AND i.status <> 'draft'
+         AND i.status <> 'cancelled'
+       ORDER BY i.created_at DESC`,
+      [portalClientId],
+    );
+    return rows.map(mapInvoice);
+  });
+}
+
+export async function countUnpaidInvoicesForPortal(portalClientId: string): Promise<number> {
+  return withDb(async (query) => {
+    await syncOverdueInvoices(query);
+    const { rows } = await query<{ count: string }>(
+      `SELECT COUNT(*)::text AS count
+       FROM invoices i
+       INNER JOIN clients c ON c.id = i.client_id
+       WHERE c.portal_client_id = $1
+         AND i.status IN ('sent', 'overdue')`,
+      [portalClientId],
+    );
+    return Number(rows[0]?.count ?? 0);
+  });
+}
+
 export async function getInvoiceStats(): Promise<{
   total: number;
   sent: number;

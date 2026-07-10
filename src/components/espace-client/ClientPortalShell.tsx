@@ -11,6 +11,8 @@ type Props = {
   section: ClientPortalSection;
   openTicketCount: number;
   messagesBadgeCount: number;
+  quotesPendingCount: number;
+  invoicesUnpaidCount: number;
   onSectionChange: (section: ClientPortalSection) => void;
   onNewRequest: () => void;
   onLogout: () => void;
@@ -22,6 +24,8 @@ export function ClientPortalShell({
   section,
   openTicketCount,
   messagesBadgeCount,
+  quotesPendingCount,
+  invoicesUnpaidCount,
   onSectionChange,
   onNewRequest,
   onLogout,
@@ -50,6 +54,8 @@ export function ClientPortalShell({
         section={section}
         openTicketCount={openTicketCount}
         messagesBadgeCount={messagesBadgeCount}
+        quotesPendingCount={quotesPendingCount}
+        invoicesUnpaidCount={invoicesUnpaidCount}
         mobileOpen={sidebarOpen}
         onSectionChange={handleSectionChange}
         onLogout={onLogout}

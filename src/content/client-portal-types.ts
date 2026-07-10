@@ -4,6 +4,7 @@ export type ClientPortalSection =
   | "messages"
   | "files"
   | "payments"
+  | "quotes"
   | "invoices"
   | "support"
   | "settings";

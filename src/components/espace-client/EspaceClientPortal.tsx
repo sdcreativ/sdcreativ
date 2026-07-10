@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
+import { useSearchParams } from "next/navigation";
 import { Loader2 } from "lucide-react";
 import { DocumentsPanel } from "@/components/documents/DocumentsPanel";
 import { ClientPortalComingSoon } from "@/components/espace-client/ClientPortalComingSoon";
@@ -9,6 +10,9 @@ import { ClientPortalDashboard } from "@/components/espace-client/ClientPortalDa
 import { ClientPortalGuest } from "@/components/espace-client/ClientPortalGuest";
 import { ClientPortalPaymentsView } from "@/components/espace-client/ClientPortalPaymentsView";
 import { ClientPortalProjectView } from "@/components/espace-client/ClientPortalProjectView";
+import { ClientPortalQuotesView } from "@/components/espace-client/ClientPortalQuotesView";
+import { ClientPortalInvoicesView } from "@/components/espace-client/ClientPortalInvoicesView";
+import { ClientPortalNotificationToasts } from "@/components/espace-client/ClientPortalNotificationToasts";
 import { ClientPortalShell } from "@/components/espace-client/ClientPortalShell";
 import { ClientPortalSupportView } from "@/components/espace-client/ClientPortalSupportView";
 import type { ClientPortalSection, ProjectStep } from "@/content/client-portal-types";
@@ -35,11 +39,14 @@ function isAuthenticatedSession(json: SessionResponse): json is SessionPayload &
 const PORTAL_POLL_MS = 30_000;
 
 export function EspaceClientPortal() {
+  const searchParams = useSearchParams();
   const [sessionState, setSessionState] = useState<SessionState>("loading");
   const [clientId, setClientId] = useState("");
   const [profile, setProfile] = useState<ClientProfileData | null>(null);
   const [section, setSection] = useState<ClientPortalSection>("overview");
   const [tickets, setTickets] = useState<Ticket[]>([]);
+  const [quotesPendingCount, setQuotesPendingCount] = useState(0);
+  const [invoicesUnpaidCount, setInvoicesUnpaidCount] = useState(0);
   const [supportCreateOpen, setSupportCreateOpen] = useState(false);
   const [projectSteps, setProjectSteps] = useState<ProjectStep[] | null>(null);
 
@@ -89,6 +96,34 @@ export function EspaceClientPortal() {
     }
   }, []);
 
+  const loadQuotes = useCallback(async () => {
+    try {
+      const res = await fetch("/api/espace-client/quotes", { credentials: "include" });
+      if (!res.ok) {
+        setQuotesPendingCount(0);
+        return;
+      }
+      const json = (await res.json()) as { pendingCount?: number };
+      setQuotesPendingCount(json.pendingCount ?? 0);
+    } catch {
+      setQuotesPendingCount(0);
+    }
+  }, []);
+
+  const loadInvoices = useCallback(async () => {
+    try {
+      const res = await fetch("/api/espace-client/invoices", { credentials: "include" });
+      if (!res.ok) {
+        setInvoicesUnpaidCount(0);
+        return;
+      }
+      const json = (await res.json()) as { unpaidCount?: number };
+      setInvoicesUnpaidCount(json.unpaidCount ?? 0);
+    } catch {
+      setInvoicesUnpaidCount(0);
+    }
+  }, []);
+
   const checkSession = useCallback(async () => {
     setSessionState("loading");
 
@@ -116,20 +151,42 @@ export function EspaceClientPortal() {
   }, [checkSession]);
 
   useEffect(() => {
+    const sectionParam = searchParams.get("section");
+    const allowed: ClientPortalSection[] = [
+      "overview",
+      "project",
+      "messages",
+      "files",
+      "payments",
+      "quotes",
+      "invoices",
+      "support",
+      "settings",
+    ];
+    if (sectionParam && allowed.includes(sectionParam as ClientPortalSection)) {
+      setSection(sectionParam as ClientPortalSection);
+    }
+  }, [searchParams]);
+
+  useEffect(() => {
     if (sessionState !== "authenticated") return;
 
     void loadTickets();
     void loadPortalProject();
+    void loadQuotes();
+    void loadInvoices();
     void refreshProfile();
 
     const interval = window.setInterval(() => {
       void loadTickets();
       void loadPortalProject();
+      void loadQuotes();
+      void loadInvoices();
       void refreshProfile();
     }, PORTAL_POLL_MS);
 
     return () => window.clearInterval(interval);
-  }, [sessionState, section, loadTickets, loadPortalProject, refreshProfile]);
+  }, [sessionState, section, loadTickets, loadPortalProject, loadQuotes, loadInvoices, refreshProfile]);
 
   function openSupportWithCreate() {
     setSection("support");
@@ -178,11 +235,14 @@ export function EspaceClientPortal() {
   const messagesBadgeCount = countMessagesAttention(tickets);
 
   return (
-    <ClientPortalShell
+    <>
+      <ClientPortalShell
       profile={profile}
       section={section}
       openTicketCount={openTicketCount}
       messagesBadgeCount={messagesBadgeCount}
+      quotesPendingCount={quotesPendingCount}
+      invoicesUnpaidCount={invoicesUnpaidCount}
       onSectionChange={handleSectionChange}
       onNewRequest={openSupportWithCreate}
       onLogout={() => void logout()}
@@ -206,11 +266,11 @@ export function EspaceClientPortal() {
 
       {section === "files" && <DocumentsPanel mode="client" clientId={clientId} />}
 
-      {section === "invoices" && (
-        <DocumentsPanel mode="client" clientId={clientId} initialCategory="invoices" />
-      )}
+      {section === "invoices" && <ClientPortalInvoicesView />}
 
       {section === "payments" && <ClientPortalPaymentsView />}
+
+      {section === "quotes" && <ClientPortalQuotesView />}
 
       {section === "messages" && (
         <ClientPortalMessagesView profile={profile} onTicketsChange={loadTickets} />
@@ -231,6 +291,8 @@ export function EspaceClientPortal() {
           description="Modifiez vos coordonnées, préférences de notification et sécurité du compte."
         />
       )}
-    </ClientPortalShell>
+      </ClientPortalShell>
+      <ClientPortalNotificationToasts />
+    </>
   );
 }

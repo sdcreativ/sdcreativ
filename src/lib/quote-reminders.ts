@@ -29,7 +29,7 @@ export async function listQuoteReminderCandidates(
   const candidates: QuoteReminderCandidate[] = [];
 
   for (const quote of quotes) {
-    if (!["sent", "negotiation"].includes(quote.status)) continue;
+    if (!["sent", "negotiation", "viewed", "follow_up"].includes(quote.status)) continue;
     if (!quote.sentAt) continue;
 
     const reminderCount = getReminderCount(quote);

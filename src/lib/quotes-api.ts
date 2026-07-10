@@ -82,6 +82,85 @@ export async function sendQuoteEmailApi(
   await parseJson<{ success: boolean }>(res);
 }
 
+export async function validateQuoteApi(id: string): Promise<{
+  quote: Quote;
+  invoiceGenerated: boolean;
+  invoice?: { id: string; reference: string };
+  emailSent?: boolean;
+}> {
+  const res = await fetch(`/api/admin/quotes/${id}/validate`, {
+    method: "POST",
+    credentials: "include",
+  });
+  return parseJson(res);
+}
+
+export async function generateInvoiceFromQuoteApi(
+  id: string,
+  input: { sendEmail?: boolean } = {},
+): Promise<{
+  invoice: { id: string; reference: string };
+  quote: Quote;
+  documentId: string;
+  emailSent: boolean;
+  alreadyExists: boolean;
+}> {
+  const res = await fetch(`/api/admin/quotes/${id}/generate-invoice`, {
+    method: "POST",
+    credentials: "include",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(input),
+  });
+  return parseJson(res);
+}
+
+export async function publishQuoteApi(
+  id: string,
+  input: { sendEmail?: boolean } = {},
+): Promise<{
+  quote: Quote;
+  documentId: string;
+  emailSent: boolean;
+  portalClientId: string;
+}> {
+  const res = await fetch(`/api/admin/quotes/${id}/publish`, {
+    method: "POST",
+    credentials: "include",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(input),
+  });
+  return parseJson(res);
+}
+
+export async function fetchQuoteDocuments(id: string) {
+  const res = await fetch(`/api/admin/quotes/${id}/documents`, { credentials: "include" });
+  return parseJson<{
+    documents: Array<{
+      id: string;
+      kind: string;
+      fileName: string;
+      mimeType: string;
+      createdAt: string;
+      downloadUrl: string | null;
+    }>;
+  }>(res);
+}
+
+export async function fetchQuoteTimeline(id: string) {
+  const res = await fetch(`/api/admin/quotes/${id}/timeline`, { credentials: "include" });
+  return parseJson<{
+    events: Array<{
+      id: string;
+      action: string;
+      summary: string;
+      fromStatus: string | null;
+      toStatus: string | null;
+      actorName: string | null;
+      createdAt: string;
+    }>;
+  }>(res);
+}
+
 export function getQuotePdfUrl(id: string): string {
   return `/api/admin/quotes/${id}/pdf`;
 }

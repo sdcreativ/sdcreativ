@@ -29,6 +29,13 @@ export type Quote = {
   status: QuoteStatus;
   sentAt: string | null;
   followUpAt: string | null;
+  validUntil: string | null;
+  viewedAt: string | null;
+  signedAt: string | null;
+  validatedAt: string | null;
+  rejectionReason: string | null;
+  rejectedAt: string | null;
+  rejectedBy: string | null;
   notes: string | null;
   metadata: Record<string, unknown>;
   createdAt: string;
@@ -58,6 +65,13 @@ type QuoteRow = {
   status: QuoteStatus;
   sent_at: Date | null;
   follow_up_at: Date | null;
+  valid_until: Date | null;
+  viewed_at: Date | null;
+  signed_at: Date | null;
+  validated_at: Date | null;
+  rejection_reason: string | null;
+  rejected_at: Date | null;
+  rejected_by: string | null;
   notes: string | null;
   metadata: Record<string, unknown> | null;
   created_at: Date;
@@ -103,6 +117,13 @@ function mapQuote(row: QuoteRow): Quote {
     status: row.status,
     sentAt: row.sent_at?.toISOString() ?? null,
     followUpAt: row.follow_up_at?.toISOString() ?? null,
+    validUntil: row.valid_until?.toISOString() ?? null,
+    viewedAt: row.viewed_at?.toISOString() ?? null,
+    signedAt: row.signed_at?.toISOString() ?? null,
+    validatedAt: row.validated_at?.toISOString() ?? null,
+    rejectionReason: row.rejection_reason,
+    rejectedAt: row.rejected_at?.toISOString() ?? null,
+    rejectedBy: row.rejected_by,
     notes: row.notes,
     metadata: row.metadata ?? {},
     createdAt: row.created_at.toISOString(),
@@ -382,6 +403,9 @@ export async function updateQuote(
     if (nextStatus === "accepted" && quote.leadId) {
       void updateLead(quote.leadId, { status: "signed" });
     }
+    if (nextStatus === "validated" && quote.leadId) {
+      void updateLead(quote.leadId, { status: "signed" });
+    }
 
     return quote;
   });
@@ -415,7 +439,7 @@ export async function getQuoteStats(): Promise<{
       const count = Number(row.count);
       total += count;
       if (row.status === "accepted") accepted += count;
-      if (["sent", "follow_up", "negotiation", "accepted", "rejected"].includes(row.status)) {
+      if (["sent", "follow_up", "negotiation", "accepted", "validated", "signed", "invoiced", "rejected"].includes(row.status)) {
         sent += count;
       }
     }
@@ -423,6 +447,35 @@ export async function getQuoteStats(): Promise<{
     const conversionRate = sent > 0 ? Math.round((accepted / sent) * 100) : 0;
 
     return { total, sent, accepted, conversionRate };
+  });
+}
+
+export async function listQuotesForPortalClient(portalClientId: string): Promise<Quote[]> {
+  return withDb(async (query) => {
+    const { rows } = await query<QuoteRow>(
+      `SELECT q.*
+       FROM quotes q
+       INNER JOIN clients c ON c.id = q.client_id
+       WHERE c.portal_client_id = $1
+         AND q.status <> 'draft'
+       ORDER BY q.created_at DESC`,
+      [portalClientId],
+    );
+    return rows.map(mapQuote);
+  });
+}
+
+export async function countActionableQuotesForPortal(portalClientId: string): Promise<number> {
+  return withDb(async (query) => {
+    const { rows } = await query<{ count: string }>(
+      `SELECT COUNT(*)::text AS count
+       FROM quotes q
+       INNER JOIN clients c ON c.id = q.client_id
+       WHERE c.portal_client_id = $1
+         AND q.status IN ('sent', 'viewed', 'follow_up', 'negotiation')`,
+      [portalClientId],
+    );
+    return Number(rows[0]?.count ?? 0);
   });
 }
 
