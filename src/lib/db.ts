@@ -390,6 +390,9 @@ async function ensureSchema(): Promise<void> {
 
     ALTER TABLE crm_users ADD COLUMN IF NOT EXISTS totp_secret VARCHAR(64);
     ALTER TABLE crm_users ADD COLUMN IF NOT EXISTS totp_enabled BOOLEAN NOT NULL DEFAULT false;
+    ALTER TABLE crm_users ADD COLUMN IF NOT EXISTS login_otp_hash VARCHAR(64);
+    ALTER TABLE crm_users ADD COLUMN IF NOT EXISTS login_otp_expires_at TIMESTAMPTZ;
+    ALTER TABLE crm_users ADD COLUMN IF NOT EXISTS login_otp_sent_at TIMESTAMPTZ;
     ALTER TABLE crm_users ALTER COLUMN password_hash DROP NOT NULL;
     ALTER TABLE crm_users ADD COLUMN IF NOT EXISTS invite_token_hash VARCHAR(64);
     ALTER TABLE crm_users ADD COLUMN IF NOT EXISTS invite_token_expires_at TIMESTAMPTZ;

@@ -19,6 +19,8 @@ import {
   Users,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { normalizeLoginEmailOtp } from "@/lib/crm-email-otp-utils";
+import type { Login2faMethod } from "@/lib/crm-totp-challenge";
 
 const CRM_MODULES = [
   { icon: LayoutDashboard, label: "Tableau de bord" },
@@ -59,8 +61,37 @@ export function AdminLoginView() {
   const [loading, setLoading] = useState(false);
   const [step, setStep] = useState<"login" | "2fa">("login");
   const [challengeToken, setChallengeToken] = useState("");
-  const [totpCode, setTotpCode] = useState("");
+  const [twoFactorMethod, setTwoFactorMethod] = useState<Login2faMethod>("email");
+  const [otpCode, setOtpCode] = useState("");
+  const [resendBusy, setResendBusy] = useState(false);
+  const [resendMessage, setResendMessage] = useState("");
   const [pendingUser, setPendingUser] = useState<{ name: string; email: string } | null>(null);
+
+  function isOtpCodeValid(): boolean {
+    if (twoFactorMethod === "totp") return otpCode.length === 6;
+    return normalizeLoginEmailOtp(otpCode) !== null;
+  }
+
+  async function handleResendCode() {
+    setResendBusy(true);
+    setResendMessage("");
+    setError("");
+    try {
+      const res = await fetch("/api/admin/login/2fa/resend", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ challengeToken }),
+      });
+      const data = (await res.json()) as { error?: string };
+      if (!res.ok) throw new Error(data.error ?? "Renvoi impossible.");
+      setResendMessage("Un nouveau code a été envoyé par email.");
+      setOtpCode("");
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Renvoi impossible.");
+    } finally {
+      setResendBusy(false);
+    }
+  }
 
   async function completeLogin(res: Response) {
     const data = (await res.json()) as { error?: string; mustChangePassword?: boolean };
@@ -86,7 +117,7 @@ export function AdminLoginView() {
         const res = await fetch("/api/admin/login/2fa", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ challengeToken, code: totpCode }),
+          body: JSON.stringify({ challengeToken, code: otpCode }),
         });
         await completeLogin(res);
         return;
@@ -101,6 +132,7 @@ export function AdminLoginView() {
       const data = (await res.json()) as {
         error?: string;
         requires2fa?: boolean;
+        method?: Login2faMethod;
         mustChangePassword?: boolean;
         challengeToken?: string;
         user?: { name: string; email: string };
@@ -112,9 +144,11 @@ export function AdminLoginView() {
 
       if (data.requires2fa && data.challengeToken) {
         setChallengeToken(data.challengeToken);
+        setTwoFactorMethod(data.method ?? "email");
         setPendingUser(data.user ?? null);
         setStep("2fa");
-        setTotpCode("");
+        setOtpCode("");
+        setResendMessage("");
         return;
       }
 
@@ -199,7 +233,18 @@ export function AdminLoginView() {
 
             {step === "2fa" && pendingUser && (
               <p className="mt-4 rounded-xl border border-primary/20 bg-primary-light/30 px-4 py-2.5 text-sm text-gray-text">
-                Code requis pour <span className="font-semibold text-foreground">{pendingUser.email}</span>
+                {twoFactorMethod === "email" ? (
+                  <>
+                    Code envoyé à{" "}
+                    <span className="font-semibold text-foreground">{pendingUser.email}</span>
+                    {" "}(format SD-XXXXXX, valable 10 min).
+                  </>
+                ) : (
+                  <>
+                    Code authenticator requis pour{" "}
+                    <span className="font-semibold text-foreground">{pendingUser.email}</span>
+                  </>
+                )}
               </p>
             )}
 
@@ -272,29 +317,68 @@ export function AdminLoginView() {
                 </>
               ) : (
                 <>
-                  <label htmlFor="admin-totp" className="mb-1.5 block text-sm font-medium text-foreground">
-                    Code authenticator (6 chiffres)
-                  </label>
-                  <input
-                    id="admin-totp"
-                    type="text"
-                    inputMode="numeric"
-                    pattern="[0-9]*"
-                    maxLength={6}
-                    value={totpCode}
-                    onChange={(e) => setTotpCode(e.target.value.replace(/\D/g, "").slice(0, 6))}
-                    placeholder="000000"
-                    required
-                    autoFocus
-                    autoComplete="one-time-code"
-                    className={cn(fieldClass, "tracking-[0.35em]")}
-                  />
+                  {twoFactorMethod === "totp" ? (
+                    <>
+                      <label htmlFor="admin-totp" className="mb-1.5 block text-sm font-medium text-foreground">
+                        Code authenticator (6 chiffres)
+                      </label>
+                      <input
+                        id="admin-totp"
+                        type="text"
+                        inputMode="numeric"
+                        pattern="[0-9]*"
+                        maxLength={6}
+                        value={otpCode}
+                        onChange={(e) => setOtpCode(e.target.value.replace(/\D/g, "").slice(0, 6))}
+                        placeholder="000000"
+                        required
+                        autoFocus
+                        autoComplete="one-time-code"
+                        className={cn(fieldClass, "tracking-[0.35em]")}
+                      />
+                    </>
+                  ) : (
+                    <>
+                      <label htmlFor="admin-email-otp" className="mb-1.5 block text-sm font-medium text-foreground">
+                        Code reçu par email
+                      </label>
+                      <input
+                        id="admin-email-otp"
+                        type="text"
+                        inputMode="text"
+                        maxLength={9}
+                        value={otpCode}
+                        onChange={(e) =>
+                          setOtpCode(e.target.value.toUpperCase().replace(/[^A-Z0-9-]/g, "").slice(0, 9))
+                        }
+                        placeholder="SD-XXXXXX"
+                        required
+                        autoFocus
+                        autoComplete="one-time-code"
+                        className={cn(fieldClass, "font-mono tracking-wider uppercase")}
+                      />
+                      <div className="mt-3 flex flex-wrap items-center gap-x-3 gap-y-1">
+                        <button
+                          type="button"
+                          onClick={() => void handleResendCode()}
+                          disabled={resendBusy || loading}
+                          className="text-xs font-medium text-primary hover:underline disabled:opacity-50"
+                        >
+                          {resendBusy ? "Envoi…" : "Renvoyer le code"}
+                        </button>
+                        {resendMessage && (
+                          <span className="text-xs text-emerald-700">{resendMessage}</span>
+                        )}
+                      </div>
+                    </>
+                  )}
                   <button
                     type="button"
                     onClick={() => {
                       setStep("login");
                       setChallengeToken("");
-                      setTotpCode("");
+                      setOtpCode("");
+                      setResendMessage("");
                       setError("");
                     }}
                     className="mt-3 text-xs font-medium text-primary hover:underline"
@@ -323,7 +407,7 @@ export function AdminLoginView() {
 
               <button
                 type="submit"
-                disabled={loading || (step === "2fa" && totpCode.length !== 6)}
+                disabled={loading || (step === "2fa" && !isOtpCodeValid())}
                 className="mt-6 flex w-full items-center justify-center gap-2 rounded-xl bg-primary py-3.5 text-sm font-semibold text-white shadow-sm transition-all hover:bg-primary-dark hover:shadow-md disabled:opacity-60"
               >
                 {loading && <Loader2 className="h-4 w-4 animate-spin" aria-hidden />}

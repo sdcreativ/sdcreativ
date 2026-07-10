@@ -1,14 +1,10 @@
 import { NextResponse } from "next/server";
-import {
-  ADMIN_SESSION_COOKIE,
-  LEGACY_ADMIN_COOKIE,
-  buildCrmSessionCookie,
-} from "@/lib/crm-session";
+import { ADMIN_SESSION_COOKIE, LEGACY_ADMIN_COOKIE } from "@/lib/crm-session";
 import { authenticateCrmUser, ensureBootstrapAdmin } from "@/lib/crm-users";
-import { getSessionMaxAgeSeconds } from "@/lib/crm-security-settings";
 import { logAdminLogin } from "@/lib/crm-login-logs";
 import { getTotpAuthState } from "@/lib/crm-totp";
 import { signTotpChallenge } from "@/lib/crm-totp-challenge";
+import { issueLoginEmailOtp } from "@/lib/crm-email-otp";
 import {
   ADMIN_LOGIN_RATE_LIMIT,
   clearRateLimit,
@@ -89,53 +85,44 @@ export async function POST(request: Request) {
         name: user.name,
         role: user.role,
         mustChangePassword: user.mustChangePassword,
+        method: "totp",
       });
       return NextResponse.json({
         requires2fa: true,
+        method: "totp",
         challengeToken,
         user: { name: user.name, email: user.email },
         mustChangePassword: user.mustChangePassword,
       });
     }
 
-    const maxAge = await getSessionMaxAgeSeconds();
-    const session = await buildCrmSessionCookie(
-      {
-        userId: user.id,
-        email: user.email,
-        name: user.name,
-        role: user.role,
-        mustChangePassword: user.mustChangePassword,
-      },
-      secret,
-      maxAge,
-    );
-
-    void logAdminLogin({
+    clearRateLimit("admin-login", rateKey);
+    const ipAddress = getClientIp(request);
+    const otpResult = await issueLoginEmailOtp({
       userId: user.id,
       email: user.email,
       name: user.name,
-      ipAddress: getClientIp(request),
-      userAgent: request.headers.get("user-agent"),
-      success: true,
+      ipAddress,
     });
+    if (!otpResult.ok) {
+      return NextResponse.json({ error: otpResult.error }, { status: 503 });
+    }
 
-    clearRateLimit("admin-login", rateKey);
-
-    const response = NextResponse.json({
-      success: true,
+    const challengeToken = signTotpChallenge({
+      userId: user.id,
+      email: user.email,
+      name: user.name,
+      role: user.role,
       mustChangePassword: user.mustChangePassword,
-      user: { name: user.name, email: user.email, role: user.role },
+      method: "email",
     });
-    response.cookies.set(ADMIN_SESSION_COOKIE, session.value, {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === "production",
-      sameSite: "strict",
-      path: "/",
-      maxAge: session.maxAge,
+    return NextResponse.json({
+      requires2fa: true,
+      method: "email",
+      challengeToken,
+      user: { name: user.name, email: user.email },
+      mustChangePassword: user.mustChangePassword,
     });
-    response.cookies.delete(LEGACY_ADMIN_COOKIE);
-    return response;
   } catch (error) {
     console.error("[api/admin/login] POST", error);
     return NextResponse.json({ error: "Erreur serveur" }, { status: 500 });

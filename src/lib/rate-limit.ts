@@ -19,6 +19,11 @@ export const ADMIN_2FA_RATE_LIMIT: RateLimitConfig = {
   windowMs: 15 * 60 * 1000,
 };
 
+export const ADMIN_OTP_RESEND_RATE_LIMIT: RateLimitConfig = {
+  limit: 3,
+  windowMs: 15 * 60 * 1000,
+};
+
 function getBucket(namespace: string): Map<string, RateLimitEntry> {
   let bucket = buckets.get(namespace);
   if (!bucket) {

@@ -97,7 +97,8 @@ export function CrmTotpSection() {
         <div className="min-w-0 flex-1">
           <p className="text-sm font-semibold text-foreground">Authentification à deux facteurs (TOTP)</p>
           <p className="mt-0.5 text-xs text-gray-text">
-            Compatible Google Authenticator, Authy, 1Password, etc.
+            Compatible Google Authenticator, Authy, 1Password, etc. Sans TOTP, un code{" "}
+            <span className="font-medium">SD-XXXXXX</span> est envoyé par email à chaque connexion.
           </p>
 
           <p className="mt-2 text-sm">

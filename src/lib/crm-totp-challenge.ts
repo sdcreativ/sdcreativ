@@ -1,12 +1,15 @@
 import { createHmac, timingSafeEqual } from "crypto";
 import type { CrmRole } from "@/content/crm-roles";
 
+export type Login2faMethod = "totp" | "email";
+
 export type TotpChallengePayload = {
   userId: string;
   email: string;
   name: string;
   role: CrmRole;
   mustChangePassword?: boolean;
+  method?: Login2faMethod;
   exp: number;
 };
 
