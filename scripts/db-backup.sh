@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Sauvegarde PostgreSQL (format custom pg_dump) + option uploads blog.
+# Sauvegarde PostgreSQL (format custom pg_dump) + uploads (hôte ou volume Docker).
 #
 # Usage :
 #   chmod +x scripts/db-backup.sh
@@ -62,7 +62,15 @@ SIZE="$(du -h "$DUMP_FILE" | cut -f1)"
 echo "✓ Dump PostgreSQL créé (${SIZE})"
 S3_UPLOAD_FILES+=("$DUMP_FILE")
 
-if [ -d public/uploads ] && [ "$(ls -A public/uploads 2>/dev/null)" ]; then
+if [ -f scripts/backup-uploads-common.sh ]; then
+  # shellcheck disable=SC1091
+  source scripts/backup-uploads-common.sh
+  if UPLOADS_ARCHIVE="$(backup_uploads_create_archive "$BACKUP_DIR" "$TIMESTAMP")"; then
+    UPLOADS_SIZE="$(du -h "$UPLOADS_ARCHIVE" | cut -f1)"
+    echo "✓ Archive uploads (${UPLOADS_SIZE}) : ${UPLOADS_ARCHIVE}"
+    S3_UPLOAD_FILES+=("$UPLOADS_ARCHIVE")
+  fi
+elif [ -d public/uploads ] && [ "$(ls -A public/uploads 2>/dev/null)" ]; then
   UPLOADS_ARCHIVE="${BACKUP_DIR}/sdcreativ-uploads-${TIMESTAMP}.tar.gz"
   tar -czf "$UPLOADS_ARCHIVE" -C public uploads
   UPLOADS_SIZE="$(du -h "$UPLOADS_ARCHIVE" | cut -f1)"

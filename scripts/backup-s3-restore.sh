@@ -18,6 +18,10 @@ TARGET="${1:-}"
 BACKUP_DIR="${BACKUP_DIR:-${ROOT_DIR}/backups}"
 COMPOSE_FILES="${COMPOSE_FILES:--f docker-compose.yml}"
 
+COMPOSE=(docker compose)
+# shellcheck disable=SC2206
+COMPOSE+=($COMPOSE_FILES)
+
 if ! backup_s3_is_configured; then
   echo "✗ S3 non configuré"
   exit 1
@@ -62,9 +66,9 @@ BACKUP_CONFIRM=yes COMPOSE_FILES="$COMPOSE_FILES" "${ROOT_DIR}/scripts/db-restor
 
 if [ -n "$UPLOADS_LOCAL" ] && [ -f "$UPLOADS_LOCAL" ]; then
   echo ">>> Extraction uploads…"
-  mkdir -p public/uploads
-  tar -xzf "$UPLOADS_LOCAL" -C public/uploads
-  echo "✓ Uploads restaurés dans public/uploads/"
+  # shellcheck disable=SC1091
+  source "${ROOT_DIR}/scripts/backup-uploads-common.sh"
+  backup_uploads_restore_archive "$UPLOADS_LOCAL"
 fi
 
 echo
