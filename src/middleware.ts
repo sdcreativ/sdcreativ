@@ -30,6 +30,11 @@ function redirectToLogin(request: NextRequest, from: string) {
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
+  // Captures statiques : servies sans auth (optimiseur Next.js + chargement tablette/mobile).
+  if (pathname.startsWith("/presentation/captures/")) {
+    return NextResponse.next();
+  }
+
   const isAdmin = pathname.startsWith("/admin");
   const isPresentation = pathname.startsWith("/presentation");
 
@@ -69,5 +74,5 @@ export async function middleware(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ["/admin/:path*", "/presentation/:path*"],
+  matcher: ["/admin/:path*", "/presentation", "/presentation/:path*"],
 };

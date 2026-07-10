@@ -1,7 +1,6 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
-import Image from "next/image";
 import Link from "next/link";
 import {
   ArrowLeft,
@@ -13,6 +12,7 @@ import {
   Tablet,
 } from "lucide-react";
 import { QuoteConfigurator } from "@/components/forms/QuoteConfigurator";
+import { PresentationCaptureImage } from "@/components/presentation/PresentationCaptureImage";
 import { SlideViewer } from "@/components/presentation/SlideViewer";
 import { Button } from "@/components/ui/Button";
 import type { SiteQuoteConfigSettings } from "@/lib/site-quote-config-types";
@@ -177,13 +177,10 @@ export function PresentationApp({ config }: Props) {
         </header>
 
         <div className="mx-auto flex w-full max-w-3xl flex-1 flex-col items-center justify-center gap-6 px-4 py-10 text-center">
-          <div className="relative aspect-[4/3] w-full max-w-xl overflow-hidden rounded-2xl border border-white/10 bg-black/30">
-            <Image
+          <div className="relative aspect-[4/3] min-h-[240px] w-full max-w-xl overflow-hidden rounded-2xl border border-white/10 bg-black/30">
+            <PresentationCaptureImage
               src="/presentation/captures/CAP-20-demande-envoyee.png"
               alt="Demande envoyée"
-              fill
-              className="object-contain"
-              sizes="(max-width: 768px) 100vw, 640px"
             />
           </div>
           <div>
@@ -252,7 +249,7 @@ export function PresentationApp({ config }: Props) {
     const isLast = slideIndex >= slides.length - 1;
 
     return (
-      <div className="flex h-screen flex-col bg-[#071525] text-white">
+      <div className="flex h-[100dvh] flex-col bg-[#071525] text-white">
         <header className="flex items-center justify-between gap-3 border-b border-white/10 px-4 py-3 md:px-6">
           <button
             type="button"

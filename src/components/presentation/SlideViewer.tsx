@@ -1,7 +1,7 @@
 "use client";
 
-import Image from "next/image";
 import { ChevronLeft, ChevronRight } from "lucide-react";
+import { PresentationCaptureImage } from "@/components/presentation/PresentationCaptureImage";
 import type { PresentationSlide } from "@/lib/presentation-types";
 import { cn } from "@/lib/utils";
 
@@ -61,14 +61,12 @@ export function SlideViewer({
         </div>
       </div>
 
-      <div className="relative min-h-0 flex-1 bg-[#020617]">
-        <Image
+      <div className="relative min-h-[45dvh] flex-1 bg-[#020617]">
+        <PresentationCaptureImage
           src={slide.image}
           alt={slide.title}
-          fill
           priority
-          className="object-contain p-2 md:p-4"
-          sizes="100vw"
+          className="p-2 md:p-4"
         />
       </div>
 
