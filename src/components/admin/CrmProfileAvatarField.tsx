@@ -69,6 +69,7 @@ export function CrmProfileAvatarField({ name, avatarUrl, onChange }: Props) {
 
       <div className="space-y-2">
         <input
+          aria-label="Choisir une photo"
           ref={inputRef}
           type="file"
           accept="image/jpeg,image/png,image/webp,image/gif"

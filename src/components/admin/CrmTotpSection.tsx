@@ -14,6 +14,8 @@ type SetupPayload = {
   qrCodeUrl: string;
 };
 
+const ACCOUNT_2FA_API = "/api/admin/account/2fa";
+
 export function CrmTotpSection() {
   const [status, setStatus] = useState<TotpStatus | null>(null);
   const [setup, setSetup] = useState<SetupPayload | null>(null);
@@ -22,19 +24,23 @@ export function CrmTotpSection() {
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState("");
+  const [loadError, setLoadError] = useState("");
 
   const load = useCallback(async () => {
     setLoading(true);
+    setLoadError("");
     try {
-      const res = await fetch("/api/admin/settings/2fa", { credentials: "include" });
+      const res = await fetch(ACCOUNT_2FA_API, { credentials: "include" });
+      const json = (await res.json()) as { status?: TotpStatus; error?: string };
       if (!res.ok) {
         setStatus(null);
+        setLoadError(json.error ?? "Impossible de charger la 2FA.");
         return;
       }
-      const json = (await res.json()) as { status: TotpStatus };
-      setStatus(json.status);
+      setStatus(json.status ?? null);
     } catch {
       setStatus(null);
+      setLoadError("Impossible de charger la 2FA.");
     } finally {
       setLoading(false);
     }
@@ -48,7 +54,7 @@ export function CrmTotpSection() {
     setBusy(true);
     setMessage("");
     try {
-      const res = await fetch("/api/admin/settings/2fa", {
+      const res = await fetch(ACCOUNT_2FA_API, {
         method: "POST",
         credentials: "include",
         headers: { "Content-Type": "application/json" },
@@ -82,8 +88,8 @@ export function CrmTotpSection() {
 
   if (!status) {
     return (
-      <p className="text-sm text-gray-text">
-        Connectez-vous avec un compte CRM (email + mot de passe) pour gérer la 2FA.
+      <p className="text-sm text-accent">
+        {loadError || "Session CRM requise pour gérer la 2FA."}
       </p>
     );
   }
