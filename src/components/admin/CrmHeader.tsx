@@ -8,6 +8,7 @@ import { useCrmPermissions } from "@/hooks/useCrmPermissions";
 import { useCrmFetch } from "@/hooks/useCrmFetch";
 import type { CalendarReminder } from "@/lib/calendar-reminders";
 import { cn } from "@/lib/utils";
+import { CrmUserAvatar } from "@/components/admin/CrmUserAvatar";
 import { CrmGlobalSearch, type CrmGlobalSearchHandle } from "@/components/admin/CrmGlobalSearch";
 import {
   Bell,
@@ -274,10 +275,11 @@ export function CrmHeader({
 
           {session && (
             <Link
-              href="/admin/compte"
+              href="/admin/crm/compte"
               className="hidden items-center gap-2 rounded-xl border border-gray/40 bg-gray-light/30 px-3 py-2 text-sm font-medium text-foreground transition-colors hover:bg-gray-light/60 md:inline-flex"
             >
-              <span>{session.name}</span>
+              <CrmUserAvatar name={session.name} avatarUrl={session.avatarUrl} size="sm" />
+              <span className="max-w-[10rem] truncate">{session.name}</span>
               <span className="rounded-full bg-primary-light px-2 py-0.5 text-[10px] font-bold text-primary">
                 {session.roleLabel ?? CRM_ROLE_LABELS[session.role as keyof typeof CRM_ROLE_LABELS] ?? session.role}
               </span>

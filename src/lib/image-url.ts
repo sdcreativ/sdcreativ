@@ -1,4 +1,4 @@
-const PUBLIC_MEDIA_PREFIXES = ["blog/media/"] as const;
+const PUBLIC_MEDIA_PREFIXES = ["blog/media/", "crm/avatars/"] as const;
 
 export function isS3ImageUrl(url: string): boolean {
   return /^https?:\/\//i.test(url) && url.includes(".amazonaws.com/");

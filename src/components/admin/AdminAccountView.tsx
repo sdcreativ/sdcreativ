@@ -50,6 +50,13 @@ export function AdminAccountView() {
         const data = (await res.json()) as { account?: AccountInfo; error?: string };
         if (!res.ok) throw new Error(data.error ?? "Session expirée.");
         setAccount(data.account ?? null);
+        if (
+          !required &&
+          data.account &&
+          !data.account.mustChangePassword
+        ) {
+          router.replace("/admin/crm/compte");
+        }
       } catch (err) {
         setError(err instanceof Error ? err.message : "Impossible de charger le compte.");
       } finally {

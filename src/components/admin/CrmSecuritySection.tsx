@@ -3,7 +3,6 @@
 import { useCallback, useEffect, useState } from "react";
 import type { CrmSecuritySettings } from "@/lib/crm-security-settings";
 import type { LoginLogEntry } from "@/lib/crm-login-logs";
-import { CrmTotpSection } from "@/components/admin/CrmTotpSection";
 import { Loader2 } from "lucide-react";
 
 const fieldClass =
@@ -167,8 +166,14 @@ export function CrmSecuritySection() {
       </div>
 
       <div>
-        <p className="mb-2 text-sm font-semibold text-foreground">Double authentification</p>
-        <CrmTotpSection />
+        <p className="mb-2 text-sm font-semibold text-foreground">Double authentification équipe</p>
+        <p className="rounded-xl border border-gray/20 bg-gray-light/30 px-4 py-3 text-sm text-gray-text">
+          Chaque membre gère son TOTP depuis{" "}
+          <a href="/admin/crm/compte" className="font-medium text-primary hover:underline">
+            Mon profil → Sécurité
+          </a>
+          . Sans TOTP activé, un code email est envoyé à chaque connexion.
+        </p>
       </div>
 
       <div>

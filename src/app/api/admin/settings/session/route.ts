@@ -5,6 +5,7 @@ import {
   getCachedRoleLabel,
 } from "@/lib/crm-roles-db";
 import { getRolePermissions } from "@/lib/crm-permissions";
+import { getCrmUserProfile } from "@/lib/crm-user-profile";
 
 export async function GET() {
   const authError = await requireAdminAuth();
@@ -16,6 +17,8 @@ export async function GET() {
   }
 
   await ensureCrmRolesCache();
+  const profile =
+    session.userId !== "legacy" ? await getCrmUserProfile(session.userId) : { avatarUrl: null };
 
   return NextResponse.json({
     session: {
@@ -25,6 +28,7 @@ export async function GET() {
       role: session.role,
       roleLabel: getCachedRoleLabel(session.role),
       permissions: getRolePermissions(session.role),
+      avatarUrl: profile.avatarUrl,
     },
   });
 }

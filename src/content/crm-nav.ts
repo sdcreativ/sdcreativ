@@ -51,6 +51,10 @@ export function getCrmPageTitle(pathname: string): string {
     return "Tableau de bord";
   }
 
+  if (pathname.startsWith("/admin/crm/compte")) {
+    return "Mon profil";
+  }
+
   const item = findCrmNavItem(pathname);
 
   return item?.label ?? "CRM";

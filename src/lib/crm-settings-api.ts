@@ -19,6 +19,7 @@ export type CrmSessionInfo = {
   role: CrmRole;
   roleLabel?: string;
   permissions: CrmPermission[];
+  avatarUrl?: string | null;
 };
 
 export async function fetchCrmSession(): Promise<CrmSessionInfo> {

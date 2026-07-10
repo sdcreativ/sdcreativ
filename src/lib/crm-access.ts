@@ -138,7 +138,9 @@ export function getCrmRoutePermission(
   const normalized =
     pathname.endsWith("/") && pathname.length > 1 ? pathname.slice(0, -1) : pathname;
 
-  if (normalized === "/admin/crm" || normalized.startsWith("/admin/compte")) return null;
+  if (normalized === "/admin/crm" || normalized.startsWith("/admin/compte") || normalized.startsWith("/admin/crm/compte")) {
+    return null;
+  }
 
   const match = navItems
     .filter((nav) => nav.href !== "/admin/crm")

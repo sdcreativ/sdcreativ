@@ -1,13 +1,15 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { usePathname } from "next/navigation";
 import { CrmLogo } from "@/components/admin/CrmLogo";
+import { CrmUserAvatar } from "@/components/admin/CrmUserAvatar";
 import { CRM_ROLE_LABELS } from "@/content/crm-roles";
 import { crmNavItems } from "@/content/crm-nav";
 import { fetchCrmSession, type CrmSessionInfo } from "@/lib/crm-settings-api";
 import { filterCrmNavItems } from "@/lib/crm-access";
+import { CRM_SESSION_CHANGED_EVENT } from "@/lib/crm-session-events";
 import { cn } from "@/lib/utils";
 
 type Props = {
@@ -26,27 +28,22 @@ function getActiveHref(pathname: string): string | null {
   return match?.href ?? null;
 }
 
-function userInitials(name: string): string {
-  return (
-    name
-      .split(/\s+/)
-      .filter(Boolean)
-      .slice(0, 2)
-      .map((part) => part[0]?.toUpperCase() ?? "")
-      .join("") || "?"
-  );
-}
-
 export function CrmSidebar({ mobileOpen = false, onNavigate }: Props) {
   const pathname = usePathname() ?? "";
   const activeHref = getActiveHref(pathname);
   const [session, setSession] = useState<CrmSessionInfo | null>(null);
 
-  useEffect(() => {
+  const loadSession = useCallback(() => {
     void fetchCrmSession()
       .then(setSession)
       .catch(() => setSession(null));
   }, []);
+
+  useEffect(() => {
+    loadSession();
+    window.addEventListener(CRM_SESSION_CHANGED_EVENT, loadSession);
+    return () => window.removeEventListener(CRM_SESSION_CHANGED_EVENT, loadSession);
+  }, [loadSession]);
 
   const roleLabel =
     session?.roleLabel ??
@@ -55,6 +52,8 @@ export function CrmSidebar({ mobileOpen = false, onNavigate }: Props) {
   const visibleNavItems = session
     ? filterCrmNavItems(crmNavItems, session.permissions)
     : crmNavItems;
+
+  const profileActive = pathname.startsWith("/admin/crm/compte");
 
   return (
     <aside
@@ -101,17 +100,18 @@ export function CrmSidebar({ mobileOpen = false, onNavigate }: Props) {
       <div className="border-t border-white/10 px-4 py-4">
         {session ? (
           <Link
-            href="/admin/compte"
+            href="/admin/crm/compte"
             onClick={onNavigate}
-            className="flex items-center gap-3 rounded-xl bg-white/5 px-3 py-3 transition-colors hover:bg-white/10"
+            className={cn(
+              "flex items-center gap-3 rounded-xl px-3 py-3 transition-colors",
+              profileActive ? "bg-primary/20 ring-1 ring-primary/40" : "bg-white/5 hover:bg-white/10",
+            )}
           >
-            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-primary text-xs font-bold">
-              {userInitials(session.name)}
-            </div>
+            <CrmUserAvatar name={session.name} avatarUrl={session.avatarUrl} size="md" />
             <div className="min-w-0">
               <p className="truncate text-sm font-semibold">{session.name}</p>
               <p className="truncate text-xs text-white/55">{roleLabel ?? session.role}</p>
-              <p className="truncate text-[10px] text-white/40">Mon compte</p>
+              <p className="truncate text-[10px] text-white/40">Mon profil</p>
             </div>
           </Link>
         ) : (
