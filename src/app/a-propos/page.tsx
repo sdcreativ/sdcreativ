@@ -6,6 +6,8 @@ import { MethodSection } from "@/components/sections/MethodSection";
 import { TeamSection } from "@/components/sections/TeamSection";
 import { createMetadata } from "@/lib/metadata";
 
+export const dynamic = "force-dynamic";
+
 export const metadata = createMetadata({
   title: "À propos",
   description:
