@@ -24,7 +24,7 @@ export async function GET(_request: Request, context: RouteContext) {
 
   try {
     const { id } = await context.params;
-    const invoice = await getPortalInvoice(session.clientId, id);
+    const invoice = await getPortalInvoice(session.crmPortalId, id);
     if (!invoice) {
       return NextResponse.json({ error: "Facture introuvable." }, { status: 404 });
     }

@@ -24,16 +24,16 @@ export async function GET(_request: Request, context: RouteContext) {
 
   try {
     const { id } = await context.params;
-    const profile = await buildClientProfileAsync(session.clientId);
+    const profile = await buildClientProfileAsync(session.crmPortalId);
 
-    let quote = await getPortalQuote(session.clientId, id);
+    let quote = await getPortalQuote(session.crmPortalId, id);
     if (!quote) {
       return NextResponse.json({ error: "Devis introuvable." }, { status: 404 });
     }
 
     if (PORTAL_SIGNABLE_STATUSES.includes(quote.status)) {
       quote = await markQuoteViewed({
-        portalClientId: session.clientId,
+        portalClientId: session.crmPortalId,
         quoteId: id,
         actorName: profile.name,
       });

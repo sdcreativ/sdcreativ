@@ -22,8 +22,8 @@ export async function GET() {
 
   try {
     const [invoices, unpaidCount] = await Promise.all([
-      listInvoicesForPortalClient(session.clientId),
-      countUnpaidInvoicesForPortal(session.clientId),
+      listInvoicesForPortalClient(session.crmPortalId),
+      countUnpaidInvoicesForPortal(session.crmPortalId),
     ]);
 
     const summaries = await Promise.all(

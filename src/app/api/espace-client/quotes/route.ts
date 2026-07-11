@@ -18,8 +18,8 @@ export async function GET() {
 
   try {
     const [quotes, pendingCount] = await Promise.all([
-      listQuotesForPortalClient(session.clientId),
-      countActionableQuotesForPortal(session.clientId),
+      listQuotesForPortalClient(session.crmPortalId),
+      countActionableQuotesForPortal(session.crmPortalId),
     ]);
 
     const summaries = await Promise.all(

@@ -24,7 +24,7 @@ export async function POST(request: Request, context: RouteContext) {
 
   try {
     const { id } = await context.params;
-    const profile = await buildClientProfileAsync(session.clientId);
+    const profile = await buildClientProfileAsync(session.crmPortalId);
     const body = await request.json();
     const parsed = rejectSchema.safeParse(body);
 
@@ -36,7 +36,7 @@ export async function POST(request: Request, context: RouteContext) {
     }
 
     const quote = await rejectPortalQuote({
-      portalClientId: session.clientId,
+      portalClientId: session.crmPortalId,
       quoteId: id,
       reason: parsed.data.reason,
       actorName: profile.name,

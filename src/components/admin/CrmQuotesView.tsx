@@ -110,6 +110,17 @@ export function CrmQuotesView() {
   }, [load]);
 
   useEffect(() => {
+    const refParam = searchParams.get("ref");
+    const idParam = searchParams.get("id");
+    if (!refParam && !idParam) return;
+
+    const match = quotes.find(
+      (q) => (idParam && q.id === idParam) || (refParam && q.reference === refParam),
+    );
+    if (match) setSelected(match);
+  }, [searchParams, quotes]);
+
+  useEffect(() => {
     const status = searchParams.get("status");
     const quoteStatuses = QUOTE_PIPELINE_COLUMNS.map((c) => c.status);
     if (status && quoteStatuses.includes(status as QuoteStatus)) {

@@ -36,7 +36,7 @@ export async function POST(request: Request, context: RouteContext) {
     }
 
     const quote = await signPortalQuote({
-      portalClientId: session.clientId,
+      portalClientId: session.crmPortalId,
       quoteId: id,
       signerName: parsed.data.signerName,
       signatureData: parsed.data.signatureData,

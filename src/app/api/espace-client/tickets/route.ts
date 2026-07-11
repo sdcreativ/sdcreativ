@@ -15,7 +15,7 @@ export async function GET() {
   }
 
   try {
-    const tickets = await listTickets({ portalClientId: session.clientId });
+    const tickets = await listTickets({ portalClientId: session.loginClientId });
     return NextResponse.json({ tickets });
   } catch (error) {
     console.error("[api/espace-client/tickets] GET", error);
@@ -34,14 +34,17 @@ export async function POST(request: Request) {
   }
 
   try {
-    const profile = await buildClientProfileAsync(session.clientId);
+    const profile = await buildClientProfileAsync(
+      session.crmPortalId,
+      session.loginClientId,
+    );
     const body = await request.json();
 
     const parsed = createTicketSchema.safeParse({
       ...body,
-      portalClientId: session.clientId,
+      portalClientId: session.loginClientId,
       clientName: profile.name,
-      clientEmail: body.clientEmail ?? `${session.clientId}@client.local`,
+      clientEmail: body.clientEmail ?? `${session.loginClientId}@client.local`,
       authorType: "client",
       authorName: profile.name,
     });

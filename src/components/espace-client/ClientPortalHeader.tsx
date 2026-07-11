@@ -48,6 +48,7 @@ export function ClientPortalHeader({
   const { title, subtitle } = clientSectionTitles[section];
   const [notifOpen, setNotifOpen] = useState(false);
   const notifRef = useRef<HTMLDivElement>(null);
+  const notifBtnRef = useRef<HTMLButtonElement>(null);
 
   const notificationCount =
     openTicketCount +
@@ -62,6 +63,10 @@ export function ClientPortalHeader({
     quotesPendingCount > 0 ||
     invoicesUnpaidCount > 0;
   const hasAnyContent = hasActionItems || billingHistory.length > 0;
+
+  useEffect(() => {
+    notifBtnRef.current?.setAttribute("aria-expanded", notifOpen ? "true" : "false");
+  }, [notifOpen]);
 
   useEffect(() => {
     function onClickOutside(e: MouseEvent) {
@@ -103,6 +108,7 @@ export function ClientPortalHeader({
 
           <div className="relative" ref={notifRef}>
             <button
+              ref={notifBtnRef}
               type="button"
               onClick={() => setNotifOpen((open) => !open)}
               className="relative rounded-xl border border-gray/60 p-2.5 text-gray-text transition-colors hover:text-foreground"
@@ -112,7 +118,6 @@ export function ClientPortalHeader({
                   : "Notifications"
               }
               aria-haspopup="menu"
-              aria-expanded={notifOpen ? "true" : "false"}
             >
               <Bell className="h-5 w-5" aria-hidden />
               {notificationCount > 0 && (

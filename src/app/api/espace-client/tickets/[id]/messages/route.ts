@@ -24,7 +24,7 @@ export async function GET(_request: Request, { params }: Props) {
   try {
     const { id } = await params;
     const ticket = await getTicketById(id);
-    if (!ticket || ticket.portalClientId !== session.clientId) {
+    if (!ticket || ticket.portalClientId !== session.loginClientId) {
       return NextResponse.json({ error: "Ticket introuvable." }, { status: 404 });
     }
 
@@ -49,11 +49,14 @@ export async function POST(request: Request, { params }: Props) {
   try {
     const { id } = await params;
     const ticket = await getTicketById(id);
-    if (!ticket || ticket.portalClientId !== session.clientId) {
+    if (!ticket || ticket.portalClientId !== session.loginClientId) {
       return NextResponse.json({ error: "Ticket introuvable." }, { status: 404 });
     }
 
-    const profile = await buildClientProfileAsync(session.clientId);
+    const profile = await buildClientProfileAsync(
+      session.crmPortalId,
+      session.loginClientId,
+    );
     const body = await request.json();
     const parsed = createMessageSchema.safeParse({
       content: body.content,

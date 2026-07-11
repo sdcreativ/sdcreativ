@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
+import { cookies } from "next/headers";
 import { loadPortalProjectPayload } from "@/lib/client-portal-db";
-import { getClientSessionFromCookies } from "@/lib/documents-auth";
+import { CLIENT_TOKEN_COOKIE, getClientSessionFromCookies } from "@/lib/documents-auth";
 import { isDatabaseConfigured } from "@/lib/db";
 
 export async function GET() {
@@ -14,7 +15,9 @@ export async function GET() {
   }
 
   try {
-    const payload = await loadPortalProjectPayload(session.clientId);
+    const cookieStore = await cookies();
+    const token = cookieStore.get(CLIENT_TOKEN_COOKIE)?.value;
+    const payload = await loadPortalProjectPayload(session.crmPortalId, token);
     return NextResponse.json(payload);
   } catch (error) {
     console.error("[api/espace-client/project] GET", error);

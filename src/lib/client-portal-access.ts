@@ -88,13 +88,20 @@ export async function validatePortalAccessCredentials(
   }
 
   const client = await getClientByPortalId(portalClientId);
-  if (!client) return false;
+  if (client) {
+    const row = await getPortalAccessRow(client.id);
+    if (row?.portal_access_token_hash) {
+      return hashPortalAccessToken(token) === row.portal_access_token_hash;
+    }
+  }
 
-  const row = await getPortalAccessRow(client.id);
+  const { resolveClientByPortalLoginId } = await import("@/lib/client-portal-resolve");
+  const resolved = await resolveClientByPortalLoginId(portalClientId, token);
+  if (!resolved) return false;
+
+  const row = await getPortalAccessRow(resolved.id);
   if (!row?.portal_access_token_hash) return false;
-
-  const hash = hashPortalAccessToken(token);
-  return hash === row.portal_access_token_hash;
+  return hashPortalAccessToken(token) === row.portal_access_token_hash;
 }
 
 async function ensureUniquePortalClientId(client: Client): Promise<string> {

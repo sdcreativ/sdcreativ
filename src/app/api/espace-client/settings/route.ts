@@ -18,7 +18,7 @@ export async function GET() {
   }
 
   try {
-    const settings = await getPortalSettingsPayload(session.clientId);
+    const settings = await getPortalSettingsPayload(session.crmPortalId);
     if (!settings) {
       return NextResponse.json(
         { error: "Compte client non lié au CRM. Contactez votre interlocuteur SD CREATIV." },
@@ -50,7 +50,7 @@ export async function PATCH(request: Request) {
       return NextResponse.json({ error: "Données invalides." }, { status: 400 });
     }
 
-    const settings = await updatePortalSettings(session.clientId, parsed.data);
+    const settings = await updatePortalSettings(session.crmPortalId, parsed.data);
     if (!settings) {
       return NextResponse.json({ error: "Compte introuvable." }, { status: 404 });
     }

@@ -5,8 +5,9 @@ import {
 } from "@/content/projects-labels";
 import type { ClientProfileData } from "@/lib/client-portal-config";
 import { buildClientProfile, parseClientPortalConfig } from "@/lib/client-portal-config";
-import { getClientByPortalId, type Client } from "@/lib/clients";
+import type { Client } from "@/lib/clients";
 import { isDatabaseConfigured } from "@/lib/db";
+import { resolveClientByPortalLoginId } from "@/lib/client-portal-resolve";
 import {
   getPrimaryProjectByPortalClientId,
   listProjectMilestones,
@@ -88,22 +89,30 @@ export function milestonesToProjectSteps(milestones: ProjectMilestone[]): Projec
   }));
 }
 
-export async function loadPortalCrmContext(portalClientId: string): Promise<PortalCrmContext | null> {
+export async function loadPortalCrmContext(
+  portalClientId: string,
+  accessToken?: string,
+): Promise<PortalCrmContext | null> {
   if (!isDatabaseConfigured()) return null;
 
   try {
-    const client = await getClientByPortalId(portalClientId);
-    if (!client) return null;
+    const client = await resolveClientByPortalLoginId(portalClientId, accessToken);
+    if (!client?.portalClientId) return null;
 
-    const project = await getPrimaryProjectByPortalClientId(portalClientId);
+    const crmPortalId = client.portalClientId;
+    const project = await getPrimaryProjectByPortalClientId(crmPortalId);
     let milestones = project ? await listProjectMilestones(project.id) : [];
 
     if (project && milestones.length > 0) {
-      const steps = milestonesToProjectSteps(milestones);
-      const drift = Math.abs(computeProgressFromMilestones(steps) - project.progress);
-      if (drift > MILESTONE_PROGRESS_DRIFT_THRESHOLD) {
-        await syncProjectMilestonesToProgress(project.id, project.progress);
-        milestones = await listProjectMilestones(project.id);
+      try {
+        const steps = milestonesToProjectSteps(milestones);
+        const drift = Math.abs(computeProgressFromMilestones(steps) - project.progress);
+        if (drift > MILESTONE_PROGRESS_DRIFT_THRESHOLD) {
+          await syncProjectMilestonesToProgress(project.id, project.progress);
+          milestones = await listProjectMilestones(project.id);
+        }
+      } catch (syncError) {
+        console.error("[client-portal-db] sync milestones", syncError);
       }
     }
 
@@ -172,8 +181,11 @@ export function mergeProfileWithCrm(
   };
 }
 
-export async function loadPortalProjectPayload(portalClientId: string): Promise<PortalProjectPayload> {
-  const crm = await loadPortalCrmContext(portalClientId);
+export async function loadPortalProjectPayload(
+  crmPortalId: string,
+  accessToken?: string,
+): Promise<PortalProjectPayload> {
+  const crm = await loadPortalCrmContext(crmPortalId, accessToken);
 
   if (!crm?.project) {
     return {
@@ -212,14 +224,49 @@ export async function loadPortalProjectPayload(portalClientId: string): Promise<
   };
 }
 
-export async function buildClientProfileAsync(portalClientId: string): Promise<ClientProfileData> {
-  const crm = await loadPortalCrmContext(portalClientId);
-  return mergeProfileWithCrm(portalClientId, crm);
+/** Fusionne les données projet API dans le profil affiché (dashboard). */
+export function applyPortalProjectToProfile(
+  profile: ClientProfileData,
+  payload: PortalProjectPayload,
+): ClientProfileData {
+  const next: ClientProfileData = {
+    ...profile,
+    linkedToCrm: payload.linked || profile.linkedToCrm,
+    crmClientId: payload.crmClientId ?? profile.crmClientId,
+    crmProjectId: payload.crmProjectId ?? profile.crmProjectId,
+  };
+
+  if (!payload.project) return next;
+
+  return {
+    ...next,
+    linkedToCrm: true,
+    projectTitle: payload.project.name,
+    projectType: payload.project.typeLabel,
+    projectStatus: payload.project.statusLabel,
+    progress: payload.project.progress,
+    startDate: formatProjectDate(payload.project.startDate),
+    endDate: formatProjectDate(payload.project.dueDate),
+    totalAmount: payload.project.budget ?? profile.totalAmount,
+  };
 }
 
-export async function loadPortalPaymentsPayload(portalClientId: string): Promise<PortalPaymentsPayload> {
-  const envProfile = buildClientProfile(portalClientId);
-  const crm = await loadPortalCrmContext(portalClientId);
+export async function buildClientProfileAsync(
+  crmPortalId: string,
+  loginPortalId?: string,
+  accessToken?: string,
+): Promise<ClientProfileData> {
+  const crm = await loadPortalCrmContext(crmPortalId, accessToken);
+  return mergeProfileWithCrm(loginPortalId ?? crmPortalId, crm);
+}
+
+export async function loadPortalPaymentsPayload(
+  crmPortalId: string,
+  loginPortalId?: string,
+  accessToken?: string,
+): Promise<PortalPaymentsPayload> {
+  const envProfile = buildClientProfile(loginPortalId ?? crmPortalId);
+  const crm = await loadPortalCrmContext(crmPortalId, accessToken);
 
   return buildPortalPaymentsPayload({
     client: crm?.client ?? null,

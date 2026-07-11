@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import type { CrmNotification } from "@/lib/billing/notifications";
 import { cn } from "@/lib/utils";
 import { FileSignature, Receipt } from "lucide-react";
@@ -37,6 +38,8 @@ export function NotificationHistoryList({
   emptyMessage = "Aucune notification récente.",
   accentClass = "text-emerald-700",
 }: Props) {
+  const router = useRouter();
+
   if (notifications.length === 0) {
     return <p className="px-4 py-3 text-sm text-gray-text">{emptyMessage}</p>;
   }
@@ -67,6 +70,25 @@ export function NotificationHistoryList({
         );
 
         if (n.linkHref) {
+          const isPortalLink = n.linkHref.startsWith("/espace-client");
+          if (isPortalLink) {
+            return (
+              <li key={n.id}>
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (unread) onMarkRead?.(n.id);
+                    onNavigate?.();
+                    router.push(n.linkHref!);
+                  }}
+                  className="flex w-full items-start gap-2 px-4 py-2.5 text-left text-sm hover:bg-gray-light/50"
+                >
+                  {content}
+                </button>
+              </li>
+            );
+          }
+
           return (
             <li key={n.id}>
               <Link

@@ -35,12 +35,12 @@ export async function POST(request: Request) {
     }
 
     const { currentToken } = parsed.data;
-    const valid = await validateClientCredentials(session.clientId, currentToken);
+    const valid = await validateClientCredentials(session.loginClientId, currentToken);
     if (!valid) {
       return NextResponse.json({ error: "Code d'accès actuel incorrect." }, { status: 401 });
     }
 
-    const client = await getClientByPortalId(session.clientId);
+    const client = await getClientByPortalId(session.crmPortalId);
     if (!client) {
       return NextResponse.json(
         { error: "Compte non lié au CRM. Contactez SD CREATIV pour modifier votre code." },
@@ -71,7 +71,7 @@ export async function POST(request: Request) {
       path: "/",
       maxAge: 60 * 60 * 8,
     };
-    response.cookies.set(CLIENT_ID_COOKIE, session.clientId, cookieOptions);
+    response.cookies.set(CLIENT_ID_COOKIE, session.loginClientId, cookieOptions);
     response.cookies.set(CLIENT_TOKEN_COOKIE, plainToken, cookieOptions);
 
     return response;

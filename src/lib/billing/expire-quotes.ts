@@ -67,7 +67,7 @@ async function expireQuote(quote: Quote): Promise<boolean> {
     eventType: "quote.expired",
     title: `Devis expiré — ${quote.reference}`,
     message: `Le devis ${quote.reference} a expiré le ${quote.validUntil ? new Date(quote.validUntil).toLocaleDateString("fr-FR") : "—"}.`,
-    linkHref: `/admin/crm/devis?ref=${encodeURIComponent(quote.reference)}`,
+    linkHref: `/admin/crm/devis?id=${quote.id}`,
     entityType: "quote",
     entityId: quote.id,
   });

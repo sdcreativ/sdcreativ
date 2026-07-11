@@ -25,14 +25,14 @@ export async function GET(request: Request) {
 
     if (history) {
       const [notifications, unreadCount] = await Promise.all([
-        listPortalNotificationHistory(session.clientId, 30),
-        countUnreadPortalNotifications(session.clientId),
+        listPortalNotificationHistory(session.crmPortalId, 30),
+        countUnreadPortalNotifications(session.crmPortalId),
       ]);
       return NextResponse.json({ notifications, unreadCount });
     }
 
     const since = searchParams.get("since") ?? undefined;
-    const notifications = await listPortalNotificationsSince(session.clientId, since);
+    const notifications = await listPortalNotificationsSince(session.crmPortalId, since);
     return NextResponse.json({ notifications });
   } catch (error) {
     console.error("[api/espace-client/notifications] GET", error);
@@ -53,7 +53,7 @@ export async function POST(request: Request) {
   try {
     const body = (await request.json()) as { ids?: string[]; all?: boolean };
     if (body.all === true) {
-      await markAllPortalNotificationsRead(session.clientId);
+      await markAllPortalNotificationsRead(session.crmPortalId);
       return NextResponse.json({ success: true });
     }
     const ids = Array.isArray(body.ids) ? body.ids : [];

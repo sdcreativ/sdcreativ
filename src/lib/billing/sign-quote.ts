@@ -120,7 +120,7 @@ export async function signPortalQuote(input: SignPortalQuoteInput): Promise<Quot
     eventType: "quote.signed",
     title: `Devis signé — ${updated.reference}`,
     message: `${signerName} a signé le devis ${updated.reference}.`,
-    linkHref: `/admin/crm/devis?ref=${encodeURIComponent(updated.reference)}`,
+    linkHref: `/admin/crm/devis?id=${updated.id}`,
     entityType: "quote",
     entityId: updated.id,
   });

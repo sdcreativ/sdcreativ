@@ -57,7 +57,7 @@ export async function rejectPortalQuote(input: {
     eventType: "quote.rejected",
     title: `Devis refusé — ${updated.reference}`,
     message: `Le client a refusé le devis ${updated.reference}.`,
-    linkHref: `/admin/crm/devis?ref=${encodeURIComponent(updated.reference)}`,
+    linkHref: `/admin/crm/devis?id=${updated.id}`,
     entityType: "quote",
     entityId: updated.id,
   });

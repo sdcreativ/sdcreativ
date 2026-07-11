@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import { useSearchParams } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { Loader2 } from "lucide-react";
 import { DocumentsPanel } from "@/components/documents/DocumentsPanel";
 import { ClientPortalSettingsView } from "@/components/espace-client/ClientPortalSettingsView";
@@ -23,7 +23,10 @@ import {
   markAllPortalNotificationsRead,
   markPortalNotificationsRead,
 } from "@/lib/billing-notifications-api";
-import type { PortalProjectPayload } from "@/lib/client-portal-db";
+import {
+  applyPortalProjectToProfile,
+  type PortalProjectPayload,
+} from "@/lib/client-portal-db";
 import { countMessagesAttention, countOpenTickets } from "@/lib/client-portal-utils";
 import type { Ticket } from "@/lib/tickets";
 
@@ -45,6 +48,7 @@ function isAuthenticatedSession(json: SessionResponse): json is SessionPayload &
 const PORTAL_POLL_MS = 30_000;
 
 export function EspaceClientPortal() {
+  const router = useRouter();
   const searchParams = useSearchParams();
   const [sessionState, setSessionState] = useState<SessionState>("loading");
   const [clientId, setClientId] = useState("");
@@ -85,6 +89,7 @@ export function EspaceClientPortal() {
       }
       const json = (await res.json()) as PortalProjectPayload;
       setProjectSteps(json.milestones.length > 0 ? json.milestones : null);
+      setProfile((prev) => (prev ? applyPortalProjectToProfile(prev, json) : prev));
     } catch {
       setProjectSteps(null);
     }
@@ -223,6 +228,7 @@ export function EspaceClientPortal() {
 
   function handleSectionChange(next: ClientPortalSection) {
     setSection(next);
+    router.replace(`/espace-client?section=${next}`, { scroll: false });
     if (next !== "support") {
       setSupportCreateOpen(false);
     }

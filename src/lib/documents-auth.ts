@@ -8,9 +8,17 @@ import {
   validateClientCredentials as validateEnvCredentials,
 } from "@/lib/client-portal-config";
 import { validatePortalAccessCredentials } from "@/lib/client-portal-access";
+import { resolveClientByPortalLoginId } from "@/lib/client-portal-resolve";
 
 export const CLIENT_ID_COOKIE = "sdcreativ_client_id";
 export const CLIENT_TOKEN_COOKIE = "sdcreativ_client_token";
+
+export type ClientPortalSession = {
+  /** Identifiant saisi à la connexion (cookies, documents S3). */
+  loginClientId: string;
+  /** Identifiant CRM canonique (devis, factures, projet). */
+  crmPortalId: string;
+};
 
 export type DocumentPermission = "documents.read" | "documents.write";
 
@@ -71,15 +79,18 @@ export async function verifyDocumentsAuth(
   return null;
 }
 
-export async function getClientSessionFromCookies(): Promise<{ clientId: string } | null> {
+export async function getClientSessionFromCookies(): Promise<ClientPortalSession | null> {
   const cookieStore = await cookies();
-  const clientId = cookieStore.get(CLIENT_ID_COOKIE)?.value;
+  const loginClientId = cookieStore.get(CLIENT_ID_COOKIE)?.value;
   const token = cookieStore.get(CLIENT_TOKEN_COOKIE)?.value;
 
-  if (!clientId || !token) return null;
-  if (!(await validateClientCredentials(clientId, token))) return null;
+  if (!loginClientId || !token) return null;
+  if (!(await validateClientCredentials(loginClientId, token))) return null;
 
-  return { clientId };
+  const client = await resolveClientByPortalLoginId(loginClientId, token);
+  const crmPortalId = client?.portalClientId ?? loginClientId;
+
+  return { loginClientId, crmPortalId };
 }
 
 export function canAccessClient(auth: DocumentAuth, clientId: string): boolean {
