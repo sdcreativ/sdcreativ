@@ -169,21 +169,40 @@ export const updateQuoteSchema = z.object({
   metadata: z.record(z.string(), z.unknown()).optional(),
 });
 
-async function nextReference(
-  query: (text: string, params?: unknown[]) => Promise<{ rows: QueryResultRow[]; rowCount: number | null }>,
-): Promise<string> {
-  const year = new Date().getFullYear();
-  const { rows } = await query(
-    `SELECT COUNT(*)::text AS count FROM quotes WHERE EXTRACT(YEAR FROM created_at) = $1`,
-    [year],
+type DbQuery = (
+  text: string,
+  params?: unknown[],
+) => Promise<{ rows: QueryResultRow[]; rowCount: number | null }>;
+
+function isPgUniqueViolation(error: unknown): boolean {
+  return (
+    typeof error === "object" &&
+    error !== null &&
+    "code" in error &&
+    (error as { code: string }).code === "23505"
   );
-  const seq = String(Number((rows[0] as { count: string })?.count ?? 0) + 1).padStart(4, "0");
-  return `DEV-${year}-${seq}`;
 }
 
-async function importMissingDevisLeads(
-  query: (text: string, params?: unknown[]) => Promise<{ rows: QueryResultRow[]; rowCount: number | null }>,
-): Promise<void> {
+async function nextReference(query: DbQuery): Promise<string> {
+  const year = new Date().getFullYear();
+  const prefix = `DEV-${year}-`;
+
+  await query(`SELECT pg_advisory_lock($1)`, [year]);
+  try {
+    const { rows } = await query(
+      `SELECT COALESCE(MAX(CAST(SPLIT_PART(reference, '-', 3) AS INTEGER)), 0)::int + 1 AS next
+       FROM quotes
+       WHERE reference LIKE $1`,
+      [`${prefix}%`],
+    );
+    const seq = String(Number((rows[0] as { next: number })?.next ?? 1)).padStart(4, "0");
+    return `${prefix}${seq}`;
+  } finally {
+    await query(`SELECT pg_advisory_unlock($1)`, [year]);
+  }
+}
+
+async function importMissingDevisLeads(query: DbQuery): Promise<void> {
   const { rows } = await query(
     `SELECT l.*
      FROM leads l
@@ -200,36 +219,48 @@ async function importMissingDevisLeads(
       lead.estimated_value ??
       lines.reduce((sum, line) => sum + (line.amount ?? 0), 0);
 
-    const ref = await nextReference(query);
-    await query(
-      `INSERT INTO quotes (
-        reference, lead_id, name, email, phone, company,
-        project_type_id, project_label, page_tier_id, addon_ids, lines,
-        subtotal, estimate_min, estimate_max, budget, timeline, message,
-        status, sent_at, metadata
-      ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,'sent',$18,$19)`,
-      [
-        ref,
-        lead.id,
-        lead.name,
-        lead.email,
-        lead.phone,
-        lead.company,
-        (meta.projectTypeId as string) ?? null,
-        lead.service ?? "Projet web",
-        (meta.pageTierId as string) ?? null,
-        JSON.stringify((meta.addonIds as string[]) ?? []),
-        JSON.stringify(lines),
-        subtotal,
-        null,
-        null,
-        lead.budget,
-        lead.timeline,
-        lead.message,
-        lead.created_at,
-        JSON.stringify({ importedFromLead: true, ...meta }),
-      ],
-    );
+    for (let attempt = 0; attempt < 3; attempt++) {
+      const ref = await nextReference(query);
+      try {
+        await query(
+          `INSERT INTO quotes (
+            reference, lead_id, name, email, phone, company,
+            project_type_id, project_label, page_tier_id, addon_ids, lines,
+            subtotal, estimate_min, estimate_max, budget, timeline, message,
+            status, sent_at, metadata
+          ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,'sent',$18,$19)`,
+          [
+            ref,
+            lead.id,
+            lead.name,
+            lead.email,
+            lead.phone,
+            lead.company,
+            (meta.projectTypeId as string) ?? null,
+            lead.service ?? "Projet web",
+            (meta.pageTierId as string) ?? null,
+            JSON.stringify((meta.addonIds as string[]) ?? []),
+            JSON.stringify(lines),
+            subtotal,
+            null,
+            null,
+            lead.budget,
+            lead.timeline,
+            lead.message,
+            lead.created_at,
+            JSON.stringify({ importedFromLead: true, ...meta }),
+          ],
+        );
+        break;
+      } catch (error) {
+        if (isPgUniqueViolation(error) && attempt < 2) continue;
+        if (isPgUniqueViolation(error)) {
+          console.warn("[quotes] importMissingDevisLeads skip lead", lead.id, error);
+          break;
+        }
+        throw error;
+      }
+    }
   }
 }
 
@@ -249,7 +280,11 @@ export type QuoteListFilters = {
 
 export async function listQuotesFiltered(filters: QuoteListFilters = {}): Promise<Quote[]> {
   return withDb(async (query) => {
-    await importMissingDevisLeads(query);
+    try {
+      await importMissingDevisLeads(query);
+    } catch (error) {
+      console.error("[quotes] importMissingDevisLeads", error);
+    }
 
     const conditions: string[] = [];
     const params: unknown[] = [];
@@ -425,7 +460,11 @@ export async function getQuoteStats(): Promise<{
   conversionRate: number;
 }> {
   return withDb(async (query) => {
-    await importMissingDevisLeads(query);
+    try {
+      await importMissingDevisLeads(query);
+    } catch (error) {
+      console.error("[quotes] importMissingDevisLeads", error);
+    }
 
     const { rows } = await query<{ status: QuoteStatus; count: string }>(
       `SELECT status, COUNT(*)::text AS count FROM quotes GROUP BY status`,
