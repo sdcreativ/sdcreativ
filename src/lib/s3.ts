@@ -222,6 +222,22 @@ export async function createPresignedUploadUrl(
   return { uploadUrl, expiresIn: PRESIGN_UPLOAD_TTL_SECONDS };
 }
 
+export async function downloadObjectBuffer(key: string): Promise<Buffer> {
+  const response = await getClient().send(
+    new GetObjectCommand({
+      Bucket: getBucket(),
+      Key: key,
+    }),
+  );
+
+  if (!response.Body) {
+    throw new Error(`Objet S3 introuvable ou vide : ${key}`);
+  }
+
+  const bytes = await response.Body.transformToByteArray();
+  return Buffer.from(bytes);
+}
+
 export async function createPresignedDownloadUrl(
   key: string,
 ): Promise<{ downloadUrl: string; expiresIn: number }> {

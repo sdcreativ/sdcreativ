@@ -180,6 +180,7 @@ export async function generateInvoiceFromQuote(input: {
         remaining > 0 ? buildPaymentInstructionsHtml(paymentPayload) : undefined,
       ),
       replyTo: process.env.CONTACT_FROM_EMAIL ?? undefined,
+      attachments: [{ filename: document.fileName, content: rendered.buffer }],
     });
   }
 

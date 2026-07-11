@@ -3,6 +3,7 @@ type SendEmailParams = {
   html: string;
   replyTo?: string;
   to?: string | string[];
+  attachments?: Array<{ filename: string; content: Buffer }>;
 };
 
 export type SendEmailResult =
@@ -54,6 +55,7 @@ export async function sendEmailDetailed({
   html,
   replyTo,
   to,
+  attachments,
 }: SendEmailParams): Promise<SendEmailResult> {
   const apiKey = process.env.RESEND_API_KEY;
   const from = getFromAddress();
@@ -67,12 +69,34 @@ export async function sendEmailDetailed({
       console.error(`[Email] ${error}`);
       return { ok: false, error };
     }
-    console.info("[Email — mode console]", { subject, replyTo, to: recipients, html });
+    console.info("[Email — mode console]", {
+      subject,
+      replyTo,
+      to: recipients,
+      attachments: attachments?.map((a) => ({ filename: a.filename, bytes: a.content.byteLength })),
+      html,
+    });
     return { ok: true };
   }
 
   if (recipients.length === 0) {
     return { ok: false, error: "Aucun destinataire (CONTACT_TO_EMAIL ou paramètre to)" };
+  }
+
+  const payload: Record<string, unknown> = {
+      from,
+      to: recipients,
+      reply_to: replyTo,
+      subject,
+      html,
+      text: htmlToPlainText(html),
+    };
+
+  if (attachments && attachments.length > 0) {
+    payload.attachments = attachments.map((file) => ({
+      filename: file.filename,
+      content: file.content.toString("base64"),
+    }));
   }
 
   const res = await fetch("https://api.resend.com/emails", {
@@ -81,14 +105,7 @@ export async function sendEmailDetailed({
       Authorization: `Bearer ${apiKey}`,
       "Content-Type": "application/json",
     },
-    body: JSON.stringify({
-      from,
-      to: recipients,
-      reply_to: replyTo,
-      subject,
-      html,
-      text: htmlToPlainText(html),
-    }),
+    body: JSON.stringify(payload),
   });
 
   if (!res.ok) {

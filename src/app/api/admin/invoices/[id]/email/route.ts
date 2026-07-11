@@ -4,6 +4,7 @@ import { z } from "zod";
 import { isDatabaseConfigured } from "@/lib/db";
 import { buildInvoiceEmailHtml } from "@/lib/invoice-email";
 import { sendEmail } from "@/lib/email";
+import { resolveInvoicePdfAttachment } from "@/lib/billing/invoice-pdf-attachment";
 import { getInvoiceById, getInvoiceRemaining, updateInvoice } from "@/lib/invoices";
 import { buildPaymentInstructionsHtml, buildPaymentInstructionsPayload } from "@/lib/payment-instructions";
 import { getPaymentSettings } from "@/lib/payment-settings";
@@ -52,11 +53,14 @@ export async function POST(request: Request, context: RouteContext) {
       paymentPayload ? buildPaymentInstructionsHtml(paymentPayload) : undefined,
     );
 
+    const pdfAttachment = await resolveInvoicePdfAttachment(invoice);
+
     const sent = await sendEmail({
       to: invoice.email,
       subject: parsed.data.subject,
       html,
       replyTo: fromEmail,
+      attachments: [{ filename: pdfAttachment.filename, content: pdfAttachment.content }],
     });
 
     if (!sent) {
