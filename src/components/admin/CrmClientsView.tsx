@@ -27,6 +27,7 @@ import {
   type ClientListFilters,
 } from "@/lib/clients-api";
 import type { Client, ClientInteraction, ClientOverview, DuplicateClientGroup } from "@/lib/clients";
+import { ClientPortalAccessPanel } from "@/components/admin/ClientPortalAccessPanel";
 import { useCrmAssignees } from "@/hooks/useCrmTeamMembers";
 import { PROJECT_STATUS_LABELS } from "@/content/projects-labels";
 import { QUOTE_STATUS_LABELS } from "@/content/quotes-labels";
@@ -640,23 +641,7 @@ function ClientDetailPanel({
           <DetailRow icon={<Mail className="h-4 w-4" />} label="Email" value={client.email} href={`mailto:${client.email}`} />
           {client.phone && <DetailRow icon={<Phone className="h-4 w-4" />} label="Téléphone" value={client.phone} href={`tel:${client.phone}`} />}
           {client.address && <DetailRow label="Adresse" value={client.address} />}
-          {client.portalClientId && (
-            <div className="rounded-xl border border-primary/20 bg-primary-light/40 p-3">
-              <p className="text-xs font-semibold uppercase tracking-wide text-primary">Espace client</p>
-              <p className="mt-1 font-mono text-sm text-foreground">{client.portalClientId}</p>
-              <Link
-                href="/espace-client"
-                target="_blank"
-                className="mt-2 inline-flex items-center gap-1 text-xs font-semibold text-primary hover:underline"
-              >
-                Ouvrir le portail
-                <ExternalLink className="h-3 w-3" aria-hidden />
-              </Link>
-              <p className="mt-1 text-[11px] text-gray-text">
-                Partagez cet identifiant avec le client pour accéder à son espace.
-              </p>
-            </div>
-          )}
+          <ClientPortalAccessPanel client={client} onUpdated={onUpdated} />
           {client.notes && (
             <div>
               <p className="text-xs font-semibold uppercase tracking-wide text-gray-text">Notes</p>

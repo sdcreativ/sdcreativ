@@ -75,6 +75,12 @@ async function ensureSchema(): Promise<void> {
     ALTER TABLE clients ADD COLUMN IF NOT EXISTS account_manager VARCHAR(100);
     ALTER TABLE clients ADD COLUMN IF NOT EXISTS sector VARCHAR(100);
     ALTER TABLE clients ADD COLUMN IF NOT EXISTS tags TEXT[] NOT NULL DEFAULT '{}';
+    ALTER TABLE clients ADD COLUMN IF NOT EXISTS portal_access_token_hash TEXT;
+    ALTER TABLE clients ADD COLUMN IF NOT EXISTS portal_access_created_at TIMESTAMPTZ;
+    ALTER TABLE clients ADD COLUMN IF NOT EXISTS portal_access_last_sent_at TIMESTAMPTZ;
+    CREATE INDEX IF NOT EXISTS idx_clients_portal_access_hash
+      ON clients (portal_access_token_hash)
+      WHERE portal_access_token_hash IS NOT NULL;
     CREATE INDEX IF NOT EXISTS idx_clients_account_manager ON clients (account_manager);
     CREATE INDEX IF NOT EXISTS idx_clients_sector ON clients (sector);
     CREATE INDEX IF NOT EXISTS idx_clients_tags ON clients USING GIN (tags);

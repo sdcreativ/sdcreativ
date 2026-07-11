@@ -2,8 +2,9 @@ import { NextResponse } from "next/server";
 import { buildClientProfileAsync } from "@/lib/client-portal-db";
 import {
   parseClientPortalConfig,
-  validateClientCredentials,
 } from "@/lib/client-portal-config";
+import { validatePortalAccessCredentials } from "@/lib/client-portal-access";
+import { isDatabaseConfigured } from "@/lib/db";
 import {
   CLIENT_ID_COOKIE,
   CLIENT_TOKEN_COOKIE,
@@ -21,10 +22,10 @@ const loginSchema = z.object({
 });
 
 export async function POST(request: Request) {
-  const config = parseClientPortalConfig();
-  if (Object.keys(config).length === 0) {
+  const envConfig = parseClientPortalConfig();
+  if (!isDatabaseConfigured() && Object.keys(envConfig).length === 0) {
     return NextResponse.json(
-      { error: "Espace client non configuré (CLIENT_PORTAL_TOKENS manquant)." },
+      { error: "Espace client non configuré." },
       { status: 503 },
     );
   }
@@ -42,7 +43,8 @@ export async function POST(request: Request) {
 
     const { clientId, token } = parsed.data;
 
-    if (!validateClientCredentials(clientId, token)) {
+    const valid = await validatePortalAccessCredentials(clientId, token);
+    if (!valid) {
       return NextResponse.json(
         { error: "Identifiant ou code d'accès incorrect." },
         { status: 401 },

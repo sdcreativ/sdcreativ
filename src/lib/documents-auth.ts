@@ -5,8 +5,9 @@ import { roleHasPermission } from "@/lib/crm-permissions";
 import type { CrmSessionPayload } from "@/lib/crm-session";
 import {
   parseClientPortalTokens,
-  validateClientCredentials as validateClientPortalCredentials,
+  validateClientCredentials as validateEnvCredentials,
 } from "@/lib/client-portal-config";
+import { validatePortalAccessCredentials } from "@/lib/client-portal-access";
 
 export const CLIENT_ID_COOKIE = "sdcreativ_client_id";
 export const CLIENT_TOKEN_COOKIE = "sdcreativ_client_token";
@@ -19,11 +20,14 @@ export type DocumentAuth =
 
 export { parseClientPortalTokens };
 
-export function validateClientCredentials(
+export async function validateClientCredentials(
   clientId: string,
   token: string,
-): boolean {
-  return validateClientPortalCredentials(clientId, token);
+): Promise<boolean> {
+  if (validateEnvCredentials(clientId, token)) {
+    return true;
+  }
+  return validatePortalAccessCredentials(clientId, token);
 }
 
 type VerifyDocumentsAuthOptions = {
@@ -50,7 +54,7 @@ export async function verifyDocumentsAuth(
   const clientIdHeader = request.headers.get("x-client-id");
   const clientTokenHeader = request.headers.get("x-client-token");
   if (clientIdHeader && clientTokenHeader) {
-    if (validateClientCredentials(clientIdHeader, clientTokenHeader)) {
+    if (await validateClientCredentials(clientIdHeader, clientTokenHeader)) {
       return { role: "client", clientId: clientIdHeader };
     }
   }
@@ -59,7 +63,7 @@ export async function verifyDocumentsAuth(
   const clientIdCookie = cookieStore.get(CLIENT_ID_COOKIE)?.value;
   const clientTokenCookie = cookieStore.get(CLIENT_TOKEN_COOKIE)?.value;
   if (clientIdCookie && clientTokenCookie) {
-    if (validateClientCredentials(clientIdCookie, clientTokenCookie)) {
+    if (await validateClientCredentials(clientIdCookie, clientTokenCookie)) {
       return { role: "client", clientId: clientIdCookie };
     }
   }
@@ -73,7 +77,7 @@ export async function getClientSessionFromCookies(): Promise<{ clientId: string 
   const token = cookieStore.get(CLIENT_TOKEN_COOKIE)?.value;
 
   if (!clientId || !token) return null;
-  if (!validateClientCredentials(clientId, token)) return null;
+  if (!(await validateClientCredentials(clientId, token))) return null;
 
   return { clientId };
 }

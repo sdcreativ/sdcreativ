@@ -6,6 +6,7 @@ import {
 } from "@/lib/client-portal-config";
 import { loadPortalCrmContext } from "@/lib/client-portal-db";
 import { isDatabaseConfigured } from "@/lib/db";
+import { getPortalAccessStatus } from "@/lib/client-portal-access";
 import { listClients } from "@/lib/clients";
 
 export type PortalAccountStatus = {
@@ -13,6 +14,7 @@ export type PortalAccountStatus = {
   label: string;
   company: string;
   hasEnvToken: boolean;
+  hasDatabaseToken: boolean;
   linkedToCrm: boolean;
   hasCrmProject: boolean;
   crmClientId: string | null;
@@ -34,6 +36,7 @@ export async function GET() {
       label: item.label,
       company: item.company,
       hasEnvToken: true,
+      hasDatabaseToken: false,
       linkedToCrm: false,
       hasCrmProject: false,
       crmClientId: null,
@@ -49,12 +52,20 @@ export async function GET() {
 
         const existing = merged.get(client.portalClientId);
         const ctx = await loadPortalCrmContext(client.portalClientId);
+        let hasDatabaseToken = false;
+        try {
+          const access = await getPortalAccessStatus(client.id);
+          hasDatabaseToken = access.hasDatabaseToken;
+        } catch {
+          /* ignore */
+        }
 
         merged.set(client.portalClientId, {
           id: client.portalClientId,
           label: client.company || client.name,
           company: client.company || client.name,
           hasEnvToken: Boolean(envConfig[client.portalClientId]),
+          hasDatabaseToken,
           linkedToCrm: Boolean(ctx),
           hasCrmProject: Boolean(ctx?.project),
           crmClientId: client.id,
