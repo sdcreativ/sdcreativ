@@ -1,6 +1,6 @@
 import { withDb } from "@/lib/db";
 import { getClientByPortalId, getClientById, type Client } from "@/lib/clients";
-import { hashPortalAccessToken } from "@/lib/client-portal-access";
+import { hashPortalAccessToken } from "@/lib/client-portal-token";
 
 async function getClientIdByPortalAccessTokenHash(tokenHash: string): Promise<string | null> {
   return withDb(async (query) => {
@@ -33,6 +33,26 @@ async function getClientIdByPortalIdPrefix(loginId: string): Promise<string | nu
     );
     return rows[0]?.id ?? null;
   });
+}
+
+/** Identifiant saisi compatible avec le slug CRM (exact, casse, préfixe). */
+export function loginIdMatchesPortalClient(loginId: string, portalClientId: string): boolean {
+  const login = loginId.trim();
+  const portal = portalClientId.trim();
+  if (!login || !portal) return false;
+  if (login === portal) return true;
+  if (login.toLowerCase() === portal.toLowerCase()) return true;
+  const loginLower = login.toLowerCase();
+  const portalLower = portal.toLowerCase();
+  if (portalLower.startsWith(`${loginLower}-`)) return true;
+  if (loginLower.startsWith(`${portalLower}-`)) return true;
+  return false;
+}
+
+export async function findClientByPortalAccessToken(token: string): Promise<Client | null> {
+  const byTokenId = await getClientIdByPortalAccessTokenHash(hashPortalAccessToken(token));
+  if (!byTokenId) return null;
+  return getClientById(byTokenId);
 }
 
 /** Résout la fiche CRM à partir de l'identifiant de connexion (env, slug ou token). */

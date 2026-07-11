@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   TICKET_CATEGORY_LABELS,
   TICKET_PRIORITY_LABELS,
@@ -117,17 +117,39 @@ export function ClientTicketThreadPanel({
   const [reply, setReply] = useState("");
   const [loading, setLoading] = useState(true);
   const [sending, setSending] = useState(false);
+  const onUpdatedRef = useRef(onUpdated);
+  onUpdatedRef.current = onUpdated;
 
   useEffect(() => {
+    let cancelled = false;
     setLoading(true);
+
     void fetch(`/api/espace-client/tickets/${ticket.id}/messages`, { credentials: "include" })
-      .then((res) => res.json())
-      .then((json: { messages: TicketMessage[]; ticket?: Ticket }) => {
-        setMessages(json.messages);
-        if (json.ticket) onUpdated(json.ticket);
+      .then(async (res) => {
+        const json = (await res.json()) as {
+          messages?: TicketMessage[];
+          ticket?: Ticket;
+          error?: string;
+        };
+        if (!res.ok) throw new Error(json.error ?? "Chargement impossible.");
+        return json;
       })
-      .finally(() => setLoading(false));
-  }, [ticket.id, onUpdated]);
+      .then((json) => {
+        if (cancelled) return;
+        setMessages(json.messages ?? []);
+        if (json.ticket) onUpdatedRef.current(json.ticket);
+      })
+      .catch(() => {
+        if (!cancelled) setMessages([]);
+      })
+      .finally(() => {
+        if (!cancelled) setLoading(false);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [ticket.id]);
 
   async function handleReply(e: React.FormEvent) {
     e.preventDefault();

@@ -59,6 +59,15 @@ export function ClientPortalSupportView({
     }
   }, [openCreateOnMount, onCreateClosed]);
 
+  const handleTicketUpdated = useCallback(
+    (updated: Ticket) => {
+      setTickets((prev) => prev.map((t) => (t.id === updated.id ? updated : t)));
+      setSelected(updated);
+      onTicketsChange?.();
+    },
+    [onTicketsChange],
+  );
+
   return (
     <div className="mx-auto max-w-3xl space-y-6">
       <div className="flex flex-wrap items-center justify-between gap-3">
@@ -130,11 +139,7 @@ export function ClientPortalSupportView({
         <ClientTicketThreadPanel
           ticket={selected}
           onClose={() => setSelected(null)}
-          onUpdated={(updated) => {
-            setTickets((prev) => prev.map((t) => (t.id === updated.id ? updated : t)));
-            setSelected(updated);
-            onTicketsChange?.();
-          }}
+          onUpdated={handleTicketUpdated}
         />
       )}
     </div>

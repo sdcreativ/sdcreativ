@@ -4,6 +4,7 @@ import {
   parseClientPortalConfig,
 } from "@/lib/client-portal-config";
 import { validatePortalAccessCredentials } from "@/lib/client-portal-access";
+import { resolveClientByPortalLoginId } from "@/lib/client-portal-resolve";
 import { isDatabaseConfigured } from "@/lib/db";
 import {
   CLIENT_ID_COOKIE,
@@ -51,7 +52,10 @@ export async function POST(request: Request) {
       );
     }
 
-    const profile = await buildClientProfileAsync(clientId);
+    const resolved = await resolveClientByPortalLoginId(clientId, token);
+    const crmPortalId = resolved?.portalClientId ?? clientId;
+
+    const profile = await buildClientProfileAsync(crmPortalId, clientId, token);
 
     const response = NextResponse.json({
       success: true,

@@ -57,6 +57,15 @@ export function ClientPortalMessagesView({ profile, onTicketsChange }: Props) {
     [tickets],
   );
 
+  const handleTicketUpdated = useCallback(
+    (updated: Ticket) => {
+      setTickets((prev) => prev.map((t) => (t.id === updated.id ? updated : t)));
+      setSelected(updated);
+      onTicketsChange?.();
+    },
+    [onTicketsChange],
+  );
+
   return (
     <div className="mx-auto flex max-w-5xl flex-col gap-4">
       <div className="flex flex-wrap items-center justify-between gap-3">
@@ -131,11 +140,7 @@ export function ClientPortalMessagesView({ profile, onTicketsChange }: Props) {
             <ClientTicketThreadPanel
               ticket={selected}
               variant="inline"
-              onUpdated={(updated) => {
-                setTickets((prev) => prev.map((t) => (t.id === updated.id ? updated : t)));
-                setSelected(updated);
-                onTicketsChange?.();
-              }}
+              onUpdated={handleTicketUpdated}
             />
           ) : (
             <div className="flex items-center justify-center rounded-2xl border border-dashed border-gray/50 bg-white p-8 text-sm text-gray-text">

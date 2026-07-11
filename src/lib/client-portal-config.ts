@@ -154,6 +154,13 @@ export function listClientPortalAccounts(): Array<{
     });
 }
 
+export function findEnvPortalClientIdForToken(token: string): string | null {
+  for (const [clientId, entry] of Object.entries(parseClientPortalConfig())) {
+    if (entry.token === token) return clientId;
+  }
+  return null;
+}
+
 export function validateClientCredentials(clientId: string, token: string): boolean {
   const config = parseClientPortalConfig();
   return config[clientId]?.token === token;

@@ -1,10 +1,17 @@
-import { createHash, randomBytes } from "node:crypto";
 import { withDb } from "@/lib/db";
 import { getClientById, getClientByPortalId, updateClient, type Client } from "@/lib/clients";
-import { validateClientCredentials as validateEnvCredentials } from "@/lib/client-portal-config";
+import { validateClientCredentials as validateEnvCredentials, findEnvPortalClientIdForToken } from "@/lib/client-portal-config";
 import { buildPortalAccessEmailHtml } from "@/lib/client-portal-access-email";
 import { sendEmail } from "@/lib/email";
 import { logCrmAudit, type AuditActor } from "@/lib/crm-audit";
+import {
+  findClientByPortalAccessToken,
+  loginIdMatchesPortalClient,
+  resolveClientByPortalLoginId,
+} from "@/lib/client-portal-resolve";
+import { generatePortalAccessToken, hashPortalAccessToken } from "@/lib/client-portal-token";
+
+export { generatePortalAccessToken, hashPortalAccessToken };
 
 export type PortalAccessStatus = {
   portalClientId: string | null;
@@ -37,14 +44,6 @@ function slugifyPortalId(value: string): string {
     .replace(/[^a-z0-9]+/g, "-")
     .replace(/^-|-$/g, "")
     .slice(0, 48);
-}
-
-export function generatePortalAccessToken(): string {
-  return randomBytes(24).toString("base64url");
-}
-
-export function hashPortalAccessToken(token: string): string {
-  return createHash("sha256").update(token).digest("hex");
 }
 
 async function getPortalAccessRow(clientId: string): Promise<PortalAccessRow | null> {
@@ -87,21 +86,26 @@ export async function validatePortalAccessCredentials(
     return true;
   }
 
-  const client = await getClientByPortalId(portalClientId);
-  if (client) {
-    const row = await getPortalAccessRow(client.id);
-    if (row?.portal_access_token_hash) {
-      return hashPortalAccessToken(token) === row.portal_access_token_hash;
-    }
+  const envClientId = findEnvPortalClientIdForToken(token);
+  if (envClientId && loginIdMatchesPortalClient(portalClientId, envClientId)) {
+    return true;
   }
 
-  const { resolveClientByPortalLoginId } = await import("@/lib/client-portal-resolve");
+  const tokenHash = hashPortalAccessToken(token);
+  const byToken = await findClientByPortalAccessToken(token);
+  if (
+    byToken?.portalClientId &&
+    loginIdMatchesPortalClient(portalClientId, byToken.portalClientId)
+  ) {
+    return true;
+  }
+
   const resolved = await resolveClientByPortalLoginId(portalClientId, token);
   if (!resolved) return false;
 
   const row = await getPortalAccessRow(resolved.id);
   if (!row?.portal_access_token_hash) return false;
-  return hashPortalAccessToken(token) === row.portal_access_token_hash;
+  return tokenHash === row.portal_access_token_hash;
 }
 
 async function ensureUniquePortalClientId(client: Client): Promise<string> {

@@ -136,3 +136,10 @@ BEGIN
 
   RAISE NOTICE 'Seed portail demo terminé (mode-style-abidjan, demo-client).';
 END $$;
+
+-- Code d'accès dev local : DevPortail2026! (hash SHA-256)
+UPDATE clients
+SET portal_access_token_hash = '2473ff8fd1b6f0d8239be2f427f830c2eede2b721cd60cc09fe5012c81a66c3b',
+    portal_access_created_at = COALESCE(portal_access_created_at, NOW())
+WHERE portal_client_id IN ('demo-client', 'mode-style-abidjan')
+  AND portal_access_token_hash IS NULL;
