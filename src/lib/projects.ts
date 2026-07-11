@@ -190,22 +190,25 @@ async function syncMilestonesToProgressQuery(
   progress: number,
 ): Promise<void> {
   const { rows } = await query(
-    `SELECT id, sort_order FROM project_milestones WHERE project_id = $1 ORDER BY sort_order ASC`,
+    `SELECT id, sort_order, completed_at FROM project_milestones WHERE project_id = $1 ORDER BY sort_order ASC`,
     [projectId],
   );
   if (rows.length === 0) return;
 
   const steps = getProjectStepsFromProgress(progress);
   for (let i = 0; i < rows.length; i++) {
-    const milestone = rows[i] as { id: string };
+    const milestone = rows[i] as { id: string; completed_at: Date | null };
     const step = steps[i];
     if (!step) continue;
+
+    const completedAt =
+      step.status === "done"
+        ? milestone.completed_at ?? new Date()
+        : null;
+
     await query(
-      `UPDATE project_milestones SET
-        status = $2,
-        completed_at = CASE WHEN $2 = 'done' THEN COALESCE(completed_at, NOW()) ELSE NULL END
-       WHERE id = $1`,
-      [milestone.id, step.status],
+      `UPDATE project_milestones SET status = $2, completed_at = $3 WHERE id = $1`,
+      [milestone.id, step.status, completedAt],
     );
   }
 }
