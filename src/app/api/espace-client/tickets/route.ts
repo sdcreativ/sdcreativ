@@ -3,6 +3,7 @@ import { getClientSessionFromCookies } from "@/lib/documents-auth";
 import { buildClientProfileAsync } from "@/lib/client-portal-db";
 import { isDatabaseConfigured } from "@/lib/db";
 import { createTicket, createTicketSchema, listTickets } from "@/lib/tickets";
+import { notifyAdminOfClientTicketCreated } from "@/lib/ticket-notifications";
 
 export async function GET() {
   if (!isDatabaseConfigured()) {
@@ -55,6 +56,11 @@ export async function POST(request: Request) {
     }
 
     const ticket = await createTicket(parsed.data);
+
+    void notifyAdminOfClientTicketCreated(ticket, parsed.data.initialMessage).catch((err) => {
+      console.error("[api/espace-client/tickets] notify admin", err);
+    });
+
     return NextResponse.json({ ticket }, { status: 201 });
   } catch (error) {
     console.error("[api/espace-client/tickets] POST", error);

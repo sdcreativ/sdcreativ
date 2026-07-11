@@ -9,7 +9,7 @@ import {
   type CrmNotification,
 } from "@/lib/billing-notifications-api";
 import { cn } from "@/lib/utils";
-import { Bell, FileSignature, Receipt, X } from "lucide-react";
+import { Bell, FileSignature, LifeBuoy, Receipt, X } from "lucide-react";
 
 const POLL_MS = 30_000;
 
@@ -22,9 +22,19 @@ type Props = {
   onNotificationsChange?: (state: BillingNotificationState) => void;
 };
 
-function notificationIcon(eventType: string) {
-  if (eventType.startsWith("invoice")) return Receipt;
+function notificationIcon(notification: CrmNotification) {
+  if (notification.category === "tickets" || notification.eventType.startsWith("ticket")) {
+    return LifeBuoy;
+  }
+  if (notification.eventType.startsWith("invoice")) return Receipt;
   return FileSignature;
+}
+
+function notificationCategoryLabel(notification: CrmNotification): string {
+  if (notification.category === "tickets" || notification.eventType.startsWith("ticket")) {
+    return "Support";
+  }
+  return "Facturation";
 }
 
 export function CrmBillingNotificationEngine({ onNotificationsChange }: Props) {
@@ -84,7 +94,7 @@ export function CrmBillingNotificationEngine({ onNotificationsChange }: Props) {
   return (
     <div className="fixed bottom-4 right-4 z-50 flex max-w-sm flex-col gap-2">
       {toasts.map((notification) => {
-        const Icon = notificationIcon(notification.eventType);
+        const Icon = notificationIcon(notification);
         return (
           <div
             key={notification.id}
@@ -98,7 +108,7 @@ export function CrmBillingNotificationEngine({ onNotificationsChange }: Props) {
             </div>
             <div className="min-w-0 flex-1">
               <p className="text-xs font-semibold uppercase tracking-wide text-gray-text">
-                Facturation
+                {notificationCategoryLabel(notification)}
               </p>
               <p className="mt-0.5 text-sm font-semibold text-foreground">{notification.title}</p>
               <p className="mt-1 text-xs text-gray-text">{notification.message}</p>

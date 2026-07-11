@@ -7,6 +7,7 @@ import {
   getTicketById,
   listTicketMessages,
 } from "@/lib/tickets";
+import { notifyAdminOfClientTicketMessage } from "@/lib/ticket-notifications";
 import { buildClientProfileAsync } from "@/lib/client-portal-db";
 
 type Props = { params: Promise<{ id: string }> };
@@ -71,6 +72,13 @@ export async function POST(request: Request, { params }: Props) {
 
     const message = await addTicketMessage(id, parsed.data);
     const updated = await getTicketById(id);
+
+    if (updated) {
+      void notifyAdminOfClientTicketMessage(updated, message).catch((err) => {
+        console.error("[api/espace-client/tickets/messages] notify admin", err);
+      });
+    }
+
     return NextResponse.json({ message, ticket: updated }, { status: 201 });
   } catch (error) {
     console.error("[api/espace-client/tickets/messages] POST", error);

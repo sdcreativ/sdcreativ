@@ -83,6 +83,21 @@ export async function createCrmNotification(input: {
   });
 }
 
+export async function createAdminTicketNotification(input: {
+  eventType: string;
+  title: string;
+  message: string;
+  linkHref?: string;
+  entityType?: string;
+  entityId?: string;
+}): Promise<CrmNotification> {
+  return createCrmNotification({
+    audience: "admin",
+    category: "tickets",
+    ...input,
+  });
+}
+
 export async function createAdminBillingNotification(input: {
   eventType: string;
   title: string;

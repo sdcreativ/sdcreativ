@@ -4,10 +4,13 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import type { CrmNotification } from "@/lib/billing/notifications";
 import { cn } from "@/lib/utils";
-import { FileSignature, Receipt } from "lucide-react";
+import { FileSignature, LifeBuoy, Receipt } from "lucide-react";
 
-function notificationIcon(eventType: string) {
-  if (eventType.startsWith("invoice")) return Receipt;
+function notificationIcon(notification: CrmNotification) {
+  if (notification.category === "tickets" || notification.eventType.startsWith("ticket")) {
+    return LifeBuoy;
+  }
+  if (notification.eventType.startsWith("invoice")) return Receipt;
   return FileSignature;
 }
 
@@ -47,7 +50,7 @@ export function NotificationHistoryList({
   return (
     <ul className="max-h-64 overflow-y-auto">
       {notifications.map((n) => {
-        const Icon = notificationIcon(n.eventType);
+        const Icon = notificationIcon(n);
         const unread = !n.readAt;
         const content = (
           <>

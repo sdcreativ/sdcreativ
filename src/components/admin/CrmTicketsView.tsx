@@ -107,6 +107,13 @@ export function CrmTicketsView() {
     if (searchParams.get("create") === "1") setShowCreate(true);
   }, [searchParams]);
 
+  useEffect(() => {
+    const ref = searchParams.get("ref");
+    if (!ref || tickets.length === 0) return;
+    const match = tickets.find((t) => t.reference === ref);
+    if (match) setSelected(match);
+  }, [searchParams, tickets]);
+
   async function handleStatusChange(ticket: Ticket, status: TicketStatus) {
     setSaving(true);
     try {
