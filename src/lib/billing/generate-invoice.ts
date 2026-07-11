@@ -1,5 +1,7 @@
 import { buildInvoiceEmailHtml } from "@/lib/invoice-email";
 import { buildInvoicePdfHtml } from "@/lib/invoice-pdf";
+import { getClientById } from "@/lib/clients";
+import { portalNotificationPrefAllows } from "@/lib/client-portal-settings";
 import { sendEmail } from "@/lib/email";
 import {
   createInvoice,
@@ -146,7 +148,10 @@ export async function generateInvoiceFromQuote(input: {
   }
 
   let emailSent = false;
-  if (input.sendEmail !== false) {
+  const client = await getClientById(clientId);
+  const allowInvoiceEmail =
+    !client || portalNotificationPrefAllows(client.metadata, "notifyInvoices");
+  if (input.sendEmail !== false && allowInvoiceEmail) {
     const body = buildInvoiceEmailBody(invoice, siteUrl, portalUrl);
     emailSent = await sendEmail({
       to: invoice.email,

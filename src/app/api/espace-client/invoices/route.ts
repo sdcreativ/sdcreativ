@@ -30,10 +30,14 @@ export async function GET() {
       invoices.map(async (invoice) => {
         let downloadUrl: string | null = null;
         if (isS3Configured()) {
-          const doc = await getLatestInvoiceBillingDocument(invoice.id);
-          if (doc) {
-            const { downloadUrl: url } = await createPresignedDownloadUrl(doc.s3Key);
-            downloadUrl = url;
+          try {
+            const doc = await getLatestInvoiceBillingDocument(invoice.id);
+            if (doc) {
+              const { downloadUrl: url } = await createPresignedDownloadUrl(doc.s3Key);
+              downloadUrl = url;
+            }
+          } catch (s3Error) {
+            console.error("[api/espace-client/invoices] presign", invoice.id, s3Error);
           }
         }
 

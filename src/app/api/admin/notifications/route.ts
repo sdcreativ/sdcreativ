@@ -2,7 +2,10 @@ import { NextResponse } from "next/server";
 import { crmApiAuth } from "@/lib/crm-api-auth";
 import { isDatabaseConfigured } from "@/lib/db";
 import {
+  countUnreadAdminNotifications,
+  listAdminNotificationHistory,
   listAdminNotificationsSince,
+  markAllAdminNotificationsRead,
   markNotificationsRead,
 } from "@/lib/billing/notifications";
 
@@ -16,6 +19,16 @@ export async function GET(request: Request) {
 
   try {
     const { searchParams } = new URL(request.url);
+    const history = searchParams.get("history") === "1";
+
+    if (history) {
+      const [notifications, unreadCount] = await Promise.all([
+        listAdminNotificationHistory(30),
+        countUnreadAdminNotifications(),
+      ]);
+      return NextResponse.json({ notifications, unreadCount });
+    }
+
     const since = searchParams.get("since") ?? undefined;
     const notifications = await listAdminNotificationsSince(since);
     return NextResponse.json({ notifications });
@@ -34,7 +47,11 @@ export async function POST(request: Request) {
   }
 
   try {
-    const body = (await request.json()) as { ids?: string[] };
+    const body = (await request.json()) as { ids?: string[]; all?: boolean };
+    if (body.all === true) {
+      await markAllAdminNotificationsRead();
+      return NextResponse.json({ success: true });
+    }
     const ids = Array.isArray(body.ids) ? body.ids : [];
     await markNotificationsRead(ids);
     return NextResponse.json({ success: true });

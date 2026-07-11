@@ -29,7 +29,7 @@ export const clientNavItems: ClientNavItem[] = [
   { id: "quotes", label: "Mes devis", icon: FileSignature, ready: true },
   { id: "invoices", label: "Factures", icon: Receipt, ready: true },
   { id: "support", label: "Support", icon: LifeBuoy, ready: true },
-  { id: "settings", label: "Paramètres", icon: Settings, ready: false },
+  { id: "settings", label: "Paramètres", icon: Settings, ready: true },
 ];
 
 export const clientSectionTitles: Record<
@@ -53,5 +53,8 @@ export const clientSectionTitles: Record<
   quotes: { title: "Mes devis", subtitle: "Consultez, téléchargez et signez vos propositions." },
   invoices: { title: "Factures", subtitle: "Consultez et téléchargez vos factures émises." },
   support: { title: "Support" },
-  settings: { title: "Paramètres" },
+  settings: {
+    title: "Paramètres",
+    subtitle: "Coordonnées, notifications et sécurité de votre compte.",
+  },
 };

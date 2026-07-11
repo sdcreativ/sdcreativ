@@ -2,7 +2,10 @@ import { NextResponse } from "next/server";
 import { getClientSessionFromCookies } from "@/lib/documents-auth";
 import { isDatabaseConfigured } from "@/lib/db";
 import {
+  countUnreadPortalNotifications,
+  listPortalNotificationHistory,
   listPortalNotificationsSince,
+  markAllPortalNotificationsRead,
   markNotificationsRead,
 } from "@/lib/billing/notifications";
 
@@ -18,6 +21,16 @@ export async function GET(request: Request) {
 
   try {
     const { searchParams } = new URL(request.url);
+    const history = searchParams.get("history") === "1";
+
+    if (history) {
+      const [notifications, unreadCount] = await Promise.all([
+        listPortalNotificationHistory(session.clientId, 30),
+        countUnreadPortalNotifications(session.clientId),
+      ]);
+      return NextResponse.json({ notifications, unreadCount });
+    }
+
     const since = searchParams.get("since") ?? undefined;
     const notifications = await listPortalNotificationsSince(session.clientId, since);
     return NextResponse.json({ notifications });
@@ -38,7 +51,11 @@ export async function POST(request: Request) {
   }
 
   try {
-    const body = (await request.json()) as { ids?: string[] };
+    const body = (await request.json()) as { ids?: string[]; all?: boolean };
+    if (body.all === true) {
+      await markAllPortalNotificationsRead(session.clientId);
+      return NextResponse.json({ success: true });
+    }
     const ids = Array.isArray(body.ids) ? body.ids : [];
     await markNotificationsRead(ids);
     return NextResponse.json({ success: true });

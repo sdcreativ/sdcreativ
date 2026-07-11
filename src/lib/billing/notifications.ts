@@ -178,3 +178,62 @@ export async function countUnreadAdminNotifications(): Promise<number> {
     return Number(rows[0]?.count ?? 0);
   });
 }
+
+export async function countUnreadPortalNotifications(portalClientId: string): Promise<number> {
+  return withDb(async (query) => {
+    const { rows } = await query<{ count: string }>(
+      `SELECT COUNT(*)::text AS count FROM crm_notifications
+       WHERE audience = 'portal' AND portal_client_id = $1 AND read_at IS NULL`,
+      [portalClientId],
+    );
+    return Number(rows[0]?.count ?? 0);
+  });
+}
+
+export async function listAdminNotificationHistory(limit = 30): Promise<CrmNotification[]> {
+  return withDb(async (query) => {
+    const { rows } = await query<NotificationRow>(
+      `SELECT * FROM crm_notifications
+       WHERE audience = 'admin'
+       ORDER BY created_at DESC
+       LIMIT $1`,
+      [limit],
+    );
+    return rows.map(mapNotification);
+  });
+}
+
+export async function listPortalNotificationHistory(
+  portalClientId: string,
+  limit = 30,
+): Promise<CrmNotification[]> {
+  return withDb(async (query) => {
+    const { rows } = await query<NotificationRow>(
+      `SELECT * FROM crm_notifications
+       WHERE audience = 'portal' AND portal_client_id = $1
+       ORDER BY created_at DESC
+       LIMIT $2`,
+      [portalClientId, limit],
+    );
+    return rows.map(mapNotification);
+  });
+}
+
+export async function markAllAdminNotificationsRead(): Promise<void> {
+  await withDb(async (query) => {
+    await query(
+      `UPDATE crm_notifications SET read_at = NOW()
+       WHERE audience = 'admin' AND read_at IS NULL`,
+    );
+  });
+}
+
+export async function markAllPortalNotificationsRead(portalClientId: string): Promise<void> {
+  await withDb(async (query) => {
+    await query(
+      `UPDATE crm_notifications SET read_at = NOW()
+       WHERE audience = 'portal' AND portal_client_id = $1 AND read_at IS NULL`,
+      [portalClientId],
+    );
+  });
+}

@@ -19,6 +19,9 @@ function statusFromStepLabel(label: string): string | null {
   return null;
 }
 
+/** Seuil au-delà duquel les jalons CRM sont considérés désynchronisés. */
+export const MILESTONE_PROGRESS_DRIFT_THRESHOLD = 10;
+
 /** Progression dérivée des jalons CRM (source de vérité côté portail). */
 export function computeProgressFromMilestones(steps: ProjectStep[]): number {
   if (steps.length === 0) return 0;
@@ -54,10 +57,33 @@ export function alignProjectDisplay(
   if (!steps || steps.length === 0) {
     return { progress, statusLabel };
   }
+
+  const milestoneProgress = computeProgressFromMilestones(steps);
+  if (Math.abs(milestoneProgress - progress) > MILESTONE_PROGRESS_DRIFT_THRESHOLD) {
+    return { progress, statusLabel };
+  }
+
   return {
-    progress: computeProgressFromMilestones(steps),
+    progress: milestoneProgress,
     statusLabel: statusLabelFromMilestones(steps, statusLabel),
   };
+}
+
+/** Étapes affichées côté portail — alignées sur la progression CRM admin. */
+export function resolvePortalProjectSteps(
+  progress: number,
+  steps: ProjectStep[] | null | undefined,
+): ProjectStep[] {
+  if (!steps || steps.length === 0) {
+    return getProjectStepsFromProgress(progress);
+  }
+
+  const milestoneProgress = computeProgressFromMilestones(steps);
+  if (Math.abs(milestoneProgress - progress) > MILESTONE_PROGRESS_DRIFT_THRESHOLD) {
+    return getProjectStepsFromProgress(progress);
+  }
+
+  return steps;
 }
 
 export function getProjectStepsFromProgress(progress: number): ProjectStep[] {

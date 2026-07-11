@@ -4,7 +4,7 @@ import { useCallback, useEffect, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { Loader2 } from "lucide-react";
 import { DocumentsPanel } from "@/components/documents/DocumentsPanel";
-import { ClientPortalComingSoon } from "@/components/espace-client/ClientPortalComingSoon";
+import { ClientPortalSettingsView } from "@/components/espace-client/ClientPortalSettingsView";
 import { ClientPortalMessagesView } from "@/components/espace-client/ClientPortalMessagesView";
 import { ClientPortalDashboard } from "@/components/espace-client/ClientPortalDashboard";
 import { ClientPortalGuest } from "@/components/espace-client/ClientPortalGuest";
@@ -12,11 +12,17 @@ import { ClientPortalPaymentsView } from "@/components/espace-client/ClientPorta
 import { ClientPortalProjectView } from "@/components/espace-client/ClientPortalProjectView";
 import { ClientPortalQuotesView } from "@/components/espace-client/ClientPortalQuotesView";
 import { ClientPortalInvoicesView } from "@/components/espace-client/ClientPortalInvoicesView";
-import { ClientPortalNotificationToasts } from "@/components/espace-client/ClientPortalNotificationToasts";
+import { ClientPortalNotificationEngine } from "@/components/espace-client/ClientPortalNotificationEngine";
 import { ClientPortalShell } from "@/components/espace-client/ClientPortalShell";
 import { ClientPortalSupportView } from "@/components/espace-client/ClientPortalSupportView";
 import type { ClientPortalSection, ProjectStep } from "@/content/client-portal-types";
 import type { ClientProfileData } from "@/lib/client-portal-config";
+import type { CrmNotification } from "@/lib/billing/notifications";
+import {
+  fetchPortalNotificationHistory,
+  markAllPortalNotificationsRead,
+  markPortalNotificationsRead,
+} from "@/lib/billing-notifications-api";
 import type { PortalProjectPayload } from "@/lib/client-portal-db";
 import { countMessagesAttention, countOpenTickets } from "@/lib/client-portal-utils";
 import type { Ticket } from "@/lib/tickets";
@@ -47,6 +53,8 @@ export function EspaceClientPortal() {
   const [tickets, setTickets] = useState<Ticket[]>([]);
   const [quotesPendingCount, setQuotesPendingCount] = useState(0);
   const [invoicesUnpaidCount, setInvoicesUnpaidCount] = useState(0);
+  const [billingHistory, setBillingHistory] = useState<CrmNotification[]>([]);
+  const [billingUnreadCount, setBillingUnreadCount] = useState(0);
   const [supportCreateOpen, setSupportCreateOpen] = useState(false);
   const [projectSteps, setProjectSteps] = useState<ProjectStep[] | null>(null);
 
@@ -123,6 +131,26 @@ export function EspaceClientPortal() {
       setInvoicesUnpaidCount(0);
     }
   }, []);
+
+  const refreshBillingHistory = useCallback(async () => {
+    try {
+      const { notifications, unreadCount } = await fetchPortalNotificationHistory();
+      setBillingHistory(notifications);
+      setBillingUnreadCount(unreadCount);
+    } catch {
+      /* ignore */
+    }
+  }, []);
+
+  async function handleMarkBillingRead(id: string) {
+    await markPortalNotificationsRead([id]);
+    await refreshBillingHistory();
+  }
+
+  async function handleMarkAllBillingRead() {
+    await markAllPortalNotificationsRead();
+    await refreshBillingHistory();
+  }
 
   const checkSession = useCallback(async () => {
     setSessionState("loading");
@@ -243,9 +271,13 @@ export function EspaceClientPortal() {
       messagesBadgeCount={messagesBadgeCount}
       quotesPendingCount={quotesPendingCount}
       invoicesUnpaidCount={invoicesUnpaidCount}
+      billingHistory={billingHistory}
+      billingUnreadCount={billingUnreadCount}
       onSectionChange={handleSectionChange}
       onNewRequest={openSupportWithCreate}
       onLogout={() => void logout()}
+      onMarkBillingRead={(id) => void handleMarkBillingRead(id)}
+      onMarkAllBillingRead={() => void handleMarkAllBillingRead()}
     >
       {section === "overview" && (
         <ClientPortalDashboard
@@ -286,13 +318,15 @@ export function EspaceClientPortal() {
       )}
 
       {section === "settings" && (
-        <ClientPortalComingSoon
-          title="Paramètres du compte"
-          description="Modifiez vos coordonnées, préférences de notification et sécurité du compte."
-        />
+        <ClientPortalSettingsView onProfileUpdated={() => void refreshProfile()} />
       )}
       </ClientPortalShell>
-      <ClientPortalNotificationToasts />
+      <ClientPortalNotificationEngine
+        onNotificationsChange={({ history, unreadCount }) => {
+          setBillingHistory(history);
+          setBillingUnreadCount(unreadCount);
+        }}
+      />
     </>
   );
 }

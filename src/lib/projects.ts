@@ -1,5 +1,7 @@
 import { z } from "zod";
+import type { QueryResultRow } from "pg";
 import { withDb } from "@/lib/db";
+import { getProjectStepsFromProgress } from "@/lib/client-portal-utils";
 import type { MilestoneStatus, ProjectStatus, ProjectType } from "@/content/projects-labels";
 import {
   DEFAULT_MILESTONE_LABELS,
@@ -175,6 +177,45 @@ async function seedDefaultMilestones(
       ],
     );
   }
+}
+
+type DbQuery = (
+  text: string,
+  params?: unknown[],
+) => Promise<{ rows: QueryResultRow[]; rowCount: number | null }>;
+
+async function syncMilestonesToProgressQuery(
+  query: DbQuery,
+  projectId: string,
+  progress: number,
+): Promise<void> {
+  const { rows } = await query(
+    `SELECT id, sort_order FROM project_milestones WHERE project_id = $1 ORDER BY sort_order ASC`,
+    [projectId],
+  );
+  if (rows.length === 0) return;
+
+  const steps = getProjectStepsFromProgress(progress);
+  for (let i = 0; i < rows.length; i++) {
+    const milestone = rows[i] as { id: string };
+    const step = steps[i];
+    if (!step) continue;
+    await query(
+      `UPDATE project_milestones SET
+        status = $2,
+        completed_at = CASE WHEN $2 = 'done' THEN COALESCE(completed_at, NOW()) ELSE NULL END
+       WHERE id = $1`,
+      [milestone.id, step.status],
+    );
+  }
+}
+
+/** Aligne les jalons CRM sur la progression admin (Kanban / fiche projet). */
+export async function syncProjectMilestonesToProgress(
+  projectId: string,
+  progress: number,
+): Promise<void> {
+  await withDb(async (query) => syncMilestonesToProgressQuery(query, projectId, progress));
 }
 
 export async function listProjects(status?: ProjectStatus): Promise<Project[]> {
@@ -379,6 +420,8 @@ export async function updateProject(
         ),
       ],
     );
+
+    await syncMilestonesToProgressQuery(query, id, nextProgress);
 
     return getProjectById(id);
   });

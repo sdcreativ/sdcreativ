@@ -5,6 +5,7 @@ import {
   countMessagesAttention,
   countOpenTickets,
   getProjectStepsFromProgress,
+  resolvePortalProjectSteps,
   statusLabelFromMilestones,
 } from "@/lib/client-portal-utils";
 import type { ProjectStep } from "@/content/client-portal-types";
@@ -87,11 +88,30 @@ describe("alignProjectDisplay", () => {
     });
   });
 
-  it("aligne progression et badge avec les jalons", () => {
-    expect(alignProjectDisplay(100, "LIVRÉ", fiveSteps)).toEqual({
+  it("conserve la progression CRM si les jalons sont désynchronisés", () => {
+    expect(alignProjectDisplay(85, "EN TEST", fiveSteps)).toEqual({
+      progress: 85,
+      statusLabel: "EN TEST",
+    });
+  });
+
+  it("aligne progression et badge quand jalons cohérents", () => {
+    expect(alignProjectDisplay(70, "EN TEST", fiveSteps)).toEqual({
       progress: 70,
       statusLabel: "EN TEST",
     });
+  });
+});
+
+describe("resolvePortalProjectSteps", () => {
+  it("dérive les étapes depuis la progression CRM si drift", () => {
+    const steps = resolvePortalProjectSteps(85, fiveSteps);
+    expect(steps.filter((s) => s.status === "done")).toHaveLength(4);
+    expect(steps.find((s) => s.label === "Mise en ligne")?.status).toBe("current");
+  });
+
+  it("conserve les jalons CRM si cohérents", () => {
+    expect(resolvePortalProjectSteps(70, fiveSteps)).toEqual(fiveSteps);
   });
 });
 

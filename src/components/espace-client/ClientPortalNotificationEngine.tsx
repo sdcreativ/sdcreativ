@@ -4,6 +4,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import {
   fetchPortalBillingNotifications,
+  fetchPortalNotificationHistory,
   markPortalNotificationsRead,
   type CrmNotification,
 } from "@/lib/billing-notifications-api";
@@ -12,23 +13,44 @@ import { Bell, FileSignature, Receipt, X } from "lucide-react";
 
 const POLL_MS = 30_000;
 
+export type PortalNotificationState = {
+  history: CrmNotification[];
+  unreadCount: number;
+};
+
+type Props = {
+  onNotificationsChange?: (state: PortalNotificationState) => void;
+};
+
 function notificationIcon(eventType: string) {
   if (eventType.startsWith("invoice")) return Receipt;
   return FileSignature;
 }
 
-export function ClientPortalNotificationToasts() {
+export function ClientPortalNotificationEngine({ onNotificationsChange }: Props) {
   const [toasts, setToasts] = useState<CrmNotification[]>([]);
   const shownRef = useRef<Set<string>>(new Set());
   const sinceRef = useRef<string | undefined>(undefined);
 
-  const poll = useCallback(async () => {
+  const refreshHistory = useCallback(async () => {
+    try {
+      const { notifications, unreadCount } = await fetchPortalNotificationHistory();
+      onNotificationsChange?.({ history: notifications, unreadCount });
+    } catch {
+      /* ignore */
+    }
+  }, [onNotificationsChange]);
+
+  const pollNew = useCallback(async () => {
     try {
       const notifications = await fetchPortalBillingNotifications(sinceRef.current);
       const fresh = notifications.filter((n) => !shownRef.current.has(n.id));
       if (fresh.length === 0) return;
 
-      const latest = fresh.reduce((max, n) => (n.createdAt > max ? n.createdAt : max), fresh[0]!.createdAt);
+      const latest = fresh.reduce(
+        (max, n) => (n.createdAt > max ? n.createdAt : max),
+        fresh[0]!.createdAt,
+      );
       sinceRef.current = latest;
 
       for (const notification of fresh) {
@@ -37,16 +59,21 @@ export function ClientPortalNotificationToasts() {
 
       setToasts((prev) => [...fresh, ...prev].slice(0, 3));
       await markPortalNotificationsRead(fresh.map((n) => n.id));
+      await refreshHistory();
     } catch {
       /* ignore */
     }
-  }, []);
+  }, [refreshHistory]);
 
   useEffect(() => {
-    void poll();
-    const id = window.setInterval(() => void poll(), POLL_MS);
+    void refreshHistory();
+    void pollNew();
+    const id = window.setInterval(() => {
+      void pollNew();
+      void refreshHistory();
+    }, POLL_MS);
     return () => window.clearInterval(id);
-  }, [poll]);
+  }, [pollNew, refreshHistory]);
 
   if (toasts.length === 0) return null;
 

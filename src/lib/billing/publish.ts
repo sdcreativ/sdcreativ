@@ -1,6 +1,8 @@
 import { buildQuoteEmailHtml } from "@/lib/quote-email";
 import { buildQuotePdfHtml } from "@/lib/quote-pdf";
 import { sendEmail } from "@/lib/email";
+import { getClientById } from "@/lib/clients";
+import { portalNotificationPrefAllows } from "@/lib/client-portal-settings";
 import { updateLead } from "@/lib/leads";
 import { getQuoteById, type Quote } from "@/lib/quotes";
 import { withDb } from "@/lib/db";
@@ -119,7 +121,10 @@ export async function publishQuote(input: {
   }
 
   let emailSent = false;
-  if (input.sendEmail !== false) {
+  const client = await getClientById(clientId);
+  const allowQuoteEmail =
+    !client || portalNotificationPrefAllows(client.metadata, "notifyQuotes");
+  if (input.sendEmail !== false && allowQuoteEmail) {
     const body = buildPublishEmailBody(updatedQuote, siteUrl, portalUrl);
     emailSent = await sendEmail({
       to: updatedQuote.email,

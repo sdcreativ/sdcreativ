@@ -8,6 +8,7 @@ import { useCrmPermissions } from "@/hooks/useCrmPermissions";
 import { useCrmFetch } from "@/hooks/useCrmFetch";
 import type { CalendarReminder } from "@/lib/calendar-reminders";
 import type { CrmNotification } from "@/lib/billing/notifications";
+import { NotificationHistoryList } from "@/components/notifications/NotificationHistoryList";
 import { cn } from "@/lib/utils";
 import { CrmUserAvatar } from "@/components/admin/CrmUserAvatar";
 import { CrmGlobalSearch, type CrmGlobalSearchHandle } from "@/components/admin/CrmGlobalSearch";
@@ -15,7 +16,6 @@ import {
   Bell,
   CalendarClock,
   ChevronDown,
-  FileSignature,
   FileText,
   FolderKanban,
   LifeBuoy,
@@ -41,7 +41,10 @@ type Props = {
   subtitle?: string;
   showNewButton?: boolean;
   calendarReminders?: CalendarReminder[];
-  billingNotifications?: CrmNotification[];
+  billingHistory?: CrmNotification[];
+  billingUnreadCount?: number;
+  onMarkBillingRead?: (id: string) => void;
+  onMarkAllBillingRead?: () => void;
   onMenuClick?: () => void;
 };
 
@@ -50,7 +53,10 @@ export function CrmHeader({
   subtitle,
   showNewButton = true,
   calendarReminders = [],
-  billingNotifications = [],
+  billingHistory = [],
+  billingUnreadCount = 0,
+  onMarkBillingRead,
+  onMarkAllBillingRead,
   onMenuClick,
 }: Props) {
   const [newOpen, setNewOpen] = useState(false);
@@ -110,7 +116,13 @@ export function CrmHeader({
   const overdueTasks = canTasks ? (taskStats?.overdue ?? 0) : 0;
   const slaBreached = canTickets ? (ticketStats?.slaBreached ?? 0) : 0;
   const openTickets = canTickets ? (ticketStats?.open ?? 0) + (ticketStats?.inProgress ?? 0) : 0;
-  const alertCount = overdueTasks + slaBreached + calendarReminders.length + billingNotifications.length;
+  const alertCount =
+    overdueTasks + slaBreached + calendarReminders.length + billingUnreadCount;
+  const hasOperationalAlerts =
+    calendarReminders.length > 0 ||
+    (canTasks && overdueTasks > 0) ||
+    (canTickets && (slaBreached > 0 || openTickets > 0));
+  const hasAnyAlerts = alertCount > 0 || billingHistory.length > 0;
   const [hydrated, setHydrated] = useState(false);
 
   useEffect(() => {
@@ -171,93 +183,106 @@ export function CrmHeader({
             </button>
 
             {notifOpen && (
-              <div className="absolute right-0 top-full z-20 mt-2 w-72 rounded-xl border border-gray/40 bg-white py-2 shadow-xl">
-                <p className="px-4 py-2 text-xs font-bold uppercase tracking-wide text-gray-text">
-                  Alertes
-                </p>
-                {alertCount === 0 ? (
+              <div className="absolute right-0 top-full z-20 mt-2 w-80 rounded-xl border border-gray/40 bg-white py-2 shadow-xl">
+                <div className="flex items-center justify-between px-4 py-2">
+                  <p className="text-xs font-bold uppercase tracking-wide text-gray-text">
+                    Notifications
+                  </p>
+                  {billingUnreadCount > 0 && onMarkAllBillingRead && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        onMarkAllBillingRead();
+                      }}
+                      className="text-[10px] font-semibold text-primary hover:underline"
+                    >
+                      Tout marquer lu
+                    </button>
+                  )}
+                </div>
+                {!hasAnyAlerts ? (
                   <p className="px-4 py-3 text-sm text-gray-text">Aucune alerte.</p>
                 ) : (
-                  <ul className="divide-y divide-gray/20">
-                    {calendarReminders.length > 0 && (
-                      <li>
+                  <div className="divide-y divide-gray/20">
+                    {hasOperationalAlerts && (
+                      <div>
                         <p className="px-4 py-2 text-[10px] font-bold uppercase tracking-wide text-primary">
-                          Rappels calendrier
+                          Alertes opérationnelles
                         </p>
-                        {calendarReminders.slice(0, 5).map((r) => (
-                          <Link
-                            key={r.key}
-                            href={r.linkHref ?? "/admin/crm/calendrier"}
-                            onClick={() => setNotifOpen(false)}
-                            className="flex items-start gap-2 px-4 py-2.5 text-sm hover:bg-gray-light/50"
-                          >
-                            <CalendarClock className="mt-0.5 h-4 w-4 shrink-0 text-primary" aria-hidden />
-                            <span className="font-medium text-foreground">{r.message}</span>
-                          </Link>
-                        ))}
-                      </li>
+                        <ul>
+                          {calendarReminders.length > 0 &&
+                            calendarReminders.slice(0, 5).map((r) => (
+                              <li key={r.key}>
+                                <Link
+                                  href={r.linkHref ?? "/admin/crm/calendrier"}
+                                  onClick={() => setNotifOpen(false)}
+                                  className="flex items-start gap-2 px-4 py-2.5 text-sm hover:bg-gray-light/50"
+                                >
+                                  <CalendarClock className="mt-0.5 h-4 w-4 shrink-0 text-primary" aria-hidden />
+                                  <span className="font-medium text-foreground">{r.message}</span>
+                                </Link>
+                              </li>
+                            ))}
+                          {canTasks && overdueTasks > 0 && (
+                            <li>
+                              <Link
+                                href="/admin/crm/taches"
+                                onClick={() => setNotifOpen(false)}
+                                className="block px-4 py-3 text-sm hover:bg-gray-light/50"
+                              >
+                                <span className="font-semibold text-foreground">
+                                  {overdueTasks} tâche(s) en retard
+                                </span>
+                              </Link>
+                            </li>
+                          )}
+                          {canTickets && slaBreached > 0 && (
+                            <li>
+                              <Link
+                                href="/admin/crm/tickets"
+                                onClick={() => setNotifOpen(false)}
+                                className="block px-4 py-3 text-sm hover:bg-gray-light/50"
+                              >
+                                <span className="font-semibold text-accent">
+                                  {slaBreached} ticket(s) SLA dépassé
+                                </span>
+                              </Link>
+                            </li>
+                          )}
+                          {canTickets && openTickets > 0 && (
+                            <li>
+                              <Link
+                                href="/admin/crm/tickets"
+                                onClick={() => setNotifOpen(false)}
+                                className="block px-4 py-3 text-sm hover:bg-gray-light/50"
+                              >
+                                <span className="text-gray-text">
+                                  {openTickets} ticket(s) ouvert(s)
+                                </span>
+                              </Link>
+                            </li>
+                          )}
+                        </ul>
+                      </div>
                     )}
-                    {billingNotifications.length > 0 && (
-                      <li>
+                    {billingHistory.length > 0 && (
+                      <div>
                         <p className="px-4 py-2 text-[10px] font-bold uppercase tracking-wide text-emerald-700">
                           Facturation
-                        </p>
-                        {billingNotifications.slice(0, 5).map((n) => (
-                          <Link
-                            key={n.id}
-                            href={n.linkHref ?? "/admin/crm/devis"}
-                            onClick={() => setNotifOpen(false)}
-                            className="flex items-start gap-2 px-4 py-2.5 text-sm hover:bg-gray-light/50"
-                          >
-                            <FileSignature className="mt-0.5 h-4 w-4 shrink-0 text-emerald-700" aria-hidden />
-                            <span>
-                              <span className="block font-medium text-foreground">{n.title}</span>
-                              <span className="block text-xs text-gray-text">{n.message}</span>
+                          {billingUnreadCount > 0 && (
+                            <span className="ml-1.5 rounded-full bg-accent/10 px-1.5 py-0.5 text-[9px] text-accent">
+                              {billingUnreadCount} non lue{billingUnreadCount > 1 ? "s" : ""}
                             </span>
-                          </Link>
-                        ))}
-                      </li>
+                          )}
+                        </p>
+                        <NotificationHistoryList
+                          notifications={billingHistory}
+                          onNavigate={() => setNotifOpen(false)}
+                          onMarkRead={onMarkBillingRead}
+                        />
+                      </div>
                     )}
-                    {canTasks && overdueTasks > 0 && (
-                      <li>
-                        <Link
-                          href="/admin/crm/taches"
-                          onClick={() => setNotifOpen(false)}
-                          className="block px-4 py-3 text-sm hover:bg-gray-light/50"
-                        >
-                          <span className="font-semibold text-foreground">
-                            {overdueTasks} tâche(s) en retard
-                          </span>
-                        </Link>
-                      </li>
-                    )}
-                    {canTickets && slaBreached > 0 && (
-                      <li>
-                        <Link
-                          href="/admin/crm/tickets"
-                          onClick={() => setNotifOpen(false)}
-                          className="block px-4 py-3 text-sm hover:bg-gray-light/50"
-                        >
-                          <span className="font-semibold text-accent">
-                            {slaBreached} ticket(s) SLA dépassé
-                          </span>
-                        </Link>
-                      </li>
-                    )}
-                    {canTickets && openTickets > 0 && (
-                      <li>
-                        <Link
-                          href="/admin/crm/tickets"
-                          onClick={() => setNotifOpen(false)}
-                          className="block px-4 py-3 text-sm hover:bg-gray-light/50"
-                        >
-                          <span className="text-gray-text">
-                            {openTickets} ticket(s) ouvert(s)
-                          </span>
-                        </Link>
-                      </li>
-                    )}
-                  </ul>
+                  </div>
                 )}
               </div>
             )}

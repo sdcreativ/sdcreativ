@@ -13,12 +13,30 @@ export async function fetchAdminBillingNotifications(since?: string): Promise<Cr
   return json.notifications;
 }
 
+export async function fetchAdminNotificationHistory(): Promise<{
+  notifications: CrmNotification[];
+  unreadCount: number;
+}> {
+  const res = await fetch("/api/admin/notifications?history=1", { credentials: "include" });
+  return parseJson<{ notifications: CrmNotification[]; unreadCount: number }>(res);
+}
+
 export async function markAdminNotificationsRead(ids: string[]): Promise<void> {
   const res = await fetch("/api/admin/notifications", {
     method: "POST",
     credentials: "include",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ ids }),
+  });
+  await parseJson<{ success: boolean }>(res);
+}
+
+export async function markAllAdminNotificationsRead(): Promise<void> {
+  const res = await fetch("/api/admin/notifications", {
+    method: "POST",
+    credentials: "include",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ all: true }),
   });
   await parseJson<{ success: boolean }>(res);
 }
@@ -30,12 +48,30 @@ export async function fetchPortalBillingNotifications(since?: string): Promise<C
   return json.notifications;
 }
 
+export async function fetchPortalNotificationHistory(): Promise<{
+  notifications: CrmNotification[];
+  unreadCount: number;
+}> {
+  const res = await fetch("/api/espace-client/notifications?history=1", { credentials: "include" });
+  return parseJson<{ notifications: CrmNotification[]; unreadCount: number }>(res);
+}
+
 export async function markPortalNotificationsRead(ids: string[]): Promise<void> {
   const res = await fetch("/api/espace-client/notifications", {
     method: "POST",
     credentials: "include",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ ids }),
+  });
+  await parseJson<{ success: boolean }>(res);
+}
+
+export async function markAllPortalNotificationsRead(): Promise<void> {
+  const res = await fetch("/api/espace-client/notifications", {
+    method: "POST",
+    credentials: "include",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ all: true }),
   });
   await parseJson<{ success: boolean }>(res);
 }

@@ -4,6 +4,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import {
   fetchAdminBillingNotifications,
+  fetchAdminNotificationHistory,
   markAdminNotificationsRead,
   type CrmNotification,
 } from "@/lib/billing-notifications-api";
@@ -12,8 +13,13 @@ import { Bell, FileSignature, Receipt, X } from "lucide-react";
 
 const POLL_MS = 30_000;
 
+type BillingNotificationState = {
+  history: CrmNotification[];
+  unreadCount: number;
+};
+
 type Props = {
-  onNotificationsChange?: (notifications: CrmNotification[]) => void;
+  onNotificationsChange?: (state: BillingNotificationState) => void;
 };
 
 function notificationIcon(eventType: string) {
@@ -26,21 +32,26 @@ export function CrmBillingNotificationEngine({ onNotificationsChange }: Props) {
   const shownRef = useRef<Set<string>>(new Set());
   const sinceRef = useRef<string | undefined>(undefined);
 
-  const poll = useCallback(async () => {
+  const refreshHistory = useCallback(async () => {
+    try {
+      const { notifications, unreadCount } = await fetchAdminNotificationHistory();
+      onNotificationsChange?.({ history: notifications, unreadCount });
+    } catch {
+      /* ignore */
+    }
+  }, [onNotificationsChange]);
+
+  const pollNew = useCallback(async () => {
     try {
       const notifications = await fetchAdminBillingNotifications(sinceRef.current);
-      onNotificationsChange?.(notifications);
-
       const fresh = notifications.filter((n) => !shownRef.current.has(n.id));
       if (fresh.length === 0) return;
 
-      if (fresh.length > 0) {
-        const latest = fresh.reduce(
-          (max, n) => (n.createdAt > max ? n.createdAt : max),
-          fresh[0]!.createdAt,
-        );
-        sinceRef.current = latest;
-      }
+      const latest = fresh.reduce(
+        (max, n) => (n.createdAt > max ? n.createdAt : max),
+        fresh[0]!.createdAt,
+      );
+      sinceRef.current = latest;
 
       for (const notification of fresh) {
         shownRef.current.add(notification.id);
@@ -48,16 +59,21 @@ export function CrmBillingNotificationEngine({ onNotificationsChange }: Props) {
 
       setToasts((prev) => [...fresh, ...prev].slice(0, 4));
       await markAdminNotificationsRead(fresh.map((n) => n.id));
+      await refreshHistory();
     } catch {
       /* ignore poll errors */
     }
-  }, [onNotificationsChange]);
+  }, [refreshHistory]);
 
   useEffect(() => {
-    void poll();
-    const id = window.setInterval(() => void poll(), POLL_MS);
+    void refreshHistory();
+    void pollNew();
+    const id = window.setInterval(() => {
+      void pollNew();
+      void refreshHistory();
+    }, POLL_MS);
     return () => window.clearInterval(id);
-  }, [poll]);
+  }, [pollNew, refreshHistory]);
 
   function dismissToast(id: string) {
     setToasts((prev) => prev.filter((t) => t.id !== id));

@@ -10,6 +10,7 @@ import { isDatabaseConfigured } from "@/lib/db";
 import {
   getPrimaryProjectByPortalClientId,
   listProjectMilestones,
+  syncProjectMilestonesToProgress,
   type Project,
   type ProjectMilestone,
 } from "@/lib/projects";
@@ -18,7 +19,12 @@ import {
   buildPortalPaymentsPayload,
   type PortalPaymentsPayload,
 } from "@/lib/client-portal-payments";
-import { alignProjectDisplay } from "@/lib/client-portal-utils";
+import {
+  alignProjectDisplay,
+  computeProgressFromMilestones,
+  MILESTONE_PROGRESS_DRIFT_THRESHOLD,
+  resolvePortalProjectSteps,
+} from "@/lib/client-portal-utils";
 
 export type PortalCrmContext = {
   client: Client;
@@ -90,7 +96,16 @@ export async function loadPortalCrmContext(portalClientId: string): Promise<Port
     if (!client) return null;
 
     const project = await getPrimaryProjectByPortalClientId(portalClientId);
-    const milestones = project ? await listProjectMilestones(project.id) : [];
+    let milestones = project ? await listProjectMilestones(project.id) : [];
+
+    if (project && milestones.length > 0) {
+      const steps = milestonesToProjectSteps(milestones);
+      const drift = Math.abs(computeProgressFromMilestones(steps) - project.progress);
+      if (drift > MILESTONE_PROGRESS_DRIFT_THRESHOLD) {
+        await syncProjectMilestonesToProgress(project.id, project.progress);
+        milestones = await listProjectMilestones(project.id);
+      }
+    }
 
     return { client, project, milestones };
   } catch (error) {
@@ -174,6 +189,7 @@ export async function loadPortalProjectPayload(portalClientId: string): Promise<
   const steps = milestonesToProjectSteps(milestones);
   const baseStatus = PORTAL_STATUS_LABELS[project.status];
   const aligned = alignProjectDisplay(project.progress, baseStatus, steps);
+  const displaySteps = resolvePortalProjectSteps(project.progress, steps);
 
   return {
     linked: true,
@@ -192,7 +208,7 @@ export async function loadPortalProjectPayload(portalClientId: string): Promise<
       budget: project.budget,
       description: project.description,
     },
-    milestones: steps,
+    milestones: displaySteps,
   };
 }
 

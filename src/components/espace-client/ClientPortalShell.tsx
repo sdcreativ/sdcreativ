@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import type { ClientProfileData } from "@/lib/client-portal-config";
+import type { CrmNotification } from "@/lib/billing/notifications";
 import { ClientPortalHeader } from "@/components/espace-client/ClientPortalHeader";
 import { ClientPortalSidebar } from "@/components/espace-client/ClientPortalSidebar";
 import type { ClientPortalSection } from "@/content/client-portal-types";
@@ -13,9 +14,13 @@ type Props = {
   messagesBadgeCount: number;
   quotesPendingCount: number;
   invoicesUnpaidCount: number;
+  billingHistory: CrmNotification[];
+  billingUnreadCount: number;
   onSectionChange: (section: ClientPortalSection) => void;
   onNewRequest: () => void;
   onLogout: () => void;
+  onMarkBillingRead?: (id: string) => void;
+  onMarkAllBillingRead?: () => void;
   children: React.ReactNode;
 };
 
@@ -26,9 +31,13 @@ export function ClientPortalShell({
   messagesBadgeCount,
   quotesPendingCount,
   invoicesUnpaidCount,
+  billingHistory,
+  billingUnreadCount,
   onSectionChange,
   onNewRequest,
   onLogout,
+  onMarkBillingRead,
+  onMarkAllBillingRead,
   children,
 }: Props) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -67,10 +76,18 @@ export function ClientPortalShell({
           section={section}
           openTicketCount={openTicketCount}
           messagesBadgeCount={messagesBadgeCount}
+          quotesPendingCount={quotesPendingCount}
+          invoicesUnpaidCount={invoicesUnpaidCount}
+          billingHistory={billingHistory}
+          billingUnreadCount={billingUnreadCount}
           onMenuClick={() => setSidebarOpen(true)}
           onNewRequest={onNewRequest}
           onOpenSupport={() => handleSectionChange("support")}
           onOpenMessages={() => handleSectionChange("messages")}
+          onOpenQuotes={() => handleSectionChange("quotes")}
+          onOpenInvoices={() => handleSectionChange("invoices")}
+          onMarkBillingRead={onMarkBillingRead}
+          onMarkAllBillingRead={onMarkAllBillingRead}
         />
         <main className="flex-1 overflow-auto p-4 md:p-6 lg:p-8">{children}</main>
       </div>

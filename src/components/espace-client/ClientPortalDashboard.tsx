@@ -7,6 +7,7 @@ import { fetchDocuments, fetchDownloadUrl } from "@/lib/documents-api";
 import {
   getProjectStepsFromProgress,
   messagesFromTickets,
+  resolvePortalProjectSteps,
   ticketsToActivities,
 } from "@/lib/client-portal-utils";
 import { formatFcfaShort } from "@/lib/format";
@@ -47,7 +48,7 @@ export function ClientPortalDashboard({
   }, [profile.paidAmount, profile.totalAmount]);
 
   const remaining = Math.max(0, profile.totalAmount - profile.paidAmount);
-  const steps = projectSteps ?? getProjectStepsFromProgress(profile.progress);
+  const steps = resolvePortalProjectSteps(profile.progress, projectSteps ?? null);
   const activities = ticketsToActivities(tickets);
   const messages = messagesFromTickets(tickets, ticketMessages);
 

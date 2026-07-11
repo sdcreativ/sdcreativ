@@ -189,7 +189,8 @@ export async function listInvoicesForPortalClient(portalClientId: string): Promi
   return withDb(async (query) => {
     await syncOverdueInvoices(query);
     const { rows } = await query<InvoiceRow>(
-      `${listSelect}
+      `SELECT i.*, c.company AS client_name
+       FROM invoices i
        INNER JOIN clients c ON c.id = i.client_id
        WHERE c.portal_client_id = $1
          AND i.status <> 'draft'

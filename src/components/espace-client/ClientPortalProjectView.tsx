@@ -1,7 +1,7 @@
 import type { ClientProfileData } from "@/lib/client-portal-config";
 import { formatFcfaShort } from "@/lib/format";
 import type { ProjectStep } from "@/content/client-portal-types";
-import { getProjectStepsFromProgress } from "@/lib/client-portal-utils";
+import { resolvePortalProjectSteps } from "@/lib/client-portal-utils";
 import { cn } from "@/lib/utils";
 
 type Props = {
@@ -10,7 +10,7 @@ type Props = {
 };
 
 export function ClientPortalProjectView({ profile, projectSteps }: Props) {
-  const steps = projectSteps ?? getProjectStepsFromProgress(profile.progress);
+  const steps = resolvePortalProjectSteps(profile.progress, projectSteps ?? null);
 
   return (
     <div className="mx-auto max-w-3xl space-y-6">
