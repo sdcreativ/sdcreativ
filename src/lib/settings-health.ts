@@ -10,6 +10,7 @@ import { listClientPortalAccounts } from "@/lib/client-portal-config";
 import { isDatabaseConfigured, withDb } from "@/lib/db";
 import { isS3Configured } from "@/lib/s3";
 import { getStorageErrorMessage } from "@/lib/s3-errors";
+import { isCinetPayConfigured } from "@/lib/payment-settings";
 import { BOOKING } from "@/lib/constants";
 
 export type IntegrationHealth = {
@@ -243,6 +244,27 @@ function checkOpenAI(): IntegrationHealth {
   };
 }
 
+function checkCinetPay(): IntegrationHealth {
+  const envVars = ["CINETPAY_API_KEY", "CINETPAY_SITE_ID"];
+  if (!isCinetPayConfigured()) {
+    return {
+      id: "cinetpay",
+      name: "CinetPay (paiements)",
+      status: "missing",
+      detail: "Paiement en ligne désactivé",
+      hint: "Ajoutez CINETPAY_API_KEY et CINETPAY_SITE_ID pour activer le bouton « Payer en ligne ».",
+      envVars,
+    };
+  }
+  return {
+    id: "cinetpay",
+    name: "CinetPay (paiements)",
+    status: "ok",
+    detail: "Passerelle configurée (carte + Mobile Money CI)",
+    envVars,
+  };
+}
+
 function checkAnalytics(): IntegrationHealth {
   const envVars = ["NEXT_PUBLIC_GA_MEASUREMENT_ID"];
   if (!process.env.NEXT_PUBLIC_GA_MEASUREMENT_ID) {
@@ -277,6 +299,7 @@ export async function getSettingsHealth(session?: {
     s3,
     checkResend(),
     checkPortal(),
+    checkCinetPay(),
     checkBooking(),
     checkSanity(),
     checkOpenAI(),

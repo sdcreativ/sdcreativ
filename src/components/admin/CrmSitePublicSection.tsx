@@ -65,10 +65,65 @@ export function SitePublicSection() {
       <p className="flex items-start gap-2 rounded-xl border border-sky-200/80 bg-sky-50 px-4 py-3 text-sm text-sky-900">
         <Globe className="mt-0.5 h-4 w-4 shrink-0" aria-hidden />
         <span>
-          Ces informations apparaissent sur le footer, la page contact, les mentions légales et le
-          référencement (JSON-LD).
+          Ces informations apparaissent sur le footer, la page contact, les mentions légales, les
+          factures PDF et le référencement (JSON-LD).
         </span>
       </p>
+
+      <fieldset className="space-y-4">
+        <legend className="text-sm font-semibold text-foreground">Identité entreprise</legend>
+        <p className="text-xs text-gray-text">
+          Utilisée sur les factures et devis PDF (logo, raison sociale, slogan).
+        </p>
+        <div className="grid gap-3 sm:grid-cols-2">
+          <label className="block sm:col-span-2">
+            <span className="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-gray-text">
+              Raison sociale
+            </span>
+            <input
+              value={form.companyName}
+              onChange={(e) => updateField("companyName", e.target.value)}
+              className={fieldClass}
+              aria-label="Raison sociale"
+            />
+          </label>
+          <label className="block sm:col-span-2">
+            <span className="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-gray-text">
+              Slogan / activité
+            </span>
+            <input
+              value={form.tagline}
+              onChange={(e) => updateField("tagline", e.target.value)}
+              className={fieldClass}
+              placeholder="Agence Web & Solutions Digitales"
+              aria-label="Slogan"
+            />
+          </label>
+          <label className="block sm:col-span-2">
+            <span className="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-gray-text">
+              Logo (URL ou chemin)
+            </span>
+            <input
+              value={form.logoUrl}
+              onChange={(e) => updateField("logoUrl", e.target.value)}
+              className={fieldClass}
+              placeholder="/images/logo_sd.svg ou https://…"
+              aria-label="URL du logo"
+            />
+            {form.logoUrl.trim() && (
+              <div className="mt-3 flex items-center gap-3 rounded-xl border border-gray/30 bg-gray-light/30 p-3">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src={form.logoUrl.startsWith("/") ? form.logoUrl : form.logoUrl}
+                  alt="Aperçu logo"
+                  className="h-12 max-w-[160px] object-contain"
+                />
+                <span className="text-xs text-gray-text">Aperçu du logo facture</span>
+              </div>
+            )}
+          </label>
+        </div>
+      </fieldset>
 
       <fieldset className="space-y-4">
         <legend className="text-sm font-semibold text-foreground">Coordonnées</legend>

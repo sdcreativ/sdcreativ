@@ -9,6 +9,8 @@ import {
 import { getPortalInvoice } from "@/lib/billing/portal-access";
 import { createPresignedDownloadUrl, isS3Configured } from "@/lib/s3";
 import { INVOICE_STATUS_LABELS, formatInvoiceAmount } from "@/content/invoices-labels";
+import { buildPaymentInstructionsPayload } from "@/lib/payment-instructions";
+import { getPaymentSettings } from "@/lib/payment-settings";
 
 type RouteContext = { params: Promise<{ id: string }> };
 
@@ -40,6 +42,15 @@ export async function GET(_request: Request, context: RouteContext) {
     }
 
     const remaining = getInvoiceRemaining(invoice);
+    const paymentSettings = await getPaymentSettings();
+    const payment =
+      remaining > 0
+        ? buildPaymentInstructionsPayload({
+            settings: paymentSettings,
+            invoiceReference: invoice.reference,
+            amountDue: remaining,
+          })
+        : null;
 
     return NextResponse.json({
       invoice: {
@@ -63,6 +74,7 @@ export async function GET(_request: Request, context: RouteContext) {
         downloadUrl,
         formattedTotal: formatInvoiceAmount(invoice.total),
         formattedRemaining: formatInvoiceAmount(remaining),
+        payment,
       },
       documents: documents.map((d) => ({
         id: d.id,

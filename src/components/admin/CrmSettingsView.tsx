@@ -21,6 +21,7 @@ import {
 import { CrmRolesSection, PermissionsMatrix } from "@/components/admin/CrmRolesSection";
 import { CrmSecuritySection } from "@/components/admin/CrmSecuritySection";
 import { SitePublicSection } from "@/components/admin/CrmSitePublicSection";
+import { PaymentSettingsSection } from "@/components/admin/PaymentSettingsSection";
 import type { CrmUser } from "@/lib/crm-users";
 import { fetchPortalAccounts, fetchSettingsHealth } from "@/lib/settings-api";
 import type { CrmRoleRecord } from "@/lib/crm-roles-api";
@@ -28,6 +29,7 @@ import { cn } from "@/lib/utils";
 import {
   Calendar,
   CheckCircle2,
+  CreditCard,
   Database,
   Globe,
   LayoutGrid,
@@ -40,11 +42,12 @@ import {
   XCircle,
 } from "lucide-react";
 
-type SettingsTab = "overview" | "site" | "team" | "emails" | "security" | "appearance";
+type SettingsTab = "overview" | "site" | "payments" | "team" | "emails" | "security" | "appearance";
 
 const TABS: { id: SettingsTab; label: string; icon: typeof LayoutGrid }[] = [
   { id: "overview", label: "Vue d'ensemble", icon: LayoutGrid },
   { id: "site", label: "Site public", icon: Globe },
+  { id: "payments", label: "Paiements", icon: CreditCard },
   { id: "team", label: "Équipe", icon: Users },
   { id: "emails", label: "Emails", icon: Mail },
   { id: "security", label: "Sécurité", icon: Shield },
@@ -225,6 +228,16 @@ export function CrmSettingsView() {
               icon={<Globe className="h-5 w-5 text-emerald-600" aria-hidden />}
             >
               <SitePublicSection />
+            </Section>
+          )}
+
+          {tab === "payments" && (
+            <Section
+              title="Coordonnées de paiement"
+              description="Virement, Mobile Money et paiement en ligne CinetPay pour vos factures."
+              icon={<CreditCard className="h-5 w-5 text-primary" aria-hidden />}
+            >
+              <PaymentSettingsSection />
             </Section>
           )}
 

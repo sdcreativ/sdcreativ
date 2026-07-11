@@ -1,5 +1,8 @@
 import { buildInvoiceEmailHtml } from "@/lib/invoice-email";
 import { buildInvoicePdfHtml } from "@/lib/invoice-pdf";
+import { buildPaymentInstructionsHtml, buildPaymentInstructionsPayload } from "@/lib/payment-instructions";
+import { getPaymentSettings } from "@/lib/payment-settings";
+import { getInvoiceDocumentCompany } from "@/lib/billing/document-company";
 import { getClientById } from "@/lib/clients";
 import { portalNotificationPrefAllows } from "@/lib/client-portal-settings";
 import { sendEmail } from "@/lib/email";
@@ -122,6 +125,14 @@ export async function generateInvoiceFromQuote(input: {
   const html = buildInvoicePdfHtml(invoice, siteUrl, {
     forArchive: true,
     verification: await buildDocumentVerificationAssets("facture", invoice.reference),
+    company: await getInvoiceDocumentCompany(siteUrl),
+    paymentInstructionsHtml: buildPaymentInstructionsHtml(
+      buildPaymentInstructionsPayload({
+        settings: await getPaymentSettings(),
+        invoiceReference: invoice.reference,
+        amountDue: getInvoiceRemaining(invoice),
+      }),
+    ),
   });
   const rendered = await renderHtmlToDocument(html);
 
@@ -152,11 +163,22 @@ export async function generateInvoiceFromQuote(input: {
   const allowInvoiceEmail =
     !client || portalNotificationPrefAllows(client.metadata, "notifyInvoices");
   if (input.sendEmail !== false && allowInvoiceEmail) {
+    const remaining = getInvoiceRemaining(invoice);
+    const paymentPayload = buildPaymentInstructionsPayload({
+      settings: await getPaymentSettings(),
+      invoiceReference: invoice.reference,
+      amountDue: remaining,
+    });
     const body = buildInvoiceEmailBody(invoice, siteUrl, portalUrl);
     emailSent = await sendEmail({
       to: invoice.email,
       subject: `Votre facture ${invoice.reference} — SD CREATIV`,
-      html: buildInvoiceEmailHtml(invoice, siteUrl, body),
+      html: buildInvoiceEmailHtml(
+        invoice,
+        siteUrl,
+        body,
+        remaining > 0 ? buildPaymentInstructionsHtml(paymentPayload) : undefined,
+      ),
       replyTo: process.env.CONTACT_FROM_EMAIL ?? undefined,
     });
   }

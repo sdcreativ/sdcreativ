@@ -17,6 +17,15 @@ const optionalUrl = z
   });
 
 export const updateSitePublicSchema = z.object({
+  companyName: z.string().trim().min(1).max(120),
+  tagline: z.string().trim().max(200),
+  logoUrl: z
+    .string()
+    .trim()
+    .max(500)
+    .refine((v) => !v || v.startsWith("/") || z.string().url().safeParse(v).success, {
+      message: "URL ou chemin invalide",
+    }),
   phone: z.string().trim().min(3).max(40),
   email: z.string().trim().email().max(255),
   address: z.string().trim().min(2).max(300),
@@ -58,6 +67,9 @@ export const getSitePublicSettings = cache(async (): Promise<ResolvedSitePublic>
 export async function getSitePublicSettingsForAdmin(): Promise<SitePublicSettings> {
   const resolved = await getSitePublicSettings();
   return {
+    companyName: resolved.companyName,
+    tagline: resolved.tagline,
+    logoUrl: resolved.logoUrl,
     phone: resolved.contact.phone,
     email: resolved.contact.email,
     address: resolved.contact.address,

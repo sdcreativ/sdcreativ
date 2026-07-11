@@ -8,6 +8,8 @@ import {
 } from "@/lib/invoices";
 import { buildInvoicePaymentReminderHtml } from "@/lib/invoice-email";
 import { sendEmail } from "@/lib/email";
+import { buildPaymentInstructionsHtml, buildPaymentInstructionsPayload } from "@/lib/payment-instructions";
+import { getPaymentSettings } from "@/lib/payment-settings";
 import { listFiredReminderKeysForChannel, markRemindersFired } from "@/lib/crm-reminders";
 
 export const INVOICE_REMINDER_AFTER_DAYS = 3;
@@ -73,8 +75,17 @@ export async function sendInvoicePaymentReminder(
 ): Promise<boolean> {
   const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? "https://sdcreativ.com";
   const fromEmail = process.env.CONTACT_FROM_EMAIL ?? "contact@sdcreativ.com";
-  const html = buildInvoicePaymentReminderHtml(invoice, siteUrl);
   const remaining = getInvoiceRemaining(invoice);
+  const paymentPayload = buildPaymentInstructionsPayload({
+    settings: await getPaymentSettings(),
+    invoiceReference: invoice.reference,
+    amountDue: remaining,
+  });
+  const html = buildInvoicePaymentReminderHtml(
+    invoice,
+    siteUrl,
+    buildPaymentInstructionsHtml(paymentPayload),
+  );
 
   const sent = await sendEmail({
     to: invoice.email,

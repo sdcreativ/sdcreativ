@@ -666,6 +666,7 @@ async function ensureSchema(): Promise<void> {
     ALTER TABLE crm_settings ADD COLUMN IF NOT EXISTS site_page_heroes JSONB NOT NULL DEFAULT '{}';
     ALTER TABLE crm_settings ADD COLUMN IF NOT EXISTS site_solutions_ia JSONB NOT NULL DEFAULT '{}';
     ALTER TABLE crm_settings ADD COLUMN IF NOT EXISTS site_careers JSONB NOT NULL DEFAULT '{}';
+    ALTER TABLE crm_settings ADD COLUMN IF NOT EXISTS payment_settings JSONB NOT NULL DEFAULT '{}';
 
     CREATE TABLE IF NOT EXISTS public_services (
       id UUID PRIMARY KEY DEFAULT gen_random_uuid(),

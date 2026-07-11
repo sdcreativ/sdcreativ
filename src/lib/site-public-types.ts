@@ -1,5 +1,11 @@
 /** Valeurs brutes stockées en base (crm_settings.site_public). */
 export type SitePublicSettings = {
+  /** Raison sociale affichée sur factures et documents */
+  companyName: string;
+  /** Slogan / activité */
+  tagline: string;
+  /** Logo (URL absolue ou chemin /images/…) */
+  logoUrl: string;
   phone: string;
   email: string;
   address: string;
@@ -41,6 +47,9 @@ export type SiteLegalInfo = {
 };
 
 export type ResolvedSitePublic = {
+  companyName: string;
+  tagline: string;
+  logoUrl: string;
   contact: SiteContactInfo;
   social: SiteSocialLinks;
   legal: SiteLegalInfo;

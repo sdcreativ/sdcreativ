@@ -5,6 +5,7 @@ import type {
   SitePublicSettings,
   SiteSocialLinks,
 } from "@/lib/site-public-types";
+import { LOGO, SITE } from "@/lib/constants";
 
 function envOrDefault(name: string, fallback: string): string {
   const value = process.env[name];
@@ -16,6 +17,9 @@ export function getEnvSitePublicDefaults(): SitePublicSettings {
   const phoneDigits = phone.replace(/\D/g, "");
 
   return {
+    companyName: SITE.name,
+    tagline: SITE.tagline,
+    logoUrl: LOGO.src,
     phone,
     email: envOrDefault("NEXT_PUBLIC_CONTACT_EMAIL", "contact@sdcreativ.com"),
     address: envOrDefault("NEXT_PUBLIC_CONTACT_ADDRESS", "Abidjan, Côte d'Ivoire"),
@@ -81,6 +85,9 @@ export function resolveSitePublic(
   const merged: SitePublicSettings = hasStored ? { ...defaults, ...stored } : defaults;
 
   return {
+    companyName: merged.companyName,
+    tagline: merged.tagline,
+    logoUrl: merged.logoUrl,
     contact: buildContact(merged),
     social: buildSocial(merged),
     legal: buildLegal(merged),

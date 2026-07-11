@@ -4,7 +4,9 @@ import { z } from "zod";
 import { isDatabaseConfigured } from "@/lib/db";
 import { buildInvoiceEmailHtml } from "@/lib/invoice-email";
 import { sendEmail } from "@/lib/email";
-import { getInvoiceById, updateInvoice } from "@/lib/invoices";
+import { getInvoiceById, getInvoiceRemaining, updateInvoice } from "@/lib/invoices";
+import { buildPaymentInstructionsHtml, buildPaymentInstructionsPayload } from "@/lib/payment-instructions";
+import { getPaymentSettings } from "@/lib/payment-settings";
 
 type RouteContext = { params: Promise<{ id: string }> };
 
@@ -34,7 +36,21 @@ export async function POST(request: Request, context: RouteContext) {
 
     const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? "https://sdcreativ.com";
     const fromEmail = process.env.CONTACT_FROM_EMAIL ?? "contact@sdcreativ.com";
-    const html = buildInvoiceEmailHtml(invoice, siteUrl, parsed.data.body);
+    const remaining = getInvoiceRemaining(invoice);
+    const paymentPayload =
+      remaining > 0
+        ? buildPaymentInstructionsPayload({
+            settings: await getPaymentSettings(),
+            invoiceReference: invoice.reference,
+            amountDue: remaining,
+          })
+        : null;
+    const html = buildInvoiceEmailHtml(
+      invoice,
+      siteUrl,
+      parsed.data.body,
+      paymentPayload ? buildPaymentInstructionsHtml(paymentPayload) : undefined,
+    );
 
     const sent = await sendEmail({
       to: invoice.email,

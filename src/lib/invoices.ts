@@ -175,6 +175,21 @@ export async function getInvoiceById(id: string): Promise<Invoice | null> {
   });
 }
 
+export async function getInvoiceByCinetPayTransactionId(
+  transactionId: string,
+): Promise<Invoice | null> {
+  return withDb(async (query) => {
+    const { rows } = await query<InvoiceRow>(
+      `${listSelect}
+       WHERE i.metadata->'cinetpayPending'->>'transactionId' = $1
+          OR i.metadata->'cinetpayProcessedTransactions' @> to_jsonb(ARRAY[$1]::text[])
+       LIMIT 1`,
+      [transactionId],
+    );
+    return rows[0] ? mapInvoice(rows[0]) : null;
+  });
+}
+
 export async function getInvoiceByQuoteId(quoteId: string): Promise<Invoice | null> {
   return withDb(async (query) => {
     const { rows } = await query<InvoiceRow>(

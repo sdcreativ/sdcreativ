@@ -1,8 +1,11 @@
 import { crmApiAuth } from "@/lib/crm-api-auth";
 import { NextResponse } from "next/server";
 import { isDatabaseConfigured } from "@/lib/db";
-import { getInvoiceById } from "@/lib/invoices";
+import { getInvoiceById, getInvoiceRemaining } from "@/lib/invoices";
 import { buildInvoicePdfHtml } from "@/lib/invoice-pdf";
+import { buildPaymentInstructionsHtml, buildPaymentInstructionsPayload } from "@/lib/payment-instructions";
+import { getPaymentSettings } from "@/lib/payment-settings";
+import { getInvoiceDocumentCompany } from "@/lib/billing/document-company";
 
 type RouteContext = { params: Promise<{ id: string }> };
 
@@ -22,7 +25,21 @@ export async function GET(_request: Request, context: RouteContext) {
     }
 
     const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? "https://sdcreativ.com";
-    const html = buildInvoicePdfHtml(invoice, siteUrl);
+    const remaining = getInvoiceRemaining(invoice);
+    const paymentPayload =
+      remaining > 0
+        ? buildPaymentInstructionsPayload({
+            settings: await getPaymentSettings(),
+            invoiceReference: invoice.reference,
+            amountDue: remaining,
+          })
+        : null;
+    const html = buildInvoicePdfHtml(invoice, siteUrl, {
+      company: await getInvoiceDocumentCompany(siteUrl),
+      paymentInstructionsHtml: paymentPayload
+        ? buildPaymentInstructionsHtml(paymentPayload)
+        : undefined,
+    });
 
     return new NextResponse(html, {
       headers: {
