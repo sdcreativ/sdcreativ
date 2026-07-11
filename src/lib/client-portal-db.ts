@@ -1,3 +1,4 @@
+import type { ProjectStep } from "@/content/client-portal-types";
 import type { ProjectStatus } from "@/content/projects-labels";
 import {
   PROJECT_TYPE_LABELS,
@@ -15,11 +16,11 @@ import {
   type Project,
   type ProjectMilestone,
 } from "@/lib/projects";
-import type { ProjectStep } from "@/content/client-portal-types";
 import {
   buildPortalPaymentsPayload,
   type PortalPaymentsPayload,
 } from "@/lib/client-portal-payments";
+import type { PortalProjectPayload } from "@/lib/client-portal-project";
 import {
   alignProjectDisplay,
   computeProgressFromMilestones,
@@ -33,25 +34,7 @@ export type PortalCrmContext = {
   milestones: ProjectMilestone[];
 };
 
-export type PortalProjectPayload = {
-  linked: boolean;
-  crmClientId: string | null;
-  crmProjectId: string | null;
-  project: {
-    id: string;
-    name: string;
-    type: string;
-    typeLabel: string;
-    status: ProjectStatus;
-    statusLabel: string;
-    progress: number;
-    startDate: string | null;
-    dueDate: string | null;
-    budget: number | null;
-    description: string | null;
-  } | null;
-  milestones: ProjectStep[];
-};
+export type { PortalProjectPayload } from "@/lib/client-portal-project";
 
 const PORTAL_STATUS_LABELS: Record<ProjectStatus, string> = {
   discovery: "EN DÉCOUVERTE",
@@ -221,33 +204,6 @@ export async function loadPortalProjectPayload(
       description: project.description,
     },
     milestones: displaySteps,
-  };
-}
-
-/** Fusionne les données projet API dans le profil affiché (dashboard). */
-export function applyPortalProjectToProfile(
-  profile: ClientProfileData,
-  payload: PortalProjectPayload,
-): ClientProfileData {
-  const next: ClientProfileData = {
-    ...profile,
-    linkedToCrm: payload.linked || profile.linkedToCrm,
-    crmClientId: payload.crmClientId ?? profile.crmClientId,
-    crmProjectId: payload.crmProjectId ?? profile.crmProjectId,
-  };
-
-  if (!payload.project) return next;
-
-  return {
-    ...next,
-    linkedToCrm: true,
-    projectTitle: payload.project.name,
-    projectType: payload.project.typeLabel,
-    projectStatus: payload.project.statusLabel,
-    progress: payload.project.progress,
-    startDate: formatProjectDate(payload.project.startDate),
-    endDate: formatProjectDate(payload.project.dueDate),
-    totalAmount: payload.project.budget ?? profile.totalAmount,
   };
 }
 

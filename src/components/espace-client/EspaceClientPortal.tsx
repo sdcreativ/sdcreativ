@@ -26,7 +26,7 @@ import {
 import {
   applyPortalProjectToProfile,
   type PortalProjectPayload,
-} from "@/lib/client-portal-db";
+} from "@/lib/client-portal-project";
 import { countMessagesAttention, countOpenTickets } from "@/lib/client-portal-utils";
 import type { Ticket } from "@/lib/tickets";
 
