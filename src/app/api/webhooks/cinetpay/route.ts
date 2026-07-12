@@ -85,6 +85,18 @@ export async function POST(request: Request) {
       });
     }
 
+    if (updated.status === "paid" && invoice.status !== "paid") {
+      void import("@/lib/crm-webhooks").then(({ dispatchCrmWebhook }) =>
+        dispatchCrmWebhook("invoice.paid", {
+          invoiceId: updated.id,
+          reference: updated.reference,
+          amount: updated.total,
+          paidAmount: updated.paidAmount,
+          currency: updated.currency,
+        }),
+      );
+    }
+
     return NextResponse.json({ ok: true, invoiceId: invoice.id });
   } catch (error) {
     console.error("[api/webhooks/cinetpay] POST", error);

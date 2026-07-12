@@ -43,10 +43,24 @@ export async function PATCH(request: Request, context: RouteContext) {
       return NextResponse.json({ error: firstError }, { status: 400 });
     }
 
+    const before = await getInvoiceById(id);
     const invoice = await updateInvoice(id, parsed.data);
     if (!invoice) {
       return NextResponse.json({ error: "Facture introuvable." }, { status: 404 });
     }
+
+    if (before && invoice.status === "paid" && before.status !== "paid") {
+      void import("@/lib/crm-webhooks").then(({ dispatchCrmWebhook }) =>
+        dispatchCrmWebhook("invoice.paid", {
+          invoiceId: invoice.id,
+          reference: invoice.reference,
+          amount: invoice.total,
+          paidAmount: invoice.paidAmount,
+          currency: invoice.currency,
+        }),
+      );
+    }
+
     return NextResponse.json({ invoice });
   } catch (error) {
     console.error("[api/admin/invoices/[id]] PATCH", error);

@@ -156,6 +156,42 @@ export function CrmSecuritySection() {
             />
             SLA ticket dépassé
           </label>
+          <label className="flex items-center gap-2">
+            <input
+              type="checkbox"
+              checked={security.webhooks.notifyQuoteSigned}
+              onChange={(e) => {
+                const webhooks = { ...security.webhooks, notifyQuoteSigned: e.target.checked };
+                setSecurity({ ...security, webhooks });
+                void save({ webhooks });
+              }}
+            />
+            Devis signé
+          </label>
+          <label className="flex items-center gap-2">
+            <input
+              type="checkbox"
+              checked={security.webhooks.notifyInvoicePaid}
+              onChange={(e) => {
+                const webhooks = { ...security.webhooks, notifyInvoicePaid: e.target.checked };
+                setSecurity({ ...security, webhooks });
+                void save({ webhooks });
+              }}
+            />
+            Facture payée
+          </label>
+          <label className="flex items-center gap-2">
+            <input
+              type="checkbox"
+              checked={security.webhooks.notifyClientCreated}
+              onChange={(e) => {
+                const webhooks = { ...security.webhooks, notifyClientCreated: e.target.checked };
+                setSecurity({ ...security, webhooks });
+                void save({ webhooks });
+              }}
+            />
+            Nouveau client
+          </label>
         </div>
       </div>
 

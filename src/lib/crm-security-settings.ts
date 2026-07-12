@@ -9,6 +9,9 @@ export type CrmSecuritySettings = {
     discordUrl: string;
     notifyLeadCreated: boolean;
     notifyTicketSla: boolean;
+    notifyQuoteSigned: boolean;
+    notifyInvoicePaid: boolean;
+    notifyClientCreated: boolean;
   };
 };
 
@@ -20,6 +23,9 @@ export const DEFAULT_CRM_SECURITY: CrmSecuritySettings = {
     discordUrl: "",
     notifyLeadCreated: true,
     notifyTicketSla: true,
+    notifyQuoteSigned: true,
+    notifyInvoicePaid: true,
+    notifyClientCreated: true,
   },
 };
 
@@ -32,6 +38,9 @@ const securitySchema = z.object({
       discordUrl: z.string().trim().max(500).optional(),
       notifyLeadCreated: z.boolean().optional(),
       notifyTicketSla: z.boolean().optional(),
+      notifyQuoteSigned: z.boolean().optional(),
+      notifyInvoicePaid: z.boolean().optional(),
+      notifyClientCreated: z.boolean().optional(),
     })
     .optional(),
 });

@@ -55,12 +55,36 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Poste invalide." }, { status: 400 });
     }
 
+    const jobLabel = await getJobLabel(data.jobId);
+
+    if (process.env.DATABASE_URL) {
+      try {
+        const { createCareerApplication } = await import("@/lib/career-applications");
+        await createCareerApplication({
+          jobId: data.jobId,
+          jobLabel,
+          name: data.name,
+          email: data.email,
+          phone: data.phone,
+          city: data.city,
+          experience: data.experience,
+          availability: data.availability,
+          hasVehicle: data.hasVehicle,
+          linkedin: data.linkedin,
+          cvLink: data.cvLink,
+          motivation: data.motivation,
+        });
+      } catch (dbError) {
+        console.error("[api/carriere] persist application", dbError);
+      }
+    }
+
     const sent = await sendEmail({
       replyTo: data.email,
-      subject: `[SD CREATIV] Candidature — ${await getJobLabel(data.jobId)} — ${data.name}`,
+      subject: `[SD CREATIV] Candidature — ${jobLabel} — ${data.name}`,
       html: `
         <h2>Nouvelle candidature</h2>
-        ${htmlRow("Poste", await getJobLabel(data.jobId))}
+        ${htmlRow("Poste", jobLabel)}
         ${htmlRow("Nom", data.name)}
         ${htmlRow("Email", data.email)}
         ${htmlRow("Téléphone", data.phone)}

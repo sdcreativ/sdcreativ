@@ -2,6 +2,7 @@ import type { Quote } from "@/lib/quotes";
 import { getQuoteById, listQuotesFiltered, updateQuote } from "@/lib/quotes";
 import { buildQuoteReminderEmailHtml } from "@/lib/quote-email";
 import { sendEmail } from "@/lib/email";
+import { isWhatsAppConfigured, sendWhatsApp } from "@/lib/whatsapp";
 import { markRemindersFired, listFiredReminderKeysForChannel } from "@/lib/crm-reminders";
 import { createTask } from "@/lib/tasks";
 import { buildQuoteFollowUpDescription, buildTaskTitle } from "@/content/tasks-labels";
@@ -77,6 +78,13 @@ export async function sendQuoteAutoReminder(
   });
 
   if (!sent) return false;
+
+  if (isWhatsAppConfigured() && quote.phone) {
+    await sendWhatsApp(
+      quote.phone,
+      `Bonjour ${quote.name}, rappel : votre devis ${quote.reference} SD CREATIV est en attente. Répondez à cet email ou contactez-nous.`,
+    );
+  }
 
   await updateQuote(quote.id, {
     status: "follow_up",

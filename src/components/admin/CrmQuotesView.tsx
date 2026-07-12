@@ -40,6 +40,8 @@ import {
 } from "@/components/admin/QuoteComposerFields";
 import { createComposerLine } from "@/lib/quote-composer";
 import type { QuoteComposerLine } from "@/lib/quote-composer";
+import { CURRENCY_LABELS, SUPPORTED_CURRENCIES } from "@/lib/currencies";
+import type { LegalEntity } from "@/lib/legal-entities";
 import { KanbanDropColumn, KANBAN_DRAG_MIME } from "@/lib/kanban-dnd";
 import { cn } from "@/lib/utils";
 import { useDialog } from "@/components/ui/DialogProvider";
@@ -970,6 +972,14 @@ function CreateQuoteModal({
   const [error, setError] = useState("");
   const [selectedClientId, setSelectedClientId] = useState("");
   const [composerLines, setComposerLines] = useState<QuoteComposerLine[]>([createComposerLine()]);
+  const [legalEntities, setLegalEntities] = useState<LegalEntity[]>([]);
+
+  useEffect(() => {
+    void fetch("/api/admin/legal-entities", { credentials: "include" })
+      .then((res) => (res.ok ? res.json() : { entities: [] }))
+      .then((json: { entities: LegalEntity[] }) => setLegalEntities(json.entities ?? []))
+      .catch(() => setLegalEntities([]));
+  }, []);
 
   const selectedClient = clients.find((c) => c.id === selectedClientId);
   const subtotal = getComposerSubtotal(composerLines);
@@ -999,6 +1009,8 @@ function CreateQuoteModal({
         subtotal,
         status: String(data.get("status") || "sent"),
         notes: String(data.get("notes") || "") || null,
+        currency: String(data.get("currency") || "XOF"),
+        legalEntityId: String(data.get("legalEntityId") || "") || null,
       });
       onCreated(quote);
     } catch (err) {
@@ -1083,6 +1095,23 @@ function CreateQuoteModal({
               <option value="draft">Brouillon</option>
               <option value="sent">Envoyé</option>
             </select>
+            <select name="currency" defaultValue="XOF" className={fieldClass} aria-label="Devise">
+              {SUPPORTED_CURRENCIES.map((code) => (
+                <option key={code} value={code}>
+                  {CURRENCY_LABELS[code]}
+                </option>
+              ))}
+            </select>
+            {legalEntities.length > 0 && (
+              <select name="legalEntityId" className={`${fieldClass} sm:col-span-2`} aria-label="Entité juridique">
+                <option value="">Entité par défaut</option>
+                {legalEntities.map((entity) => (
+                  <option key={entity.id} value={entity.id}>
+                    {entity.name} ({CURRENCY_LABELS[entity.currency]})
+                  </option>
+                ))}
+              </select>
+            )}
           </div>
 
           <div className="mt-5">

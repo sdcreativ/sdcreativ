@@ -18,6 +18,7 @@ import {
   Settings,
   Target,
   Tablet,
+  UserCog,
   Users,
 } from "lucide-react";
 
@@ -42,6 +43,7 @@ export const crmNavItems: CrmNavItem[] = [
   { id: "invoices", label: "Factures", href: "/admin/crm/factures", icon: Receipt, ready: true },
   { id: "inbox", label: "Inbox", href: "/admin/crm/inbox", icon: Inbox, ready: true },
   { id: "timesheets", label: "Temps", href: "/admin/crm/temps", icon: Clock, ready: true },
+  { id: "vendors", label: "Prestataires", href: "/admin/crm/prestataires", icon: UserCog, ready: true },
   { id: "documents", label: "Documents", href: "/admin/crm/documents", icon: FileText, ready: true },
   { id: "tasks", label: "Tâches", href: "/admin/crm/taches", icon: CheckSquare, ready: true },
   { id: "tickets", label: "Tickets support", href: "/admin/crm/tickets", icon: LifeBuoy, ready: true },

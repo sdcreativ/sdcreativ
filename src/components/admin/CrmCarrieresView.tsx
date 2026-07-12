@@ -26,7 +26,7 @@ import {
   updateJobOfferApi,
 } from "@/lib/public-job-offers-api";
 import { slugifyJobTitle } from "@/lib/public-slug-utils";
-import { useDialog } from "@/components/ui/DialogProvider";
+import { CrmCareerApplicationsPanel } from "@/components/admin/CrmCareerApplicationsPanel";
 import { cn } from "@/lib/utils";
 import {
   CrmFormActions,
@@ -191,6 +191,11 @@ export function CrmCarrieresView() {
       />
 
       <CrmFormStatus message={message} />
+
+      <section className="rounded-2xl border border-gray/30 bg-white p-5 shadow-sm">
+        <h2 className="text-lg font-bold mb-4">Candidatures reçues</h2>
+        <CrmCareerApplicationsPanel />
+      </section>
 
       <form id="crm-carrieres-form" onSubmit={(e) => void handleSaveAll(e)} className="max-w-5xl space-y-6">
         <CrmFormSection title="Avantages employeur" description="Liste affichée sur la page carrières pour attirer les candidats.">

@@ -32,6 +32,7 @@ export type Invoice = {
   paidAt: string | null;
   notes: string | null;
   metadata: Record<string, unknown>;
+  currency: string;
   createdAt: string;
   updatedAt: string;
 };
@@ -58,6 +59,7 @@ type InvoiceRow = {
   paid_at: Date | null;
   notes: string | null;
   metadata: Record<string, unknown> | null;
+  currency?: string | null;
   created_at: Date;
   updated_at: Date;
 };
@@ -85,6 +87,7 @@ function mapInvoice(row: InvoiceRow): Invoice {
     paidAt: row.paid_at?.toISOString() ?? null,
     notes: row.notes,
     metadata: row.metadata ?? {},
+    currency: row.currency ?? "XOF",
     createdAt: row.created_at.toISOString(),
     updatedAt: row.updated_at.toISOString(),
   };
@@ -124,6 +127,7 @@ export const createInvoiceSchema = z.object({
   status: z.enum(INVOICE_STATUSES).default("draft"),
   dueDate: z.string().trim().optional().nullable(),
   notes: z.string().trim().max(5000).optional().nullable(),
+  currency: z.string().length(3).optional(),
 });
 
 export const updateInvoiceSchema = z.object({
@@ -277,8 +281,8 @@ export async function createInvoice(input: z.infer<typeof createInvoiceSchema>):
     const { rows } = await query<{ id: string }>(
       `INSERT INTO invoices (
         reference, client_id, project_id, quote_id, name, email, company,
-        lines, subtotal, tva_rate, tva_amount, total, status, due_date, sent_at, notes
-      ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16)
+        lines, subtotal, tva_rate, tva_amount, total, status, due_date, sent_at, notes, currency
+      ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17)
       RETURNING id`,
       [
         reference,
@@ -297,6 +301,7 @@ export async function createInvoice(input: z.infer<typeof createInvoiceSchema>):
         input.dueDate ?? null,
         sentAt,
         input.notes ?? null,
+        input.currency ?? "XOF",
       ],
     );
     const id = rows[0]!.id;
@@ -412,6 +417,7 @@ export async function createInvoiceFromQuote(quoteId: string): Promise<Invoice |
     tvaRate: 18,
     status: "draft",
     dueDate: new Date(Date.now() + 30 * 86_400_000).toISOString().slice(0, 10),
+    currency: quote.currency,
   });
 }
 

@@ -119,6 +119,7 @@ export async function generateInvoiceFromQuote(input: {
     tvaRate: 18,
     status: "sent",
     dueDate: new Date(Date.now() + 30 * 86_400_000).toISOString().slice(0, 10),
+    currency: quote.currency,
   });
 
   const html = buildInvoicePdfHtml(invoice, siteUrl, {

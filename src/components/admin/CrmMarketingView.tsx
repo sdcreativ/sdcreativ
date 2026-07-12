@@ -10,7 +10,7 @@ import {
   patchNewsletterSubscriberApi,
 } from "@/lib/marketing-api";
 import { useDialog } from "@/components/ui/DialogProvider";
-import { cn } from "@/lib/utils";
+import { CrmMarketingSequencesPanel } from "@/components/admin/CrmMarketingSequencesPanel";
 
 const INTEREST_LABELS: Record<string, string> = {
   "espace-client": "Espace client",
@@ -18,7 +18,7 @@ const INTEREST_LABELS: Record<string, string> = {
   general: "Intérêt général",
 };
 
-type Tab = "newsletter" | "waitlist";
+type Tab = "newsletter" | "waitlist" | "sequences";
 
 export function CrmMarketingView() {
   const [tab, setTab] = useState<Tab>("newsletter");
@@ -71,6 +71,7 @@ export function CrmMarketingView() {
           [
             { id: "newsletter" as const, label: "Newsletter", icon: Mail },
             { id: "waitlist" as const, label: "Waitlist", icon: UserPlus },
+            { id: "sequences" as const, label: "Séquences", icon: Mail },
           ] as const
         ).map(({ id, label, icon: Icon }) => (
           <button
@@ -155,6 +156,8 @@ export function CrmMarketingView() {
             ))}
           </ul>
         )
+      ) : tab === "sequences" ? (
+        <CrmMarketingSequencesPanel />
       ) : waitlist.length === 0 ? (
         <EmptyState>Aucune inscription waitlist.</EmptyState>
       ) : (

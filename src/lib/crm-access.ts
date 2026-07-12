@@ -17,6 +17,7 @@ export const CRM_NAV_PERMISSIONS: Record<string, CrmPermission | CrmPermission[]
   invoices: "invoices.read",
   inbox: "tickets.read",
   timesheets: "projects.read",
+  vendors: "projects.read",
   documents: "documents.read",
   tasks: "tasks.read",
   tickets: "tickets.read",

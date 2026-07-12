@@ -23,6 +23,8 @@ import { CrmSecuritySection } from "@/components/admin/CrmSecuritySection";
 import { SitePublicSection } from "@/components/admin/CrmSitePublicSection";
 import { PaymentSettingsSection } from "@/components/admin/PaymentSettingsSection";
 import { CrmOperationsSettingsSection } from "@/components/admin/CrmOperationsSettingsSection";
+import { CrmApiKeysSection } from "@/components/admin/CrmApiKeysSection";
+import { CrmLegalEntitiesSection } from "@/components/admin/CrmLegalEntitiesSection";
 import type { CrmUser } from "@/lib/crm-users";
 import { fetchPortalAccounts, fetchSettingsHealth } from "@/lib/settings-api";
 import type { CrmRoleRecord } from "@/lib/crm-roles-api";
@@ -356,13 +358,29 @@ export function CrmSettingsView() {
           )}
 
           {tab === "operations" && (
-            <Section
-              title="Rapports planifiés"
-              description="Destinataires, fréquence et KPIs envoyés automatiquement par email."
-              icon={<BarChart3 className="h-5 w-5 text-primary" aria-hidden />}
-            >
-              <CrmOperationsSettingsSection />
-            </Section>
+            <div className="space-y-6">
+              <Section
+                title="Rapports planifiés"
+                description="Destinataires, fréquence et KPIs envoyés automatiquement par email."
+                icon={<BarChart3 className="h-5 w-5 text-primary" aria-hidden />}
+              >
+                <CrmOperationsSettingsSection />
+              </Section>
+              <Section
+                title="Clés API publiques"
+                description="Intégrations Zapier, Make et outils comptables externes."
+                icon={<Shield className="h-5 w-5 text-primary" aria-hidden />}
+              >
+                <CrmApiKeysSection />
+              </Section>
+              <Section
+                title="Multi-entités"
+                description="Structures juridiques et devises par défaut pour la facturation."
+                icon={<Globe className="h-5 w-5 text-primary" aria-hidden />}
+              >
+                <CrmLegalEntitiesSection />
+              </Section>
+            </div>
           )}
 
           {tab === "appearance" && (

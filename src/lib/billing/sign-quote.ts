@@ -124,5 +124,14 @@ export async function signPortalQuote(input: SignPortalQuoteInput): Promise<Quot
     entityType: "quote",
     entityId: updated.id,
   });
+  void import("@/lib/crm-webhooks").then(({ dispatchCrmWebhook }) =>
+    dispatchCrmWebhook("quote.signed", {
+      quoteId: updated.id,
+      reference: updated.reference,
+      clientName: updated.name,
+      amount: updated.subtotal,
+      currency: updated.currency,
+    }),
+  );
   return updated;
 }

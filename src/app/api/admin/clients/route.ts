@@ -79,6 +79,14 @@ export async function POST(request: Request) {
     }
 
     const client = await createClient(parsed.data);
+    void import("@/lib/crm-webhooks").then(({ dispatchCrmWebhook }) =>
+      dispatchCrmWebhook("client.created", {
+        clientId: client.id,
+        name: client.name,
+        email: client.email,
+        company: client.company,
+      }),
+    );
     return NextResponse.json({ client }, { status: 201 });
   } catch (error) {
     console.error("[api/admin/clients] POST", error);

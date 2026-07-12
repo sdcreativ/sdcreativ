@@ -23,6 +23,7 @@ import {
 } from "@/lib/invoices-api";
 import { fetchProjects } from "@/lib/projects-api";
 import type { Project } from "@/lib/projects";
+import { CURRENCY_LABELS, SUPPORTED_CURRENCIES } from "@/lib/currencies";
 import { fetchQuotes } from "@/lib/quotes-api";
 import type { Quote } from "@/lib/quotes";
 import { InvoiceEmailComposer } from "@/components/admin/InvoiceEmailComposer";
@@ -548,6 +549,7 @@ function CreateInvoiceModal({
         tvaRate,
         status: String(data.get("status") || "draft"),
         dueDate: String(data.get("dueDate") || "") || null,
+        currency: String(data.get("currency") || "XOF"),
       });
       onCreated(invoice);
     } catch (err) {
@@ -630,8 +632,18 @@ function CreateInvoiceModal({
             <input name="lineLabel" defaultValue="Prestation" placeholder="Libellé" className={fieldClass} aria-label="Libellé de la ligne" />
           </label>
           <label className="block">
-            <span className="mb-1 block text-xs font-medium text-gray-text">Montant HT (FCFA) *</span>
-            <input name="subtotal" type="number" min={0} required placeholder="Montant HT" className={fieldClass} aria-label="Montant HT en FCFA" />
+            <span className="mb-1 block text-xs font-medium text-gray-text">Montant HT *</span>
+            <input name="subtotal" type="number" min={0} required placeholder="Montant HT" className={fieldClass} aria-label="Montant HT" />
+          </label>
+          <label className="block">
+            <span className="mb-1 block text-xs font-medium text-gray-text">Devise</span>
+            <select name="currency" defaultValue="XOF" className={fieldClass} aria-label="Devise">
+              {SUPPORTED_CURRENCIES.map((code) => (
+                <option key={code} value={code}>
+                  {CURRENCY_LABELS[code]}
+                </option>
+              ))}
+            </select>
           </label>
           <label className="block">
             <span className="mb-1 block text-xs font-medium text-gray-text">TVA (%)</span>

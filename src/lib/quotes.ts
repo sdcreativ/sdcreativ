@@ -38,6 +38,8 @@ export type Quote = {
   rejectedBy: string | null;
   notes: string | null;
   metadata: Record<string, unknown>;
+  currency: string;
+  legalEntityId: string | null;
   createdAt: string;
   updatedAt: string;
 };
@@ -74,6 +76,8 @@ type QuoteRow = {
   rejected_by: string | null;
   notes: string | null;
   metadata: Record<string, unknown> | null;
+  currency?: string | null;
+  legal_entity_id?: string | null;
   created_at: Date;
   updated_at: Date;
 };
@@ -126,6 +130,8 @@ function mapQuote(row: QuoteRow): Quote {
     rejectedBy: row.rejected_by,
     notes: row.notes,
     metadata: row.metadata ?? {},
+    currency: row.currency ?? "XOF",
+    legalEntityId: row.legal_entity_id ?? null,
     createdAt: row.created_at.toISOString(),
     updatedAt: row.updated_at.toISOString(),
   };
@@ -163,6 +169,8 @@ export const createQuoteSchema = z.object({
   clientId: z.string().uuid().optional().nullable(),
   notes: z.string().trim().max(5000).optional().nullable(),
   metadata: z.record(z.string(), z.unknown()).optional(),
+  currency: z.string().length(3).optional(),
+  legalEntityId: z.string().uuid().optional().nullable(),
 });
 
 export const updateQuoteSchema = z.object({
@@ -171,6 +179,8 @@ export const updateQuoteSchema = z.object({
   notes: z.string().trim().max(5000).optional().nullable(),
   clientId: z.string().uuid().optional().nullable(),
   metadata: z.record(z.string(), z.unknown()).optional(),
+  currency: z.string().length(3).optional(),
+  legalEntityId: z.string().uuid().optional().nullable(),
 });
 
 type DbQuery = (
@@ -357,8 +367,8 @@ export async function createQuote(
         reference, lead_id, client_id, name, email, phone, company,
         project_type_id, project_label, page_tier_id, addon_ids, lines,
         subtotal, estimate_min, estimate_max, budget, timeline, message,
-        status, sent_at, notes, metadata
-      ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21,$22)
+        status, sent_at, notes, metadata, currency, legal_entity_id
+      ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21,$22,$23,$24)
       RETURNING *`,
       [
         reference,
@@ -383,6 +393,8 @@ export async function createQuote(
         sentAt,
         input.notes ?? null,
         JSON.stringify(input.metadata ?? {}),
+        input.currency ?? "XOF",
+        input.legalEntityId ?? null,
       ],
     );
 
@@ -423,6 +435,8 @@ export async function updateQuote(
         client_id = $5,
         sent_at = $6,
         metadata = $7::jsonb,
+        currency = $8,
+        legal_entity_id = $9,
         updated_at = NOW()
       WHERE id = $1
       RETURNING *`,
@@ -434,6 +448,8 @@ export async function updateQuote(
         input.clientId !== undefined ? input.clientId : existing.client_id,
         sentAt,
         JSON.stringify(mergedMetadata),
+        input.currency ?? existing.currency ?? "XOF",
+        input.legalEntityId !== undefined ? input.legalEntityId : existing.legal_entity_id,
       ],
     );
 

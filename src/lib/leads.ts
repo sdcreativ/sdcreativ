@@ -163,6 +163,11 @@ export async function createLead(input: CreateLeadInput): Promise<Lead | null> {
         content: `Lead créé — source : ${LEAD_SOURCE_LABELS[lead.source]}`,
         actorName: input.actorName ?? null,
       }).catch((err) => console.error("[leads] createLead activity failed:", err));
+      void import("@/lib/marketing-sequences").then(({ enrollLeadInActiveSequences }) =>
+        enrollLeadInActiveSequences(lead.id, lead.status).catch((err) =>
+          console.error("[leads] sequence enrollment failed:", err),
+        ),
+      );
       return lead;
     });
   } catch (error) {

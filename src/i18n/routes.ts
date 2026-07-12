@@ -5,6 +5,11 @@ export const LOCALE_ROUTE_PAIRS = [
   { fr: "/tarifs", en: "/en/pricing" },
   { fr: "/a-propos", en: "/en/about" },
   { fr: "/contact", en: "/en/contact" },
+  { fr: "/realisations", en: "/en/portfolio" },
+  { fr: "/carrieres", en: "/en/careers" },
+  { fr: "/maintenance", en: "/en/maintenance" },
+  { fr: "/mentions-legales", en: "/en/legal" },
+  { fr: "/blog", en: "/en/blog" },
 ] as const;
 
 export function normalizePath(path: string): string {

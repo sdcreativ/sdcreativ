@@ -930,6 +930,114 @@ async function ensureSchema(): Promise<void> {
 
     ALTER TABLE crm_settings ADD COLUMN IF NOT EXISTS operations JSONB NOT NULL DEFAULT '{}';
 
+    ALTER TABLE quotes ADD COLUMN IF NOT EXISTS currency VARCHAR(3) NOT NULL DEFAULT 'XOF';
+    ALTER TABLE invoices ADD COLUMN IF NOT EXISTS currency VARCHAR(3) NOT NULL DEFAULT 'XOF';
+    ALTER TABLE quotes ADD COLUMN IF NOT EXISTS legal_entity_id UUID;
+    ALTER TABLE invoices ADD COLUMN IF NOT EXISTS legal_entity_id UUID;
+
+    CREATE TABLE IF NOT EXISTS legal_entities (
+      id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+      name VARCHAR(160) NOT NULL,
+      slug VARCHAR(80) NOT NULL UNIQUE,
+      currency VARCHAR(3) NOT NULL DEFAULT 'XOF',
+      address TEXT,
+      metadata JSONB NOT NULL DEFAULT '{}',
+      created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    );
+
+    CREATE TABLE IF NOT EXISTS marketing_sequences (
+      id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+      name VARCHAR(120) NOT NULL,
+      trigger_status VARCHAR(30) NOT NULL DEFAULT 'new',
+      is_active BOOLEAN NOT NULL DEFAULT true,
+      created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    );
+
+    CREATE TABLE IF NOT EXISTS marketing_sequence_steps (
+      id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+      sequence_id UUID NOT NULL REFERENCES marketing_sequences(id) ON DELETE CASCADE,
+      delay_days INTEGER NOT NULL DEFAULT 0,
+      subject VARCHAR(200) NOT NULL,
+      html_body TEXT NOT NULL,
+      sort_order INTEGER NOT NULL DEFAULT 0
+    );
+    CREATE INDEX IF NOT EXISTS idx_marketing_sequence_steps_seq ON marketing_sequence_steps (sequence_id, sort_order);
+
+    CREATE TABLE IF NOT EXISTS lead_sequence_enrollments (
+      id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+      lead_id UUID NOT NULL REFERENCES leads(id) ON DELETE CASCADE,
+      sequence_id UUID NOT NULL REFERENCES marketing_sequences(id) ON DELETE CASCADE,
+      current_step INTEGER NOT NULL DEFAULT 0,
+      enrolled_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+      last_sent_at TIMESTAMPTZ,
+      completed_at TIMESTAMPTZ,
+      metadata JSONB NOT NULL DEFAULT '{}',
+      UNIQUE (lead_id, sequence_id)
+    );
+    CREATE INDEX IF NOT EXISTS idx_lead_sequence_enrollments_active ON lead_sequence_enrollments (sequence_id, current_step);
+
+    CREATE TABLE IF NOT EXISTS crm_vendors (
+      id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+      name VARCHAR(160) NOT NULL,
+      email VARCHAR(255),
+      phone VARCHAR(32),
+      specialty VARCHAR(120),
+      hourly_rate INTEGER,
+      currency VARCHAR(3) NOT NULL DEFAULT 'XOF',
+      notes TEXT,
+      metadata JSONB NOT NULL DEFAULT '{}',
+      created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+      updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    );
+
+    CREATE TABLE IF NOT EXISTS vendor_purchase_orders (
+      id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+      reference VARCHAR(24) NOT NULL UNIQUE,
+      vendor_id UUID NOT NULL REFERENCES crm_vendors(id) ON DELETE CASCADE,
+      project_id UUID REFERENCES projects(id) ON DELETE SET NULL,
+      amount INTEGER NOT NULL DEFAULT 0,
+      currency VARCHAR(3) NOT NULL DEFAULT 'XOF',
+      status VARCHAR(30) NOT NULL DEFAULT 'draft',
+      due_date DATE,
+      description TEXT,
+      created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+      updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    );
+    CREATE INDEX IF NOT EXISTS idx_vendor_po_project ON vendor_purchase_orders (project_id, status);
+
+    CREATE TABLE IF NOT EXISTS career_applications (
+      id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+      job_id VARCHAR(80) NOT NULL,
+      job_label VARCHAR(200) NOT NULL,
+      name VARCHAR(160) NOT NULL,
+      email VARCHAR(255) NOT NULL,
+      phone VARCHAR(32),
+      city VARCHAR(120),
+      experience VARCHAR(40),
+      availability VARCHAR(40),
+      has_vehicle VARCHAR(10),
+      linkedin VARCHAR(500),
+      cv_link VARCHAR(500),
+      motivation TEXT NOT NULL,
+      status VARCHAR(30) NOT NULL DEFAULT 'new',
+      metadata JSONB NOT NULL DEFAULT '{}',
+      created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+      updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    );
+    CREATE INDEX IF NOT EXISTS idx_career_applications_status ON career_applications (status, created_at DESC);
+
+    CREATE TABLE IF NOT EXISTS api_keys (
+      id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+      name VARCHAR(120) NOT NULL,
+      key_prefix VARCHAR(12) NOT NULL,
+      key_hash VARCHAR(64) NOT NULL UNIQUE,
+      scopes TEXT[] NOT NULL DEFAULT '{}',
+      created_by UUID REFERENCES crm_users(id) ON DELETE SET NULL,
+      last_used_at TIMESTAMPTZ,
+      revoked_at TIMESTAMPTZ,
+      created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    );
+
     CREATE TABLE IF NOT EXISTS public_realisations (
       id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
       slug VARCHAR(120) NOT NULL UNIQUE,
@@ -997,6 +1105,18 @@ async function ensureSchema(): Promise<void> {
 
   const { seedQuoteTemplates } = await import("@/lib/quote-templates");
   await seedQuoteTemplates(async (text, params) => {
+    const result = await client.query(text, params);
+    return { rows: result.rows as never[], rowCount: result.rowCount };
+  });
+
+  const { seedMarketingSequences } = await import("@/lib/marketing-sequences");
+  await seedMarketingSequences(async (text, params) => {
+    const result = await client.query(text, params);
+    return { rows: result.rows as never[], rowCount: result.rowCount };
+  });
+
+  const { seedLegalEntities } = await import("@/lib/legal-entities");
+  await seedLegalEntities(async (text, params) => {
     const result = await client.query(text, params);
     return { rows: result.rows as never[], rowCount: result.rowCount };
   });
