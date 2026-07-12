@@ -28,6 +28,55 @@ export const TASK_PRIORITY_LABELS: Record<TaskPriority, string> = {
 
 export const TASK_ASSIGNEES = CRM_TEAM_MEMBERS;
 
+export const TASK_CATEGORIES = [
+  { id: "quote_follow_up", label: "Relance devis" },
+  { id: "invoice_follow_up", label: "Relance facture" },
+  { id: "client_check_in", label: "Point client" },
+  { id: "deliverable", label: "Livrable" },
+  { id: "meeting", label: "Réunion / RDV" },
+  { id: "internal", label: "Interne" },
+  { id: "custom", label: "Autre (personnalisé)" },
+] as const;
+
+export type TaskCategoryId = (typeof TASK_CATEGORIES)[number]["id"];
+
+export function getTaskCategoryLabel(categoryId: string): string {
+  return TASK_CATEGORIES.find((item) => item.id === categoryId)?.label ?? categoryId;
+}
+
+export function buildTaskTitle(input: {
+  categoryId: TaskCategoryId | string;
+  customTitle?: string;
+  clientName?: string | null;
+  quoteReference?: string | null;
+}): string {
+  const base =
+    input.categoryId === "custom"
+      ? input.customTitle?.trim() || "Tâche"
+      : getTaskCategoryLabel(input.categoryId);
+
+  if (input.quoteReference?.trim()) {
+    return `${base} — ${input.quoteReference.trim()}`;
+  }
+  if (input.clientName?.trim()) {
+    return `${base} — ${input.clientName.trim()}`;
+  }
+  return base;
+}
+
+export function buildQuoteFollowUpDescription(input: {
+  quoteReference: string;
+  amountLabel: string;
+  statusLabel: string;
+  sentDaysAgo?: number | null;
+}): string {
+  const ageLine =
+    input.sentDaysAgo != null && input.sentDaysAgo > 0
+      ? `Le devis a été envoyé il y a ${input.sentDaysAgo} jour${input.sentDaysAgo > 1 ? "s" : ""}. `
+      : "";
+  return `${ageLine}Devis ${input.quoteReference} (${input.amountLabel} HT — ${input.statusLabel}). Pas de retour du client. Appeler pour répondre aux questions ou ajuster le périmètre.`;
+}
+
 export function formatTaskDate(iso: string | null): string {
   if (!iso) return "—";
   return new Intl.DateTimeFormat("fr-FR", {

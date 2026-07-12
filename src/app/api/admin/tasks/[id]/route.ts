@@ -1,4 +1,5 @@
 import { crmApiAuth } from "@/lib/crm-api-auth";
+import { getAdminSession } from "@/lib/admin-auth";
 import { NextResponse } from "next/server";
 import { isDatabaseConfigured } from "@/lib/db";
 import {
@@ -64,8 +65,9 @@ export async function PATCH(request: Request, { params }: Props) {
 
     const assigneeChanged =
       parsed.data.assignee !== undefined && parsed.data.assignee !== existing.assignee;
-    if (task.assignee && (assigneeChanged || parsed.data.status !== undefined || parsed.data.dueDate !== undefined)) {
-      void notifyTaskAssignee(task, assigneeChanged ? "assigned" : "updated").catch((err) => {
+    if (task.assignee && assigneeChanged) {
+      const session = await getAdminSession();
+      void notifyTaskAssignee(task, "assigned", { actorName: session?.name }).catch((err) => {
         console.error("[api/admin/tasks/id] notify assignee", err);
       });
     }

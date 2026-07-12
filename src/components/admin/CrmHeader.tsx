@@ -116,6 +116,8 @@ export function CrmHeader({
   const overdueTasks = canTasks ? (taskStats?.overdue ?? 0) : 0;
   const slaBreached = canTickets ? (ticketStats?.slaBreached ?? 0) : 0;
   const openTickets = canTickets ? (ticketStats?.open ?? 0) + (ticketStats?.inProgress ?? 0) : 0;
+  const taskNotifications = billingHistory.filter((n) => n.category === "tasks");
+  const billingOnly = billingHistory.filter((n) => n.category !== "tasks");
   const alertCount =
     overdueTasks + slaBreached + calendarReminders.length + billingUnreadCount;
   const hasOperationalAlerts =
@@ -265,7 +267,7 @@ export function CrmHeader({
                         </ul>
                       </div>
                     )}
-                    {billingHistory.length > 0 && (
+                    {billingOnly.length > 0 && (
                       <div>
                         <p className="px-4 py-2 text-[10px] font-bold uppercase tracking-wide text-emerald-700">
                           Facturation
@@ -276,9 +278,22 @@ export function CrmHeader({
                           )}
                         </p>
                         <NotificationHistoryList
-                          notifications={billingHistory}
+                          notifications={billingOnly}
                           onNavigate={() => setNotifOpen(false)}
                           onMarkRead={onMarkBillingRead}
+                        />
+                      </div>
+                    )}
+                    {taskNotifications.length > 0 && (
+                      <div>
+                        <p className="px-4 py-2 text-[10px] font-bold uppercase tracking-wide text-primary">
+                          Tâches assignées
+                        </p>
+                        <NotificationHistoryList
+                          notifications={taskNotifications}
+                          onNavigate={() => setNotifOpen(false)}
+                          onMarkRead={onMarkBillingRead}
+                          accentClass="text-primary"
                         />
                       </div>
                     )}

@@ -405,6 +405,10 @@ async function ensureSchema(): Promise<void> {
     CREATE INDEX IF NOT EXISTS idx_crm_notifications_portal
       ON crm_notifications (portal_client_id, created_at DESC)
       WHERE audience = 'portal';
+    ALTER TABLE crm_notifications ADD COLUMN IF NOT EXISTS recipient_name VARCHAR(100);
+    CREATE INDEX IF NOT EXISTS idx_crm_notifications_recipient
+      ON crm_notifications (recipient_name, created_at DESC)
+      WHERE audience = 'admin' AND recipient_name IS NOT NULL;
 
     ALTER TABLE projects ADD COLUMN IF NOT EXISTS assignee VARCHAR(100);
     ALTER TABLE leads ADD COLUMN IF NOT EXISTS assignee VARCHAR(100);

@@ -1,4 +1,5 @@
 import { crmApiAuth } from "@/lib/crm-api-auth";
+import { getAdminSession } from "@/lib/admin-auth";
 import { NextResponse } from "next/server";
 import { isDatabaseConfigured } from "@/lib/db";
 import { createTask, createTaskSchema, listTasks } from "@/lib/tasks";
@@ -53,7 +54,8 @@ export async function POST(request: Request) {
 
     const task = await createTask(parsed.data);
     if (task.assignee) {
-      void notifyTaskAssignee(task, "assigned").catch((err) => {
+      const session = await getAdminSession();
+      void notifyTaskAssignee(task, "assigned", { actorName: session?.name }).catch((err) => {
         console.error("[api/admin/tasks] notify assignee", err);
       });
     }

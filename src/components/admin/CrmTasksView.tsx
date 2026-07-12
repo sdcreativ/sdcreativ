@@ -3,15 +3,22 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import {
+  TASK_CATEGORIES,
   TASK_PIPELINE_COLUMNS,
   TASK_PRIORITY_LABELS,
   TASK_STATUS_LABELS,
+  buildQuoteFollowUpDescription,
+  buildTaskTitle,
   formatTaskDate,
   isTaskOverdue,
   priorityStyles,
+  type TaskCategoryId,
   type TaskPriority,
   type TaskStatus,
 } from "@/content/tasks-labels";
+import { QUOTE_STATUS_LABELS, formatQuoteAmount } from "@/content/quotes-labels";
+import { fetchQuotes } from "@/lib/quotes-api";
+import type { Quote } from "@/lib/quotes";
 import { fetchCrmClients } from "@/lib/clients-api";
 import type { Client } from "@/lib/clients";
 import { fetchProjects } from "@/lib/projects-api";
@@ -111,6 +118,13 @@ export function CrmTasksView() {
     const q = searchParams.get("q");
     if (q) setSearch(q);
   }, [searchParams]);
+
+  useEffect(() => {
+    const taskId = searchParams.get("task");
+    if (!taskId || tasks.length === 0) return;
+    const match = tasks.find((task) => task.id === taskId);
+    if (match) setSelected(match);
+  }, [searchParams, tasks]);
 
   const filtered = tasks;
 
@@ -560,6 +574,13 @@ function TaskDetailPanel({
             </div>
           )}
 
+          {typeof task.metadata?.quoteReference === "string" && task.metadata.quoteReference && (
+            <div>
+              <p className="text-xs font-semibold uppercase tracking-wide text-gray-text">Devis lié</p>
+              <p className="mt-0.5 font-mono font-medium">{task.metadata.quoteReference}</p>
+            </div>
+          )}
+
           {task.description && (
             <div>
               <p className="text-xs font-semibold uppercase tracking-wide text-gray-text">Description</p>
@@ -597,8 +618,15 @@ function CreateTaskModal({
 }) {
   const [projects, setProjects] = useState<Project[]>([]);
   const [clients, setClients] = useState<Client[]>([]);
+  const [clientQuotes, setClientQuotes] = useState<Quote[]>([]);
+  const [quotesLoading, setQuotesLoading] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const [categoryId, setCategoryId] = useState<TaskCategoryId>("quote_follow_up");
+  const [customTitle, setCustomTitle] = useState("");
+  const [description, setDescription] = useState("");
+  const [selectedClientId, setSelectedClientId] = useState("");
+  const [selectedQuoteId, setSelectedQuoteId] = useState("");
   const assignees = useCrmAssignees();
 
   useEffect(() => {
@@ -613,22 +641,87 @@ function CreateTaskModal({
       });
   }, []);
 
+  useEffect(() => {
+    if (!selectedClientId) {
+      setClientQuotes([]);
+      setSelectedQuoteId("");
+      return;
+    }
+
+    setQuotesLoading(true);
+    void fetchQuotes({ clientId: selectedClientId })
+      .then((quotes) => {
+        setClientQuotes(quotes);
+        if (quotes.length === 1) {
+          setSelectedQuoteId(quotes[0]!.id);
+        } else {
+          setSelectedQuoteId("");
+        }
+      })
+      .catch(() => setClientQuotes([]))
+      .finally(() => setQuotesLoading(false));
+  }, [selectedClientId]);
+
+  const selectedClient = clients.find((client) => client.id === selectedClientId);
+  const selectedQuote = clientQuotes.find((quote) => quote.id === selectedQuoteId) ?? null;
+  const previewTitle = buildTaskTitle({
+    categoryId,
+    customTitle,
+    clientName: selectedClient?.company || selectedClient?.name || null,
+    quoteReference: selectedQuote?.reference ?? null,
+  });
+
+  useEffect(() => {
+    if (categoryId !== "quote_follow_up" || !selectedQuote) return;
+    const sentAt = selectedQuote.sentAt ?? selectedQuote.createdAt;
+    const sentDaysAgo = sentAt
+      ? Math.max(0, Math.floor((Date.now() - new Date(sentAt).getTime()) / 86_400_000))
+      : null;
+    setDescription(
+      buildQuoteFollowUpDescription({
+        quoteReference: selectedQuote.reference,
+        amountLabel: formatQuoteAmount(selectedQuote.subtotal),
+        statusLabel: QUOTE_STATUS_LABELS[selectedQuote.status],
+        sentDaysAgo,
+      }),
+    );
+  }, [categoryId, selectedQuote]);
+
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
     setLoading(true);
     setError("");
     const data = new FormData(e.currentTarget);
+    const assignee = String(data.get("assignee") || "") || null;
+
+    if (categoryId === "custom" && !customTitle.trim()) {
+      setError("Indiquez un titre personnalisé.");
+      setLoading(false);
+      return;
+    }
+
+    if (clientQuotes.length > 1 && selectedClientId && !selectedQuoteId) {
+      setError("Sélectionnez le devis concerné.");
+      setLoading(false);
+      return;
+    }
 
     try {
       const task = await createTaskApi({
-        title: String(data.get("title")),
-        description: String(data.get("description") || "") || null,
+        title: previewTitle,
+        description: description.trim() || null,
         priority: String(data.get("priority") || "medium"),
         status: "todo",
         dueDate: String(data.get("dueDate") || "") || null,
-        assignee: String(data.get("assignee") || "") || null,
+        assignee,
         projectId: String(data.get("projectId") || "") || null,
-        clientId: String(data.get("clientId") || "") || null,
+        clientId: selectedClientId || null,
+        metadata: {
+          categoryId,
+          customTitle: categoryId === "custom" ? customTitle.trim() : null,
+          quoteId: selectedQuote?.id ?? null,
+          quoteReference: selectedQuote?.reference ?? null,
+        },
       });
       onCreated(task);
     } catch (err) {
@@ -649,8 +742,44 @@ function CreateTaskModal({
         </div>
 
         <div className="space-y-3">
-          <input name="title" required placeholder="Titre *" className={fieldClass} />
-          <textarea name="description" placeholder="Description" rows={3} className={fieldClass} />
+          <label className="block text-xs font-semibold uppercase tracking-wide text-gray-text">
+            Catégorie
+            <select
+              value={categoryId}
+              onChange={(e) => setCategoryId(e.target.value as TaskCategoryId)}
+              className="mt-1 w-full rounded-xl border border-gray/60 px-3 py-2.5 text-sm"
+            >
+              {TASK_CATEGORIES.map((category) => (
+                <option key={category.id} value={category.id}>
+                  {category.label}
+                </option>
+              ))}
+            </select>
+          </label>
+
+          {categoryId === "custom" && (
+            <input
+              value={customTitle}
+              onChange={(e) => setCustomTitle(e.target.value)}
+              required
+              placeholder="Titre personnalisé *"
+              className={fieldClass}
+            />
+          )}
+
+          <div className="rounded-xl border border-primary/15 bg-primary/5 px-3 py-2 text-sm">
+            <p className="text-[10px] font-bold uppercase tracking-wide text-primary">Titre généré</p>
+            <p className="mt-1 font-medium text-foreground">{previewTitle}</p>
+          </div>
+
+          <textarea
+            value={description}
+            onChange={(e) => setDescription(e.target.value)}
+            placeholder="Description"
+            rows={4}
+            className={fieldClass}
+          />
+
           <div className="grid gap-3 sm:grid-cols-2">
             <select name="priority" defaultValue="medium" className={fieldClass} aria-label="Priorité">
               {Object.entries(TASK_PRIORITY_LABELS).map(([value, label]) => (
@@ -659,22 +788,67 @@ function CreateTaskModal({
             </select>
             <input name="dueDate" type="date" className={fieldClass} aria-label="Échéance" />
           </div>
+
           <select name="assignee" defaultValue="" className={fieldClass} aria-label="Assigné à">
             <option value="">Non assigné</option>
             {assignees.map((name) => (
               <option key={name} value={name}>{name}</option>
             ))}
           </select>
-          <select name="projectId" className={fieldClass} aria-label="Projet lié">
-            <option value="">Projet (optionnel)</option>
-            {projects.map((p) => (
-              <option key={p.id} value={p.id}>{p.name}</option>
+
+          <select
+            value={selectedClientId}
+            onChange={(e) => setSelectedClientId(e.target.value)}
+            className={fieldClass}
+            aria-label="Client lié"
+          >
+            <option value="">Client (optionnel)</option>
+            {clients.map((client) => (
+              <option key={client.id} value={client.id}>
+                {client.company || client.name}
+              </option>
             ))}
           </select>
-          <select name="clientId" className={fieldClass} aria-label="Client lié">
-            <option value="">Client (optionnel)</option>
-            {clients.map((c) => (
-              <option key={c.id} value={c.id}>{c.company || c.name}</option>
+
+          {selectedClientId && quotesLoading && (
+            <p className="text-sm text-gray-text">Chargement des devis…</p>
+          )}
+
+          {selectedClientId && !quotesLoading && clientQuotes.length === 0 && (
+            <p className="rounded-xl bg-gray-light/60 px-3 py-2 text-xs text-gray-text">
+              Aucun devis lié à ce client.
+            </p>
+          )}
+
+          {selectedClientId && !quotesLoading && clientQuotes.length > 1 && (
+            <label className="block text-xs font-semibold uppercase tracking-wide text-gray-text">
+              Devis concerné *
+              <select
+                value={selectedQuoteId}
+                onChange={(e) => setSelectedQuoteId(e.target.value)}
+                required
+                className="mt-1 w-full rounded-xl border border-gray/60 px-3 py-2.5 text-sm"
+              >
+                <option value="">Choisir un devis</option>
+                {clientQuotes.map((quote) => (
+                  <option key={quote.id} value={quote.id}>
+                    {quote.reference} — {formatQuoteAmount(quote.subtotal)} — {QUOTE_STATUS_LABELS[quote.status]}
+                  </option>
+                ))}
+              </select>
+            </label>
+          )}
+
+          {selectedClientId && !quotesLoading && clientQuotes.length === 1 && selectedQuote && (
+            <p className="rounded-xl border border-emerald-200 bg-emerald-50 px-3 py-2 text-xs text-emerald-900">
+              Devis lié : <strong>{selectedQuote.reference}</strong> ({formatQuoteAmount(selectedQuote.subtotal)} HT)
+            </p>
+          )}
+
+          <select name="projectId" className={fieldClass} aria-label="Projet lié">
+            <option value="">Projet (optionnel)</option>
+            {projects.map((project) => (
+              <option key={project.id} value={project.id}>{project.name}</option>
             ))}
           </select>
         </div>

@@ -9,7 +9,7 @@ import {
   type CrmNotification,
 } from "@/lib/billing-notifications-api";
 import { cn } from "@/lib/utils";
-import { Bell, FileSignature, LifeBuoy, Receipt, X } from "lucide-react";
+import { Bell, FileSignature, CheckSquare, LifeBuoy, Receipt, X } from "lucide-react";
 
 const POLL_MS = 30_000;
 
@@ -23,6 +23,9 @@ type Props = {
 };
 
 function notificationIcon(notification: CrmNotification) {
+  if (notification.category === "tasks" || notification.eventType.startsWith("task")) {
+    return CheckSquare;
+  }
   if (notification.category === "tickets" || notification.eventType.startsWith("ticket")) {
     return LifeBuoy;
   }
@@ -31,6 +34,9 @@ function notificationIcon(notification: CrmNotification) {
 }
 
 function notificationCategoryLabel(notification: CrmNotification): string {
+  if (notification.category === "tasks" || notification.eventType.startsWith("task")) {
+    return "Tâche";
+  }
   if (notification.category === "tickets" || notification.eventType.startsWith("ticket")) {
     return "Support";
   }

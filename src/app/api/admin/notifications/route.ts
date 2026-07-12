@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { getAdminSession } from "@/lib/admin-auth";
 import { crmApiAuth } from "@/lib/crm-api-auth";
 import { isDatabaseConfigured } from "@/lib/db";
 import {
@@ -18,19 +19,21 @@ export async function GET(request: Request) {
   }
 
   try {
+    const session = await getAdminSession();
+    const recipientName = session?.name;
     const { searchParams } = new URL(request.url);
     const history = searchParams.get("history") === "1";
 
     if (history) {
       const [notifications, unreadCount] = await Promise.all([
-        listAdminNotificationHistory(30),
-        countUnreadAdminNotifications(),
+        listAdminNotificationHistory(30, recipientName),
+        countUnreadAdminNotifications(recipientName),
       ]);
       return NextResponse.json({ notifications, unreadCount });
     }
 
     const since = searchParams.get("since") ?? undefined;
-    const notifications = await listAdminNotificationsSince(since);
+    const notifications = await listAdminNotificationsSince(since, 30, recipientName);
     return NextResponse.json({ notifications });
   } catch (error) {
     console.error("[api/admin/notifications] GET", error);
@@ -47,9 +50,10 @@ export async function POST(request: Request) {
   }
 
   try {
+    const session = await getAdminSession();
     const body = (await request.json()) as { ids?: string[]; all?: boolean };
     if (body.all === true) {
-      await markAllAdminNotificationsRead();
+      await markAllAdminNotificationsRead(session?.name);
       return NextResponse.json({ success: true });
     }
     const ids = Array.isArray(body.ids) ? body.ids : [];
