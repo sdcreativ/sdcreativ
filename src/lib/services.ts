@@ -19,7 +19,7 @@ export async function getService(id: string): Promise<Service | undefined> {
 export async function getServiceHref(service: Service): Promise<string> {
   if (service.detailHref) return service.detailHref;
   if (await resolveHasServiceDetail(service.id)) return `/services/${service.id}`;
-  return `/contact?service=${service.id}`;
+  return `/devis?type=${service.id}`;
 }
 
 export async function getServiceHubLinkLabel(service: Service): Promise<string> {

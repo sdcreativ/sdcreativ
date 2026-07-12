@@ -1,17 +1,14 @@
 import { z } from "zod";
-import { budgetOptions, timelineOptions } from "@/content/contact-options";
+import { contactSubjectOptions } from "@/content/contact-options";
 
-const budgetValues = budgetOptions.map((o) => o.value) as [string, ...string[]];
-const timelineValues = timelineOptions.map((o) => o.value) as [string, ...string[]];
+const subjectValues = contactSubjectOptions.map((o) => o.value) as [string, ...string[]];
 
 export const contactSchema = z.object({
   name: z.string().min(2, "Le nom doit contenir au moins 2 caractères."),
   email: z.string().email("Adresse email invalide."),
   phone: z.string().optional(),
   company: z.string().optional(),
-  service: z.string().trim().min(1, "Veuillez sélectionner un service."),
-  budget: z.enum(budgetValues, { message: "Veuillez indiquer un budget." }),
-  timeline: z.enum(timelineValues, { message: "Veuillez indiquer un délai." }),
+  subject: z.enum(subjectValues, { message: "Veuillez sélectionner un sujet." }),
   message: z.string().min(10, "Le message doit contenir au moins 10 caractères."),
 });
 

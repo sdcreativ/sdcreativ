@@ -69,10 +69,10 @@ export type SitePageHeroesSettings = Record<PageHeroKey, PageHeroConfig>;
 export const defaultSitePageHeroesSettings: SitePageHeroesSettings = {
   contact: {
     eyebrow: "Contact",
-    title: "Parlons de",
-    highlight: "votre projet",
+    title: "Écrivez",
+    highlight: "à notre équipe",
     description:
-      "Remplissez le formulaire ou contactez-nous directement. Nous vous répondons sous 24 à 48 heures.",
+      "Une question, un suivi ou un besoin d'assistance ? Envoyez-nous un message — nous vous répondons sous 24 à 48 heures.",
     backgroundImage: "/images/contact/contact-hero-bg.png",
     backgroundAlt: "Équipe SD CREATIV au travail dans un bureau moderne",
   },

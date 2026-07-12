@@ -1,6 +1,5 @@
 import { NextResponse } from "next/server";
-import { getBudgetLabel, getTimelineLabel } from "@/content/contact-options";
-import { getServices } from "@/lib/services";
+import { getContactSubjectLabel } from "@/content/contact-options";
 import { htmlRow, sendEmail } from "@/lib/email";
 import { safeCreateLead } from "@/lib/leads";
 import { rejectIfBot } from "@/lib/form-guard";
@@ -48,28 +47,19 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: firstError }, { status: 400 });
     }
 
-    const { name, email, phone, company, service, budget, timeline, message } =
-      parsed.data;
+    const { name, email, phone, company, subject, message } = parsed.data;
+    const subjectLabel = getContactSubjectLabel(subject);
 
-    const services = await getServices();
-    const serviceRecord = services.find((s) => s.id === service);
-    if (!serviceRecord) {
-      return NextResponse.json({ error: "Service invalide." }, { status: 400 });
-    }
-
-    const serviceLabel = serviceRecord.title;
     const sent = await sendEmail({
       replyTo: email,
-      subject: `[SD CREATIV] Contact — ${serviceLabel} — ${name}`,
+      subject: `[SD CREATIV] Message — ${subjectLabel} — ${name}`,
       html: `
-        <h2>Nouvelle demande de contact</h2>
+        <h2>Nouveau message via le formulaire de contact</h2>
         ${htmlRow("Nom", name)}
         ${htmlRow("Email", email)}
         ${htmlRow("Téléphone", phone)}
         ${htmlRow("Entreprise", company)}
-        ${htmlRow("Service", serviceLabel)}
-        ${htmlRow("Budget indicatif", getBudgetLabel(budget))}
-        ${htmlRow("Délai souhaité", getTimelineLabel(timeline))}
+        ${htmlRow("Sujet", subjectLabel)}
         <p><strong>Message :</strong></p>
         <p>${message.replace(/\n/g, "<br>")}</p>
       `,
@@ -88,11 +78,9 @@ export async function POST(request: Request) {
       phone: phone || null,
       company: company || null,
       source: "contact",
-      service: serviceLabel,
-      budget,
-      timeline,
+      service: subjectLabel,
       message,
-      metadata: { serviceId: service },
+      metadata: { subject, channel: "contact_form" },
     });
 
     return NextResponse.json({ success: true });

@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useState, type FormEvent, type ReactNode } from "react";
 import {
   Send,
@@ -12,29 +13,22 @@ import {
   Building2,
   MessageSquare,
   ChevronDown,
-  Sparkles,
-  Briefcase,
-  Wallet,
-  Clock,
+  Inbox,
+  Tag,
 } from "lucide-react";
 import { motion } from "framer-motion";
 import { Button } from "@/components/ui/Button";
 import { HoneypotField } from "@/components/forms/HoneypotField";
 import { TurnstileWidget } from "@/components/forms/TurnstileWidget";
 import { useFormTurnstile } from "@/components/forms/useFormTurnstile";
-import {
-  budgetOptions,
-  serviceSelectOptions as staticServiceSelectOptions,
-  timelineOptions,
-} from "@/content/contact-options";
+import { contactSubjectOptions } from "@/content/contact-options";
 import { cn } from "@/lib/utils";
 
 type FormState = "idle" | "loading" | "success" | "error";
 
 type ContactFormProps = {
   className?: string;
-  defaultService?: string;
-  serviceSelectOptions?: ReadonlyArray<{ value: string; label: string }>;
+  defaultSubject?: string;
 };
 
 type FormFieldProps = {
@@ -66,14 +60,16 @@ function FormField({ id, label, required, icon, children }: FormFieldProps) {
 const fieldClass =
   "w-full rounded-xl border border-gray/80 bg-white px-4 py-3.5 text-sm text-foreground shadow-sm transition-all duration-200 placeholder:text-gray-text/50 hover:border-primary/30 hover:shadow-md focus:border-primary focus:bg-white focus:outline-none focus:ring-4 focus:ring-primary/10";
 
-export function ContactForm({
-  className,
-  defaultService = "",
-  serviceSelectOptions = staticServiceSelectOptions,
-}: ContactFormProps) {
+export function ContactForm({ className, defaultSubject = "" }: ContactFormProps) {
   const [state, setState] = useState<FormState>("idle");
   const [errorMessage, setErrorMessage] = useState("");
   const { turnstileToken, setTurnstileToken, validate, reset, onExpire, required } = useFormTurnstile();
+
+  const resolvedDefaultSubject =
+    defaultSubject &&
+    contactSubjectOptions.some((option) => option.value === defaultSubject)
+      ? defaultSubject
+      : "";
 
   async function handleSubmit(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -99,9 +95,7 @@ export function ContactForm({
           email: data.get("email"),
           phone: data.get("phone"),
           company: data.get("company"),
-          service: data.get("service"),
-          budget: data.get("budget"),
-          timeline: data.get("timeline"),
+          subject: data.get("subject"),
           message: data.get("message"),
           _hp: data.get("_hp"),
           turnstileToken: turnstileToken || undefined,
@@ -140,7 +134,7 @@ export function ContactForm({
           </div>
           <h3 className="mt-6 text-2xl font-bold text-foreground">Message envoyé !</h3>
           <p className="mx-auto mt-3 max-w-sm leading-relaxed text-gray-text">
-            Merci pour votre confiance. Notre équipe vous recontactera sous 24 à 48 heures ouvrées.
+            Merci pour votre message. Notre équipe vous répond sous 24 à 48 heures ouvrées.
           </p>
           <Button
             type="button"
@@ -170,18 +164,23 @@ export function ContactForm({
       <div className="p-8 md:p-10">
         <div className="mb-8 flex items-start gap-4">
           <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-primary-light">
-            <Sparkles className="h-5 w-5 text-primary" aria-hidden />
+            <Inbox className="h-5 w-5 text-primary" aria-hidden />
           </div>
           <div>
-            <h2 className="text-xl font-bold text-foreground md:text-2xl">
-              Demander un devis gratuit
-            </h2>
+            <h2 className="text-xl font-bold text-foreground md:text-2xl">Nous écrire</h2>
             <p className="mt-1 text-sm leading-relaxed text-gray-text">
-              Précisez votre service, budget et délai — nous qualifions votre demande
-              rapidement pour un devis adapté.
+              Posez votre question ou décrivez votre besoin — nous vous répondons personnellement
+              sous 24 à 48 h.
             </p>
           </div>
         </div>
+
+        <p className="mb-6 rounded-xl border border-primary/15 bg-primary/5 px-4 py-3 text-sm text-gray-text">
+          Besoin d&apos;une estimation chiffrée en FCFA ?{" "}
+          <Link href="/devis" className="font-semibold text-primary underline underline-offset-2">
+            Utilisez le configurateur de devis →
+          </Link>
+        </p>
 
         <form onSubmit={handleSubmit} className="relative space-y-6" noValidate>
           <HoneypotField />
@@ -254,22 +253,22 @@ export function ContactForm({
           </div>
 
           <FormField
-            id="service"
-            label="Service concerné"
+            id="subject"
+            label="Sujet"
             required
-            icon={<Briefcase className="h-3.5 w-3.5" aria-hidden />}
+            icon={<Tag className="h-3.5 w-3.5" aria-hidden />}
           >
             <div className="relative">
               <select
-                aria-label="Service concerné"
-                id="service"
-                name="service"
+                aria-label="Sujet du message"
+                id="subject"
+                name="subject"
                 required
-                defaultValue={defaultService}
+                defaultValue={resolvedDefaultSubject}
                 className={cn(fieldClass, "cursor-pointer appearance-none pr-10")}
               >
-                <option value="">Choisissez un service</option>
-                {serviceSelectOptions.map((option) => (
+                <option value="">Choisissez un sujet</option>
+                {contactSubjectOptions.map((option) => (
                   <option key={option.value} value={option.value}>
                     {option.label}
                   </option>
@@ -281,64 +280,6 @@ export function ContactForm({
               />
             </div>
           </FormField>
-
-          <div className="grid gap-6 sm:grid-cols-2">
-            <FormField
-              id="budget"
-              label="Budget indicatif"
-              required
-              icon={<Wallet className="h-3.5 w-3.5" aria-hidden />}
-            >
-              <div className="relative">
-                <select
-                  aria-label="Budget indicatif"
-                  id="budget"
-                  name="budget"
-                  required
-                  className={cn(fieldClass, "cursor-pointer appearance-none pr-10")}
-                >
-                  <option value="">Choisir une fourchette</option>
-                  {budgetOptions.map((option) => (
-                    <option key={option.value} value={option.value}>
-                      {option.label}
-                    </option>
-                  ))}
-                </select>
-                <ChevronDown
-                  className="pointer-events-none absolute right-4 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-text"
-                  aria-hidden
-                />
-              </div>
-            </FormField>
-
-            <FormField
-              id="timeline"
-              label="Délai souhaité"
-              required
-              icon={<Clock className="h-3.5 w-3.5" aria-hidden />}
-            >
-              <div className="relative">
-                <select
-                  aria-label="Délai souhaité" 
-                  id="timeline"
-                  name="timeline"
-                  required
-                  className={cn(fieldClass, "cursor-pointer appearance-none pr-10")}
-                >
-                  <option value="">Choisir un délai</option>
-                  {timelineOptions.map((option) => (
-                    <option key={option.value} value={option.value}>
-                      {option.label}
-                    </option>
-                  ))}
-                </select>
-                <ChevronDown
-                  className="pointer-events-none absolute right-4 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-text"
-                  aria-hidden
-                />
-              </div>
-            </FormField>
-          </div>
 
           <FormField
             id="message"
@@ -352,7 +293,7 @@ export function ContactForm({
               required
               rows={5}
               className={cn(fieldClass, "min-h-[140px] resize-y leading-relaxed")}
-              placeholder="Décrivez votre projet, vos objectifs et vos contraintes..."
+              placeholder="Décrivez votre question ou votre demande..."
             />
           </FormField>
 
@@ -368,10 +309,7 @@ export function ContactForm({
           )}
 
           {required && (
-            <TurnstileWidget
-              onToken={setTurnstileToken}
-              onExpire={onExpire}
-            />
+            <TurnstileWidget onToken={setTurnstileToken} onExpire={onExpire} />
           )}
 
           <div className="flex flex-col gap-5 border-t border-gray/80 pt-6 sm:flex-row sm:items-center sm:justify-between">
@@ -399,7 +337,7 @@ export function ContactForm({
                 </>
               ) : (
                 <>
-                  Envoyer ma demande
+                  Envoyer mon message
                   <Send className="h-4 w-4" aria-hidden />
                 </>
               )}

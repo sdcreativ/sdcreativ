@@ -41,7 +41,7 @@ export default async function DevisPage() {
               projet et obtenir un devis personnalisé.
             </p>
             <Button href="/contact" variant="ghost" className="mt-4 w-fit">
-              Nous écrire via le formulaire de contact →
+              Une question ? Écrivez-nous →
             </Button>
           </div>
           <BookAppointment />

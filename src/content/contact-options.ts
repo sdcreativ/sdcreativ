@@ -9,6 +9,20 @@ export function getServiceLabel(serviceId: string): string {
   return services.find((s) => s.id === serviceId)?.title ?? serviceId;
 }
 
+/** Sujets du formulaire de contact (messagerie — distinct du configurateur /devis). */
+export const contactSubjectOptions = [
+  { value: "question-generale", label: "Question générale" },
+  { value: "support", label: "Support & assistance" },
+  { value: "facturation", label: "Facturation & administratif" },
+  { value: "audit", label: "Demande d'audit gratuit" },
+  { value: "partenariat", label: "Partenariat" },
+  { value: "autre", label: "Autre" },
+] as const;
+
+export function getContactSubjectLabel(value: string): string {
+  return contactSubjectOptions.find((o) => o.value === value)?.label ?? value;
+}
+
 export const budgetOptions = [
   { value: "moins-500k", label: "Moins de 500 000 FCFA" },
   { value: "500k-1m", label: "500 000 – 1 000 000 FCFA" },

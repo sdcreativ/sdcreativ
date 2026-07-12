@@ -29,9 +29,9 @@ export const enHome = {
 } as const;
 
 export const enContact = {
-  title: "Contact us",
-  highlight: "Let's talk",
-  description: "Tell us about your project. We reply within 24–48 business hours.",
+  title: "Get in touch",
+  highlight: "with our team",
+  description: "Questions, support or follow-up? Send us a message — we reply within 24–48 business hours.",
 } as const;
 
 export const enServices = {

@@ -100,7 +100,7 @@ export default function AuditGratuitPage() {
           <h2 className="mb-8 text-center text-2xl font-bold text-foreground">
             Demandez votre audit gratuit
           </h2>
-          <ContactForm defaultService="refonte-web" />
+          <ContactForm defaultSubject="audit" />
           <p className="mt-6 text-center text-sm text-gray-text">
             Pas encore de site ?{" "}
             <Link href="/devis" className="font-semibold text-primary hover:underline">

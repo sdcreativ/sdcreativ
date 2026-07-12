@@ -14,33 +14,25 @@ import { BookAppointment } from "@/components/booking/BookAppointment";
 import { Button } from "@/components/ui/Button";
 import { getSitePublicSettings } from "@/lib/site-public-settings";
 import { buildWhatsappUrl } from "@/lib/site-public-resolver";
-import { getServices } from "@/lib/services";
 import { createMetadata } from "@/lib/metadata";
 
 export const metadata = createMetadata({
   title: "Contact",
   description:
-    "Contactez SD CREATIV pour un devis gratuit. Agence web à Abidjan — sites vitrines, e-commerce, refonte et SEO local.",
+    "Écrivez à SD CREATIV : questions, support et suivi de projet. Agence web à Abidjan — réponse sous 24 à 48 h.",
   path: "/contact",
 });
 
 const benefits = [
-  "Devis gratuit et sans engagement",
-  "Estimation instantanée en FCFA",
   "Réponse sous 24 à 48 heures",
-  "Accompagnement de A à Z",
+  "Équipe disponible du lundi au vendredi",
+  "Support, questions et suivi de projet",
+  "WhatsApp pour un échange rapide",
 ] as const;
 
-type Props = {
-  searchParams: Promise<{ service?: string }>;
-};
-
-export default async function ContactPage({ searchParams }: Props) {
-  const { service } = await searchParams;
+export default async function ContactPage() {
   const { contact } = await getSitePublicSettings();
   const waUrl = buildWhatsappUrl(contact);
-  const services = await getServices();
-  const serviceSelectOptions = services.map(({ id, title }) => ({ value: id, label: title }));
   return (
     <>
       <SitePageHero pageKey="contact" />
@@ -51,7 +43,7 @@ export default async function ContactPage({ searchParams }: Props) {
 
         <div className="container relative mx-auto grid gap-10 px-4 lg:grid-cols-5 lg:gap-12 md:px-6 lg:px-8">
           <div className="lg:col-span-3">
-            <ContactForm defaultService={service ?? ""} serviceSelectOptions={serviceSelectOptions} />
+            <ContactForm />
           </div>
 
           <div className="lg:col-span-2">

@@ -5,7 +5,7 @@ import { createMetadata } from "@/lib/metadata";
 
 export const metadata = createMetadata({
   title: "Contact",
-  description: "Get in touch with SD CREATIV for a free quote on your web project in Abidjan.",
+  description: "Send a message to SD CREATIV — questions, support and project follow-up. Web agency in Abidjan.",
   path: "/en/contact",
   locale: "en",
 });

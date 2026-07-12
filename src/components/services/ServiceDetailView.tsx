@@ -204,12 +204,12 @@ export async function ServiceDetailView({ service, detail }: Props) {
               <ArrowUpRight className="h-4 w-4" aria-hidden />
             </Button>
             <Button
-              href={`/contact?service=${detail.id}`}
+              href="/contact"
               variant="outline"
               size="lg"
               className="border-white/30 text-white hover:bg-white/10"
             >
-              Demander un devis
+              Nous écrire
             </Button>
             <Button href={waUrl} external variant="whatsapp" size="lg">
               <MessageCircle className="h-4 w-4 text-green-400" aria-hidden />
