@@ -203,12 +203,12 @@ export async function processMarketingSequences(now = new Date()): Promise<{ sen
 export async function seedMarketingSequences(
   query: (text: string, params?: unknown[]) => Promise<{ rows: unknown[]; rowCount: number | null }>,
 ): Promise<void> {
-  const { rows } = await query<{ count: string }>(
+  const { rows } = await query(
     `SELECT COUNT(*)::text AS count FROM marketing_sequences`,
   );
-  if (Number(rows[0]?.count ?? 0) > 0) return;
+  if (Number((rows[0] as { count: string })?.count ?? 0) > 0) return;
 
-  const { rows: seqRows } = await query<{ id: string }>(
+  const { rows: seqRows } = await query(
     `INSERT INTO marketing_sequences (name, trigger_status, is_active)
      VALUES ('Audit gratuit → proposition', 'new', true) RETURNING id`,
   );

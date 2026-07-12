@@ -14,7 +14,7 @@ export function formatMoney(amount: number, currency: SupportedCurrency = "XOF")
   return new Intl.NumberFormat(currency === "EUR" ? "fr-FR" : "en-US", {
     style: "currency",
     currency,
-    maximumFractionDigits: currency === "XOF" ? 0 : 2,
+    maximumFractionDigits: 2,
   }).format(amount);
 }
 

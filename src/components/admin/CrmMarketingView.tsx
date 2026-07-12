@@ -11,6 +11,7 @@ import {
 } from "@/lib/marketing-api";
 import { useDialog } from "@/components/ui/DialogProvider";
 import { CrmMarketingSequencesPanel } from "@/components/admin/CrmMarketingSequencesPanel";
+import { cn } from "@/lib/utils";
 
 const INTEREST_LABELS: Record<string, string> = {
   "espace-client": "Espace client",

@@ -21,22 +21,7 @@ export type CareerApplication = {
   createdAt: string;
 };
 
-export const createCareerApplicationSchema = z.object({
-  jobId: z.string().trim().min(1).max(80),
-  jobLabel: z.string().trim().min(1).max(200),
-  name: z.string().trim().min(2).max(160),
-  email: z.string().email(),
-  phone: z.string().trim().max(32).optional().nullable(),
-  city: z.string().trim().max(120).optional().nullable(),
-  experience: z.string().trim().max(40).optional().nullable(),
-  availability: z.string().trim().max(40).optional().nullable(),
-  hasVehicle: z.string().trim().max(10).optional().nullable(),
-  linkedin: z.string().trim().max(500).optional().nullable(),
-  cvLink: z.string().trim().max(500).optional().nullable(),
-  motivation: z.string().trim().min(10).max(10000),
-});
-
-function mapRow(row: {
+type CareerApplicationRow = {
   id: string;
   job_id: string;
   job_label: string;
@@ -52,7 +37,24 @@ function mapRow(row: {
   motivation: string;
   status: CareerApplicationStatus;
   created_at: Date;
-}): CareerApplication {
+};
+
+export const createCareerApplicationSchema = z.object({
+  jobId: z.string().trim().min(1).max(80),
+  jobLabel: z.string().trim().min(1).max(200),
+  name: z.string().trim().min(2).max(160),
+  email: z.string().email(),
+  phone: z.string().trim().max(32).optional().nullable(),
+  city: z.string().trim().max(120).optional().nullable(),
+  experience: z.string().trim().max(40).optional().nullable(),
+  availability: z.string().trim().max(40).optional().nullable(),
+  hasVehicle: z.string().trim().max(10).optional().nullable(),
+  linkedin: z.string().trim().max(500).optional().nullable(),
+  cvLink: z.string().trim().max(500).optional().nullable(),
+  motivation: z.string().trim().min(10).max(10000),
+});
+
+function mapRow(row: CareerApplicationRow): CareerApplication {
   return {
     id: row.id,
     jobId: row.job_id,
@@ -88,7 +90,7 @@ export async function listCareerApplications(filters?: {
       clauses.push(`job_id = $${params.length}`);
     }
     const where = clauses.length ? `WHERE ${clauses.join(" AND ")}` : "";
-    const { rows } = await query(
+    const { rows } = await query<CareerApplicationRow>(
       `SELECT * FROM career_applications ${where} ORDER BY created_at DESC`,
       params,
     );
@@ -100,7 +102,7 @@ export async function createCareerApplication(
   input: z.infer<typeof createCareerApplicationSchema>,
 ): Promise<CareerApplication> {
   return withDb(async (query) => {
-    const { rows } = await query(
+    const { rows } = await query<CareerApplicationRow>(
       `INSERT INTO career_applications (
         job_id, job_label, name, email, phone, city, experience,
         availability, has_vehicle, linkedin, cv_link, motivation
@@ -120,7 +122,7 @@ export async function createCareerApplication(
         input.motivation,
       ],
     );
-    return mapRow(rows[0] as Parameters<typeof mapRow>[0]);
+    return mapRow(rows[0]!);
   });
 }
 
@@ -130,10 +132,10 @@ export async function updateCareerApplicationStatus(
 ): Promise<CareerApplication | null> {
   if (!CAREER_APPLICATION_STATUSES.includes(status)) return null;
   return withDb(async (query) => {
-    const { rows } = await query(
+    const { rows } = await query<CareerApplicationRow>(
       `UPDATE career_applications SET status = $2, updated_at = NOW() WHERE id = $1 RETURNING *`,
       [id, status],
     );
-    return rows[0] ? mapRow(rows[0] as Parameters<typeof mapRow>[0]) : null;
+    return rows[0] ? mapRow(rows[0]) : null;
   });
 }

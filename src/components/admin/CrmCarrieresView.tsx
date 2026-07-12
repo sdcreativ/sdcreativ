@@ -27,6 +27,7 @@ import {
 } from "@/lib/public-job-offers-api";
 import { slugifyJobTitle } from "@/lib/public-slug-utils";
 import { CrmCareerApplicationsPanel } from "@/components/admin/CrmCareerApplicationsPanel";
+import { useDialog } from "@/components/ui/DialogProvider";
 import { cn } from "@/lib/utils";
 import {
   CrmFormActions,
