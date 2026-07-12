@@ -5,7 +5,6 @@ import { ensureCrmRolesCache } from "@/lib/crm-roles-db";
 import { roleHasPermission } from "@/lib/crm-permissions";
 import {
   ADMIN_SESSION_COOKIE,
-  LEGACY_ADMIN_COOKIE,
   verifyCrmSession,
   type CrmSessionPayload,
 } from "@/lib/crm-session";

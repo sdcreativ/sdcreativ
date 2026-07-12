@@ -7,8 +7,6 @@ import {
   PROJECT_PIPELINE_COLUMNS,
   PROJECT_STATUS_LABELS,
   PROJECT_TYPE_LABELS,
-  MILESTONE_STATUS_LABELS,
-  formatProjectBudget,
   formatProjectDate,
   type ProjectStatus,
   type ProjectType,
@@ -22,7 +20,6 @@ import {
   createProjectApi,
   deleteProjectApi,
   fetchProjectsPaginated,
-  fetchProjects,
   getProjectsExportUrl,
   updateProjectApi,
 } from "@/lib/projects-api";
@@ -53,16 +50,6 @@ type ViewMode = "kanban" | "list" | "gantt";
 
 const fieldClass =
   "w-full rounded-xl border border-gray/60 bg-white px-3 py-2.5 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20";
-
-const statusStyles: Record<ProjectStatus, string> = {
-  discovery: "bg-sky-100 text-sky-700",
-  design: "bg-violet-100 text-violet-700",
-  development: "bg-primary-light text-primary",
-  testing: "bg-amber-100 text-amber-700",
-  delivered: "bg-emerald-100 text-emerald-700",
-  on_hold: "bg-gray-light text-gray-text",
-  cancelled: "bg-red-100 text-red-700",
-};
 
 export function CrmProjectsView() {
   const { confirm } = useDialog();

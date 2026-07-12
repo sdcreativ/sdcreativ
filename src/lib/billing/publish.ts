@@ -20,7 +20,6 @@ import {
   computeQuoteValidUntil,
 } from "@/lib/billing/workflow";
 import { logCrmAudit } from "@/lib/crm-audit";
-import type { QuoteStatus } from "@/content/quotes-labels";
 
 export type PublishQuoteResult = {
   quote: Quote;

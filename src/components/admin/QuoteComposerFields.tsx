@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
-import { Loader2, Plus, Trash2, X } from "lucide-react";
+import { Loader2, Plus, Trash2 } from "lucide-react";
 import {
   SERVICE_CATALOG_CATEGORY_LABELS,
   SERVICE_CATALOG_UNIT_LABELS,

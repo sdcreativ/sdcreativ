@@ -4,7 +4,6 @@ import { useCallback, useEffect, useState } from "react";
 import { Heart, Loader2, RotateCcw } from "lucide-react";
 import type { SiteMethodSettings } from "@/lib/site-method-types";
 import type { SiteWhyUsSettings } from "@/lib/site-why-us-types";
-import type { LucideIconName } from "@/lib/lucide-icon-map";
 import { parseFetchJson } from "@/lib/fetch-json";
 import { useDialog } from "@/components/ui/DialogProvider";
 import {

@@ -15,10 +15,6 @@ function absoluteUrl(path: string): string {
   return `${SITE.url}${path.startsWith("/") ? path : `/${path}`}`;
 }
 
-function stripHtml(html: string): string {
-  return html.replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim();
-}
-
 export function buildBlogRssFeed(posts: BlogPost[], contactEmail: string): string {
   const items = posts
     .map((post) => {

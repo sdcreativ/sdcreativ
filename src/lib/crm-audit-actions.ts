@@ -1,4 +1,3 @@
-import { NextResponse } from "next/server";
 import { getAdminSession, requireAdminAuth } from "@/lib/admin-auth";
 import { logCrmAudit } from "@/lib/crm-audit";
 

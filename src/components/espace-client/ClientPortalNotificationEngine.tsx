@@ -9,7 +9,7 @@ import {
   type CrmNotification,
 } from "@/lib/billing-notifications-api";
 import { cn } from "@/lib/utils";
-import { Bell, FileSignature, Receipt, X } from "lucide-react";
+import { FileSignature, Receipt, X } from "lucide-react";
 
 const POLL_MS = 30_000;
 

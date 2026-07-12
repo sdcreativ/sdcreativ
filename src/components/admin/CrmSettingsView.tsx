@@ -591,7 +591,7 @@ function CrmUsersSection({ roles }: { roles: CrmRoleRecord[] }) {
         <div className="rounded-2xl border border-gray/25 bg-gradient-to-br from-white to-amber-50/50 px-4 py-3.5 shadow-sm">
           <p className="text-xs font-semibold uppercase tracking-wide text-gray-text">Invitations</p>
           <p className="mt-2 text-2xl font-bold text-amber-700">{pendingCount}</p>
-          <p className="mt-0.5 text-xs text-gray-text">en attente d'activation</p>
+          <p className="mt-0.5 text-xs text-gray-text">en attente d&apos;activation</p>
         </div>
       </div>
 
@@ -716,7 +716,7 @@ function CrmUsersSection({ roles }: { roles: CrmRoleRecord[] }) {
                       ) : (
                         <Mail className="h-3.5 w-3.5" aria-hidden />
                       )}
-                      Renvoyer l'invitation
+                      Renvoyer l&apos;invitation
                     </button>
                   )}
                   <button
@@ -755,7 +755,7 @@ function CrmUsersSection({ roles }: { roles: CrmRoleRecord[] }) {
                 </p>
                 <h2 className="mt-1 text-lg font-bold text-foreground">Nouvel utilisateur</h2>
                 <p className="mt-1 text-sm text-gray-text">
-                  Un email d'activation sera envoyé automatiquement.
+                  Un email d&apos;activation sera envoyé automatiquement.
                 </p>
               </div>
               <button
@@ -797,7 +797,7 @@ function CrmUsersSection({ roles }: { roles: CrmRoleRecord[] }) {
                 className="inline-flex items-center gap-2 rounded-xl bg-primary px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-primary-dark"
               >
                 <Mail className="h-4 w-4" aria-hidden />
-                Envoyer l'invitation
+                Envoyer l&apos;invitation
               </button>
             </div>
           </form>

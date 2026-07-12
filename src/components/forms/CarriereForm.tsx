@@ -92,7 +92,7 @@ export function CarriereForm({
     if (poste && jobSelectOptions.some((o) => o.value === poste)) {
       setJobId(poste);
     }
-  }, [searchParams]);
+  }, [searchParams, jobSelectOptions]);
 
   async function handleSubmit(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();

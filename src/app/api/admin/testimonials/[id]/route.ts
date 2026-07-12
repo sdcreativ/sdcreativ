@@ -2,7 +2,6 @@ import { crmApiAuth } from "@/lib/crm-api-auth";
 import { NextResponse } from "next/server";
 import {
   deletePublicTestimonial,
-  getPublicTestimonialById,
   updatePublicTestimonial,
   updatePublicTestimonialSchema,
 } from "@/lib/public-testimonials";

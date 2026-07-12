@@ -51,7 +51,7 @@ export function ProjectGanttTimeline({ project }: Props) {
     );
   }
 
-  const todayPct = computeTodayPct(project, items);
+  const todayPct = computeTodayPct(project);
 
   return (
     <div className="space-y-4">
@@ -238,7 +238,7 @@ function buildTimelineItems(project: Project, milestones: ProjectMilestone[]): T
   return items.sort((a, b) => a.date.getTime() - b.date.getTime());
 }
 
-function computeTodayPct(project: Project, _items: TimelineItem[]): number | null {
+function computeTodayPct(project: Project): number | null {
   if (!project.startDate || !project.dueDate) return null;
   const start = new Date(project.startDate).getTime();
   const end = new Date(project.dueDate).getTime();

@@ -1,10 +1,6 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import {
-  CRM_PERMISSION_LABELS,
-  CRM_PERMISSIONS,
-} from "@/lib/crm-permissions";
 import type { CrmBranding, CrmEmailTemplate, CrmSettingsPayload } from "@/lib/crm-settings-types";
 import type { CrmAuditLog } from "@/lib/crm-audit";
 import {

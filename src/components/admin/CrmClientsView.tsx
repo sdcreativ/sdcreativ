@@ -10,7 +10,6 @@ import {
   formatClientDate,
   formatClientRevenue,
   type ClientStatus,
-  type InteractionType,
 } from "@/content/clients-labels";
 import {
   addClientInteractionApi,
@@ -19,7 +18,6 @@ import {
   fetchClientInteractions,
   fetchClientOverview,
   fetchClientsPaginated,
-  fetchCrmClients,
   fetchDuplicateClientGroups,
   getClientsExportUrl,
   mergeClientsApi,
@@ -39,7 +37,6 @@ import { useDialog } from "@/components/ui/DialogProvider";
 import { CrmPagination } from "@/components/admin/CrmPagination";
 import {
   CheckSquare,
-  ExternalLink,
   FileText,
   FolderKanban,
   LifeBuoy,

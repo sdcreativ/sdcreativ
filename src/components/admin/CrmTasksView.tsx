@@ -13,7 +13,6 @@ import {
   isTaskOverdue,
   priorityStyles,
   type TaskCategoryId,
-  type TaskPriority,
   type TaskStatus,
 } from "@/content/tasks-labels";
 import { QUOTE_STATUS_LABELS, formatQuoteAmount } from "@/content/quotes-labels";

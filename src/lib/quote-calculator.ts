@@ -1,4 +1,4 @@
-import type { QuoteAddon, QuotePageTier, QuoteProjectType } from "@/content/quote-config";
+import type { QuoteAddon } from "@/content/quote-config";
 import {
   quoteAddons,
   quotePageTiers,

@@ -147,13 +147,6 @@ const optionalImageUrl = z
     "URL d'image invalide.",
   );
 
-const optionalDateTime = z
-  .string()
-  .datetime({ offset: true })
-  .optional()
-  .nullable()
-  .or(z.literal("").transform(() => null));
-
 const blogPostBaseSchema = z.object({
   slug: slugSchema.optional(),
   title: z.string().trim().min(3).max(300),

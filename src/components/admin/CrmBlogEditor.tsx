@@ -164,6 +164,7 @@ export function CrmBlogEditor({ postId }: Props) {
     } finally {
       setLoading(false);
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- applyPost dépend de l'état du formulaire
   }, [postId]);
 
   function applyPost(post: BlogPostRecord) {
@@ -226,6 +227,7 @@ export function CrmBlogEditor({ postId }: Props) {
     if (!isNew) return;
     const payload = buildPayload({ forAutosave: true });
     localStorage.setItem(DRAFT_STORAGE_KEY, JSON.stringify(payload));
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- buildPayload agrège l'état du formulaire
   }, [isNew, title, slug, excerpt, category, customCategory, date, readTime, contentHtml, status, scheduledAtLocal, coverImage, authorName, metaTitle, metaDescription, tags, customReadTime, effectiveReadTime, resolvedCategory]);
 
   const runAutosave = useCallback(async () => {
@@ -240,6 +242,7 @@ export function CrmBlogEditor({ postId }: Props) {
     } finally {
       setAutosaving(false);
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- buildPayload agrège l'état du formulaire
   }, [postId, saving, title, slug, excerpt, resolvedCategory, date, effectiveReadTime, contentHtml, status, scheduledAtLocal, coverImage, authorName, metaTitle, metaDescription, tags]);
 
   async function openPreview() {

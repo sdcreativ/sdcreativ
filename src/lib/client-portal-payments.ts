@@ -77,7 +77,7 @@ function parseScheduleFromMetadata(
       label,
       amount,
       status: normalizePaymentStatus(entry.status),
-      date: entry.date ?? entry.paidAt ?? entry.dueDate ?? "—",
+      date: entry.date ?? entry.paidAt ?? entry.dueDate ?? fallbackEndDate,
     });
   }
 

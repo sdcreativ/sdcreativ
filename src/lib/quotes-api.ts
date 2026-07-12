@@ -1,5 +1,4 @@
 import type { Quote } from "@/lib/quotes";
-import type { QuoteStatus } from "@/content/quotes-labels";
 import type { QuoteListFilters } from "@/lib/quotes";
 import { parseFetchJson } from "@/lib/fetch-json";
 

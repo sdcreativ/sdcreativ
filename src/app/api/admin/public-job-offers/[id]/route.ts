@@ -2,7 +2,6 @@ import { crmApiAuth } from "@/lib/crm-api-auth";
 import { isDatabaseConfigured } from "@/lib/db";
 import {
   deletePublicJobOffer,
-  getPublicJobOfferById,
   updatePublicJobOffer,
   updatePublicJobOfferSchema,
 } from "@/lib/public-job-offers";

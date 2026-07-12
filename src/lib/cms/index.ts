@@ -9,7 +9,6 @@ import { isDatabaseConfigured } from "@/lib/db";
 import {
   realisations,
   getRealisation as getStaticRealisation,
-  getRelatedRealisations as getStaticRelated,
 } from "@/content/realisations";
 import type { BlogPost } from "@/content/blog";
 import type { Realisation } from "@/content/realisations";

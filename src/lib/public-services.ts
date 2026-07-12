@@ -268,7 +268,8 @@ export async function importStaticServices(): Promise<{ imported: number; skippe
           return;
         }
 
-        const { id: _id, ...detailBody } = detail ?? { id: slug };
+        const { id: omittedId, ...detailBody } = detail ?? { id: slug };
+        void omittedId;
 
         await query(
           `INSERT INTO public_services (

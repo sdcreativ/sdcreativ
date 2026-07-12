@@ -1,6 +1,5 @@
 import { NextResponse } from "next/server";
 import { getAdminSession, requireAdminAuth } from "@/lib/admin-auth";
-import { createLeadActivity } from "@/lib/lead-activities";
 
 export async function GET() {
   const authError = await requireAdminAuth();

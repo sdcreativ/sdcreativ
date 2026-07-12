@@ -31,9 +31,6 @@ import { DEFAULT_IMAGE_POSITION, normalizeImagePosition } from "@/lib/image-posi
 import { resolveImageDisplayUrl } from "@/lib/image-url";
 import { cn } from "@/lib/utils";
 
-const fieldClass =
-  "w-full rounded-xl border border-gray/60 bg-white px-3 py-2.5 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20";
-
 type MemberForm = {
   name: string;
   role: string;

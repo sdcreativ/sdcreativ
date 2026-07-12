@@ -286,5 +286,8 @@ export function buildActivities(
   return items
     .sort((a, b) => b.at - a.at)
     .slice(0, 6)
-    .map(({ at: _at, ...rest }) => rest);
+    .map(({ at, ...rest }) => {
+      void at;
+      return rest;
+    });
 }

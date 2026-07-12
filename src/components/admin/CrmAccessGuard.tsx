@@ -9,7 +9,7 @@ import { Loader2, ShieldOff } from "lucide-react";
 
 export function CrmAccessGuard({ children }: { children: React.ReactNode }) {
   const pathname = usePathname() ?? "/admin/crm";
-  const { permissions, loading, can } = useCrmPermissions();
+  const { loading, can } = useCrmPermissions();
 
   if (loading) {
     return (

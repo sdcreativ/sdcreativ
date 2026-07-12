@@ -5,7 +5,6 @@ import { Download, FileText, Loader2 } from "lucide-react";
 import type { ClientProfile, ProjectStep } from "@/content/client-portal-types";
 import { fetchDocuments, fetchDownloadUrl } from "@/lib/documents-api";
 import {
-  getProjectStepsFromProgress,
   messagesFromTickets,
   resolvePortalProjectSteps,
   ticketsToActivities,

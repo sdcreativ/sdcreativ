@@ -1,5 +1,5 @@
 import type { Client, ClientListFilters, DuplicateClientGroup } from "@/lib/clients";
-import type { ClientStatus, InteractionType } from "@/content/clients-labels";
+import type { InteractionType } from "@/content/clients-labels";
 
 type ApiError = { error: string };
 

@@ -44,7 +44,7 @@ export function getClientIp(request: Request): string {
 export function getRateLimitStatus(
   namespace: string,
   key: string,
-  { limit, windowMs }: RateLimitConfig,
+  { limit }: RateLimitConfig,
 ): { limited: boolean; retryAfterSec: number } {
   const now = Date.now();
   const entry = getBucket(namespace).get(key);

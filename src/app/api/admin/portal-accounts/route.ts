@@ -62,9 +62,9 @@ export async function GET() {
 
         merged.set(client.portalClientId, {
           id: client.portalClientId,
-          label: client.company || client.name,
+          label: existing?.label ?? (client.company || client.name),
           company: client.company || client.name,
-          hasEnvToken: Boolean(envConfig[client.portalClientId]),
+          hasEnvToken: existing?.hasEnvToken ?? Boolean(envConfig[client.portalClientId]),
           hasDatabaseToken,
           linkedToCrm: Boolean(ctx),
           hasCrmProject: Boolean(ctx?.project),
