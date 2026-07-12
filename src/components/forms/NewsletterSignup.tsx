@@ -14,7 +14,7 @@ export function NewsletterSignup() {
   const [consent, setConsent] = useState(false);
   const [status, setStatus] = useState<Status>("idle");
   const [error, setError] = useState("");
-  const { turnstileToken, setTurnstileToken, validate, reset, required } = useFormTurnstile();
+  const { turnstileToken, setTurnstileToken, validate, reset, onExpire, required } = useFormTurnstile();
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -126,7 +126,7 @@ export function NewsletterSignup() {
         <TurnstileWidget
           className="mt-3"
           onToken={setTurnstileToken}
-          onExpire={() => setTurnstileToken("")}
+          onExpire={onExpire}
         />
       )}
       {error && (

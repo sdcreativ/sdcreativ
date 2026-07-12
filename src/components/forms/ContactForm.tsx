@@ -73,7 +73,7 @@ export function ContactForm({
 }: ContactFormProps) {
   const [state, setState] = useState<FormState>("idle");
   const [errorMessage, setErrorMessage] = useState("");
-  const { turnstileToken, setTurnstileToken, validate, reset, required } = useFormTurnstile();
+  const { turnstileToken, setTurnstileToken, validate, reset, onExpire, required } = useFormTurnstile();
 
   async function handleSubmit(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -370,7 +370,7 @@ export function ContactForm({
           {required && (
             <TurnstileWidget
               onToken={setTurnstileToken}
-              onExpire={() => setTurnstileToken("")}
+              onExpire={onExpire}
             />
           )}
 

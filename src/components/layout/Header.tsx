@@ -18,7 +18,7 @@ export function Header() {
   const isEn = pathname.startsWith("/en");
   const isAdmin = pathname.startsWith("/admin");
   const nav = isEn ? enNav : mainNav;
-  const contactHref = isEn ? "/en/contact" : "/contact";
+  const devisHref = "/devis";
   const ctaLabel = isEn ? "Get a quote" : "Demander un devis";
   const servicesLabel = isEn ? "Services" : "Services";
 
@@ -114,7 +114,7 @@ export function Header() {
           <LocaleSwitcher className="hidden sm:flex" />
           <div className="hidden items-center gap-2 md:flex">
             <Button
-              href={contactHref}
+              href={devisHref}
               size="sm"
               className="rounded-full px-5 shadow-[0_4px_16px_rgba(0,114,181,0.4)] hover:shadow-[0_6px_20px_rgba(0,114,181,0.45)]"
             >
@@ -199,7 +199,7 @@ export function Header() {
                 <LocaleSwitcher />
               </div>
               <div className="mt-5 flex flex-col gap-2.5">
-                <Button href={contactHref} className="w-full justify-center rounded-full">
+                <Button href={devisHref} className="w-full justify-center rounded-full">
                   {ctaLabel}
                 </Button>
                 <Button

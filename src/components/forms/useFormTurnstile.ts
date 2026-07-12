@@ -15,6 +15,7 @@ export function useFormTurnstile(options?: { skip?: boolean }) {
   }, [required, turnstileToken]);
 
   const reset = useCallback(() => setTurnstileToken(""), []);
+  const onExpire = reset;
 
   return {
     required,
@@ -22,5 +23,6 @@ export function useFormTurnstile(options?: { skip?: boolean }) {
     setTurnstileToken,
     validate,
     reset,
+    onExpire,
   };
 }

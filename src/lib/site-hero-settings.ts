@@ -34,13 +34,17 @@ function mergeHeroSettings(raw: Partial<SiteHeroSettings> | null): SiteHeroSetti
   if (!raw) return defaultSiteHeroSettings;
   const backgroundImage =
     raw.backgroundImage?.trim() || defaultSiteHeroSettings.backgroundImage;
-  return {
+  const merged: SiteHeroSettings = {
     ...defaultSiteHeroSettings,
     ...raw,
     backgroundImage,
     features: raw.features?.length ? raw.features : defaultSiteHeroSettings.features,
     highlights: raw.highlights?.length ? raw.highlights : defaultSiteHeroSettings.highlights,
   };
+  if (merged.ctaPrimaryHref === "/contact" && /devis/i.test(merged.ctaPrimaryLabel)) {
+    merged.ctaPrimaryHref = "/devis";
+  }
+  return merged;
 }
 
 export const getSiteHeroSettings = cache(async (): Promise<SiteHeroSettings> => {

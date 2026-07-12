@@ -41,7 +41,7 @@ export function Footer() {
             Discutons de votre projet et construisons ensemble votre succès.
           </p>
           <div className="mt-8 flex flex-col items-center justify-center gap-4 sm:flex-row">
-            <Button href="/contact" size="lg">
+            <Button href="/devis" size="lg">
               Demander un devis
             </Button>
             <Button href={waUrl} external variant="outline" size="lg">

@@ -59,7 +59,7 @@ export function QuoteConfigurator({
   const [errorMessage, setErrorMessage] = useState("");
   const [clientValidatedOrally, setClientValidatedOrally] = useState(false);
   const isPresentation = variant === "presentation";
-  const { turnstileToken, setTurnstileToken, validate, reset, required } = useFormTurnstile({
+  const { turnstileToken, setTurnstileToken, validate, reset, onExpire, required } = useFormTurnstile({
     skip: isPresentation,
   });
 
@@ -392,7 +392,7 @@ export function QuoteConfigurator({
         {required && (
           <TurnstileWidget
             onToken={setTurnstileToken}
-            onExpire={() => setTurnstileToken("")}
+            onExpire={onExpire}
           />
         )}
 

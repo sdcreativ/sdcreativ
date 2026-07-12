@@ -85,7 +85,7 @@ export function CarriereForm({
   const [jobId, setJobId] = useState(defaultJobId);
   const [state, setState] = useState<FormState>("idle");
   const [errorMessage, setErrorMessage] = useState("");
-  const { turnstileToken, setTurnstileToken, validate, reset, required } = useFormTurnstile();
+  const { turnstileToken, setTurnstileToken, validate, reset, onExpire, required } = useFormTurnstile();
 
   useEffect(() => {
     const poste = searchParams.get("poste");
@@ -423,7 +423,7 @@ export function CarriereForm({
           {required && (
             <TurnstileWidget
               onToken={setTurnstileToken}
-              onExpire={() => setTurnstileToken("")}
+              onExpire={onExpire}
             />
           )}
 

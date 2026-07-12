@@ -33,42 +33,72 @@ export function isTurnstileEnabled(): boolean {
   return Boolean(SITE_KEY);
 }
 
+function loadTurnstileScript(): Promise<void> {
+  if (window.turnstile) return Promise.resolve();
+
+  const existing = document.getElementById(SCRIPT_ID) as HTMLScriptElement | null;
+  if (existing) {
+    return new Promise((resolve) => {
+      if (window.turnstile) {
+        resolve();
+        return;
+      }
+      existing.addEventListener("load", () => resolve(), { once: true });
+    });
+  }
+
+  return new Promise((resolve) => {
+    const script = document.createElement("script");
+    script.id = SCRIPT_ID;
+    script.src = "https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit";
+    script.async = true;
+    script.onload = () => resolve();
+    document.head.appendChild(script);
+  });
+}
+
 export function TurnstileWidget({ onToken, onExpire, className }: Props) {
   const containerRef = useRef<HTMLDivElement>(null);
   const widgetIdRef = useRef<string | null>(null);
+  const onTokenRef = useRef(onToken);
+  const onExpireRef = useRef(onExpire);
+
+  useEffect(() => {
+    onTokenRef.current = onToken;
+  }, [onToken]);
+
+  useEffect(() => {
+    onExpireRef.current = onExpire;
+  }, [onExpire]);
 
   useEffect(() => {
     if (!SITE_KEY || !containerRef.current) return;
 
+    let cancelled = false;
+
     const renderWidget = () => {
-      if (!window.turnstile || !containerRef.current) return;
+      if (cancelled || !window.turnstile || !containerRef.current) return;
+      if (widgetIdRef.current) {
+        window.turnstile.remove(widgetIdRef.current);
+        widgetIdRef.current = null;
+      }
       widgetIdRef.current = window.turnstile.render(containerRef.current, {
         sitekey: SITE_KEY,
-        callback: onToken,
-        "expired-callback": onExpire,
+        callback: (token) => onTokenRef.current(token),
+        "expired-callback": () => onExpireRef.current?.(),
       });
     };
 
-    if (window.turnstile) {
-      renderWidget();
-    } else if (!document.getElementById(SCRIPT_ID)) {
-      const script = document.createElement("script");
-      script.id = SCRIPT_ID;
-      script.src = "https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit";
-      script.async = true;
-      script.onload = renderWidget;
-      document.head.appendChild(script);
-    } else {
-      renderWidget();
-    }
+    void loadTurnstileScript().then(renderWidget);
 
     return () => {
+      cancelled = true;
       if (widgetIdRef.current && window.turnstile) {
         window.turnstile.remove(widgetIdRef.current);
         widgetIdRef.current = null;
       }
     };
-  }, [onToken, onExpire]);
+  }, []);
 
   if (!SITE_KEY) return null;
 

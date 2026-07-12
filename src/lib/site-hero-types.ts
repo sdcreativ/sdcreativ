@@ -33,7 +33,7 @@ export const defaultSiteHeroSettings: SiteHeroSettings = {
     { label: "Support Après mise en ligne", description: "On reste à vos côtés" },
   ],
   ctaPrimaryLabel: "Obtenir mon devis",
-  ctaPrimaryHref: "/contact",
+  ctaPrimaryHref: "/devis",
   ctaSecondaryLabel: "Découvrir nos services",
   ctaSecondaryHref: "/services",
   backgroundImage: "/images/services/services-hero-bg.png",
