@@ -31,6 +31,43 @@ export const CRM_PERMISSIONS = [
 
 export type CrmPermission = (typeof CRM_PERMISSIONS)[number];
 
+export const CRM_PERMISSION_GROUPS: Array<{
+  id: string;
+  label: string;
+  permissions: CrmPermission[];
+}> = [
+  {
+    id: "admin",
+    label: "Administration",
+    permissions: ["users.manage", "settings.manage", "audit.view"],
+  },
+  {
+    id: "commercial",
+    label: "Commercial",
+    permissions: ["leads.read", "leads.write", "clients.read", "clients.write", "quotes.read", "quotes.write"],
+  },
+  {
+    id: "operations",
+    label: "Opérations",
+    permissions: ["projects.read", "projects.write", "tasks.read", "tasks.write", "tickets.read", "tickets.write"],
+  },
+  {
+    id: "billing",
+    label: "Facturation & documents",
+    permissions: ["invoices.read", "invoices.write", "documents.read", "documents.write"],
+  },
+  {
+    id: "content",
+    label: "Contenu & site",
+    permissions: ["blog.read", "blog.write", "site.read", "site.write"],
+  },
+  {
+    id: "insights",
+    label: "Reporting & infra",
+    permissions: ["reports.view", "infra.view"],
+  },
+];
+
 export const CRM_PERMISSION_LABELS: Record<CrmPermission, string> = {
   "users.manage": "Gérer les utilisateurs",
   "settings.manage": "Modifier paramètres & branding",

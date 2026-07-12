@@ -25,6 +25,7 @@ import { PaymentSettingsSection } from "@/components/admin/PaymentSettingsSectio
 import type { CrmUser } from "@/lib/crm-users";
 import { fetchPortalAccounts, fetchSettingsHealth } from "@/lib/settings-api";
 import type { CrmRoleRecord } from "@/lib/crm-roles-api";
+import { fetchCrmRoles } from "@/lib/crm-roles-api";
 import { cn } from "@/lib/utils";
 import {
   Calendar,
@@ -33,16 +34,20 @@ import {
   Database,
   Globe,
   LayoutGrid,
+  Grid3X3,
   Loader2,
   Mail,
   Palette,
   RefreshCw,
   Shield,
+  UserPlus,
   Users,
+  X,
   XCircle,
 } from "lucide-react";
 
 type SettingsTab = "overview" | "site" | "payments" | "team" | "emails" | "security" | "appearance";
+type TeamSubTab = "roles" | "users" | "matrix";
 
 const TABS: { id: SettingsTab; label: string; icon: typeof LayoutGrid }[] = [
   { id: "overview", label: "Vue d'ensemble", icon: LayoutGrid },
@@ -60,6 +65,7 @@ export function CrmSettingsView() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [tab, setTab] = useState<SettingsTab>("overview");
+  const [teamSubTab, setTeamSubTab] = useState<TeamSubTab>("roles");
   const [crmRoles, setCrmRoles] = useState<CrmRoleRecord[]>([]);
 
   const load = useCallback(async () => {
@@ -83,6 +89,13 @@ export function CrmSettingsView() {
   useEffect(() => {
     void load();
   }, [load]);
+
+  useEffect(() => {
+    if (tab !== "team") return;
+    void fetchCrmRoles()
+      .then(setCrmRoles)
+      .catch(() => setCrmRoles([]));
+  }, [tab]);
 
   const okCount = health?.integrations.filter((i) => i.status === "ok").length ?? 0;
   const issueCount =
@@ -242,29 +255,64 @@ export function CrmSettingsView() {
           )}
 
           {tab === "team" && (
-            <div className="space-y-6">
-              <Section
-                title="Rôles & permissions"
-                description="Rôles système + rôles personnalisés pour votre équipe."
-                icon={<Shield className="h-5 w-5 text-primary" aria-hidden />}
+            <div className="space-y-5">
+              <nav
+                className="flex gap-1 overflow-x-auto rounded-2xl border border-gray/30 bg-gray-light/30 p-1.5"
+                aria-label="Sous-sections équipe"
               >
-                <CrmRolesSection onRolesChange={setCrmRoles} />
-              </Section>
+                {(
+                  [
+                    { id: "roles" as const, label: "Rôles", icon: Shield },
+                    { id: "users" as const, label: "Utilisateurs", icon: Users },
+                    { id: "matrix" as const, label: "Matrice", icon: Grid3X3 },
+                  ] as const
+                ).map(({ id, label, icon: Icon }) => (
+                  <button
+                    key={id}
+                    type="button"
+                    onClick={() => setTeamSubTab(id)}
+                    className={cn(
+                      "inline-flex shrink-0 items-center gap-2 rounded-xl px-4 py-2.5 text-sm font-medium transition-all",
+                      teamSubTab === id
+                        ? "bg-white text-foreground shadow-sm ring-1 ring-gray/20"
+                        : "text-gray-text hover:bg-white/70 hover:text-foreground",
+                    )}
+                  >
+                    <Icon className="h-4 w-4" aria-hidden />
+                    {label}
+                  </button>
+                ))}
+              </nav>
 
-              <Section
-                title="Utilisateurs"
-                description="Assignez un rôle à chaque membre de l'équipe."
-                icon={<Users className="h-5 w-5 text-violet-600" aria-hidden />}
-              >
-                <CrmUsersSection roles={crmRoles} />
-              </Section>
+              {teamSubTab === "roles" && (
+                <Section
+                  title="Rôles & permissions"
+                  description="Rôles système et profils personnalisés pour contrôler l'accès au CRM."
+                  icon={<Shield className="h-5 w-5 text-primary" aria-hidden />}
+                >
+                  <CrmRolesSection onRolesChange={setCrmRoles} />
+                </Section>
+              )}
 
-              <Section
-                title="Matrice des permissions"
-                description="Aperçu des droits par rôle."
-              >
-                <PermissionsMatrix roles={crmRoles} />
-              </Section>
+              {teamSubTab === "users" && (
+                <Section
+                  title="Utilisateurs"
+                  description="Invitez et gérez les membres de votre équipe CRM."
+                  icon={<Users className="h-5 w-5 text-violet-600" aria-hidden />}
+                >
+                  <CrmUsersSection roles={crmRoles} />
+                </Section>
+              )}
+
+              {teamSubTab === "matrix" && (
+                <Section
+                  title="Matrice des permissions"
+                  description="Vue d'ensemble des droits accordés à chaque rôle."
+                  icon={<Grid3X3 className="h-5 w-5 text-emerald-600" aria-hidden />}
+                >
+                  <PermissionsMatrix roles={crmRoles} />
+                </Section>
+              )}
             </div>
           )}
 
@@ -479,6 +527,9 @@ function CrmUsersSection({ roles }: { roles: CrmRoleRecord[] }) {
     void loadUsers();
   }, [loadUsers]);
 
+  const activeCount = users.filter((u) => u.active).length;
+  const pendingCount = users.filter((u) => u.invitationPending).length;
+
   async function handleCreate(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
     setError("");
@@ -520,172 +571,237 @@ function CrmUsersSection({ roles }: { roles: CrmRoleRecord[] }) {
     }
   }
 
+  function getRoleLabel(slug: string) {
+    return roles.find((r) => r.slug === slug)?.label ?? slug;
+  }
+
   return (
-    <div className="space-y-4">
-      <p className="text-sm text-gray-text">
+    <div className="space-y-6">
+      <div className="grid gap-3 sm:grid-cols-3">
+        <div className="rounded-2xl border border-gray/25 bg-gradient-to-br from-white to-gray-light/30 px-4 py-3.5 shadow-sm">
+          <p className="text-xs font-semibold uppercase tracking-wide text-gray-text">Équipe</p>
+          <p className="mt-2 text-2xl font-bold text-foreground">{users.length}</p>
+          <p className="mt-0.5 text-xs text-gray-text">utilisateur(s) au total</p>
+        </div>
+        <div className="rounded-2xl border border-gray/25 bg-gradient-to-br from-white to-emerald-50/50 px-4 py-3.5 shadow-sm">
+          <p className="text-xs font-semibold uppercase tracking-wide text-gray-text">Actifs</p>
+          <p className="mt-2 text-2xl font-bold text-emerald-700">{activeCount}</p>
+          <p className="mt-0.5 text-xs text-gray-text">comptes opérationnels</p>
+        </div>
+        <div className="rounded-2xl border border-gray/25 bg-gradient-to-br from-white to-amber-50/50 px-4 py-3.5 shadow-sm">
+          <p className="text-xs font-semibold uppercase tracking-wide text-gray-text">Invitations</p>
+          <p className="mt-2 text-2xl font-bold text-amber-700">{pendingCount}</p>
+          <p className="mt-0.5 text-xs text-gray-text">en attente d'activation</p>
+        </div>
+      </div>
+
+      <p className="text-sm leading-relaxed text-gray-text">
         Invitez un collaborateur par email : il recevra un lien sécurisé pour définir son mot de
         passe (valable 72 h).
       </p>
 
       {success && (
-        <p className="rounded-xl border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm text-emerald-800">
+        <p className="rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-800">
           {success}
         </p>
       )}
 
       {error && (
-        <p className="rounded-xl border border-accent/30 bg-accent/5 px-3 py-2 text-sm text-accent">
+        <p className="rounded-xl border border-accent/30 bg-accent/5 px-4 py-3 text-sm text-accent">
           {error}
         </p>
       )}
 
       {loading ? (
-        <p className="flex items-center gap-2 text-sm text-gray-text">
-          <Loader2 className="h-4 w-4 animate-spin text-primary" aria-hidden />
-          Chargement…
-        </p>
+        <div className="flex items-center justify-center gap-2 rounded-2xl border border-dashed border-gray/30 bg-gray-light/20 py-16 text-sm text-gray-text">
+          <Loader2 className="h-5 w-5 animate-spin text-primary" aria-hidden />
+          Chargement des utilisateurs…
+        </div>
       ) : users.length === 0 ? (
         <EmptyState>Aucun utilisateur CRM pour le moment.</EmptyState>
       ) : (
-        <ul className="space-y-2">
+        <div className="grid gap-4 sm:grid-cols-2">
           {users.map((user) => (
-            <li
+            <article
               key={user.id}
-              className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-gray/25 bg-gray-light/20 px-4 py-3.5 transition-colors hover:border-gray/40 hover:bg-white"
+              className="group overflow-hidden rounded-2xl border border-gray/25 bg-gradient-to-br from-white to-gray-light/25 shadow-sm transition-all hover:-translate-y-0.5 hover:shadow-md"
             >
-              <div className="flex items-center gap-3">
-                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-primary/10 text-sm font-bold text-primary">
-                  {user.name
-                    .split(" ")
-                    .map((n) => n[0])
-                    .join("")
-                    .slice(0, 2)
-                    .toUpperCase()}
+              <div className="p-5">
+                <div className="flex items-start gap-3">
+                  <div
+                    className={cn(
+                      "flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl text-sm font-bold shadow-sm ring-1",
+                      user.active
+                        ? "bg-primary/10 text-primary ring-primary/20"
+                        : "bg-gray-light text-gray-text ring-gray/20",
+                    )}
+                  >
+                    {user.name
+                      .split(" ")
+                      .map((n) => n[0])
+                      .join("")
+                      .slice(0, 2)
+                      .toUpperCase()}
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <p className="truncate font-bold text-foreground">{user.name}</p>
+                    <p className="truncate text-xs text-gray-text">{user.email}</p>
+                    <p className="mt-2 inline-flex items-center gap-1 rounded-full bg-white px-2.5 py-1 text-[11px] font-medium text-gray-text ring-1 ring-gray/15">
+                      <Shield className="h-3 w-3 text-primary" aria-hidden />
+                      {getRoleLabel(user.role)}
+                    </p>
+                  </div>
                 </div>
-                <div>
-                  <p className="font-semibold text-foreground">{user.name}</p>
-                  <p className="text-xs text-gray-text">{user.email}</p>
-                </div>
-              </div>
-              <div className="flex flex-wrap items-center gap-2">
-                <select
-                  value={user.role}
-                  onChange={(e) =>
-                    void updateCrmUserApi(user.id, { role: e.target.value })
-                      .then(loadUsers)
-                      .catch((err) =>
-                        setError(err instanceof Error ? err.message : "Mise à jour impossible."),
-                      )
-                  }
-                  className="rounded-lg border border-gray/60 bg-white px-2.5 py-1.5 text-xs shadow-sm"
-                  aria-label={`Rôle de ${user.name}`}
-                >
-                  {roles.map((role) => (
-                    <option key={role.id} value={role.slug}>
-                      {role.label}
-                    </option>
-                  ))}
-                </select>
-                <button
-                  type="button"
-                  onClick={() =>
-                    void updateCrmUserApi(user.id, { active: !user.active })
-                      .then(loadUsers)
-                      .catch((err) =>
-                        setError(err instanceof Error ? err.message : "Mise à jour impossible."),
-                      )
-                  }
-                  className={cn(
-                    "rounded-full px-2.5 py-1 text-[10px] font-bold uppercase tracking-wide",
-                    user.active ? "bg-emerald-100 text-emerald-700" : "bg-gray-light text-gray-text",
-                  )}
-                >
-                  {user.active ? "Actif" : "Inactif"}
-                </button>
-                {user.invitationPending && (
-                  <>
+
+                <div className="mt-4 flex flex-wrap gap-2">
+                  <button
+                    type="button"
+                    onClick={() =>
+                      void updateCrmUserApi(user.id, { active: !user.active })
+                        .then(loadUsers)
+                        .catch((err) =>
+                          setError(err instanceof Error ? err.message : "Mise à jour impossible."),
+                        )
+                    }
+                    className={cn(
+                      "rounded-full px-2.5 py-1 text-[10px] font-bold uppercase tracking-wide transition-colors",
+                      user.active
+                        ? "bg-emerald-100 text-emerald-700 hover:bg-emerald-200/80"
+                        : "bg-gray-light text-gray-text hover:bg-gray/30",
+                    )}
+                  >
+                    {user.active ? "Actif" : "Inactif"}
+                  </button>
+                  {user.invitationPending && (
                     <span className="rounded-full bg-amber-100 px-2.5 py-1 text-[10px] font-bold uppercase tracking-wide text-amber-800">
                       En attente
                     </span>
+                  )}
+                </div>
+
+                <div className="mt-4 space-y-2 border-t border-gray/15 pt-4">
+                  <label className="block text-[11px] font-semibold uppercase tracking-wide text-gray-text">
+                    Rôle assigné
+                  </label>
+                  <select
+                    value={user.role}
+                    onChange={(e) =>
+                      void updateCrmUserApi(user.id, { role: e.target.value })
+                        .then(loadUsers)
+                        .catch((err) =>
+                          setError(err instanceof Error ? err.message : "Mise à jour impossible."),
+                        )
+                    }
+                    className="w-full rounded-xl border border-gray/50 bg-white px-3 py-2 text-sm shadow-sm transition-all focus:border-primary focus:outline-none focus:ring-4 focus:ring-primary/10"
+                    aria-label={`Rôle de ${user.name}`}
+                  >
+                    {roles.map((role) => (
+                      <option key={role.id} value={role.slug}>
+                        {role.label}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                <div className="mt-3 flex flex-wrap gap-2">
+                  {user.invitationPending && (
                     <button
                       type="button"
                       disabled={resendingId === user.id}
                       onClick={() => void handleResendInvitation(user)}
-                      className="inline-flex items-center gap-1 rounded-lg px-2 py-1 text-xs font-medium text-primary transition-colors hover:bg-primary/5 disabled:opacity-50"
+                      className="inline-flex flex-1 items-center justify-center gap-1.5 rounded-xl border border-primary/25 bg-primary-light/20 px-3 py-2 text-xs font-semibold text-primary transition-colors hover:bg-primary-light/40 disabled:opacity-50"
                     >
                       {resendingId === user.id ? (
-                        <Loader2 className="h-3 w-3 animate-spin" aria-hidden />
+                        <Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden />
                       ) : (
-                        <Mail className="h-3 w-3" aria-hidden />
+                        <Mail className="h-3.5 w-3.5" aria-hidden />
                       )}
-                      Renvoyer
+                      Renvoyer l'invitation
                     </button>
-                  </>
-                )}
-                <button
-                  type="button"
-                  onClick={() => void deleteCrmUserApi(user.id).then(loadUsers)}
-                  className="rounded-lg px-2 py-1 text-xs font-medium text-accent transition-colors hover:bg-accent/5"
-                >
-                  Supprimer
-                </button>
+                  )}
+                  <button
+                    type="button"
+                    onClick={() => void deleteCrmUserApi(user.id).then(loadUsers)}
+                    className="rounded-xl border border-accent/20 px-3 py-2 text-xs font-semibold text-accent transition-colors hover:bg-accent/5"
+                  >
+                    Supprimer
+                  </button>
+                </div>
               </div>
-            </li>
+            </article>
           ))}
-        </ul>
+        </div>
       )}
 
-      {showForm ? (
-        <form
-          onSubmit={handleCreate}
-          className="rounded-xl border border-primary/20 bg-primary-light/20 p-5"
-        >
-          <p className="mb-1 text-sm font-semibold text-foreground">Nouvel utilisateur</p>
-          <p className="mb-3 text-xs text-gray-text">
-            Une invitation par email sera envoyée automatiquement.
-          </p>
-          <div className="grid gap-3 sm:grid-cols-2">
-            <input name="name" required placeholder="Nom *" className={userFieldClass} />
-            <input
-              name="email"
-              type="email"
-              required
-              placeholder="Email *"
-              className={userFieldClass}
-            />
-            <select name="role" defaultValue="commercial" className={userFieldClass} aria-label="Rôle">
-              {roles.map((role) => (
-                <option key={role.id} value={role.slug}>
-                  {role.label}
-                </option>
-              ))}
-            </select>
-          </div>
-          <div className="mt-4 flex gap-2">
-            <button
-              type="submit"
-              className="rounded-xl bg-primary px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-primary-dark"
-            >
-              Créer le compte
-            </button>
-            <button
-              type="button"
-              onClick={() => setShowForm(false)}
-              className="rounded-xl border border-gray/60 px-4 py-2 text-sm font-medium text-gray-text hover:bg-white"
-            >
-              Annuler
-            </button>
-          </div>
-        </form>
-      ) : (
-        <button
-          type="button"
-          onClick={() => setShowForm(true)}
-          className="inline-flex items-center gap-2 rounded-xl border border-primary/30 bg-primary-light/30 px-4 py-2.5 text-sm font-semibold text-primary transition-colors hover:bg-primary-light/50"
-        >
-          <Users className="h-4 w-4" aria-hidden />
-          Ajouter un utilisateur
-        </button>
+      <button
+        type="button"
+        onClick={() => setShowForm(true)}
+        className="group inline-flex w-full items-center justify-center gap-2 rounded-2xl border border-dashed border-violet-300/50 bg-gradient-to-br from-violet-50/50 to-white px-5 py-4 text-sm font-semibold text-violet-700 transition-all hover:border-violet-400/60 hover:shadow-md sm:w-auto"
+      >
+        <UserPlus className="h-4 w-4 transition-transform group-hover:scale-110" aria-hidden />
+        Inviter un utilisateur
+      </button>
+
+      {showForm && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/45 p-4 backdrop-blur-sm">
+          <form
+            onSubmit={handleCreate}
+            className="w-full max-w-md overflow-hidden rounded-2xl bg-white shadow-2xl ring-1 ring-black/5"
+          >
+            <div className="flex items-start justify-between gap-4 border-b border-gray/20 bg-gradient-to-r from-violet-50/60 to-white px-6 py-5">
+              <div>
+                <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-gray-text">
+                  Invitation
+                </p>
+                <h2 className="mt-1 text-lg font-bold text-foreground">Nouvel utilisateur</h2>
+                <p className="mt-1 text-sm text-gray-text">
+                  Un email d'activation sera envoyé automatiquement.
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowForm(false)}
+                className="rounded-xl border border-gray/30 p-2 text-gray-text hover:bg-gray-light/60"
+                aria-label="Fermer"
+              >
+                <X className="h-4 w-4" aria-hidden />
+              </button>
+            </div>
+            <div className="space-y-3 px-6 py-5">
+              <input name="name" required placeholder="Nom complet *" className={userFieldClass} />
+              <input
+                name="email"
+                type="email"
+                required
+                placeholder="Email professionnel *"
+                className={userFieldClass}
+              />
+              <select name="role" defaultValue="commercial" className={userFieldClass} aria-label="Rôle">
+                {roles.map((role) => (
+                  <option key={role.id} value={role.slug}>
+                    {role.label}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div className="flex justify-end gap-2 border-t border-gray/20 bg-gray-light/20 px-6 py-4">
+              <button
+                type="button"
+                onClick={() => setShowForm(false)}
+                className="rounded-xl border border-gray/60 px-4 py-2 text-sm font-medium text-gray-text hover:bg-white"
+              >
+                Annuler
+              </button>
+              <button
+                type="submit"
+                className="inline-flex items-center gap-2 rounded-xl bg-primary px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-primary-dark"
+              >
+                <Mail className="h-4 w-4" aria-hidden />
+                Envoyer l'invitation
+              </button>
+            </div>
+          </form>
+        </div>
       )}
     </div>
   );
