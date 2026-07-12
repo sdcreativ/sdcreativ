@@ -1,4 +1,5 @@
 import { cache } from "react";
+import { connection } from "next/server";
 import { z } from "zod";
 import { isDatabaseConfigured, withDb } from "@/lib/db";
 import { resolveSitePublic } from "@/lib/site-public-resolver";
@@ -48,6 +49,8 @@ export const updateSitePublicSchema = z.object({
 });
 
 export const getSitePublicSettings = cache(async (): Promise<ResolvedSitePublic> => {
+  await connection();
+
   if (!isDatabaseConfigured()) {
     return resolveSitePublic(null);
   }

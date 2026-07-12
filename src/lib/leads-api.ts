@@ -1,4 +1,11 @@
-import type { CreateLeadInput, Lead, LeadListFilters, LeadListResult, LeadStatus } from "@/lib/leads";
+import type {
+  CreateLeadInput,
+  DuplicateLeadGroup,
+  Lead,
+  LeadListFilters,
+  LeadListResult,
+  LeadStatus,
+} from "@/lib/leads";
 import { parseFetchJson } from "@/lib/fetch-json";
 
 async function parseJson<T>(res: Response): Promise<T> {
@@ -71,6 +78,23 @@ export async function updateLeadApi(
     credentials: "include",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(input),
+  });
+  const json = await parseJson<{ lead: Lead }>(res);
+  return json.lead;
+}
+
+export async function fetchDuplicateLeadGroups(): Promise<DuplicateLeadGroup[]> {
+  const res = await fetch("/api/admin/leads/duplicates", { credentials: "include" });
+  const json = await parseJson<{ groups: DuplicateLeadGroup[] }>(res);
+  return json.groups;
+}
+
+export async function mergeLeadsApi(sourceId: string, targetId: string): Promise<Lead> {
+  const res = await fetch("/api/admin/leads/merge", {
+    method: "POST",
+    credentials: "include",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ sourceId, targetId }),
   });
   const json = await parseJson<{ lead: Lead }>(res);
   return json.lead;

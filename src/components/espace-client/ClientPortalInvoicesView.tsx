@@ -44,7 +44,15 @@ function statusTone(status: string): string {
   return "bg-gray-light text-gray-text";
 }
 
-function PaymentInstructionsPanel({ payment }: { payment: PaymentInstructionsPayload }) {
+function PaymentInstructionsPanel({
+  payment,
+  onPayOnline,
+  payLoading,
+}: {
+  payment: PaymentInstructionsPayload;
+  onPayOnline?: () => void;
+  payLoading?: boolean;
+}) {
   const hasBank = Boolean(payment.bankName || payment.iban);
   const hasMomo = Boolean(
     payment.orangeMoneyNumber || payment.waveNumber || payment.mtnMomoNumber,
@@ -59,6 +67,28 @@ function PaymentInstructionsPanel({ payment }: { payment: PaymentInstructionsPay
       <p className="mt-1 text-sm text-gray-text">
         Référence obligatoire : <strong className="font-mono text-foreground">{payment.referenceLabel}</strong>
       </p>
+
+      {payment.onlineAvailable && onPayOnline && (
+        <button
+          type="button"
+          disabled={payLoading}
+          onClick={onPayOnline}
+          className="mt-4 inline-flex w-full items-center justify-center gap-2 rounded-xl bg-emerald-600 py-3 text-sm font-semibold text-white hover:bg-emerald-700 disabled:opacity-60"
+        >
+          {payLoading ? (
+            <Loader2 className="h-4 w-4 animate-spin" aria-hidden />
+          ) : (
+            <CreditCard className="h-4 w-4" aria-hidden />
+          )}
+          Payer en ligne — {payment.formattedAmountDue}
+        </button>
+      )}
+
+      {!payment.onlineAvailable && (
+        <p className="mt-4 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-900">
+          Paiement en ligne indisponible pour le moment. Utilisez les coordonnées ci-dessous (virement ou Mobile Money).
+        </p>
+      )}
 
       {hasBank && (
         <div className="mt-4 text-sm">
@@ -314,7 +344,13 @@ export function ClientPortalInvoicesView() {
                 </p>
               )}
 
-              {detail.payment && <PaymentInstructionsPanel payment={detail.payment} />}
+              {detail.payment && (
+                <PaymentInstructionsPanel
+                  payment={detail.payment}
+                  onPayOnline={detail.payment.onlineAvailable ? () => void handlePayOnline() : undefined}
+                  payLoading={payLoading}
+                />
+              )}
 
               {payError && (
                 <p className="mt-4 rounded-xl border border-accent/30 bg-accent/5 px-3 py-2 text-sm text-accent">
@@ -323,22 +359,6 @@ export function ClientPortalInvoicesView() {
               )}
 
               <div className="mt-6 flex flex-col gap-3">
-                {detail.payment?.onlineAvailable && (
-                  <button
-                    type="button"
-                    disabled={payLoading}
-                    onClick={() => void handlePayOnline()}
-                    className="inline-flex w-full items-center justify-center gap-2 rounded-xl bg-emerald-600 py-3 text-sm font-semibold text-white hover:bg-emerald-700 disabled:opacity-60"
-                  >
-                    {payLoading ? (
-                      <Loader2 className="h-4 w-4 animate-spin" aria-hidden />
-                    ) : (
-                      <CreditCard className="h-4 w-4" aria-hidden />
-                    )}
-                    Payer en ligne — {detail.payment.formattedAmountDue}
-                  </button>
-                )}
-
                 {detail.downloadUrl && (
                   <a
                     href={detail.downloadUrl}

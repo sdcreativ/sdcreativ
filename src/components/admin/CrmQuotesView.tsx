@@ -33,6 +33,13 @@ import {
 import { fetchCrmClients } from "@/lib/clients-api";
 import type { Client } from "@/lib/clients";
 import { QuoteEmailComposer } from "@/components/admin/QuoteEmailComposer";
+import {
+  getComposerSubtotal,
+  getQuoteLinesFromComposer,
+  QuoteComposerFields,
+} from "@/components/admin/QuoteComposerFields";
+import { createComposerLine } from "@/lib/quote-composer";
+import type { QuoteComposerLine } from "@/lib/quote-composer";
 import { KanbanDropColumn, KANBAN_DRAG_MIME } from "@/lib/kanban-dnd";
 import { cn } from "@/lib/utils";
 import { useDialog } from "@/components/ui/DialogProvider";
@@ -207,6 +214,12 @@ export function CrmQuotesView() {
           Historique des devis du configurateur en ligne, création manuelle, relances et suivi de conversion.
         </p>
         <div className="flex gap-2">
+          <Link
+            href="/admin/crm/catalogue"
+            className="inline-flex items-center gap-2 rounded-xl border border-gray/60 bg-white px-3 py-2 text-sm font-medium text-gray-text hover:text-foreground"
+          >
+            Catalogue
+          </Link>
           <button
             type="button"
             onClick={() => void load()}
@@ -956,16 +969,23 @@ function CreateQuoteModal({
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [selectedClientId, setSelectedClientId] = useState("");
+  const [composerLines, setComposerLines] = useState<QuoteComposerLine[]>([createComposerLine()]);
 
   const selectedClient = clients.find((c) => c.id === selectedClientId);
+  const subtotal = getComposerSubtotal(composerLines);
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
     setLoading(true);
     setError("");
     const data = new FormData(e.currentTarget);
-    const lineLabel = String(data.get("lineLabel") || "Prestation").trim();
-    const subtotal = Number(data.get("subtotal") || 0);
+    const quoteLines = getQuoteLinesFromComposer(composerLines);
+
+    if (quoteLines.length === 0) {
+      setError("Ajoutez au moins une ligne avec un montant.");
+      setLoading(false);
+      return;
+    }
 
     try {
       const quote = await createQuoteApi({
@@ -975,7 +995,7 @@ function CreateQuoteModal({
         company: String(data.get("company") || selectedClient?.company || "") || null,
         clientId: selectedClientId || null,
         projectLabel: String(data.get("projectLabel")),
-        lines: [{ label: lineLabel, amount: subtotal }],
+        lines: quoteLines,
         subtotal,
         status: String(data.get("status") || "sent"),
         notes: String(data.get("notes") || "") || null,
@@ -990,52 +1010,104 @@ function CreateQuoteModal({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4 backdrop-blur-sm">
-      <form onSubmit={handleSubmit} className="max-h-[90vh] w-full max-w-lg overflow-y-auto rounded-2xl bg-white p-6 shadow-2xl">
-        <div className="mb-4 flex items-center justify-between">
-          <h2 className="text-lg font-bold text-foreground">Nouveau devis</h2>
+      <form
+        onSubmit={handleSubmit}
+        className="flex max-h-[92vh] w-full max-w-4xl flex-col overflow-hidden rounded-2xl bg-white shadow-2xl"
+      >
+        <div className="flex items-center justify-between border-b border-gray/40 px-6 py-4">
+          <div>
+            <h2 className="text-lg font-bold text-foreground">Nouveau devis</h2>
+            <p className="text-sm text-gray-text">Composez le devis à partir du catalogue ou de lignes libres.</p>
+          </div>
           <button type="button" onClick={onClose} aria-label="Fermer">
             <X className="h-5 w-5 text-gray-text" aria-hidden />
           </button>
         </div>
 
-        <label className="mb-3 block text-xs font-semibold uppercase tracking-wide text-gray-text">
-          Client existant (optionnel)
-          <select
-            value={selectedClientId}
-            onChange={(e) => setSelectedClientId(e.target.value)}
-            className="mt-1 w-full rounded-xl border border-gray/60 px-3 py-2.5 text-sm"
-          >
-            <option value="">Saisie manuelle</option>
-            {clients.map((client) => (
-              <option key={client.id} value={client.id}>
-                {client.company || client.name} — {client.email}
-              </option>
-            ))}
-          </select>
-        </label>
+        <div className="flex-1 overflow-y-auto px-6 py-4">
+          <label className="mb-4 block text-xs font-semibold uppercase tracking-wide text-gray-text">
+            Client existant (optionnel)
+            <select
+              value={selectedClientId}
+              onChange={(e) => setSelectedClientId(e.target.value)}
+              className="mt-1 w-full rounded-xl border border-gray/60 px-3 py-2.5 text-sm"
+            >
+              <option value="">Saisie manuelle</option>
+              {clients.map((client) => (
+                <option key={client.id} value={client.id}>
+                  {client.company || client.name} — {client.email}
+                </option>
+              ))}
+            </select>
+          </label>
 
-        <div className="grid gap-3">
-          <input name="name" required defaultValue={selectedClient?.name} placeholder="Nom du contact *" className={fieldClass} key={`name-${selectedClientId}`} />
-          <input name="email" type="email" required defaultValue={selectedClient?.email} placeholder="Email *" className={fieldClass} key={`email-${selectedClientId}`} />
-          <input name="phone" defaultValue={selectedClient?.phone ?? ""} placeholder="Téléphone" className={fieldClass} key={`phone-${selectedClientId}`} />
-          <input name="company" defaultValue={selectedClient?.company ?? ""} placeholder="Entreprise" className={fieldClass} key={`company-${selectedClientId}`} />
-          <input name="projectLabel" required placeholder="Intitulé du projet *" className={fieldClass} />
-          <input name="lineLabel" defaultValue="Prestation" placeholder="Libellé ligne principale" className={fieldClass} />
-          <input name="subtotal" type="number" min={0} required placeholder="Montant HT (FCFA) *" className={fieldClass} />
-          <select name="status" defaultValue="sent" className={fieldClass} aria-label="Statut initial">
-            <option value="draft">Brouillon</option>
-            <option value="sent">Envoyé</option>
-          </select>
+          <div className="grid gap-3 sm:grid-cols-2">
+            <input
+              name="name"
+              required
+              defaultValue={selectedClient?.name}
+              placeholder="Nom du contact *"
+              className={fieldClass}
+              key={`name-${selectedClientId}`}
+            />
+            <input
+              name="email"
+              type="email"
+              required
+              defaultValue={selectedClient?.email}
+              placeholder="Email *"
+              className={fieldClass}
+              key={`email-${selectedClientId}`}
+            />
+            <input
+              name="phone"
+              defaultValue={selectedClient?.phone ?? ""}
+              placeholder="Téléphone"
+              className={fieldClass}
+              key={`phone-${selectedClientId}`}
+            />
+            <input
+              name="company"
+              defaultValue={selectedClient?.company ?? ""}
+              placeholder="Entreprise"
+              className={fieldClass}
+              key={`company-${selectedClientId}`}
+            />
+            <input
+              name="projectLabel"
+              required
+              placeholder="Intitulé du projet *"
+              className={`${fieldClass} sm:col-span-2`}
+            />
+            <select name="status" defaultValue="sent" className={fieldClass} aria-label="Statut initial">
+              <option value="draft">Brouillon</option>
+              <option value="sent">Envoyé</option>
+            </select>
+          </div>
+
+          <div className="mt-5">
+            <QuoteComposerFields lines={composerLines} onChange={setComposerLines} />
+          </div>
+
+          <textarea
+            name="notes"
+            placeholder="Notes internes"
+            rows={2}
+            className={`${fieldClass} mt-4`}
+          />
+          {error && <p className="mt-3 text-sm text-accent">{error}</p>}
         </div>
-        <textarea name="notes" placeholder="Notes internes" rows={2} className={`${fieldClass} mt-3`} />
-        {error && <p className="mt-3 text-sm text-accent">{error}</p>}
-        <button
-          type="submit"
-          disabled={loading}
-          className="mt-4 w-full rounded-xl bg-primary py-3 text-sm font-semibold text-white hover:bg-primary-dark disabled:opacity-50"
-        >
-          {loading ? "Création…" : "Créer le devis"}
-        </button>
+
+        <div className="border-t border-gray/40 px-6 py-4">
+          <button
+            type="submit"
+            disabled={loading || subtotal <= 0}
+            className="flex w-full items-center justify-center gap-2 rounded-xl bg-primary py-3 text-sm font-semibold text-white hover:bg-primary-dark disabled:opacity-50"
+          >
+            {loading && <Loader2 className="h-4 w-4 animate-spin" aria-hidden />}
+            Créer le devis — {formatQuoteAmount(subtotal)} HT
+          </button>
+        </div>
       </form>
     </div>
   );

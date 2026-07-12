@@ -16,6 +16,9 @@ export type QuoteInput = {
 export type QuoteLine = {
   label: string;
   amount: number;
+  quantity?: number;
+  unitPrice?: number;
+  catalogItemId?: string;
 };
 
 export type QuoteResult = {

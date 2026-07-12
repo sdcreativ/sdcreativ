@@ -48,7 +48,7 @@ export default async function RootLayout({
           <main id="main-content" className="flex-1">
             {children}
           </main>
-          <FooterGate />
+          <FooterGate sitePublic={sitePublic} />
           <FloatingWidgets />
           <CookieConsent />
           <Analytics />

@@ -279,7 +279,7 @@ export default async function RealisationDetailPage({ params }: Props) {
             Discutons de votre activité et construisons ensemble votre succès digital.
           </p>
           <div className="mt-8 flex flex-col items-center justify-center gap-4 sm:flex-row">
-            <Button href="/contact" size="lg">
+            <Button href="/devis" size="lg">
               Demander un devis
               <ArrowUpRight className="h-4 w-4" aria-hidden />
             </Button>

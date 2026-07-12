@@ -377,7 +377,6 @@ export function CrmClientsView() {
           onMerged={() => {
             void loadClients();
             void loadDuplicateCount();
-            setShowDuplicates(false);
           }}
         />
       )}
@@ -1042,6 +1041,8 @@ function ClientDuplicatesModal({
     setError("");
     try {
       await mergeClientsApi(sourceId, targetId);
+      const next = await fetchDuplicateClientGroups();
+      setGroups(next);
       onMerged();
     } catch (err) {
       setError(err instanceof Error ? err.message : "Fusion impossible.");

@@ -2,6 +2,11 @@ import { formatInvoiceAmount } from "@/content/invoices-labels";
 import type { PaymentInstructionsPayload, PaymentSettings } from "@/lib/payment-settings-types";
 import { isCinetPayConfigured } from "@/lib/payment-settings";
 
+export function buildPortalInvoiceUrl(siteUrl: string, invoiceId: string): string {
+  const base = siteUrl.replace(/\/$/, "");
+  return `${base}/espace-client?section=invoices&invoice=${invoiceId}`;
+}
+
 export function buildPaymentInstructionsPayload(input: {
   settings: PaymentSettings;
   invoiceReference: string;
@@ -16,8 +21,23 @@ export function buildPaymentInstructionsPayload(input: {
   };
 }
 
-export function buildPaymentInstructionsHtml(payload: PaymentInstructionsPayload): string {
+export function buildPaymentInstructionsHtml(
+  payload: PaymentInstructionsPayload,
+  portalInvoiceUrl?: string,
+): string {
   const rows: string[] = [];
+
+  if (portalInvoiceUrl && payload.amountDue > 0) {
+    const payLabel = payload.onlineAvailable
+      ? `Payer en ligne — ${payload.formattedAmountDue}`
+      : "Accéder à ma facture";
+    rows.push(
+      `<div style="margin:0 0 16px;text-align:center">
+        <a href="${escapeAttr(portalInvoiceUrl)}" style="display:inline-block;padding:14px 28px;background:#059669;color:#ffffff;text-decoration:none;border-radius:10px;font-weight:700;font-size:15px">${escapeHtml(payLabel)}</a>
+        <p style="margin:10px 0 0;font-size:13px;color:#6b7280">Connectez-vous à votre espace client avec l&apos;email de cette facture.</p>
+      </div>`,
+    );
+  }
 
   if (payload.amountDue > 0) {
     rows.push(
@@ -65,6 +85,10 @@ function escapeHtml(value: string): string {
     .replace(/</g, "&lt;")
     .replace(/>/g, "&gt;")
     .replace(/"/g, "&quot;");
+}
+
+function escapeAttr(value: string): string {
+  return escapeHtml(value).replace(/'/g, "&#39;");
 }
 
 export function hasManualPaymentDetails(settings: PaymentSettings): boolean {

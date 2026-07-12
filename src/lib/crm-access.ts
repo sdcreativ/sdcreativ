@@ -11,6 +11,7 @@ export const CRM_NAV_PERMISSIONS: Record<string, CrmPermission | CrmPermission[]
   clients: "clients.read",
   projects: "projects.read",
   quotes: "quotes.read",
+  catalogue: "quotes.read",
   invoices: "invoices.read",
   documents: "documents.read",
   tasks: "tasks.read",
@@ -75,6 +76,7 @@ const ACTIVITY_HREF_PERMISSIONS: Array<{ prefix: string; permission: CrmPermissi
   { prefix: "/admin/crm/leads", permission: "leads.read" },
   { prefix: "/admin/crm/projets", permission: "projects.read" },
   { prefix: "/admin/crm/devis", permission: "quotes.read" },
+  { prefix: "/admin/crm/catalogue", permission: "quotes.read" },
   { prefix: "/admin/crm/taches", permission: "tasks.read" },
 ];
 

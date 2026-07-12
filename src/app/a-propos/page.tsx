@@ -62,7 +62,7 @@ export default function AboutPage() {
               local et l&apos;identité visuelle, nous couvrons l&apos;ensemble du
               parcours digital de nos clients — avec un suivi de A à Z.
             </p>
-            <Button href="/contact" className="mt-8">
+            <Button href="/devis" className="mt-8">
               Travaillons ensemble
             </Button>
           </div>

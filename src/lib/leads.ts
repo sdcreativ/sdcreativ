@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { withDb, isDatabaseConfigured } from "@/lib/db";
+import { withDb, withDbTransaction, isDatabaseConfigured } from "@/lib/db";
 import { createLeadActivity } from "@/lib/lead-activities";
 import { LEAD_SOURCE_LABELS } from "@/content/leads-labels";
 
@@ -358,4 +358,167 @@ export async function countLeadsByStatus(): Promise<Record<LeadStatus, number>> 
 /** Enregistre un lead sans faire échouer le formulaire public. */
 export async function safeCreateLead(input: CreateLeadInput): Promise<void> {
   await createLead(input);
+}
+
+export type DuplicateLeadGroup = {
+  reason: "email" | "phone";
+  key: string;
+  leads: Lead[];
+};
+
+function normalizeLeadEmail(email: string): string {
+  return email.trim().toLowerCase();
+}
+
+function normalizeLeadPhone(phone: string | null | undefined): string | null {
+  if (!phone?.trim()) return null;
+  const digits = phone.replace(/\D/g, "");
+  return digits.length >= 8 ? digits : null;
+}
+
+const LEAD_STATUS_MERGE_PRIORITY: Record<LeadStatus, number> = {
+  signed: 5,
+  quote_sent: 4,
+  contacted: 3,
+  new: 2,
+  lost: 1,
+};
+
+function pickMergedLeadStatus(a: LeadStatus, b: LeadStatus): LeadStatus {
+  if (a === "lost" && b !== "lost") return b;
+  if (b === "lost" && a !== "lost") return a;
+  return LEAD_STATUS_MERGE_PRIORITY[a] >= LEAD_STATUS_MERGE_PRIORITY[b] ? a : b;
+}
+
+export async function findDuplicateLeadGroups(): Promise<DuplicateLeadGroup[]> {
+  const { leads } = await listLeadsPaginated({ page: 1, pageSize: 10_000 });
+  const byEmail = new Map<string, Lead[]>();
+  const byPhone = new Map<string, Lead[]>();
+
+  for (const lead of leads) {
+    const emailKey = normalizeLeadEmail(lead.email);
+    if (emailKey) {
+      const list = byEmail.get(emailKey) ?? [];
+      list.push(lead);
+      byEmail.set(emailKey, list);
+    }
+    const phoneKey = normalizeLeadPhone(lead.phone);
+    if (phoneKey) {
+      const list = byPhone.get(phoneKey) ?? [];
+      list.push(lead);
+      byPhone.set(phoneKey, list);
+    }
+  }
+
+  const groups: DuplicateLeadGroup[] = [];
+  for (const [key, list] of byEmail) {
+    if (list.length > 1) groups.push({ reason: "email", key, leads: list });
+  }
+  for (const [key, list] of byPhone) {
+    if (list.length > 1) {
+      const alreadyGrouped = groups.some(
+        (g) => g.reason === "email" && g.leads.every((lead) => list.some((item) => item.id === lead.id)),
+      );
+      if (!alreadyGrouped) {
+        groups.push({ reason: "phone", key, leads: list });
+      }
+    }
+  }
+  return groups;
+}
+
+export async function mergeLeads(sourceId: string, targetId: string): Promise<Lead | null> {
+  if (sourceId === targetId) return null;
+  if (!isDatabaseConfigured()) return null;
+
+  return withDbTransaction(async (query) => {
+    const { rows: sourceRows } = await query<LeadRow>(`SELECT * FROM leads WHERE id = $1`, [sourceId]);
+    const { rows: targetRows } = await query<LeadRow>(`SELECT * FROM leads WHERE id = $1`, [targetId]);
+    const source = sourceRows[0];
+    const target = targetRows[0];
+    if (!source || !target) return null;
+
+    const mergedMessage =
+      [target.message, source.message].filter((value) => value?.trim()).join("\n\n---\n\n") || null;
+    const mergedMetadata = {
+      ...(source.metadata ?? {}),
+      ...(target.metadata ?? {}),
+      mergedFrom: sourceId,
+      mergedSources: [
+        ...new Set([
+          ...(Array.isArray(target.metadata?.mergedSources) ? (target.metadata.mergedSources as string[]) : []),
+          target.source,
+          source.source,
+        ]),
+      ],
+    };
+    const mergedStatus = pickMergedLeadStatus(target.status, source.status);
+    const mergedEstimatedValue = Math.max(target.estimated_value ?? 0, source.estimated_value ?? 0) || null;
+
+    await query(`UPDATE lead_activities SET lead_id = $1 WHERE lead_id = $2`, [targetId, sourceId]);
+    await query(`UPDATE tasks SET lead_id = $1 WHERE lead_id = $2`, [targetId, sourceId]);
+
+    const { rows: targetQuoteRows } = await query<{ id: string }>(
+      `SELECT id FROM quotes WHERE lead_id = $1 LIMIT 1`,
+      [targetId],
+    );
+    if (targetQuoteRows[0]) {
+      await query(`UPDATE quotes SET lead_id = NULL WHERE lead_id = $1`, [sourceId]);
+    } else {
+      await query(`UPDATE quotes SET lead_id = $1 WHERE lead_id = $2`, [targetId, sourceId]);
+    }
+
+    const { rows: targetClientRows } = await query<{ id: string }>(
+      `SELECT id FROM clients WHERE lead_id = $1 LIMIT 1`,
+      [targetId],
+    );
+    if (targetClientRows[0]) {
+      await query(`UPDATE clients SET lead_id = NULL WHERE lead_id = $1`, [sourceId]);
+    } else {
+      await query(`UPDATE clients SET lead_id = $1 WHERE lead_id = $2`, [targetId, sourceId]);
+    }
+
+    const { rows } = await query<LeadRow>(
+      `UPDATE leads SET
+        status = $2,
+        phone = COALESCE($3, phone),
+        company = COALESCE($4, company),
+        service = COALESCE($5, service),
+        budget = COALESCE($6, budget),
+        timeline = COALESCE($7, timeline),
+        message = $8,
+        estimated_value = $9,
+        assignee = COALESCE($10, assignee),
+        metadata = $11::jsonb,
+        updated_at = NOW()
+      WHERE id = $1
+      RETURNING *`,
+      [
+        targetId,
+        mergedStatus,
+        target.phone ?? source.phone,
+        target.company ?? source.company,
+        target.service ?? source.service,
+        target.budget ?? source.budget,
+        target.timeline ?? source.timeline,
+        mergedMessage,
+        mergedEstimatedValue,
+        target.assignee ?? source.assignee,
+        JSON.stringify(mergedMetadata),
+      ],
+    );
+
+    await query(
+      `INSERT INTO lead_activities (lead_id, type, subject, content, actor_name)
+       VALUES ($1, 'note', 'Fusion de leads', $2, NULL)`,
+      [
+        targetId,
+        `Lead fusionné avec ${source.name} (${source.email}, ${LEAD_SOURCE_LABELS[source.source]}) — ID source : ${sourceId}`,
+      ],
+    );
+
+    await query(`DELETE FROM leads WHERE id = $1`, [sourceId]);
+
+    return rows[0] ? mapLead(rows[0]) : null;
+  });
 }

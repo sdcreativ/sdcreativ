@@ -8,7 +8,7 @@ import {
 } from "@/lib/invoices";
 import { buildInvoicePaymentReminderHtml } from "@/lib/invoice-email";
 import { sendEmail } from "@/lib/email";
-import { buildPaymentInstructionsHtml, buildPaymentInstructionsPayload } from "@/lib/payment-instructions";
+import { buildPaymentInstructionsHtml, buildPaymentInstructionsPayload, buildPortalInvoiceUrl } from "@/lib/payment-instructions";
 import { getPaymentSettings } from "@/lib/payment-settings";
 import { listFiredReminderKeysForChannel, markRemindersFired } from "@/lib/crm-reminders";
 
@@ -84,7 +84,10 @@ export async function sendInvoicePaymentReminder(
   const html = buildInvoicePaymentReminderHtml(
     invoice,
     siteUrl,
-    buildPaymentInstructionsHtml(paymentPayload),
+    buildPaymentInstructionsHtml(
+      paymentPayload,
+      buildPortalInvoiceUrl(siteUrl, invoice.id),
+    ),
   );
 
   const sent = await sendEmail({

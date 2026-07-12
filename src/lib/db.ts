@@ -758,6 +758,21 @@ async function ensureSchema(): Promise<void> {
     );
     CREATE INDEX IF NOT EXISTS idx_public_pricing_reassurance_locale_sort ON public_pricing_reassurance (locale, sort_order);
 
+    CREATE TABLE IF NOT EXISTS crm_service_catalog (
+      id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+      name VARCHAR(200) NOT NULL,
+      description TEXT,
+      category VARCHAR(50) NOT NULL DEFAULT 'autre',
+      unit VARCHAR(20) NOT NULL DEFAULT 'forfait',
+      unit_price INTEGER NOT NULL DEFAULT 0,
+      sort_order INTEGER NOT NULL DEFAULT 0,
+      is_active BOOLEAN NOT NULL DEFAULT true,
+      created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+      updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    );
+    CREATE INDEX IF NOT EXISTS idx_crm_service_catalog_category ON crm_service_catalog (category, sort_order);
+    CREATE INDEX IF NOT EXISTS idx_crm_service_catalog_active ON crm_service_catalog (is_active);
+
     CREATE TABLE IF NOT EXISTS public_realisations (
       id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
       slug VARCHAR(120) NOT NULL UNIQUE,
@@ -848,4 +863,42 @@ export async function withDb<T>(
   }
 
   return fn(query);
+}
+
+export async function withDbTransaction<T>(
+  fn: (query: <R extends QueryResultRow>(
+    text: string,
+    params?: unknown[],
+  ) => Promise<{ rows: R[]; rowCount: number | null }>) => Promise<T>,
+): Promise<T> {
+  if (!isDatabaseConfigured()) {
+    throw new Error("DATABASE_URL is not configured.");
+  }
+
+  if (!schemaReady) {
+    schemaReady = ensureSchema().catch((error) => {
+      schemaReady = null;
+      throw error;
+    });
+  }
+  await schemaReady;
+
+  const poolClient = await getPool().connect();
+  try {
+    await poolClient.query("BEGIN");
+
+    async function query<R extends QueryResultRow>(text: string, params?: unknown[]) {
+      const result = await poolClient.query<R>(text, params);
+      return { rows: result.rows, rowCount: result.rowCount };
+    }
+
+    const result = await fn(query);
+    await poolClient.query("COMMIT");
+    return result;
+  } catch (error) {
+    await poolClient.query("ROLLBACK");
+    throw error;
+  } finally {
+    poolClient.release();
+  }
 }

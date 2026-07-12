@@ -12,13 +12,17 @@ import { Logo } from "@/components/ui/Logo";
 import { Button } from "@/components/ui/Button";
 import { NavGlowLink } from "@/components/ui/NavGlowLink";
 import { NewsletterSignup } from "@/components/forms/NewsletterSignup";
-import { useSitePublic, useWhatsappUrl } from "@/components/site/SitePublicProvider";
-import { SITE } from "@/lib/constants";
+import { buildWhatsappUrl } from "@/lib/site-public-resolver";
+import type { ResolvedSitePublic } from "@/lib/site-public-types";
 import { footerQuickLinks, footerServices, footerSeoLinks, legalLinks } from "@/content/navigation";
 
-export function Footer() {
-  const { contact, social } = useSitePublic();
-  const waUrl = useWhatsappUrl();
+type FooterProps = {
+  sitePublic: ResolvedSitePublic;
+};
+
+export function Footer({ sitePublic }: FooterProps) {
+  const { contact, social, companyName, tagline } = sitePublic;
+  const waUrl = buildWhatsappUrl(contact);
   const year = new Date().getFullYear();
 
   const socialIcons = [
@@ -54,7 +58,7 @@ export function Footer() {
       <div className="container mx-auto grid gap-10 px-4 py-14 md:grid-cols-2 md:px-6 lg:grid-cols-4 lg:px-8">
         <div>
           <Logo variant="footer" />
-          <p className="mt-4 text-sm leading-relaxed text-white/60">{SITE.tagline}</p>
+          <p className="mt-4 text-sm leading-relaxed text-white/60">{tagline}</p>
           <NewsletterSignup />
           <div className="mt-6 flex gap-3">
             {socialIcons.map(({ href, icon: Icon, label }) => (
@@ -139,7 +143,7 @@ export function Footer() {
 
       <div className="border-t border-white/10">
         <div className="container mx-auto flex flex-col items-center justify-between gap-4 px-4 py-6 text-sm text-white/50 md:flex-row md:px-6 lg:px-8">
-          <p>© {year} {SITE.name}. Tous droits réservés.</p>
+          <p>© {year} {companyName}. Tous droits réservés.</p>
           <div className="flex flex-wrap justify-center gap-4">
             {footerSeoLinks.map((link) => (
               <Link

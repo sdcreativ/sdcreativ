@@ -2,7 +2,7 @@ import { crmApiAuth } from "@/lib/crm-api-auth";
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { isDatabaseConfigured } from "@/lib/db";
-import { mergeClients } from "@/lib/clients";
+import { mergeLeads } from "@/lib/leads";
 
 const mergeSchema = z.object({
   sourceId: z.string().uuid(),
@@ -10,7 +10,7 @@ const mergeSchema = z.object({
 });
 
 export async function POST(request: Request) {
-  const authError = await crmApiAuth.clients.write();
+  const authError = await crmApiAuth.leads.write();
   if (authError) return authError;
 
   if (!isDatabaseConfigured()) {
@@ -25,20 +25,20 @@ export async function POST(request: Request) {
     }
 
     if (parsed.data.sourceId === parsed.data.targetId) {
-      return NextResponse.json({ error: "Impossible de fusionner une fiche avec elle-même." }, { status: 400 });
+      return NextResponse.json({ error: "Impossible de fusionner un lead avec lui-même." }, { status: 400 });
     }
 
-    const client = await mergeClients(parsed.data.sourceId, parsed.data.targetId);
-    if (!client) {
-      return NextResponse.json({ error: "Fusion impossible — fiche introuvable." }, { status: 404 });
+    const lead = await mergeLeads(parsed.data.sourceId, parsed.data.targetId);
+    if (!lead) {
+      return NextResponse.json({ error: "Fusion impossible — lead introuvable." }, { status: 404 });
     }
 
-    return NextResponse.json({ client });
+    return NextResponse.json({ lead });
   } catch (error) {
-    console.error("[api/admin/clients/merge] POST", error);
+    console.error("[api/admin/leads/merge] POST", error);
     const message =
       error instanceof Error && /lead_id|unique|duplicate key/i.test(error.message)
-        ? "Fusion impossible — conflit de données liées (lead ou portail). Réessayez ou contactez le support."
+        ? "Fusion impossible — conflit de données liées (devis ou client). Réessayez ou contactez le support."
         : "Erreur serveur.";
     return NextResponse.json({ error: message }, { status: 500 });
   }

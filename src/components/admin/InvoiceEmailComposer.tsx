@@ -75,8 +75,8 @@ export function InvoiceEmailComposer({
             <textarea value={body} onChange={(e) => setBody(e.target.value)} required rows={8} className={`${fieldClass} mt-1`} />
           </label>
           <p className="text-xs text-gray-text">
-            Le récapitulatif de la facture (montant, lignes, reste dû) et le PDF seront inclus
-            automatiquement dans l&apos;email.
+            Le récapitulatif de la facture (montant, lignes, reste dû), un bouton de paiement vers
+            l&apos;espace client et le PDF seront inclus automatiquement dans l&apos;email.
           </p>
         </div>
 

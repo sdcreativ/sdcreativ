@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { withDb, isDatabaseConfigured } from "@/lib/db";
+import { withDb, withDbTransaction, isDatabaseConfigured } from "@/lib/db";
 import type { ClientStatus, InteractionType } from "@/content/clients-labels";
 import { CLIENT_STATUSES, INTERACTION_TYPES } from "@/content/clients-labels";
 import { getLeadById, type Lead } from "@/lib/leads";
@@ -443,7 +443,7 @@ export async function mergeClients(sourceId: string, targetId: string): Promise<
   if (sourceId === targetId) return null;
   if (!isDatabaseConfigured()) return null;
 
-  return withDb(async (query) => {
+  return withDbTransaction(async (query) => {
     const { rows: sourceRows } = await query<ClientRow>(`SELECT * FROM clients WHERE id = $1`, [sourceId]);
     const { rows: targetRows } = await query<ClientRow>(`SELECT * FROM clients WHERE id = $1`, [targetId]);
     const source = sourceRows[0];
@@ -453,6 +453,27 @@ export async function mergeClients(sourceId: string, targetId: string): Promise<
     const mergedNotes = [target.notes, source.notes].filter(Boolean).join("\n\n---\n\n") || null;
     const mergedTags = [...new Set([...(target.tags ?? []), ...(source.tags ?? [])])];
     const mergedMetadata = { ...(source.metadata ?? {}), ...(target.metadata ?? {}), mergedFrom: sourceId };
+    const mergedPortalClientId = target.portal_client_id ?? source.portal_client_id;
+    const mergedLeadId = target.lead_id ?? source.lead_id;
+
+    // idx_clients_lead_id est UNIQUE — libérer la source avant d'attacher le lead à la cible.
+    if (source.lead_id) {
+      await query(`UPDATE clients SET lead_id = NULL WHERE id = $1`, [sourceId]);
+    }
+
+    if (source.portal_client_id && source.portal_client_id !== target.portal_client_id && mergedPortalClientId) {
+      await query(`UPDATE crm_notifications SET portal_client_id = $1 WHERE portal_client_id = $2`, [
+        mergedPortalClientId,
+        source.portal_client_id,
+      ]);
+      if (!target.portal_client_id) {
+        await query(`UPDATE support_tickets SET portal_client_id = $1 WHERE portal_client_id = $2`, [
+          mergedPortalClientId,
+          source.portal_client_id,
+        ]);
+      }
+      await query(`UPDATE clients SET portal_client_id = NULL WHERE id = $1`, [sourceId]);
+    }
 
     await query(`UPDATE client_interactions SET client_id = $1 WHERE client_id = $2`, [targetId, sourceId]);
     await query(`UPDATE projects SET client_id = $1 WHERE client_id = $2`, [targetId, sourceId]);
@@ -461,16 +482,6 @@ export async function mergeClients(sourceId: string, targetId: string): Promise<
     await query(`UPDATE tasks SET client_id = $1 WHERE client_id = $2`, [targetId, sourceId]);
     await query(`UPDATE calendar_events SET client_id = $1 WHERE client_id = $2`, [targetId, sourceId]);
     await query(`UPDATE invoices SET client_id = $1 WHERE client_id = $2`, [targetId, sourceId]);
-
-    const portalClientId = target.portal_client_id || source.portal_client_id;
-    const leadId = target.lead_id || source.lead_id;
-
-    if (!target.portal_client_id && source.portal_client_id) {
-      await query(`UPDATE support_tickets SET portal_client_id = $1 WHERE portal_client_id = $2`, [
-        portalClientId,
-        source.portal_client_id,
-      ]);
-    }
 
     await query(
       `UPDATE clients SET
@@ -491,8 +502,8 @@ export async function mergeClients(sourceId: string, targetId: string): Promise<
         target.phone ?? source.phone,
         target.company ?? source.company,
         target.address ?? source.address,
-        portalClientId,
-        leadId,
+        mergedPortalClientId,
+        mergedLeadId,
         mergedNotes,
         target.account_manager ?? source.account_manager,
         target.sector ?? source.sector,
@@ -512,7 +523,21 @@ export async function mergeClients(sourceId: string, targetId: string): Promise<
 
     await query(`DELETE FROM clients WHERE id = $1`, [sourceId]);
 
-    return getClientById(targetId);
+    const { rows } = await query<ClientRow>(
+      `SELECT c.*, COUNT(DISTINCT ci.id)::text AS interaction_count,
+        COALESCE(rev.revenue_total, 0)::text AS revenue_total
+       FROM clients c
+       LEFT JOIN client_interactions ci ON ci.client_id = c.id
+       LEFT JOIN (
+         SELECT client_id, SUM(paid_amount)::bigint AS revenue_total
+         FROM invoices WHERE client_id IS NOT NULL GROUP BY client_id
+       ) rev ON rev.client_id = c.id
+       WHERE c.id = $1
+       GROUP BY c.id, rev.revenue_total`,
+      [targetId],
+    );
+
+    return rows[0] ? mapClient(rows[0]) : null;
   });
 }
 

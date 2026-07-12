@@ -13,12 +13,14 @@ import {
 import {
   createLeadApi,
   deleteLeadApi,
+  fetchDuplicateLeadGroups,
   fetchLeadsPaginated,
   getLeadsExportUrl,
+  mergeLeadsApi,
   updateLeadApi,
 } from "@/lib/leads-api";
 import { convertLeadToClient } from "@/lib/clients-api";
-import type { Lead, LeadSource, LeadStatus } from "@/lib/leads";
+import type { DuplicateLeadGroup, Lead, LeadSource, LeadStatus } from "@/lib/leads";
 import {
   computeLeadScore,
   getLeadScoreTier,
@@ -37,6 +39,7 @@ import {
   ChevronLeft,
   ChevronRight,
   Download,
+  GitMerge,
   GripVertical,
   Loader2,
   Mail,
@@ -68,6 +71,8 @@ export function CrmLeadsView() {
   const [selected, setSelected] = useState<Lead | null>(null);
   const [activityRefreshKey, setActivityRefreshKey] = useState(0);
   const [showCreate, setShowCreate] = useState(false);
+  const [showDuplicates, setShowDuplicates] = useState(false);
+  const [duplicateCount, setDuplicateCount] = useState(0);
   const [saving, setSaving] = useState(false);
   const [dragOverColumn, setDragOverColumn] = useState<LeadStatus | null>(null);
   const [draggingId, setDraggingId] = useState<string | null>(null);
@@ -117,6 +122,19 @@ export function CrmLeadsView() {
   useEffect(() => {
     void loadLeads();
   }, [loadLeads]);
+
+  const loadDuplicateCount = useCallback(async () => {
+    try {
+      const groups = await fetchDuplicateLeadGroups();
+      setDuplicateCount(groups.length);
+    } catch {
+      setDuplicateCount(0);
+    }
+  }, []);
+
+  useEffect(() => {
+    void loadDuplicateCount();
+  }, [loadDuplicateCount, leads.length]);
 
   useEffect(() => {
     if (searchParams.get("create") === "1") setShowCreate(true);
@@ -246,6 +264,19 @@ export function CrmLeadsView() {
             <Download className="h-4 w-4" aria-hidden />
             PDF
           </a>
+          <button
+            type="button"
+            onClick={() => setShowDuplicates(true)}
+            className="relative inline-flex items-center gap-2 rounded-xl border border-gray/60 bg-white px-3 py-2 text-sm font-medium text-gray-text hover:text-foreground"
+          >
+            <GitMerge className="h-4 w-4" aria-hidden />
+            Doublons
+            {duplicateCount > 0 && (
+              <span className="rounded-full bg-accent px-1.5 py-0.5 text-[10px] font-bold text-white">
+                {duplicateCount}
+              </span>
+            )}
+          </button>
           <button
             type="button"
             onClick={() => void loadLeads()}
@@ -501,6 +532,16 @@ export function CrmLeadsView() {
             void loadLeads();
             setShowCreate(false);
             setSelected(lead);
+          }}
+        />
+      )}
+
+      {showDuplicates && (
+        <LeadDuplicatesModal
+          onClose={() => setShowDuplicates(false)}
+          onMerged={() => {
+            void loadLeads();
+            void loadDuplicateCount();
           }}
         />
       )}
@@ -844,6 +885,123 @@ function DetailRow({
         {icon}
         {value}
       </p>
+    </div>
+  );
+}
+
+function LeadDuplicatesModal({
+  onClose,
+  onMerged,
+}: {
+  onClose: () => void;
+  onMerged: () => void;
+}) {
+  const { confirm } = useDialog();
+  const [groups, setGroups] = useState<DuplicateLeadGroup[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [merging, setMerging] = useState<string | null>(null);
+  const [error, setError] = useState("");
+
+  useEffect(() => {
+    void fetchDuplicateLeadGroups()
+      .then(setGroups)
+      .catch(() => setGroups([]))
+      .finally(() => setLoading(false));
+  }, []);
+
+  async function handleMerge(sourceId: string, targetId: string) {
+    const ok = await confirm({
+      title: "Fusionner les leads",
+      message:
+        "Fusionner ces leads ? Le lead source sera supprimé et son historique rattaché au lead conservé.",
+      confirmLabel: "Fusionner",
+      variant: "danger",
+    });
+    if (!ok) return;
+    setMerging(sourceId);
+    setError("");
+    try {
+      await mergeLeadsApi(sourceId, targetId);
+      const next = await fetchDuplicateLeadGroups();
+      setGroups(next);
+      onMerged();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Fusion impossible.");
+    } finally {
+      setMerging(null);
+    }
+  }
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4 backdrop-blur-sm">
+      <div className="flex max-h-[85vh] w-full max-w-2xl flex-col rounded-2xl bg-white shadow-2xl">
+        <div className="flex items-center justify-between border-b border-gray/40 px-5 py-4">
+          <div>
+            <h2 className="flex items-center gap-2 text-lg font-bold text-foreground">
+              <GitMerge className="h-5 w-5 text-primary" aria-hidden />
+              Fusion de doublons
+            </h2>
+            <p className="text-sm text-gray-text">Email ou téléphone identiques</p>
+          </div>
+          <button type="button" onClick={onClose} aria-label="Fermer">
+            <X className="h-5 w-5 text-gray-text" />
+          </button>
+        </div>
+
+        <div className="flex-1 overflow-y-auto px-5 py-4">
+          {loading ? (
+            <p className="flex items-center gap-2 text-sm text-gray-text">
+              <Loader2 className="h-4 w-4 animate-spin" aria-hidden />
+              Analyse en cours…
+            </p>
+          ) : groups.length === 0 ? (
+            <p className="rounded-xl bg-emerald-50 px-4 py-3 text-sm text-emerald-800">
+              Aucun doublon détecté.
+            </p>
+          ) : (
+            <ul className="space-y-4">
+              {groups.map((group) => (
+                <li key={`${group.reason}-${group.key}`} className="rounded-xl border border-gray/30 p-4">
+                  <p className="text-xs font-bold uppercase tracking-wide text-gray-text">
+                    {group.reason === "email" ? "Email identique" : "Téléphone identique"} — {group.key}
+                  </p>
+                  <ul className="mt-3 space-y-2">
+                    {group.leads.map((lead) => (
+                      <li
+                        key={lead.id}
+                        className="flex flex-wrap items-center justify-between gap-2 rounded-lg bg-gray-light/50 px-3 py-2 text-sm"
+                      >
+                        <div>
+                          <p className="font-medium text-foreground">{lead.name}</p>
+                          <p className="text-xs text-gray-text">
+                            {lead.email} · {LEAD_SOURCE_LABELS[lead.source]} · {LEAD_STATUS_LABELS[lead.status]}
+                          </p>
+                        </div>
+                        <div className="flex flex-wrap gap-1">
+                          {group.leads
+                            .filter((other) => other.id !== lead.id)
+                            .map((other) => (
+                              <button
+                                key={other.id}
+                                type="button"
+                                disabled={merging !== null}
+                                onClick={() => void handleMerge(lead.id, other.id)}
+                                className="rounded-lg border border-primary/30 px-2 py-1 text-[11px] font-semibold text-primary hover:bg-primary-light disabled:opacity-50"
+                              >
+                                {merging === lead.id ? "Fusion…" : `Fusionner → ${other.name}`}
+                              </button>
+                            ))}
+                        </div>
+                      </li>
+                    ))}
+                  </ul>
+                </li>
+              ))}
+            </ul>
+          )}
+          {error && <p className="mt-3 text-sm text-accent">{error}</p>}
+        </div>
+      </div>
     </div>
   );
 }

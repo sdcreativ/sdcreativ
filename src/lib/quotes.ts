@@ -145,8 +145,12 @@ export const createQuoteSchema = z.object({
       z.object({
         label: z.string(),
         amount: z.number().int().min(0),
+        quantity: z.number().positive().optional(),
+        unitPrice: z.number().int().min(0).optional(),
+        catalogItemId: z.string().uuid().optional(),
       }),
     )
+    .min(1)
     .default([]),
   subtotal: z.number().int().min(0),
   estimateMin: z.number().int().min(0).optional().nullable(),

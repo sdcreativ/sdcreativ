@@ -1,6 +1,6 @@
 import { buildInvoiceEmailHtml } from "@/lib/invoice-email";
 import { buildInvoicePdfHtml } from "@/lib/invoice-pdf";
-import { buildPaymentInstructionsHtml, buildPaymentInstructionsPayload } from "@/lib/payment-instructions";
+import { buildPaymentInstructionsHtml, buildPaymentInstructionsPayload, buildPortalInvoiceUrl } from "@/lib/payment-instructions";
 import { getPaymentSettings } from "@/lib/payment-settings";
 import { getInvoiceDocumentCompany } from "@/lib/billing/document-company";
 import { getClientById } from "@/lib/clients";
@@ -50,7 +50,7 @@ async function markQuoteInvoiced(quoteId: string): Promise<Quote | null> {
   return getQuoteById(quoteId);
 }
 
-function buildInvoiceEmailBody(invoice: Invoice, siteUrl: string, portalUrl: string): string {
+function buildInvoiceEmailBody(invoice: Invoice, siteUrl: string): string {
   const remaining = getInvoiceRemaining(invoice);
   return `Bonjour ${invoice.name.split(" ")[0] ?? invoice.name},
 
@@ -60,8 +60,8 @@ Total TTC : ${formatInvoiceAmount(invoice.total)}
 ${invoice.dueDate ? `Échéance : ${formatInvoiceDate(invoice.dueDate)}` : ""}
 ${remaining > 0 ? `Reste dû : ${formatInvoiceAmount(remaining)}` : ""}
 
-Consultez et téléchargez votre facture ici :
-${portalUrl}
+Consultez votre facture et réglez-la en ligne :
+${buildPortalInvoiceUrl(siteUrl, invoice.id)}
 
 Pour toute question, contactez-nous via ${siteUrl}/contact.`;
 }
@@ -104,7 +104,6 @@ export async function generateInvoiceFromQuote(input: {
 
   const { clientId, portalClientId } = await resolveClientForQuote(quote);
   const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? "https://sdcreativ.com";
-  const portalUrl = `${siteUrl}/espace-client?section=invoices`;
 
   const lines = quote.lines.length
     ? quote.lines
@@ -132,6 +131,7 @@ export async function generateInvoiceFromQuote(input: {
         invoiceReference: invoice.reference,
         amountDue: getInvoiceRemaining(invoice),
       }),
+      buildPortalInvoiceUrl(siteUrl, invoice.id),
     ),
   });
   const rendered = await renderHtmlToDocument(html);
@@ -169,7 +169,7 @@ export async function generateInvoiceFromQuote(input: {
       invoiceReference: invoice.reference,
       amountDue: remaining,
     });
-    const body = buildInvoiceEmailBody(invoice, siteUrl, portalUrl);
+    const body = buildInvoiceEmailBody(invoice, siteUrl);
     emailSent = await sendEmail({
       to: invoice.email,
       subject: `Votre facture ${invoice.reference} — SD CREATIV`,
@@ -177,7 +177,12 @@ export async function generateInvoiceFromQuote(input: {
         invoice,
         siteUrl,
         body,
-        remaining > 0 ? buildPaymentInstructionsHtml(paymentPayload) : undefined,
+        remaining > 0
+          ? buildPaymentInstructionsHtml(
+              paymentPayload,
+              buildPortalInvoiceUrl(siteUrl, invoice.id),
+            )
+          : undefined,
       ),
       replyTo: process.env.CONTACT_FROM_EMAIL ?? undefined,
       attachments: [{ filename: document.fileName, content: rendered.buffer }],

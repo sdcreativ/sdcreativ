@@ -6,7 +6,7 @@ import { buildInvoiceEmailHtml } from "@/lib/invoice-email";
 import { sendEmail } from "@/lib/email";
 import { resolveInvoicePdfAttachment } from "@/lib/billing/invoice-pdf-attachment";
 import { getInvoiceById, getInvoiceRemaining, updateInvoice } from "@/lib/invoices";
-import { buildPaymentInstructionsHtml, buildPaymentInstructionsPayload } from "@/lib/payment-instructions";
+import { buildPaymentInstructionsHtml, buildPaymentInstructionsPayload, buildPortalInvoiceUrl } from "@/lib/payment-instructions";
 import { getPaymentSettings } from "@/lib/payment-settings";
 
 type RouteContext = { params: Promise<{ id: string }> };
@@ -50,7 +50,12 @@ export async function POST(request: Request, context: RouteContext) {
       invoice,
       siteUrl,
       parsed.data.body,
-      paymentPayload ? buildPaymentInstructionsHtml(paymentPayload) : undefined,
+      paymentPayload
+        ? buildPaymentInstructionsHtml(
+            paymentPayload,
+            buildPortalInvoiceUrl(siteUrl, invoice.id),
+          )
+        : undefined,
     );
 
     const pdfAttachment = await resolveInvoicePdfAttachment(invoice);

@@ -1,17 +1,46 @@
 "use client";
 
+import Link from "next/link";
 import { useState } from "react";
+import { Calculator, Inbox, Search, ArrowRight } from "lucide-react";
 import { RealisationCard } from "@/components/realisations/RealisationCard";
 import { PortfolioStats } from "@/components/realisations/PortfolioStats";
-import { Button } from "@/components/ui/Button";
 import {
   realisations as staticRealisations,
   realisationCategories,
   type Realisation,
 } from "@/content/realisations";
-import { useWhatsappUrl } from "@/components/site/SitePublicProvider";
 import { cn } from "@/lib/utils";
-import { MessageCircle } from "lucide-react";
+
+const nextSteps = [
+  {
+    icon: Calculator,
+    title: "Estimer mon projet",
+    description:
+      "Configurateur en ligne — type de projet, options et fourchette indicative en FCFA.",
+    href: "/devis",
+    cta: "Configurer mon devis",
+    featured: true,
+  },
+  {
+    icon: Search,
+    title: "Audit gratuit",
+    description:
+      "Vous avez déjà un site ? Analyse performance, SEO et mobile, sans engagement.",
+    href: "/audit-gratuit",
+    cta: "Demander un audit",
+    featured: false,
+  },
+  {
+    icon: Inbox,
+    title: "Nous écrire",
+    description:
+      "Une question sur nos réalisations ou votre besoin ? Message direct à l'équipe.",
+    href: "/contact",
+    cta: "Envoyer un message",
+    featured: false,
+  },
+] as const;
 
 type CategoryFilterButtonProps = {
   label: string;
@@ -47,7 +76,6 @@ type Props = {
 };
 
 export function RealisationsGrid({ items = staticRealisations }: Props) {
-  const waUrl = useWhatsappUrl();
   const [activeCategory, setActiveCategory] = useState<string>("Tous");
 
   const filtered =
@@ -100,26 +128,67 @@ export function RealisationsGrid({ items = staticRealisations }: Props) {
         </p>
       )}
 
-      <div className="relative mt-16 overflow-hidden rounded-2xl bg-dark p-10 text-center md:p-14">
-        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,rgba(0,114,181,0.15),transparent_70%)]" />
-        <div className="relative">
-          <h2 className="text-2xl font-bold text-white md:text-3xl">
-            Votre projet pourrait être le prochain
-          </h2>
-          <p className="mx-auto mt-3 max-w-xl text-white/70">
-            Contactez-nous pour discuter de votre site web et obtenir un devis personnalisé.
+      <section className="mt-16 rounded-3xl border border-gray/60 bg-gradient-to-br from-gray-light via-white to-primary-light/20 p-8 md:p-12">
+        <div className="mx-auto max-w-2xl text-center">
+          <p className="text-xs font-semibold uppercase tracking-[0.2em] text-primary">
+            Prochaine étape
           </p>
-          <div className="mt-8 flex flex-col items-center justify-center gap-4 sm:flex-row">
-            <Button href="/contact" size="lg">
-              Démarrer mon projet
-            </Button>
-            <Button href={waUrl} external variant="outline" size="lg">
-              <MessageCircle className="h-4 w-4 text-green-400" aria-hidden />
-              Parler sur WhatsApp
-            </Button>
-          </div>
+          <h2 className="mt-3 text-2xl font-bold text-foreground md:text-3xl">
+            Inspiré par nos réalisations ?
+          </h2>
+          <p className="mt-3 text-sm leading-relaxed text-gray-text md:text-base">
+            Choisissez le parcours adapté à votre situation — estimation, audit ou simple
+            message.
+          </p>
         </div>
-      </div>
+
+        <div className="mt-10 grid gap-6 md:grid-cols-3">
+          {nextSteps.map((step) => {
+            const Icon = step.icon;
+            return (
+              <Link
+                key={step.href}
+                href={step.href}
+                className={cn(
+                  "group flex h-full flex-col rounded-2xl border bg-white p-6 shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md",
+                  step.featured
+                    ? "border-primary/30 ring-2 ring-primary/10"
+                    : "border-gray/60 hover:border-primary/25",
+                )}
+              >
+                <span
+                  className={cn(
+                    "flex h-11 w-11 items-center justify-center rounded-xl",
+                    step.featured
+                      ? "bg-primary text-white"
+                      : "bg-primary-light text-primary",
+                  )}
+                >
+                  <Icon className="h-5 w-5" aria-hidden />
+                </span>
+                <h3 className="mt-5 font-bold text-foreground">{step.title}</h3>
+                <p className="mt-2 flex-1 text-sm leading-relaxed text-gray-text">
+                  {step.description}
+                </p>
+                <span
+                  className={cn(
+                    "mt-6 inline-flex items-center gap-2 text-sm font-semibold transition-colors",
+                    step.featured
+                      ? "text-primary group-hover:text-primary-dark"
+                      : "text-foreground group-hover:text-primary",
+                  )}
+                >
+                  {step.cta}
+                  <ArrowRight
+                    className="h-4 w-4 transition-transform group-hover:translate-x-0.5"
+                    aria-hidden
+                  />
+                </span>
+              </Link>
+            );
+          })}
+        </div>
+      </section>
     </>
   );
 }

@@ -4,7 +4,7 @@ import { getLatestInvoiceBillingDocument } from "@/lib/billing/documents";
 import { renderHtmlToDocument } from "@/lib/billing/pdf";
 import { buildInvoicePdfHtml } from "@/lib/invoice-pdf";
 import { getInvoiceRemaining, type Invoice } from "@/lib/invoices";
-import { buildPaymentInstructionsHtml, buildPaymentInstructionsPayload } from "@/lib/payment-instructions";
+import { buildPaymentInstructionsHtml, buildPaymentInstructionsPayload, buildPortalInvoiceUrl } from "@/lib/payment-instructions";
 import { getPaymentSettings } from "@/lib/payment-settings";
 import { downloadObjectBuffer, isS3Configured } from "@/lib/s3";
 
@@ -31,7 +31,10 @@ async function generateInvoicePdfAttachment(invoice: Invoice): Promise<InvoiceEm
     verification: await buildDocumentVerificationAssets("facture", invoice.reference),
     company: await getInvoiceDocumentCompany(siteUrl),
     paymentInstructionsHtml: paymentPayload
-      ? buildPaymentInstructionsHtml(paymentPayload)
+      ? buildPaymentInstructionsHtml(
+          paymentPayload,
+          buildPortalInvoiceUrl(siteUrl, invoice.id),
+        )
       : undefined,
   });
 

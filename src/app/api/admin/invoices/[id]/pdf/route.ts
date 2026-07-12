@@ -3,7 +3,7 @@ import { NextResponse } from "next/server";
 import { isDatabaseConfigured } from "@/lib/db";
 import { getInvoiceById, getInvoiceRemaining } from "@/lib/invoices";
 import { buildInvoicePdfHtml } from "@/lib/invoice-pdf";
-import { buildPaymentInstructionsHtml, buildPaymentInstructionsPayload } from "@/lib/payment-instructions";
+import { buildPaymentInstructionsHtml, buildPaymentInstructionsPayload, buildPortalInvoiceUrl } from "@/lib/payment-instructions";
 import { getPaymentSettings } from "@/lib/payment-settings";
 import { getInvoiceDocumentCompany } from "@/lib/billing/document-company";
 
@@ -37,7 +37,10 @@ export async function GET(_request: Request, context: RouteContext) {
     const html = buildInvoicePdfHtml(invoice, siteUrl, {
       company: await getInvoiceDocumentCompany(siteUrl),
       paymentInstructionsHtml: paymentPayload
-        ? buildPaymentInstructionsHtml(paymentPayload)
+        ? buildPaymentInstructionsHtml(
+            paymentPayload,
+            buildPortalInvoiceUrl(siteUrl, invoice.id),
+          )
         : undefined,
     });
 
