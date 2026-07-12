@@ -2,6 +2,8 @@ import { NextResponse } from "next/server";
 import { sendEmail } from "@/lib/email";
 import { rejectIfBot } from "@/lib/form-guard";
 import { newsletterSchema } from "@/lib/validations/newsletter";
+import { upsertNewsletterSubscriber } from "@/lib/marketing-subscribers";
+import { isDatabaseConfigured } from "@/lib/db";
 
 const rateLimit = new Map<string, { count: number; resetAt: number }>();
 const RATE_LIMIT = 3;
@@ -46,6 +48,14 @@ export async function POST(request: Request) {
     }
 
     const { email } = parsed.data;
+
+    if (isDatabaseConfigured()) {
+      try {
+        await upsertNewsletterSubscriber({ email, source: "website" });
+      } catch (err) {
+        console.error("[api/newsletter] persist", err);
+      }
+    }
 
     const sent = await sendEmail({
       subject: "[SD CREATIV] Nouvelle inscription newsletter",

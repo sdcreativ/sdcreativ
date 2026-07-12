@@ -38,7 +38,7 @@ import {
   type DashboardLayout,
   type DashboardWidgetId,
 } from "@/lib/dashboard-config";
-import { fetchCrmSession } from "@/lib/crm-settings-api";
+import { fetchCrmSession, saveDashboardLayoutApi } from "@/lib/crm-settings-api";
 import {
   canShowDashboardWidget,
   filterDashboardActivities,
@@ -111,6 +111,7 @@ export function CrmDashboard() {
   const [layout, setLayout] = useState<DashboardLayout | null>(null);
   const [customizeOpen, setCustomizeOpen] = useState(false);
   const [roleLabel, setRoleLabel] = useState<string | null>(null);
+  const [userId, setUserId] = useState<string | null>(null);
   const [infraHealth, setInfraHealth] = useState<InfraHealth | null>(null);
   const [infraLoading, setInfraLoading] = useState(false);
   const [infraError, setInfraError] = useState("");
@@ -118,8 +119,10 @@ export function CrmDashboard() {
   useEffect(() => {
     void fetchCrmSession()
       .then((s) => {
+        setUserId(s.userId);
         setRoleLabel(s.roleLabel ?? CRM_ROLE_LABELS[s.role as keyof typeof CRM_ROLE_LABELS] ?? s.role);
-        setLayout(loadDashboardLayout(s.role));
+        const base = s.dashboardLayout ?? loadDashboardLayout(s.role);
+        setLayout(base);
       })
       .catch(() => setLayout(loadDashboardLayout("admin")));
     if (canClients) {
@@ -222,6 +225,9 @@ export function CrmDashboard() {
   function updateLayout(next: DashboardLayout) {
     setLayout(next);
     saveDashboardLayout(next);
+    void saveDashboardLayoutApi(next).catch(() => {
+      /* fallback localStorage déjà sauvegardé */
+    });
   }
 
   const exportPdfUrl = useMemo(() => {
@@ -574,6 +580,20 @@ export function CrmDashboard() {
       </div>
 
       <div className="flex flex-wrap items-end gap-3 rounded-2xl border border-gray/40 bg-white p-4 shadow-sm">
+        {userId && userId !== "legacy" && (
+          <button
+            type="button"
+            onClick={() => setFilters((f) => ({ ...f, assignee: userId }))}
+            className={cn(
+              "rounded-xl px-3 py-2 text-sm font-medium transition-colors",
+              filters.assignee === userId
+                ? "bg-[#071525] text-white"
+                : "border border-gray/60 text-gray-text hover:bg-gray-light/50",
+            )}
+          >
+            Mes dossiers
+          </button>
+        )}
         <label className="text-sm">
           <span className="mb-1 block text-xs font-semibold uppercase tracking-wide text-gray-text">Équipe</span>
           <select

@@ -216,7 +216,10 @@ export async function listLeadsPaginated(filters: LeadListFilters = {}): Promise
     }
     if (filters.assignee) {
       if (filters.assignee === "__unassigned__") {
-        conditions.push(`(assignee IS NULL OR TRIM(assignee) = '')`);
+        conditions.push(`(assignee_id IS NULL AND (assignee IS NULL OR TRIM(assignee) = ''))`);
+      } else if (/^[0-9a-f-]{36}$/i.test(filters.assignee)) {
+        conditions.push(`assignee_id = $${idx++}`);
+        params.push(filters.assignee);
       } else {
         conditions.push(`assignee = $${idx++}`);
         params.push(filters.assignee);

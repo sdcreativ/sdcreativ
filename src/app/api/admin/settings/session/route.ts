@@ -18,7 +18,9 @@ export async function GET() {
 
   await ensureCrmRolesCache();
   const profile =
-    session.userId !== "legacy" ? await getCrmUserProfile(session.userId) : { avatarUrl: null };
+    session.userId !== "legacy"
+      ? await getCrmUserProfile(session.userId)
+      : { avatarUrl: null, dashboardLayout: null };
 
   return NextResponse.json({
     session: {
@@ -29,6 +31,7 @@ export async function GET() {
       roleLabel: getCachedRoleLabel(session.role),
       permissions: getRolePermissions(session.role),
       avatarUrl: profile.avatarUrl,
+      dashboardLayout: profile.dashboardLayout,
     },
   });
 }

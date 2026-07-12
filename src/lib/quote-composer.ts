@@ -52,3 +52,21 @@ export function composerLinesToQuoteLines(lines: QuoteComposerLine[]): QuoteLine
       };
     });
 }
+
+export function templateLinesToComposer(
+  lines: Array<{
+    catalogItemId?: string | null;
+    label: string;
+    quantity: number;
+    unitPrice: number;
+  }>,
+): QuoteComposerLine[] {
+  return lines.map((line) =>
+    createComposerLine({
+      catalogItemId: line.catalogItemId ?? undefined,
+      label: line.label,
+      quantity: line.quantity,
+      unitPrice: line.unitPrice,
+    }),
+  );
+}

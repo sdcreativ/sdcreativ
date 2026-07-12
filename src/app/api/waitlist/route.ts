@@ -2,6 +2,8 @@ import { NextResponse } from "next/server";
 import { htmlRow, sendEmail } from "@/lib/email";
 import { isHoneypotTripped } from "@/lib/spam-guard";
 import { waitlistSchema } from "@/lib/validations/waitlist";
+import { createWaitlistEntry } from "@/lib/marketing-subscribers";
+import { isDatabaseConfigured } from "@/lib/db";
 
 const rateLimit = new Map<string, { count: number; resetAt: number }>();
 const RATE_LIMIT = 5;
@@ -50,6 +52,14 @@ export async function POST(request: Request) {
     }
 
     const { name, email, company, interest, message } = parsed.data;
+
+    if (isDatabaseConfigured()) {
+      try {
+        await createWaitlistEntry({ name, email, company, interest, message });
+      } catch (err) {
+        console.error("[api/waitlist] persist", err);
+      }
+    }
 
     await sendEmail({
       subject: `[Phase 2] ${interestLabels[interest] ?? interest} — ${name}`,

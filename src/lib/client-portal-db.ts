@@ -10,7 +10,9 @@ import type { Client } from "@/lib/clients";
 import { isDatabaseConfigured } from "@/lib/db";
 import { resolveClientByPortalLoginId } from "@/lib/client-portal-resolve";
 import {
+  getPortalProjectById,
   getPrimaryProjectByPortalClientId,
+  listProjectsByPortalClientId,
   listProjectMilestones,
   syncProjectMilestonesToProgress,
   type Project,
@@ -75,6 +77,7 @@ export function milestonesToProjectSteps(milestones: ProjectMilestone[]): Projec
 export async function loadPortalCrmContext(
   portalClientId: string,
   accessToken?: string,
+  projectId?: string,
 ): Promise<PortalCrmContext | null> {
   if (!isDatabaseConfigured()) return null;
 
@@ -83,7 +86,9 @@ export async function loadPortalCrmContext(
     if (!client?.portalClientId) return null;
 
     const crmPortalId = client.portalClientId;
-    const project = await getPrimaryProjectByPortalClientId(crmPortalId);
+    const project = projectId
+      ? await getPortalProjectById(crmPortalId, projectId)
+      : await getPrimaryProjectByPortalClientId(crmPortalId);
     let milestones = project ? await listProjectMilestones(project.id) : [];
 
     if (project && milestones.length > 0) {
@@ -164,11 +169,29 @@ export function mergeProfileWithCrm(
   };
 }
 
+export async function listPortalProjects(
+  crmPortalId: string,
+  accessToken?: string,
+): Promise<Array<{ id: string; name: string; type: string; status: string; progress: number }>> {
+  const client = await resolveClientByPortalLoginId(crmPortalId, accessToken);
+  if (!client?.portalClientId) return [];
+
+  const projects = await listProjectsByPortalClientId(client.portalClientId);
+  return projects.map((p) => ({
+    id: p.id,
+    name: p.name,
+    type: p.type,
+    status: p.status,
+    progress: p.progress,
+  }));
+}
+
 export async function loadPortalProjectPayload(
   crmPortalId: string,
   accessToken?: string,
+  projectId?: string,
 ): Promise<PortalProjectPayload> {
-  const crm = await loadPortalCrmContext(crmPortalId, accessToken);
+  const crm = await loadPortalCrmContext(crmPortalId, accessToken, projectId);
 
   if (!crm?.project) {
     return {

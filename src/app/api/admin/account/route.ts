@@ -21,6 +21,7 @@ const patchAccountSchema = z
   .object({
     name: updateOwnProfileSchema.shape.name,
     avatarUrl: updateOwnProfileSchema.shape.avatarUrl,
+    dashboardLayout: updateOwnProfileSchema.shape.dashboardLayout,
     currentPassword: changeOwnPasswordSchema.shape.currentPassword,
     newPassword: changeOwnPasswordSchema.shape.newPassword.optional(),
   })
@@ -28,6 +29,7 @@ const patchAccountSchema = z
     (data) =>
       data.name !== undefined ||
       data.avatarUrl !== undefined ||
+      data.dashboardLayout !== undefined ||
       data.newPassword !== undefined,
     { message: "Aucune modification demandée." },
   );
@@ -45,6 +47,7 @@ async function buildAccountResponse(userId: string) {
     roleLabel: getCachedRoleLabel(user.role),
     mustChangePassword: user.mustChangePassword,
     avatarUrl: profile.avatarUrl,
+    dashboardLayout: profile.dashboardLayout,
   };
 }
 
@@ -86,10 +89,10 @@ export async function PATCH(request: Request) {
       return NextResponse.json({ error: "Données invalides." }, { status: 400 });
     }
 
-    const { name, avatarUrl, currentPassword, newPassword } = parsed.data;
+    const { name, avatarUrl, dashboardLayout, currentPassword, newPassword } = parsed.data;
 
-    if (name !== undefined || avatarUrl !== undefined) {
-      await updateCrmUserProfile(session.userId, { name, avatarUrl });
+    if (name !== undefined || avatarUrl !== undefined || dashboardLayout !== undefined) {
+      await updateCrmUserProfile(session.userId, { name, avatarUrl, dashboardLayout });
     }
 
     if (newPassword) {

@@ -8,6 +8,8 @@ import {
   Download,
   Eye,
   EyeOff,
+  Layers,
+  LayoutList,
   Loader2,
   Pencil,
   Plus,
@@ -33,6 +35,7 @@ import {
   updateServiceCatalogItemApi,
 } from "@/lib/service-catalog-api";
 import { useDialog } from "@/components/ui/DialogProvider";
+import { CrmQuoteTemplatesPanel } from "@/components/admin/CrmQuoteTemplatesPanel";
 import { cn } from "@/lib/utils";
 
 const fieldClass =
@@ -79,6 +82,7 @@ export function CrmServiceCatalogView() {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [showForm, setShowForm] = useState(false);
   const [form, setForm] = useState<ItemForm>(emptyForm);
+  const [tab, setTab] = useState<"items" | "packs">("items");
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -212,6 +216,35 @@ export function CrmServiceCatalogView() {
 
   return (
     <div className="space-y-6">
+      <nav className="flex gap-1 rounded-2xl border border-gray/30 bg-gray-light/30 p-1.5">
+        <button
+          type="button"
+          onClick={() => setTab("items")}
+          className={cn(
+            "inline-flex items-center gap-2 rounded-xl px-4 py-2.5 text-sm font-medium transition-all",
+            tab === "items" ? "bg-white text-foreground shadow-sm" : "text-gray-text hover:bg-white/70",
+          )}
+        >
+          <LayoutList className="h-4 w-4" aria-hidden />
+          Prestations
+        </button>
+        <button
+          type="button"
+          onClick={() => setTab("packs")}
+          className={cn(
+            "inline-flex items-center gap-2 rounded-xl px-4 py-2.5 text-sm font-medium transition-all",
+            tab === "packs" ? "bg-white text-foreground shadow-sm" : "text-gray-text hover:bg-white/70",
+          )}
+        >
+          <Layers className="h-4 w-4" aria-hidden />
+          Packs de devis
+        </button>
+      </nav>
+
+      {tab === "packs" ? (
+        <CrmQuoteTemplatesPanel />
+      ) : (
+        <>
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
           <p className="text-sm text-gray-text">
@@ -459,6 +492,8 @@ export function CrmServiceCatalogView() {
             </div>
           </form>
         </div>
+      )}
+        </>
       )}
     </div>
   );

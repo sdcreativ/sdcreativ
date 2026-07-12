@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
-import { Loader2, Plus, Trash2 } from "lucide-react";
+import { Loader2, Layers, Plus, Trash2 } from "lucide-react";
 import {
   SERVICE_CATALOG_CATEGORY_LABELS,
   SERVICE_CATALOG_UNIT_LABELS,
@@ -16,8 +16,12 @@ import {
   composerLinesSubtotal,
   composerLinesToQuoteLines,
   createComposerLine,
+  templateLinesToComposer,
   type QuoteComposerLine,
 } from "@/lib/quote-composer";
+import { fetchQuoteTemplate, fetchQuoteTemplates } from "@/lib/quote-templates-api";
+import type { QuoteTemplate } from "@/lib/quote-templates";
+import { CrmQuoteTemplatesPanel } from "@/components/admin/CrmQuoteTemplatesPanel";
 import { cn } from "@/lib/utils";
 
 const fieldClass =
@@ -34,12 +38,17 @@ export function QuoteComposerFields({ lines, onChange }: Props) {
   const [catalogError, setCatalogError] = useState("");
   const [categoryFilter, setCategoryFilter] = useState<string>("all");
   const [search, setSearch] = useState("");
+  const [templates, setTemplates] = useState<QuoteTemplate[]>([]);
+  const [showPacks, setShowPacks] = useState(false);
 
   useEffect(() => {
     void fetchServiceCatalogItems(true)
       .then(setCatalog)
       .catch(() => setCatalogError("Catalogue indisponible."))
       .finally(() => setCatalogLoading(false));
+    void fetchQuoteTemplates(true)
+      .then(setTemplates)
+      .catch(() => setTemplates([]));
   }, []);
 
   const filteredCatalog = useMemo(() => {
@@ -74,8 +83,32 @@ export function QuoteComposerFields({ lines, onChange }: Props) {
     onChange(lines.filter((line) => line.id !== id));
   }
 
+  async function applyTemplate(template: QuoteTemplate) {
+    const full = template.lines?.length ? template : await fetchQuoteTemplate(template.id);
+    const composed = templateLinesToComposer(full.lines ?? []);
+    onChange([...lines, ...composed]);
+    setShowPacks(false);
+  }
+
   return (
     <div className="space-y-4">
+      {templates.length > 0 && (
+        <div className="rounded-2xl border border-primary/20 bg-primary-light/15 p-4">
+          <button
+            type="button"
+            onClick={() => setShowPacks((v) => !v)}
+            className="inline-flex items-center gap-2 text-sm font-semibold text-primary"
+          >
+            <Layers className="h-4 w-4" aria-hidden />
+            {showPacks ? "Masquer les packs" : "Appliquer un pack de devis"}
+          </button>
+          {showPacks && (
+            <div className="mt-3">
+              <CrmQuoteTemplatesPanel compact onApply={(t) => void applyTemplate(t)} />
+            </div>
+          )}
+        </div>
+      )}
       <div className="rounded-2xl border border-gray/40 bg-gray-light/20 p-4">
         <div className="flex flex-wrap items-center justify-between gap-2">
           <h3 className="text-sm font-bold text-foreground">Ajouter depuis le catalogue</h3>

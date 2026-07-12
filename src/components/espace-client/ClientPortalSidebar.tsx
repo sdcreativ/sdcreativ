@@ -2,6 +2,7 @@
 
 import { LogOut } from "lucide-react";
 import { Logo } from "@/components/ui/Logo";
+import { ClientPortalProjectSwitcher } from "@/components/espace-client/ClientPortalProjectSwitcher";
 import type { ClientProfileData } from "@/lib/client-portal-config";
 import { clientNavItems } from "@/content/client-portal-nav";
 import type { ClientPortalSection } from "@/content/client-portal-types";
@@ -10,6 +11,8 @@ import { cn } from "@/lib/utils";
 type Props = {
   profile: ClientProfileData;
   section: ClientPortalSection;
+  activeProjectId?: string | null;
+  onProjectChange?: (projectId: string) => void;
   openTicketCount: number;
   messagesBadgeCount: number;
   quotesPendingCount: number;
@@ -22,6 +25,8 @@ type Props = {
 export function ClientPortalSidebar({
   profile,
   section,
+  activeProjectId,
+  onProjectChange,
   openTicketCount,
   messagesBadgeCount,
   quotesPendingCount,
@@ -44,6 +49,13 @@ export function ClientPortalSidebar({
           Espace client
         </p>
       </div>
+
+      {onProjectChange && (
+        <ClientPortalProjectSwitcher
+          activeProjectId={activeProjectId}
+          onProjectChange={onProjectChange}
+        />
+      )}
 
       <div className="border-b border-white/10 px-4 py-5">
         <button

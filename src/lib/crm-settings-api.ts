@@ -3,6 +3,7 @@ import type { SitePublicSettings } from "@/lib/site-public-types";
 import type { CrmAuditLog } from "@/lib/crm-audit";
 import type { CrmRole } from "@/content/crm-roles";
 import type { CrmPermission } from "@/lib/crm-permissions";
+import type { DashboardLayout } from "@/lib/dashboard-config";
 
 type ApiError = { error: string };
 
@@ -20,7 +21,18 @@ export type CrmSessionInfo = {
   roleLabel?: string;
   permissions: CrmPermission[];
   avatarUrl?: string | null;
+  dashboardLayout?: DashboardLayout | null;
 };
+
+export async function saveDashboardLayoutApi(layout: DashboardLayout): Promise<void> {
+  const res = await fetch("/api/admin/account", {
+    method: "PATCH",
+    credentials: "include",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ dashboardLayout: layout }),
+  });
+  await parseJson<{ success: boolean }>(res);
+}
 
 export async function fetchCrmSession(): Promise<CrmSessionInfo> {
   const res = await fetch("/api/admin/settings/session", { credentials: "include" });

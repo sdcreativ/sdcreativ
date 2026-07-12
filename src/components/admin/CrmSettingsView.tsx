@@ -22,12 +22,14 @@ import { CrmRolesSection, PermissionsMatrix } from "@/components/admin/CrmRolesS
 import { CrmSecuritySection } from "@/components/admin/CrmSecuritySection";
 import { SitePublicSection } from "@/components/admin/CrmSitePublicSection";
 import { PaymentSettingsSection } from "@/components/admin/PaymentSettingsSection";
+import { CrmOperationsSettingsSection } from "@/components/admin/CrmOperationsSettingsSection";
 import type { CrmUser } from "@/lib/crm-users";
 import { fetchPortalAccounts, fetchSettingsHealth } from "@/lib/settings-api";
 import type { CrmRoleRecord } from "@/lib/crm-roles-api";
 import { fetchCrmRoles } from "@/lib/crm-roles-api";
 import { cn } from "@/lib/utils";
 import {
+  BarChart3,
   Calendar,
   CheckCircle2,
   CreditCard,
@@ -46,7 +48,7 @@ import {
   XCircle,
 } from "lucide-react";
 
-type SettingsTab = "overview" | "site" | "payments" | "team" | "emails" | "security" | "appearance";
+type SettingsTab = "overview" | "site" | "payments" | "team" | "emails" | "security" | "appearance" | "operations";
 type TeamSubTab = "roles" | "users" | "matrix";
 
 const TABS: { id: SettingsTab; label: string; icon: typeof LayoutGrid }[] = [
@@ -56,6 +58,7 @@ const TABS: { id: SettingsTab; label: string; icon: typeof LayoutGrid }[] = [
   { id: "team", label: "Équipe", icon: Users },
   { id: "emails", label: "Emails", icon: Mail },
   { id: "security", label: "Sécurité", icon: Shield },
+  { id: "operations", label: "Opérations", icon: BarChart3 },
   { id: "appearance", label: "Apparence", icon: Palette },
 ];
 
@@ -350,6 +353,16 @@ export function CrmSettingsView() {
                 <AuditLogSection />
               </Section>
             </div>
+          )}
+
+          {tab === "operations" && (
+            <Section
+              title="Rapports planifiés"
+              description="Destinataires, fréquence et KPIs envoyés automatiquement par email."
+              icon={<BarChart3 className="h-5 w-5 text-primary" aria-hidden />}
+            >
+              <CrmOperationsSettingsSection />
+            </Section>
           )}
 
           {tab === "appearance" && (

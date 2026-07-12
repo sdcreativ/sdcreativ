@@ -61,11 +61,16 @@ export function EspaceClientPortal() {
   const [billingUnreadCount, setBillingUnreadCount] = useState(0);
   const [supportCreateOpen, setSupportCreateOpen] = useState(false);
   const [projectSteps, setProjectSteps] = useState<ProjectStep[] | null>(null);
+  const [activeProjectId, setActiveProjectId] = useState<string | null>(null);
+
+  const portalProjectStorageKey = clientId ? `portal_project_${clientId}` : null;
 
   const applySession = useCallback((session: SessionPayload) => {
     setClientId(session.clientId);
     setProfile(session.profile);
     setSessionState("authenticated");
+    const stored = window.localStorage.getItem(`portal_project_${session.clientId}`);
+    setActiveProjectId(stored ?? session.profile.crmProjectId ?? null);
   }, []);
 
   const refreshProfile = useCallback(async () => {
@@ -82,7 +87,8 @@ export function EspaceClientPortal() {
 
   const loadPortalProject = useCallback(async () => {
     try {
-      const res = await fetch("/api/espace-client/project", { credentials: "include" });
+      const qs = activeProjectId ? `?projectId=${encodeURIComponent(activeProjectId)}` : "";
+      const res = await fetch(`/api/espace-client/project${qs}`, { credentials: "include" });
       if (!res.ok) {
         setProjectSteps(null);
         return;
@@ -90,10 +96,13 @@ export function EspaceClientPortal() {
       const json = (await res.json()) as PortalProjectPayload;
       setProjectSteps(json.milestones.length > 0 ? json.milestones : null);
       setProfile((prev) => (prev ? applyPortalProjectToProfile(prev, json) : prev));
+      if (json.crmProjectId) {
+        setActiveProjectId(json.crmProjectId);
+      }
     } catch {
       setProjectSteps(null);
     }
-  }, []);
+  }, [activeProjectId]);
 
   const loadTickets = useCallback(async () => {
     try {
@@ -219,7 +228,14 @@ export function EspaceClientPortal() {
     }, PORTAL_POLL_MS);
 
     return () => window.clearInterval(interval);
-  }, [sessionState, section, loadTickets, loadPortalProject, loadQuotes, loadInvoices, refreshProfile]);
+  }, [sessionState, loadTickets, loadPortalProject, loadQuotes, loadInvoices, refreshProfile]);
+
+  const handleProjectChange = useCallback((projectId: string) => {
+    setActiveProjectId(projectId);
+    if (portalProjectStorageKey) {
+      window.localStorage.setItem(portalProjectStorageKey, projectId);
+    }
+  }, [portalProjectStorageKey]);
 
   function openSupportWithCreate() {
     setSection("support");
@@ -273,6 +289,8 @@ export function EspaceClientPortal() {
       <ClientPortalShell
       profile={profile}
       section={section}
+      activeProjectId={activeProjectId}
+      onProjectChange={handleProjectChange}
       openTicketCount={openTicketCount}
       messagesBadgeCount={messagesBadgeCount}
       quotesPendingCount={quotesPendingCount}

@@ -1,5 +1,10 @@
-import { CrmInvoicesView } from "@/components/admin/CrmInvoicesView";
+import { Suspense } from "react";
+import { CrmBillingHubView } from "@/components/admin/CrmBillingHubView";
 
 export default function CrmInvoicesPage() {
-  return <CrmInvoicesView />;
+  return (
+    <Suspense fallback={null}>
+      <CrmBillingHubView />
+    </Suspense>
+  );
 }

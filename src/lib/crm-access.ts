@@ -7,12 +7,16 @@ import type { DashboardKpi } from "@/lib/dashboard-utils";
 export const CRM_NAV_PERMISSIONS: Record<string, CrmPermission | CrmPermission[] | null> = {
   dashboard: null,
   leads: "leads.read",
+  deals: "leads.read",
+  marketing: "leads.read",
   presentation: "leads.write",
   clients: "clients.read",
   projects: "projects.read",
   quotes: "quotes.read",
   catalogue: "quotes.read",
   invoices: "invoices.read",
+  inbox: "tickets.read",
+  timesheets: "projects.read",
   documents: "documents.read",
   tasks: "tasks.read",
   tickets: "tickets.read",
@@ -74,6 +78,8 @@ export const CRM_SETTINGS_ACCESS_PERMISSIONS: CrmPermission[] = [
 
 const ACTIVITY_HREF_PERMISSIONS: Array<{ prefix: string; permission: CrmPermission }> = [
   { prefix: "/admin/crm/leads", permission: "leads.read" },
+  { prefix: "/admin/crm/opportunites", permission: "leads.read" },
+  { prefix: "/admin/crm/marketing", permission: "leads.read" },
   { prefix: "/admin/crm/projets", permission: "projects.read" },
   { prefix: "/admin/crm/devis", permission: "quotes.read" },
   { prefix: "/admin/crm/catalogue", permission: "quotes.read" },

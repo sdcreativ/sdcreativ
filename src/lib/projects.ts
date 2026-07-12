@@ -316,15 +316,38 @@ export async function getProjectById(id: string): Promise<Project | null> {
 export async function getPrimaryProjectByPortalClientId(
   portalClientId: string,
 ): Promise<Project | null> {
+  const projects = await listProjectsByPortalClientId(portalClientId);
+  return projects[0] ?? null;
+}
+
+/** Tous les projets actifs d'un compte portail, du plus récent au plus ancien. */
+export async function listProjectsByPortalClientId(
+  portalClientId: string,
+): Promise<Project[]> {
   return withDb(async (query) => {
     const { rows } = await query<ProjectRow>(
       `${projectSelect}
        WHERE c.portal_client_id = $1
          AND p.status NOT IN ('cancelled')
        GROUP BY p.id, c.name, c.company
-       ORDER BY p.updated_at DESC
-       LIMIT 1`,
+       ORDER BY p.updated_at DESC`,
       [portalClientId],
+    );
+    return rows.map(mapProject);
+  });
+}
+
+export async function getPortalProjectById(
+  portalClientId: string,
+  projectId: string,
+): Promise<Project | null> {
+  return withDb(async (query) => {
+    const { rows } = await query<ProjectRow>(
+      `${projectSelect}
+       WHERE c.portal_client_id = $1 AND p.id = $2
+         AND p.status NOT IN ('cancelled')
+       GROUP BY p.id, c.name, c.company`,
+      [portalClientId, projectId],
     );
     return rows[0] ? mapProject(rows[0]) : null;
   });

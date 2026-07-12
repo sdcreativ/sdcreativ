@@ -3,6 +3,11 @@ import { getQuoteById, listQuotesFiltered, updateQuote } from "@/lib/quotes";
 import { buildQuoteReminderEmailHtml } from "@/lib/quote-email";
 import { sendEmail } from "@/lib/email";
 import { markRemindersFired, listFiredReminderKeysForChannel } from "@/lib/crm-reminders";
+import { createTask } from "@/lib/tasks";
+import { buildQuoteFollowUpDescription, buildTaskTitle } from "@/content/tasks-labels";
+import { QUOTE_STATUS_LABELS, formatQuoteAmount } from "@/content/quotes-labels";
+import { getLeadById } from "@/lib/leads";
+import { notifyTaskAssignee } from "@/lib/task-notifications";
 
 export const QUOTE_REMINDER_AFTER_DAYS = 7;
 export const QUOTE_MAX_AUTO_REMINDERS = 3;
@@ -86,6 +91,43 @@ export async function sendQuoteAutoReminder(
   return true;
 }
 
+async function createQuoteFollowUpTask(quote: Quote, reminderIndex: number): Promise<void> {
+  if (reminderIndex > 0) return;
+
+  const lead = quote.leadId ? await getLeadById(quote.leadId) : null;
+  const assignee = lead?.assignee ?? null;
+  if (!assignee) return;
+
+  const sentDaysAgo = quote.sentAt
+    ? Math.max(0, Math.floor((Date.now() - new Date(quote.sentAt).getTime()) / 86_400_000))
+    : null;
+
+  const title = buildTaskTitle({
+    categoryId: "quote_follow_up",
+    clientName: quote.company || quote.name,
+    quoteReference: quote.reference,
+  });
+
+  const task = await createTask({
+    title,
+    status: "todo",
+    description: buildQuoteFollowUpDescription({
+      quoteReference: quote.reference,
+      amountLabel: formatQuoteAmount(quote.subtotal),
+      statusLabel: QUOTE_STATUS_LABELS[quote.status],
+      sentDaysAgo,
+    }),
+    assignee,
+    clientId: quote.clientId,
+    leadId: quote.leadId,
+    priority: "high",
+    dueDate: new Date().toISOString().slice(0, 10),
+    metadata: { quoteReference: quote.reference, quoteId: quote.id, autoCreated: true },
+  });
+
+  await notifyTaskAssignee(task, "assigned", { actorName: "Automatisation CRM" });
+}
+
 export async function processQuoteAutoReminders(now = new Date()): Promise<{
   sent: number;
   skipped: number;
@@ -114,6 +156,12 @@ export async function processQuoteAutoReminders(now = new Date()): Promise<{
     if (!ok) {
       skipped += 1;
       continue;
+    }
+
+    try {
+      await createQuoteFollowUpTask(quote, candidate.reminderIndex);
+    } catch {
+      /* tâche auto optionnelle */
     }
 
     await markRemindersFired([

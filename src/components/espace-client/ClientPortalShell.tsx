@@ -10,6 +10,8 @@ import type { ClientPortalSection } from "@/content/client-portal-types";
 type Props = {
   profile: ClientProfileData;
   section: ClientPortalSection;
+  activeProjectId?: string | null;
+  onProjectChange?: (projectId: string) => void;
   openTicketCount: number;
   messagesBadgeCount: number;
   quotesPendingCount: number;
@@ -27,6 +29,8 @@ type Props = {
 export function ClientPortalShell({
   profile,
   section,
+  activeProjectId,
+  onProjectChange,
   openTicketCount,
   messagesBadgeCount,
   quotesPendingCount,
@@ -61,6 +65,8 @@ export function ClientPortalShell({
       <ClientPortalSidebar
         profile={profile}
         section={section}
+        activeProjectId={activeProjectId}
+        onProjectChange={onProjectChange}
         openTicketCount={openTicketCount}
         messagesBadgeCount={messagesBadgeCount}
         quotesPendingCount={quotesPendingCount}

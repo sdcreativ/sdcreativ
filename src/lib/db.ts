@@ -777,6 +777,159 @@ async function ensureSchema(): Promise<void> {
     CREATE INDEX IF NOT EXISTS idx_crm_service_catalog_category ON crm_service_catalog (category, sort_order);
     CREATE INDEX IF NOT EXISTS idx_crm_service_catalog_active ON crm_service_catalog (is_active);
 
+    CREATE TABLE IF NOT EXISTS crm_quote_templates (
+      id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+      name VARCHAR(200) NOT NULL,
+      description TEXT,
+      category VARCHAR(50) NOT NULL DEFAULT 'autre',
+      sort_order INTEGER NOT NULL DEFAULT 0,
+      is_active BOOLEAN NOT NULL DEFAULT true,
+      created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+      updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    );
+    CREATE INDEX IF NOT EXISTS idx_crm_quote_templates_active ON crm_quote_templates (is_active, sort_order);
+
+    CREATE TABLE IF NOT EXISTS crm_quote_template_lines (
+      id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+      template_id UUID NOT NULL REFERENCES crm_quote_templates(id) ON DELETE CASCADE,
+      catalog_item_id UUID REFERENCES crm_service_catalog(id) ON DELETE SET NULL,
+      label VARCHAR(200) NOT NULL,
+      quantity NUMERIC(10,2) NOT NULL DEFAULT 1,
+      unit_price INTEGER NOT NULL DEFAULT 0,
+      sort_order INTEGER NOT NULL DEFAULT 0
+    );
+    CREATE INDEX IF NOT EXISTS idx_crm_quote_template_lines_template ON crm_quote_template_lines (template_id, sort_order);
+
+    CREATE TABLE IF NOT EXISTS newsletter_subscribers (
+      id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+      email VARCHAR(255) NOT NULL UNIQUE,
+      consent_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+      source VARCHAR(50) NOT NULL DEFAULT 'website',
+      status VARCHAR(20) NOT NULL DEFAULT 'active',
+      unsubscribed_at TIMESTAMPTZ,
+      created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    );
+    CREATE INDEX IF NOT EXISTS idx_newsletter_subscribers_status ON newsletter_subscribers (status, created_at DESC);
+
+    CREATE TABLE IF NOT EXISTS waitlist_entries (
+      id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+      name VARCHAR(160) NOT NULL,
+      email VARCHAR(255) NOT NULL,
+      company VARCHAR(160),
+      interest VARCHAR(50) NOT NULL,
+      message TEXT,
+      created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    );
+    CREATE INDEX IF NOT EXISTS idx_waitlist_entries_created ON waitlist_entries (created_at DESC);
+
+    ALTER TABLE leads ADD COLUMN IF NOT EXISTS assignee_id UUID REFERENCES crm_users(id) ON DELETE SET NULL;
+    ALTER TABLE projects ADD COLUMN IF NOT EXISTS assignee_id UUID REFERENCES crm_users(id) ON DELETE SET NULL;
+    ALTER TABLE tasks ADD COLUMN IF NOT EXISTS assignee_id UUID REFERENCES crm_users(id) ON DELETE SET NULL;
+    ALTER TABLE support_tickets ADD COLUMN IF NOT EXISTS assignee_id UUID REFERENCES crm_users(id) ON DELETE SET NULL;
+    ALTER TABLE quotes ADD COLUMN IF NOT EXISTS assignee_id UUID REFERENCES crm_users(id) ON DELETE SET NULL;
+    CREATE INDEX IF NOT EXISTS idx_leads_assignee_id ON leads (assignee_id);
+    CREATE INDEX IF NOT EXISTS idx_projects_assignee_id ON projects (assignee_id);
+    CREATE INDEX IF NOT EXISTS idx_tasks_assignee_id ON tasks (assignee_id);
+    CREATE INDEX IF NOT EXISTS idx_support_tickets_assignee_id ON support_tickets (assignee_id);
+    CREATE INDEX IF NOT EXISTS idx_quotes_assignee_id ON quotes (assignee_id);
+
+    CREATE TABLE IF NOT EXISTS credit_notes (
+      id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+      reference VARCHAR(24) NOT NULL UNIQUE,
+      invoice_id UUID NOT NULL REFERENCES invoices(id) ON DELETE CASCADE,
+      client_id UUID REFERENCES clients(id) ON DELETE SET NULL,
+      amount INTEGER NOT NULL DEFAULT 0,
+      reason TEXT,
+      status VARCHAR(30) NOT NULL DEFAULT 'draft',
+      issued_at TIMESTAMPTZ,
+      applied_at TIMESTAMPTZ,
+      metadata JSONB NOT NULL DEFAULT '{}',
+      created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+      updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    );
+    CREATE INDEX IF NOT EXISTS idx_credit_notes_invoice ON credit_notes (invoice_id);
+    CREATE INDEX IF NOT EXISTS idx_credit_notes_client ON credit_notes (client_id, status);
+
+    CREATE TABLE IF NOT EXISTS crm_contracts (
+      id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+      reference VARCHAR(24) NOT NULL UNIQUE,
+      client_id UUID NOT NULL REFERENCES clients(id) ON DELETE CASCADE,
+      project_id UUID REFERENCES projects(id) ON DELETE SET NULL,
+      quote_id UUID REFERENCES quotes(id) ON DELETE SET NULL,
+      title VARCHAR(200) NOT NULL,
+      status VARCHAR(30) NOT NULL DEFAULT 'draft',
+      start_date DATE,
+      end_date DATE,
+      amount INTEGER,
+      reminder_days_before INTEGER NOT NULL DEFAULT 30,
+      signed_at TIMESTAMPTZ,
+      sent_at TIMESTAMPTZ,
+      notes TEXT,
+      metadata JSONB NOT NULL DEFAULT '{}',
+      created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+      updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    );
+    CREATE INDEX IF NOT EXISTS idx_crm_contracts_client ON crm_contracts (client_id, status);
+    CREATE INDEX IF NOT EXISTS idx_crm_contracts_end_date ON crm_contracts (end_date) WHERE status IN ('signed', 'linked');
+
+    CREATE TABLE IF NOT EXISTS crm_contract_amendments (
+      id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+      contract_id UUID NOT NULL REFERENCES crm_contracts(id) ON DELETE CASCADE,
+      title VARCHAR(200) NOT NULL,
+      description TEXT,
+      amount_delta INTEGER NOT NULL DEFAULT 0,
+      effective_date DATE,
+      status VARCHAR(30) NOT NULL DEFAULT 'draft',
+      created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    );
+    CREATE INDEX IF NOT EXISTS idx_crm_contract_amendments_contract ON crm_contract_amendments (contract_id);
+
+    CREATE TABLE IF NOT EXISTS crm_subscriptions (
+      id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+      client_id UUID NOT NULL REFERENCES clients(id) ON DELETE CASCADE,
+      project_id UUID REFERENCES projects(id) ON DELETE SET NULL,
+      contract_id UUID REFERENCES crm_contracts(id) ON DELETE SET NULL,
+      title VARCHAR(200) NOT NULL,
+      amount INTEGER NOT NULL DEFAULT 0,
+      interval VARCHAR(20) NOT NULL DEFAULT 'monthly',
+      status VARCHAR(30) NOT NULL DEFAULT 'active',
+      next_billing_date DATE NOT NULL,
+      renewal_reminder_days INTEGER NOT NULL DEFAULT 14,
+      tva_rate NUMERIC(5,2) NOT NULL DEFAULT 18,
+      lines JSONB NOT NULL DEFAULT '[]',
+      metadata JSONB NOT NULL DEFAULT '{}',
+      created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+      updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    );
+    CREATE INDEX IF NOT EXISTS idx_crm_subscriptions_billing ON crm_subscriptions (next_billing_date, status);
+    CREATE INDEX IF NOT EXISTS idx_crm_subscriptions_client ON crm_subscriptions (client_id, status);
+
+    CREATE TABLE IF NOT EXISTS time_entries (
+      id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+      project_id UUID NOT NULL REFERENCES projects(id) ON DELETE CASCADE,
+      task_id UUID REFERENCES tasks(id) ON DELETE SET NULL,
+      user_id UUID REFERENCES crm_users(id) ON DELETE SET NULL,
+      user_name VARCHAR(160),
+      description TEXT,
+      hours NUMERIC(6,2) NOT NULL DEFAULT 0,
+      billable BOOLEAN NOT NULL DEFAULT true,
+      sold_hours NUMERIC(6,2),
+      entry_date DATE NOT NULL DEFAULT CURRENT_DATE,
+      created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+      updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    );
+    CREATE INDEX IF NOT EXISTS idx_time_entries_project ON time_entries (project_id, entry_date DESC);
+    CREATE INDEX IF NOT EXISTS idx_time_entries_user ON time_entries (user_id, entry_date DESC);
+
+    CREATE TABLE IF NOT EXISTS crm_inbox_reads (
+      user_id UUID NOT NULL REFERENCES crm_users(id) ON DELETE CASCADE,
+      item_key VARCHAR(120) NOT NULL,
+      read_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+      PRIMARY KEY (user_id, item_key)
+    );
+
+    ALTER TABLE crm_settings ADD COLUMN IF NOT EXISTS operations JSONB NOT NULL DEFAULT '{}';
+
     CREATE TABLE IF NOT EXISTS public_realisations (
       id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
       slug VARCHAR(120) NOT NULL UNIQUE,
@@ -817,6 +970,33 @@ async function ensureSchema(): Promise<void> {
 
   const { seedSystemCrmRoles } = await import("@/lib/crm-roles-db");
   await seedSystemCrmRoles(async (text, params) => {
+    const result = await client.query(text, params);
+    return { rows: result.rows as never[], rowCount: result.rowCount };
+  });
+
+  await client.query(`
+    UPDATE leads l SET assignee_id = u.id
+    FROM crm_users u
+    WHERE l.assignee_id IS NULL AND l.assignee IS NOT NULL AND u.name = l.assignee AND u.active = true
+  `);
+  await client.query(`
+    UPDATE projects p SET assignee_id = u.id
+    FROM crm_users u
+    WHERE p.assignee_id IS NULL AND p.assignee IS NOT NULL AND u.name = p.assignee AND u.active = true
+  `);
+  await client.query(`
+    UPDATE tasks t SET assignee_id = u.id
+    FROM crm_users u
+    WHERE t.assignee_id IS NULL AND t.assignee IS NOT NULL AND u.name = t.assignee AND u.active = true
+  `);
+  await client.query(`
+    UPDATE support_tickets st SET assignee_id = u.id
+    FROM crm_users u
+    WHERE st.assignee_id IS NULL AND st.assignee IS NOT NULL AND u.name = st.assignee AND u.active = true
+  `);
+
+  const { seedQuoteTemplates } = await import("@/lib/quote-templates");
+  await seedQuoteTemplates(async (text, params) => {
     const result = await client.query(text, params);
     return { rows: result.rows as never[], rowCount: result.rowCount };
   });
