@@ -3,6 +3,7 @@ import type { CrmRole } from "@/content/crm-roles";
 import type { CrmPermission } from "@/lib/crm-permissions";
 import { ensureCrmRolesCache } from "@/lib/crm-roles-db";
 import { roleHasPermission } from "@/lib/crm-permissions";
+import { withDb } from "@/lib/db";
 import {
   ADMIN_SESSION_COOKIE,
   verifyCrmSession,
@@ -47,6 +48,25 @@ export async function requireAdminAuth(options?: {
   const session = await getAdminSession();
   if (!session) {
     return Response.json({ error: "Non autorisé." }, { status: 401 });
+  }
+
+  // Un membre désactivé ne doit plus pouvoir accéder au CRM même si son cookie est encore valide.
+  if (session.userId !== "legacy") {
+    try {
+      const active = await withDb(async (query) => {
+        const { rows } = await query<{ active: boolean }>(
+          `SELECT active FROM crm_users WHERE id = $1 LIMIT 1`,
+          [session.userId],
+        );
+        return rows[0]?.active ?? false;
+      });
+      if (!active) {
+        return Response.json({ error: "Compte inactif." }, { status: 401 });
+      }
+    } catch {
+      // En cas de DB indisponible, on conserve le comportement existant (les routes
+      // retourneront 503 plus loin quand elles touchent la DB).
+    }
   }
 
   if (session.mustChangePassword && !options?.allowPasswordChange) {
