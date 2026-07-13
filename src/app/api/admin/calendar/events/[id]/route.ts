@@ -72,11 +72,11 @@ export async function PATCH(request: Request, { params }: Props) {
       void pushCalendarEventToOAuthProviders(session.userId, event.id).catch(console.error);
     }
 
-    let invited = 0;
+    let invited = { emails: 0, whatsapp: 0 };
     if (participants) {
-      const { newEmails } = await syncEventParticipants(id, participants);
-      if (sendInvitations !== false && newEmails.length > 0) {
-        invited = await sendCalendarInvitations(event, newEmails);
+      const { newParticipants } = await syncEventParticipants(id, participants);
+      if (sendInvitations !== false && newParticipants.length > 0) {
+        invited = await sendCalendarInvitations(event, newParticipants);
       }
     }
 

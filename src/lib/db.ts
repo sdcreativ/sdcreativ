@@ -374,6 +374,8 @@ async function ensureSchema(): Promise<void> {
     );
     CREATE INDEX IF NOT EXISTS idx_calendar_participants_event ON calendar_event_participants (event_id);
 
+    ALTER TABLE calendar_event_participants ADD COLUMN IF NOT EXISTS phone VARCHAR(32);
+
     CREATE TABLE IF NOT EXISTS crm_reminder_logs (
       reminder_key VARCHAR(160) PRIMARY KEY,
       item_id VARCHAR(64) NOT NULL,

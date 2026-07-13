@@ -37,11 +37,11 @@ export async function POST(request: Request) {
       void pushCalendarEventToOAuthProviders(session.userId, event.id).catch(console.error);
     }
 
-    let invited = 0;
+    let invited = { emails: 0, whatsapp: 0 };
     if (participants?.length) {
-      const { newEmails } = await syncEventParticipants(event.id, participants);
-      if (sendInvitations !== false && newEmails.length > 0) {
-        invited = await sendCalendarInvitations(event, newEmails);
+      const { newParticipants } = await syncEventParticipants(event.id, participants);
+      if (sendInvitations !== false && newParticipants.length > 0) {
+        invited = await sendCalendarInvitations(event, newParticipants);
       }
     }
 

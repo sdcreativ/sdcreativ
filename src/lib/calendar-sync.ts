@@ -1,4 +1,5 @@
 import type { CalendarEvent } from "@/lib/calendar";
+import { MEETING_PLATFORMS, type MeetingPlatform } from "@/content/calendar-labels";
 import type { CalendarOAuthProvider } from "@/lib/calendar-oauth-config";
 import {
   ensureValidAccessToken,
@@ -341,6 +342,15 @@ async function getEventWithMetadata(eventId: string): Promise<
     const row = rows[0];
     if (!row) return null;
 
+    const meta = row.metadata ?? {};
+    const platform = meta.meetingPlatform;
+    const meetingPlatform =
+      typeof platform === "string" && MEETING_PLATFORMS.includes(platform as MeetingPlatform)
+        ? (platform as MeetingPlatform)
+        : null;
+    const meetingUrl =
+      typeof meta.meetingUrl === "string" && meta.meetingUrl.trim() ? meta.meetingUrl.trim() : null;
+
     return {
       id: row.id,
       title: row.title,
@@ -352,6 +362,8 @@ async function getEventWithMetadata(eventId: string): Promise<
       assignee: row.assignee,
       clientId: row.client_id,
       projectId: row.project_id,
+      meetingPlatform,
+      meetingUrl,
       createdAt: row.created_at.toISOString(),
       updatedAt: row.updated_at.toISOString(),
       metadata: parseMetadata(row.metadata),

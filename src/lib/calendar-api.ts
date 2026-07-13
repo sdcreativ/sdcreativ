@@ -55,6 +55,14 @@ export async function updateCalendarReminderPreferencesApi(
   return json.preferences;
 }
 
+export async function fetchCalendarInvitees(): Promise<
+  import("@/lib/calendar-invitees").CalendarInvitee[]
+> {
+  const res = await fetch("/api/admin/calendar/invitees", { credentials: "include" });
+  const json = await parseJson<{ invitees: import("@/lib/calendar-invitees").CalendarInvitee[] }>(res);
+  return json.invitees;
+}
+
 export async function fetchEventParticipants(eventId: string): Promise<CalendarParticipant[]> {
   const res = await fetch(`/api/admin/calendar/events/${eventId}/participants`, {
     credentials: "include",

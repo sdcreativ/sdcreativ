@@ -18,9 +18,10 @@ import {
   startOfWeek,
   toDateKey,
 } from "@/content/calendar-labels";
-import { BOOKING } from "@/lib/constants";
+import { BOOKING, CONTACT } from "@/lib/constants";
 import type { CalendarItem } from "@/lib/calendar";
 import { formatCountdownToEvent } from "@/lib/calendar-reminders";
+import type { ParticipantInput } from "@/lib/calendar-participants";
 import {
   createCalendarEventApi,
   deleteCalendarEventApi,
@@ -32,7 +33,9 @@ import {
 } from "@/lib/calendar-api";
 import { cn } from "@/lib/utils";
 import { useDialog } from "@/components/ui/DialogProvider";
-import type { EventType } from "@/content/calendar-labels";
+import type { EventType, MeetingPlatform } from "@/content/calendar-labels";
+import { MEETING_PLATFORM_LABELS, MEETING_PLATFORMS } from "@/content/calendar-labels";
+import { CalendarParticipantPicker } from "@/components/admin/CalendarParticipantPicker";
 import { CalendarDayView } from "@/components/admin/CalendarDayView";
 import { CalendarReminderSettings } from "@/components/admin/CalendarReminderSettings";
 import { CalendarSyncPanel } from "@/components/admin/CalendarSyncPanel";
@@ -701,27 +704,34 @@ function EventFormModal({
 
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
-  const [participantsText, setParticipantsText] = useState("");
+  const [participants, setParticipants] = useState<ParticipantInput[]>([]);
   const [sendInvitations, setSendInvitations] = useState(true);
   const [allDay, setAllDay] = useState(item?.allDay ?? true);
+  const [meetingPlatform, setMeetingPlatform] = useState<MeetingPlatform>("none");
+  const [meetingUrl, setMeetingUrl] = useState("");
 
   useEffect(() => {
     if (!isEdit || !item?.sourceId) {
-      setParticipantsText("");
+      setParticipants([]);
+      setMeetingPlatform("none");
+      setMeetingUrl("");
       return;
     }
     void fetchEventParticipants(item.sourceId)
-      .then((rows) => setParticipantsText(rows.map((p) => p.email).join("\n")))
-      .catch(() => setParticipantsText(""));
+      .then((rows) =>
+        setParticipants(
+          rows.map((p) => ({ email: p.email, name: p.name, phone: p.phone })),
+        ),
+      )
+      .catch(() => setParticipants([]));
+    void fetch(`/api/admin/calendar/events/${item.sourceId}`, { credentials: "include" })
+      .then((res) => (res.ok ? res.json() : null))
+      .then((json: { event?: { meetingPlatform?: MeetingPlatform; meetingUrl?: string } } | null) => {
+        if (json?.event?.meetingPlatform) setMeetingPlatform(json.event.meetingPlatform);
+        if (json?.event?.meetingUrl) setMeetingUrl(json.event.meetingUrl);
+      })
+      .catch(() => undefined);
   }, [isEdit, item?.sourceId]);
-
-  function parseParticipants(raw: string) {
-    return raw
-      .split(/[\n,;]+/)
-      .map((s) => s.trim())
-      .filter(Boolean)
-      .map((email) => ({ email }));
-  }
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -747,8 +757,13 @@ function EventFormModal({
       startsAt,
       allDay: isAllDay,
       assignee: String(data.get("assignee") || "") || null,
-      participants: parseParticipants(participantsText),
+      participants,
       sendInvitations,
+      meetingPlatform,
+      meetingUrl:
+        meetingPlatform === "google_meet" || meetingPlatform === "zoom"
+          ? meetingUrl.trim() || null
+          : null,
     };
 
     try {
@@ -769,7 +784,7 @@ function EventFormModal({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4 backdrop-blur-sm">
-      <form onSubmit={handleSubmit} className="max-h-[90vh] w-full max-w-md overflow-y-auto rounded-2xl bg-white p-6 shadow-2xl">
+      <form onSubmit={handleSubmit} className="max-h-[90vh] w-full max-w-lg overflow-y-auto rounded-2xl bg-white p-6 shadow-2xl">
         <div className="mb-4 flex items-center justify-between">
           <h2 className="text-lg font-bold">{isEdit ? "Modifier l'événement" : "Nouvel événement"}</h2>
           <button type="button" onClick={onClose} aria-label="Fermer">
@@ -831,17 +846,56 @@ function EventFormModal({
             ))}
           </select>
           <div>
-            <label className="mb-1 block text-xs font-medium text-gray-text">
-              Participants (emails, un par ligne)
-            </label>
-            <textarea
-              value={participantsText}
-              onChange={(e) => setParticipantsText(e.target.value)}
-              rows={3}
-              placeholder="client@example.com"
-              className={fieldClass}
-            />
+            <label className="mb-1 block text-xs font-medium text-gray-text">Participants</label>
+            <CalendarParticipantPicker value={participants} onChange={setParticipants} />
           </div>
+
+          <div>
+            <label className="mb-2 block text-xs font-medium text-gray-text">Canal de réunion</label>
+            <div className="grid grid-cols-2 gap-2">
+              {MEETING_PLATFORMS.map((platform) => (
+                <label
+                  key={platform}
+                  className={cn(
+                    "flex cursor-pointer items-center gap-2 rounded-xl border px-3 py-2 text-sm transition-colors",
+                    meetingPlatform === platform
+                      ? "border-primary bg-primary/5 text-foreground"
+                      : "border-gray/30 hover:bg-gray-light/50",
+                  )}
+                >
+                  <input
+                    type="radio"
+                    name="meetingPlatform"
+                    value={platform}
+                    checked={meetingPlatform === platform}
+                    onChange={() => setMeetingPlatform(platform)}
+                    className="text-primary"
+                  />
+                  {MEETING_PLATFORM_LABELS[platform]}
+                </label>
+              ))}
+            </div>
+            {meetingPlatform === "whatsapp" && (
+              <p className="mt-2 text-xs text-gray-text">
+                Les participants avec un numéro recevront aussi une notification WhatsApp.
+                Lien généré vers {CONTACT.whatsapp ? `+${CONTACT.whatsapp}` : "le numéro SD CREATIV"}.
+              </p>
+            )}
+            {(meetingPlatform === "google_meet" || meetingPlatform === "zoom") && (
+              <input
+                type="url"
+                value={meetingUrl}
+                onChange={(e) => setMeetingUrl(e.target.value)}
+                placeholder={
+                  meetingPlatform === "google_meet"
+                    ? "https://meet.google.com/xxx-xxxx-xxx"
+                    : "https://zoom.us/j/123456789"
+                }
+                className={`${fieldClass} mt-2`}
+              />
+            )}
+          </div>
+
           <label className="flex items-center gap-2 text-sm">
             <input
               type="checkbox"
@@ -849,7 +903,7 @@ function EventFormModal({
               onChange={(e) => setSendInvitations(e.target.checked)}
               className="rounded border-gray/60"
             />
-            Envoyer les invitations par email
+            Envoyer les invitations (email + fichier calendrier .ics)
           </label>
           <label className="flex items-center gap-2 text-sm">
             <input

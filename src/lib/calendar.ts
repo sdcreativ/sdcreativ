@@ -1,7 +1,7 @@
 import { z } from "zod";
 import { withDb } from "@/lib/db";
-import type { CalendarItemType, EventType } from "@/content/calendar-labels";
-import { EVENT_TYPES } from "@/content/calendar-labels";
+import type { CalendarItemType, EventType, MeetingPlatform } from "@/content/calendar-labels";
+import { EVENT_TYPES, MEETING_PLATFORMS } from "@/content/calendar-labels";
 
 export type CalendarItem = {
   id: string;
@@ -28,6 +28,8 @@ export type CalendarEvent = {
   assignee: string | null;
   clientId: string | null;
   projectId: string | null;
+  meetingPlatform: MeetingPlatform | null;
+  meetingUrl: string | null;
   createdAt: string;
   updatedAt: string;
 };
@@ -43,11 +45,29 @@ type EventRow = {
   assignee: string | null;
   client_id: string | null;
   project_id: string | null;
+  metadata: Record<string, unknown> | null;
   created_at: Date;
   updated_at: Date;
 };
 
+function readMeetingMeta(metadata: Record<string, unknown> | null): {
+  meetingPlatform: MeetingPlatform | null;
+  meetingUrl: string | null;
+} {
+  const platform = metadata?.meetingPlatform;
+  const url = metadata?.meetingUrl;
+  return {
+    meetingPlatform:
+      typeof platform === "string" &&
+      MEETING_PLATFORMS.includes(platform as MeetingPlatform)
+        ? (platform as MeetingPlatform)
+        : null,
+    meetingUrl: typeof url === "string" && url.trim() ? url.trim() : null,
+  };
+}
+
 function mapEvent(row: EventRow): CalendarEvent {
+  const meeting = readMeetingMeta(row.metadata);
   return {
     id: row.id,
     title: row.title,
@@ -59,6 +79,8 @@ function mapEvent(row: EventRow): CalendarEvent {
     assignee: row.assignee,
     clientId: row.client_id,
     projectId: row.project_id,
+    meetingPlatform: meeting.meetingPlatform,
+    meetingUrl: meeting.meetingUrl,
     createdAt: row.created_at.toISOString(),
     updatedAt: row.updated_at.toISOString(),
   };
@@ -74,6 +96,8 @@ export const createEventSchema = z.object({
   assignee: z.string().trim().max(100).optional().nullable(),
   clientId: z.string().uuid().optional().nullable(),
   projectId: z.string().uuid().optional().nullable(),
+  meetingPlatform: z.enum(MEETING_PLATFORMS).optional().nullable(),
+  meetingUrl: z.string().trim().max(500).optional().nullable(),
 });
 
 export const updateEventSchema = createEventSchema.partial();
@@ -243,12 +267,16 @@ export async function createCalendarEvent(
     const allDay = input.allDay ?? false;
     const startsAt = parseStartsAt(input.startsAt, allDay);
     const endsAt = input.endsAt ? new Date(input.endsAt) : null;
+    const metadata = {
+      meetingPlatform: input.meetingPlatform ?? "none",
+      meetingUrl: input.meetingUrl ?? null,
+    };
 
     const { rows } = await query<EventRow>(
       `INSERT INTO calendar_events (
         title, description, type, starts_at, ends_at, all_day,
-        assignee, client_id, project_id
-      ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9)
+        assignee, client_id, project_id, metadata
+      ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10)
       RETURNING *`,
       [
         input.title,
@@ -260,6 +288,7 @@ export async function createCalendarEvent(
         input.assignee ?? null,
         input.clientId ?? null,
         input.projectId ?? null,
+        JSON.stringify(metadata),
       ],
     );
 
@@ -297,6 +326,15 @@ export async function updateCalendarEvent(
           : null
         : existing.ends_at;
 
+    const existingMeta = existing.metadata ?? {};
+    const metadata = {
+      ...existingMeta,
+      ...(input.meetingPlatform !== undefined
+        ? { meetingPlatform: input.meetingPlatform ?? "none" }
+        : {}),
+      ...(input.meetingUrl !== undefined ? { meetingUrl: input.meetingUrl } : {}),
+    };
+
     const { rows } = await query<EventRow>(
       `UPDATE calendar_events SET
         title = $2,
@@ -308,6 +346,7 @@ export async function updateCalendarEvent(
         assignee = $8,
         client_id = $9,
         project_id = $10,
+        metadata = $11::jsonb,
         updated_at = NOW()
       WHERE id = $1
       RETURNING *`,
@@ -322,6 +361,7 @@ export async function updateCalendarEvent(
         input.assignee !== undefined ? input.assignee : existing.assignee,
         input.clientId !== undefined ? input.clientId : existing.client_id,
         input.projectId !== undefined ? input.projectId : existing.project_id,
+        JSON.stringify(metadata),
       ],
     );
 
