@@ -5,6 +5,7 @@ import Link from "next/link";
 import {
   CALENDAR_ITEM_COLORS,
   CALENDAR_ITEM_DOT_COLORS,
+  CALENDAR_ITEM_ACCENT,
   CALENDAR_ITEM_LABELS,
   EVENT_TYPE_LABELS,
   MONTH_LABELS,
@@ -47,18 +48,25 @@ import {
   BellRing,
   ChevronLeft,
   ChevronRight,
+  ChevronDown,
   Clock,
   ExternalLink,
   LayoutGrid,
   Loader2,
   Pencil,
   Plus,
+  Settings2,
   Sparkles,
   Trash2,
   X,
 } from "lucide-react";
 
 type ViewMode = "month" | "week" | "day";
+
+const calendarShell =
+  "overflow-hidden rounded-2xl border border-slate-200/80 bg-white shadow-[0_1px_2px_rgba(15,23,42,0.04),0_12px_32px_rgba(15,23,42,0.06)]";
+const calendarHeader =
+  "flex items-center justify-between border-b border-slate-100 bg-[linear-gradient(180deg,#f8fafc_0%,#ffffff_100%)] px-5 py-4";
 
 const fieldClass =
   "w-full rounded-xl border border-gray/60 bg-white px-3 py-2.5 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20";
@@ -90,6 +98,7 @@ export function CrmCalendarView() {
   const [eventModal, setEventModal] = useState<EventModalState>(null);
   const [error, setError] = useState("");
   const [now, setNow] = useState(() => new Date());
+  const [showSettings, setShowSettings] = useState(false);
 
   useEffect(() => {
     const id = window.setInterval(() => setNow(new Date()), 60_000);
@@ -144,6 +153,20 @@ export function CrmCalendarView() {
   const monthEventCount = items.filter((item) => {
     const d = new Date(item.startsAt);
     return d.getFullYear() === year && d.getMonth() === month;
+  }).length;
+
+  const todayItems = itemsByDay.get(todayKey) ?? [];
+  const monthMeetings = items.filter((i) => {
+    const d = new Date(i.startsAt);
+    return d.getFullYear() === year && d.getMonth() === month && (i.type === "meeting" || i.type === "call");
+  }).length;
+  const monthDeadlines = items.filter((i) => {
+    const d = new Date(i.startsAt);
+    return (
+      d.getFullYear() === year &&
+      d.getMonth() === month &&
+      (i.type === "project_deadline" || i.type === "task_due")
+    );
   }).length;
 
   function prevMonth() {
@@ -256,24 +279,17 @@ export function CrmCalendarView() {
   }
 
   return (
-    <div className="space-y-5">
-      {/* En-tête */}
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+    <div className="space-y-6">
+      {/* Barre d'outils */}
+      <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
         <div>
-          <p className="text-sm text-gray-text">
-            Deadlines projet, échéances tâches, relances devis et événements d&apos;équipe.
+          <h2 className="text-xl font-bold tracking-tight text-foreground">Calendrier</h2>
+          <p className="mt-1 max-w-xl text-sm text-gray-text">
+            Vue unifiée des réunions, échéances et relances commerciales.
           </p>
-          <p className="mt-1 text-xs text-gray-text/70">
-            Mois · semaine · jour · glisser-déposer pour déplacer un événement manuel
-          </p>
-          {!loading && (
-            <p className="mt-1 text-xs text-gray-text/80">
-              {monthEventCount} événement{monthEventCount !== 1 ? "s" : ""} ce mois
-            </p>
-          )}
         </div>
         <div className="flex flex-wrap items-center gap-2">
-          <div className="inline-flex rounded-xl border border-gray/60 bg-white p-1">
+          <div className="inline-flex rounded-xl border border-slate-200/80 bg-slate-50/80 p-1 shadow-sm">
             {([
               ["month", LayoutGrid, "Mois"],
               ["week", CalendarDays, "Semaine"],
@@ -284,8 +300,10 @@ export function CrmCalendarView() {
                 type="button"
                 onClick={() => handleViewModeChange(mode)}
                 className={cn(
-                  "inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-semibold transition-colors",
-                  viewMode === mode ? "bg-primary text-white" : "text-gray-text hover:text-foreground",
+                  "inline-flex items-center gap-1.5 rounded-lg px-3.5 py-2 text-xs font-semibold transition-all",
+                  viewMode === mode
+                    ? "bg-white text-primary shadow-sm ring-1 ring-slate-200/80"
+                    : "text-gray-text hover:text-foreground",
                 )}
               >
                 <Icon className="h-3.5 w-3.5" aria-hidden />
@@ -295,13 +313,46 @@ export function CrmCalendarView() {
           </div>
           <button
             type="button"
+            onClick={() => setShowSettings((v) => !v)}
+            className={cn(
+              "inline-flex items-center gap-2 rounded-xl border px-3.5 py-2.5 text-sm font-medium transition-colors",
+              showSettings
+                ? "border-primary/30 bg-primary/5 text-primary"
+                : "border-slate-200/80 bg-white text-gray-text hover:text-foreground",
+            )}
+          >
+            <Settings2 className="h-4 w-4" aria-hidden />
+            Sync & rappels
+            <ChevronDown className={cn("h-4 w-4 transition-transform", showSettings && "rotate-180")} aria-hidden />
+          </button>
+          <button
+            type="button"
             onClick={() => openCreateForDay(viewMode === "day" ? focusDay : selectedDay)}
-            className="inline-flex shrink-0 items-center gap-2 rounded-xl bg-primary px-4 py-2.5 text-sm font-semibold text-white shadow-sm shadow-primary/20 transition-colors hover:bg-primary-dark"
+            className="inline-flex shrink-0 items-center gap-2 rounded-xl bg-primary px-4 py-2.5 text-sm font-semibold text-white shadow-md shadow-primary/25 transition-all hover:bg-primary-dark hover:shadow-lg hover:shadow-primary/20"
           >
             <Plus className="h-4 w-4" aria-hidden />
             Nouvel événement
           </button>
         </div>
+      </div>
+
+      {/* KPIs */}
+      <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+        {[
+          { label: "Ce mois", value: monthEventCount, sub: "événements" },
+          { label: "Aujourd'hui", value: todayItems.length, sub: "planifiés" },
+          { label: "Réunions", value: monthMeetings, sub: "mois en cours" },
+          { label: "Échéances", value: monthDeadlines, sub: "projets & tâches" },
+        ].map((stat) => (
+          <div
+            key={stat.label}
+            className="rounded-2xl border border-slate-200/70 bg-white px-4 py-3.5 shadow-sm"
+          >
+            <p className="text-[11px] font-semibold uppercase tracking-wider text-gray-text/80">{stat.label}</p>
+            <p className="mt-1 text-2xl font-bold tabular-nums text-foreground">{stat.value}</p>
+            <p className="text-xs text-gray-text">{stat.sub}</p>
+          </div>
+        ))}
       </div>
 
       {BOOKING.url && (
@@ -331,10 +382,14 @@ export function CrmCalendarView() {
         </div>
       )}
 
-      <CalendarReminderSettings />
-      <CalendarSyncPanel />
+      {showSettings && (
+        <div className="space-y-4 rounded-2xl border border-slate-200/70 bg-slate-50/50 p-4">
+          <CalendarReminderSettings />
+          <CalendarSyncPanel />
+        </div>
+      )}
 
-      <div className="grid gap-5 xl:grid-cols-[1fr_340px]">
+      <div className="grid gap-6 xl:grid-cols-[1fr_360px]">
         {loading ? (
           <div className="flex items-center justify-center gap-2 rounded-2xl border border-gray/30 bg-white py-24 text-sm text-gray-text shadow-sm">
             <Loader2 className="h-5 w-5 animate-spin text-primary" aria-hidden />
@@ -365,26 +420,28 @@ export function CrmCalendarView() {
             onNextDay={nextDay}
           />
         ) : (
-        <section className="overflow-hidden rounded-2xl border border-gray/30 bg-white shadow-sm">
-          <div className="flex items-center justify-between border-b border-gray/20 bg-gradient-to-r from-[#f8fafc] to-white px-4 py-4 sm:px-6">
+        <section className={calendarShell}>
+          <div className={calendarHeader}>
             <button
               type="button"
               onClick={prevMonth}
-              className="rounded-xl border border-gray/30 p-2 text-gray-text transition-colors hover:border-primary/30 hover:bg-primary-light/30 hover:text-primary"
+              className="rounded-xl border border-slate-200/80 bg-white p-2.5 text-gray-text shadow-sm transition-all hover:border-primary/30 hover:text-primary"
               aria-label="Mois précédent"
             >
               <ChevronLeft className="h-5 w-5" aria-hidden />
             </button>
 
             <div className="text-center">
-              <h2 className="flex items-center justify-center gap-2 text-lg font-bold text-foreground">
-                <CalendarDays className="h-5 w-5 text-primary" aria-hidden />
-                {MONTH_LABELS[month]} {year}
+              <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-primary/80">
+                {year}
+              </p>
+              <h2 className="mt-0.5 text-xl font-bold tracking-tight text-foreground">
+                {MONTH_LABELS[month]}
               </h2>
               <button
                 type="button"
                 onClick={goToToday}
-                className="mt-1 text-xs font-semibold text-primary hover:underline"
+                className="mt-1.5 rounded-full border border-primary/20 bg-primary/5 px-3 py-0.5 text-[11px] font-semibold text-primary transition-colors hover:bg-primary/10"
               >
                 Aujourd&apos;hui
               </button>
@@ -393,7 +450,7 @@ export function CrmCalendarView() {
             <button
               type="button"
               onClick={nextMonth}
-              className="rounded-xl border border-gray/30 p-2 text-gray-text transition-colors hover:border-primary/30 hover:bg-primary-light/30 hover:text-primary"
+              className="rounded-xl border border-slate-200/80 bg-white p-2.5 text-gray-text shadow-sm transition-all hover:border-primary/30 hover:text-primary"
               aria-label="Mois suivant"
             >
               <ChevronRight className="h-5 w-5" aria-hidden />
@@ -401,35 +458,35 @@ export function CrmCalendarView() {
           </div>
 
           <div className="p-4 sm:p-5">
-            <div className="mb-1 grid grid-cols-7">
+            <div className="mb-2 grid grid-cols-7 gap-1.5">
               {WEEKDAY_LABELS.map((label) => (
                 <div
                   key={label}
-                  className="py-2 text-center text-[11px] font-bold uppercase tracking-widest text-gray-text/70"
+                  className="py-2 text-center text-[10px] font-bold uppercase tracking-[0.15em] text-slate-400"
                 >
                   {label}
                 </div>
               ))}
             </div>
 
-            <div className="grid grid-cols-7 gap-px overflow-hidden rounded-xl bg-gray/20">
+            <div className="grid grid-cols-7 gap-1.5 rounded-2xl bg-slate-100/60 p-1.5">
               {grid.map((date) => {
                 const key = toDateKey(date);
                 const inMonth = date.getMonth() === month;
                 const isToday = key === todayKey;
                 const isSelected = key === selectedDay;
                 const dayItems = itemsByDay.get(key) ?? [];
-                const userEvents = dayItems.filter((i) => i.source === "event");
-                const uniqueTypes = [...new Set(dayItems.map((i) => i.type))];
+                const visibleItems = dayItems.slice(0, 2);
+                const overflow = dayItems.length - visibleItems.length;
 
                 return (
                   <div
                     key={key}
                     className={cn(
-                      "group relative flex min-h-[4.75rem] flex-col bg-white p-2 text-left transition-all sm:min-h-[5.75rem]",
-                      !inMonth && "bg-gray-light/30",
-                      isSelected && "z-10 bg-primary-light/25 ring-2 ring-inset ring-primary/40",
-                      !isSelected && "hover:bg-primary-light/10",
+                      "group relative flex min-h-[5.5rem] flex-col rounded-xl border bg-white p-2 text-left transition-all sm:min-h-[6.25rem]",
+                      !inMonth && "opacity-45",
+                      isSelected && "border-primary/40 bg-primary/[0.04] ring-2 ring-primary/20",
+                      !isSelected && "border-transparent hover:border-slate-200 hover:shadow-sm",
                     )}
                     onDragOver={(e) => {
                       e.preventDefault();
@@ -453,7 +510,7 @@ export function CrmCalendarView() {
                             e.stopPropagation();
                             openCreateForDay(key);
                           }}
-                          className="absolute right-1 top-1 z-10 flex h-6 w-6 items-center justify-center rounded-lg border border-primary/20 bg-white text-primary opacity-0 shadow-sm transition-opacity hover:bg-primary-light group-hover:opacity-100"
+                          className="absolute right-1.5 top-1.5 z-10 flex h-6 w-6 items-center justify-center rounded-lg bg-primary text-white opacity-0 shadow-md transition-all hover:bg-primary-dark group-hover:opacity-100"
                           aria-label={`Ajouter un événement le ${key}`}
                         >
                           <Plus className="h-3.5 w-3.5" aria-hidden />
@@ -466,19 +523,19 @@ export function CrmCalendarView() {
                         >
                           <span
                             className={cn(
-                              "flex h-7 w-7 items-center justify-center rounded-full text-sm font-semibold transition-colors",
-                              isToday && "bg-primary text-white shadow-sm",
-                              !isToday && isSelected && "text-primary",
-                              !isToday && !isSelected && inMonth && "text-foreground group-hover:text-primary",
-                              !inMonth && "text-gray-text/50",
+                              "flex h-7 w-7 items-center justify-center rounded-full text-sm font-semibold transition-all",
+                              isToday && "bg-primary text-white shadow-md shadow-primary/30",
+                              !isToday && isSelected && "bg-primary/10 text-primary",
+                              !isToday && !isSelected && inMonth && "text-slate-700 group-hover:text-primary",
+                              !inMonth && "text-slate-400",
                             )}
                           >
                             {date.getDate()}
                           </span>
 
                           {dayItems.length > 0 && (
-                            <div className="mt-auto space-y-0.5 pt-1">
-                              {userEvents.slice(0, 1).map((item) => {
+                            <div className="mt-1 flex min-h-0 flex-1 flex-col gap-0.5 overflow-hidden">
+                              {visibleItems.map((item) => {
                                 const editable = isEditableEvent(item);
                                 return (
                                   <span
@@ -493,29 +550,20 @@ export function CrmCalendarView() {
                                       );
                                     }}
                                     className={cn(
-                                      "block w-full truncate rounded px-1 py-0.5 text-left text-[9px] font-medium sm:text-[10px]",
+                                      "block w-full truncate rounded-md px-1.5 py-0.5 text-left text-[9px] font-medium leading-tight sm:text-[10px]",
                                       CALENDAR_ITEM_COLORS[item.type],
-                                      editable && "cursor-grab",
+                                      editable && "cursor-grab active:cursor-grabbing",
                                     )}
                                   >
                                     {item.title}
                                   </span>
                                 );
                               })}
-                              <div className="flex flex-wrap items-center gap-1">
-                                {uniqueTypes.slice(0, 4).map((type) => (
-                                  <span
-                                    key={type}
-                                    className={cn("h-1.5 w-1.5 rounded-full", CALENDAR_ITEM_DOT_COLORS[type])}
-                                    aria-hidden
-                                  />
-                                ))}
-                                {dayItems.length > 1 && (
-                                  <span className="text-[9px] font-medium text-gray-text">
-                                    +{dayItems.length - 1}
-                                  </span>
-                                )}
-                              </div>
+                              {overflow > 0 && (
+                                <span className="text-[9px] font-semibold text-slate-400">
+                                  +{overflow} autre{overflow > 1 ? "s" : ""}
+                                </span>
+                              )}
                             </div>
                           )}
                         </button>
@@ -529,31 +577,44 @@ export function CrmCalendarView() {
         </section>
         )}
 
-        <aside className="flex flex-col overflow-hidden rounded-2xl border border-gray/30 bg-white shadow-sm">
-          <div className="border-b border-gray/20 bg-gradient-to-r from-[#f8fafc] to-white px-5 py-4">
-            <p className="text-xs font-semibold uppercase tracking-widest text-primary">Agenda</p>
-            <h3 className="mt-1 capitalize text-lg font-bold text-foreground">
-              {formatDateKeyLabel(selectedDay)}
-            </h3>
-            <p className="mt-0.5 text-sm text-gray-text">
-              {selectedItems.length} événement{selectedItems.length !== 1 ? "s" : ""}
-            </p>
+        <aside className={cn(calendarShell, "flex flex-col")}>
+          <div className={cn(calendarHeader, "gap-4")}>
+            <div className="flex min-w-0 flex-1 items-center gap-4">
+              <div className="flex h-14 w-14 shrink-0 flex-col items-center justify-center rounded-2xl bg-primary text-white shadow-lg shadow-primary/25">
+                <span className="text-[10px] font-bold uppercase tracking-wider opacity-90">
+                  {parseDateKey(selectedDay).toLocaleDateString("fr-FR", { weekday: "short" })}
+                </span>
+                <span className="text-2xl font-bold leading-none tabular-nums">
+                  {parseDateKey(selectedDay).getDate()}
+                </span>
+              </div>
+              <div className="min-w-0">
+                <p className="text-[11px] font-semibold uppercase tracking-[0.15em] text-primary">Agenda</p>
+                <h3 className="truncate capitalize text-base font-bold text-foreground">
+                  {formatDateKeyLabel(selectedDay, { weekday: "long", day: "numeric", month: "long" })}
+                </h3>
+                <p className="mt-0.5 text-sm text-gray-text">
+                  {selectedItems.length} événement{selectedItems.length !== 1 ? "s" : ""}
+                </p>
+              </div>
+            </div>
           </div>
 
           <div className="flex-1 overflow-y-auto p-4">
             {selectedItems.length === 0 ? (
-              <div className="flex flex-col items-center justify-center py-12 text-center">
-                <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-gray-light/80">
-                  <Sparkles className="h-6 w-6 text-gray-text/50" aria-hidden />
+              <div className="flex flex-col items-center justify-center rounded-2xl border border-dashed border-slate-200 bg-slate-50/50 py-14 text-center">
+                <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-white shadow-sm">
+                  <Sparkles className="h-6 w-6 text-slate-300" aria-hidden />
                 </div>
-                <p className="mt-4 font-medium text-foreground">Journée libre</p>
+                <p className="mt-4 font-semibold text-foreground">Journée libre</p>
                 <p className="mt-1 text-sm text-gray-text">Aucun événement planifié.</p>
                 <button
                   type="button"
                   onClick={() => openCreateForDay(selectedDay)}
-                  className="mt-4 text-sm font-semibold text-primary hover:underline"
+                  className="mt-5 inline-flex items-center gap-1.5 rounded-xl bg-primary px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-primary-dark"
                 >
-                  + Ajouter un événement
+                  <Plus className="h-4 w-4" aria-hidden />
+                  Planifier
                 </button>
               </div>
             ) : (
@@ -601,7 +662,7 @@ function AgendaDayItem({
   const editable = isEditableEvent(item);
   const countdown = formatCountdownToEvent(item.startsAt, now);
   const cardClass =
-    "group relative overflow-hidden rounded-xl border border-gray/25 bg-white pl-4 shadow-sm transition-shadow hover:shadow-md";
+    "group relative overflow-hidden rounded-xl border border-slate-200/70 bg-white shadow-sm transition-all hover:border-slate-300/80 hover:shadow-md";
 
   const header = (
     <div className="flex items-start justify-between gap-2">
@@ -668,7 +729,7 @@ function AgendaDayItem({
   return (
     <li className={cn(cardClass, editable && "cursor-pointer")}>
       <span
-        className={cn("absolute left-0 top-0 h-full w-1", CALENDAR_ITEM_DOT_COLORS[item.type])}
+        className={cn("absolute left-0 top-0 h-full w-1 rounded-l-xl", CALENDAR_ITEM_ACCENT[item.type])}
         aria-hidden
       />
       <div className="p-3.5">
@@ -933,16 +994,13 @@ function EventFormModal({
 function Legend() {
   const types = Object.entries(CALENDAR_ITEM_LABELS) as Array<[keyof typeof CALENDAR_ITEM_LABELS, string]>;
   return (
-    <div className="mt-5 flex flex-wrap gap-2 border-t border-gray/15 pt-4">
+    <div className="mt-4 flex flex-wrap gap-1.5 border-t border-slate-100 pt-4">
       {types.map(([type, label]) => (
         <span
           key={type}
-          className={cn(
-            "inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[10px] font-semibold",
-            CALENDAR_ITEM_COLORS[type],
-          )}
+          className="inline-flex items-center gap-1.5 rounded-lg bg-slate-50 px-2 py-1 text-[10px] font-medium text-slate-600"
         >
-          <span className={cn("h-1.5 w-1.5 rounded-full", CALENDAR_ITEM_DOT_COLORS[type])} aria-hidden />
+          <span className={cn("h-2 w-2 rounded-full", CALENDAR_ITEM_DOT_COLORS[type])} aria-hidden />
           {label}
         </span>
       ))}

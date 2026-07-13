@@ -42,25 +42,37 @@ export const CALENDAR_ITEM_LABELS: Record<CalendarItemType, string> = {
 };
 
 export const CALENDAR_ITEM_COLORS: Record<CalendarItemType, string> = {
-  meeting: "bg-primary/10 text-primary border border-primary/20",
-  call: "bg-violet-500/10 text-violet-700 border border-violet-500/20",
-  reminder: "bg-amber-500/10 text-amber-800 border border-amber-500/20",
-  other: "bg-gray-light text-gray-text border border-gray/30",
-  project_deadline: "bg-emerald-500/10 text-emerald-700 border border-emerald-500/20",
-  task_due: "bg-sky-500/10 text-sky-700 border border-sky-500/20",
-  quote_followup: "bg-orange-500/10 text-orange-700 border border-orange-500/20",
-  ticket_sla: "bg-red-500/10 text-red-700 border border-red-500/20",
+  meeting: "bg-[#eef4ff] text-[#1e40af] border border-[#bfdbfe]/80",
+  call: "bg-[#f5f3ff] text-[#5b21b6] border border-[#ddd6fe]/80",
+  reminder: "bg-[#fffbeb] text-[#92400e] border border-[#fde68a]/80",
+  other: "bg-slate-50 text-slate-600 border border-slate-200/80",
+  project_deadline: "bg-[#ecfdf5] text-[#047857] border border-[#a7f3d0]/80",
+  task_due: "bg-[#f0f9ff] text-[#0369a1] border border-[#bae6fd]/80",
+  quote_followup: "bg-[#fff7ed] text-[#c2410c] border border-[#fed7aa]/80",
+  ticket_sla: "bg-[#fef2f2] text-[#b91c1c] border border-[#fecaca]/80",
 };
 
 export const CALENDAR_ITEM_DOT_COLORS: Record<CalendarItemType, string> = {
-  meeting: "bg-primary",
-  call: "bg-violet-500",
-  reminder: "bg-amber-500",
-  other: "bg-gray-text",
-  project_deadline: "bg-emerald-500",
-  task_due: "bg-sky-500",
-  quote_followup: "bg-orange-500",
-  ticket_sla: "bg-red-500",
+  meeting: "bg-[#2563eb]",
+  call: "bg-[#7c3aed]",
+  reminder: "bg-[#d97706]",
+  other: "bg-slate-400",
+  project_deadline: "bg-[#059669]",
+  task_due: "bg-[#0284c7]",
+  quote_followup: "bg-[#ea580c]",
+  ticket_sla: "bg-[#dc2626]",
+};
+
+/** Bande latérale agenda / cellules */
+export const CALENDAR_ITEM_ACCENT: Record<CalendarItemType, string> = {
+  meeting: "bg-[#2563eb]",
+  call: "bg-[#7c3aed]",
+  reminder: "bg-[#d97706]",
+  other: "bg-slate-400",
+  project_deadline: "bg-[#059669]",
+  task_due: "bg-[#0284c7]",
+  quote_followup: "bg-[#ea580c]",
+  ticket_sla: "bg-[#dc2626]",
 };
 
 export const WEEKDAY_LABELS = ["Lun", "Mar", "Mer", "Jeu", "Ven", "Sam", "Dim"] as const;

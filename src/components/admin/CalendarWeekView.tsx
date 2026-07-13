@@ -54,20 +54,20 @@ export function CalendarWeekView({
   }
 
   return (
-    <section className="overflow-hidden rounded-2xl border border-gray/30 bg-white shadow-sm">
-      <div className="flex items-center justify-between border-b border-gray/20 bg-gradient-to-r from-[#f8fafc] to-white px-4 py-4">
-        <button type="button" onClick={onPrevWeek} className="rounded-xl border border-gray/30 p-2 hover:bg-primary-light/30" aria-label="Semaine précédente">
+    <section className="overflow-hidden rounded-2xl border border-slate-200/80 bg-white shadow-[0_1px_2px_rgba(15,23,42,0.04),0_12px_32px_rgba(15,23,42,0.06)]">
+      <div className="flex items-center justify-between border-b border-slate-100 bg-[linear-gradient(180deg,#f8fafc_0%,#ffffff_100%)] px-5 py-4">
+        <button type="button" onClick={onPrevWeek} className="rounded-xl border border-slate-200/80 bg-white p-2.5 shadow-sm hover:border-primary/30 hover:text-primary" aria-label="Semaine précédente">
           <ChevronLeft className="h-5 w-5" />
         </button>
-        <h2 className="text-sm font-bold capitalize text-foreground">
+        <h2 className="text-sm font-bold capitalize tracking-tight text-foreground">
           Semaine du {formatDateKeyLabel(toDateKey(weekStart), { day: "numeric", month: "long" })}
         </h2>
-        <button type="button" onClick={onNextWeek} className="rounded-xl border border-gray/30 p-2 hover:bg-primary-light/30" aria-label="Semaine suivante">
+        <button type="button" onClick={onNextWeek} className="rounded-xl border border-slate-200/80 bg-white p-2.5 shadow-sm hover:border-primary/30 hover:text-primary" aria-label="Semaine suivante">
           <ChevronRight className="h-5 w-5" />
         </button>
       </div>
 
-      <div className="grid grid-cols-7 border-b border-gray/15">
+      <div className="grid grid-cols-7 border-b border-slate-100 bg-slate-50/50">
         {days.map((date, i) => {
           const key = toDateKey(date);
           const isToday = key === todayKey;

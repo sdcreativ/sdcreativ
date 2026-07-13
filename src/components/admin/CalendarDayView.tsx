@@ -48,20 +48,20 @@ export function CalendarDayView({
   const dayItems = items.filter((i) => toDateKey(new Date(i.startsAt)) === dayKey);
 
   return (
-    <section className="overflow-hidden rounded-2xl border border-gray/30 bg-white shadow-sm">
-      <div className="flex items-center justify-between border-b border-gray/20 bg-gradient-to-r from-[#f8fafc] to-white px-4 py-4">
-        <button type="button" onClick={onPrevDay} className="rounded-xl border border-gray/30 p-2 hover:bg-primary-light/30" aria-label="Jour précédent">
+    <section className="overflow-hidden rounded-2xl border border-slate-200/80 bg-white shadow-[0_1px_2px_rgba(15,23,42,0.04),0_12px_32px_rgba(15,23,42,0.06)]">
+      <div className="flex items-center justify-between border-b border-slate-100 bg-[linear-gradient(180deg,#f8fafc_0%,#ffffff_100%)] px-5 py-4">
+        <button type="button" onClick={onPrevDay} className="rounded-xl border border-slate-200/80 bg-white p-2.5 shadow-sm hover:border-primary/30 hover:text-primary" aria-label="Jour précédent">
           <ChevronLeft className="h-5 w-5" />
         </button>
         <div className="text-center">
-          <h2 className={cn("text-sm font-bold capitalize", isToday && "text-primary")}>
+          <h2 className={cn("text-sm font-bold capitalize tracking-tight", isToday && "text-primary")}>
             {formatDateKeyLabel(dayKey)}
           </h2>
-          <button type="button" onClick={() => onCreateOnDay(dayKey)} className="mt-1 text-xs font-semibold text-primary hover:underline">
+          <button type="button" onClick={() => onCreateOnDay(dayKey)} className="mt-1.5 rounded-full border border-primary/20 bg-primary/5 px-3 py-0.5 text-[11px] font-semibold text-primary hover:bg-primary/10">
             + Ajouter un événement
           </button>
         </div>
-        <button type="button" onClick={onNextDay} className="rounded-xl border border-gray/30 p-2 hover:bg-primary-light/30" aria-label="Jour suivant">
+        <button type="button" onClick={onNextDay} className="rounded-xl border border-slate-200/80 bg-white p-2.5 shadow-sm hover:border-primary/30 hover:text-primary" aria-label="Jour suivant">
           <ChevronRight className="h-5 w-5" />
         </button>
       </div>
