@@ -2,8 +2,8 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { Loader2, Search } from "lucide-react";
-import type { CalendarInvitee } from "@/lib/calendar-invitees";
-import { inviteeKey } from "@/lib/calendar-invitees";
+import type { CalendarInvitee } from "@/lib/calendar-invitees-types";
+import { inviteeKey } from "@/lib/calendar-invitees-types";
 import { fetchCalendarInvitees } from "@/lib/calendar-api";
 import type { ParticipantInput } from "@/lib/calendar-participants";
 import { cn } from "@/lib/utils";

@@ -55,11 +55,11 @@ export async function updateCalendarReminderPreferencesApi(
   return json.preferences;
 }
 
-export async function fetchCalendarInvitees(): Promise<
-  import("@/lib/calendar-invitees").CalendarInvitee[]
-> {
+import type { CalendarInvitee } from "@/lib/calendar-invitees-types";
+
+export async function fetchCalendarInvitees(): Promise<CalendarInvitee[]> {
   const res = await fetch("/api/admin/calendar/invitees", { credentials: "include" });
-  const json = await parseJson<{ invitees: import("@/lib/calendar-invitees").CalendarInvitee[] }>(res);
+  const json = await parseJson<{ invitees: CalendarInvitee[] }>(res);
   return json.invitees;
 }
 
