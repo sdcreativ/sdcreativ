@@ -100,6 +100,28 @@ const ALL: CrmPermission[] = [...CRM_PERMISSIONS];
 
 export const ROLE_PERMISSIONS: Record<CrmRole, CrmPermission[]> = {
   admin: ALL,
+  sales_director: [
+    // Commercial
+    "leads.read",
+    "leads.write",
+    "clients.read",
+    "clients.write",
+    "quotes.read",
+    "quotes.write",
+
+    // Pilotage
+    "reports.view",
+
+    // Opérations (lecture / suivi)
+    "projects.read",
+    "tasks.read",
+    "tasks.write",
+    "tickets.read",
+
+    // Facturation & documents (lecture)
+    "invoices.read",
+    "documents.read",
+  ],
   commercial: [
     "leads.read",
     "leads.write",

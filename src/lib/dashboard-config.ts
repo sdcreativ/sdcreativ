@@ -25,6 +25,7 @@ export const DASHBOARD_WIDGET_LABELS: Record<DashboardWidgetId, string> = {
 /** Widgets visibles par défaut selon le rôle système. */
 export const ROLE_DASHBOARD_WIDGETS: Record<SystemCrmRole, DashboardWidgetId[]> = {
   admin: ["infra", "kpis", "charts", "pipeline", "tasks", "projects", "activity"],
+  sales_director: ["kpis", "charts", "pipeline", "tasks", "projects", "activity"],
   commercial: ["kpis", "pipeline", "charts", "activity"],
   project_manager: ["kpis", "tasks", "projects", "charts"],
   readonly: ["kpis", "charts", "pipeline", "projects", "activity"],
