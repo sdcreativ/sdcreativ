@@ -29,6 +29,7 @@ import type { CrmUser } from "@/lib/crm-users";
 import { fetchPortalAccounts, fetchSettingsHealth } from "@/lib/settings-api";
 import type { CrmRoleRecord } from "@/lib/crm-roles-api";
 import { fetchCrmRoles } from "@/lib/crm-roles-api";
+import { useDialog } from "@/components/ui/DialogProvider";
 import { cn } from "@/lib/utils";
 import {
   BarChart3,
@@ -535,6 +536,7 @@ const userFieldClass =
   "w-full rounded-xl border border-gray/60 bg-white px-3 py-2.5 text-sm shadow-sm transition-all focus:border-primary focus:outline-none focus:ring-4 focus:ring-primary/10";
 
 function CrmUsersSection({ roles }: { roles: CrmRoleRecord[] }) {
+  const { confirm } = useDialog();
   const [users, setUsers] = useState<CrmUser[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -604,6 +606,25 @@ function CrmUsersSection({ roles }: { roles: CrmRoleRecord[] }) {
 
   function getRoleLabel(slug: string) {
     return roles.find((r) => r.slug === slug)?.label ?? slug;
+  }
+
+  async function handleDeleteUser(user: CrmUser) {
+    setError("");
+    setSuccess("");
+    const ok = await confirm({
+      title: "Supprimer le membre",
+      message: `Supprimer définitivement ${user.name} (${user.email}) ? Cette action est irréversible.`,
+      confirmLabel: "Supprimer",
+      variant: "danger",
+    });
+    if (!ok) return;
+    try {
+      await deleteCrmUserApi(user.id);
+      await loadUsers();
+      setSuccess(`Utilisateur supprimé : ${user.email}.`);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Suppression impossible.");
+    }
   }
 
   return (
@@ -752,7 +773,7 @@ function CrmUsersSection({ roles }: { roles: CrmRoleRecord[] }) {
                   )}
                   <button
                     type="button"
-                    onClick={() => void deleteCrmUserApi(user.id).then(loadUsers)}
+                    onClick={() => void handleDeleteUser(user)}
                     className="rounded-xl border border-accent/20 px-3 py-2 text-xs font-semibold text-accent transition-colors hover:bg-accent/5"
                   >
                     Supprimer
