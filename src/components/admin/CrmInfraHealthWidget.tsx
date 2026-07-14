@@ -20,7 +20,6 @@ import {
   RotateCcw,
   Server,
   Shield,
-  Terminal,
   XCircle,
   Zap,
 } from "lucide-react";
@@ -434,18 +433,6 @@ export function CrmInfraHealthWidget({ health, loading, error, onRefresh }: Prop
               {detailChecks.map((check) => (
                 <InfraCheckCard key={check.id} check={check} />
               ))}
-            </div>
-
-            <div className="flex items-start gap-3 rounded-xl border border-dashed border-gray/35 bg-gray-light/20 px-4 py-3 text-xs leading-relaxed text-gray-text">
-              <Terminal className="mt-0.5 h-4 w-4 shrink-0 text-primary" aria-hidden />
-              <p>
-                Les actions sensibles copient une commande SSH pour{" "}
-                <code className="rounded-md bg-white px-1.5 py-0.5 font-mono text-[11px] text-foreground">
-                  /var/www/sdcreativ
-                </code>
-                . La restauration S3 remplace PostgreSQL — à exécuter hors heures de production,
-                après validation de l&apos;équipe.
-              </p>
             </div>
 
             <p className="text-right text-[11px] text-gray-text/70">

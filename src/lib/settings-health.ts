@@ -159,28 +159,6 @@ function checkAdmin(): IntegrationHealth {
   };
 }
 
-function checkPortal(): IntegrationHealth {
-  const envVars = ["CLIENT_PORTAL_TOKENS"];
-  const accounts = listClientPortalAccounts();
-  if (accounts.length === 0) {
-    return {
-      id: "portal",
-      name: "Espace client",
-      status: "missing",
-      detail: "Aucun compte configuré",
-      hint: "Ajoutez CLIENT_PORTAL_TOKENS (JSON) pour l'espace client.",
-      envVars,
-    };
-  }
-  return {
-    id: "portal",
-    name: "Espace client",
-    status: "ok",
-    detail: `${accounts.length} compte(s) actif(s)`,
-    envVars,
-  };
-}
-
 function checkBooking(): IntegrationHealth {
   const envVars = ["NEXT_PUBLIC_BOOKING_URL"];
   if (!BOOKING.url) {
@@ -298,7 +276,6 @@ export async function getSettingsHealth(session?: {
     database,
     s3,
     checkResend(),
-    checkPortal(),
     checkCinetPay(),
     checkBooking(),
     checkSanity(),
