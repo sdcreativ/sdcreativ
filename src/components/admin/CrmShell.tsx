@@ -45,13 +45,23 @@ export function CrmShell({ children, subtitle, showNewButton }: Props) {
   }
 
   async function handleMarkBillingRead(id: string) {
-    await markAdminNotificationsRead([id]);
-    await refreshBillingHistory();
+    setBillingHistory((prev) => prev.filter((n) => n.id !== id));
+    setBillingUnreadCount((prev) => Math.max(0, prev - 1));
+    try {
+      await markAdminNotificationsRead([id]);
+    } catch {
+      await refreshBillingHistory();
+    }
   }
 
   async function handleMarkAllBillingRead() {
-    await markAllAdminNotificationsRead();
-    await refreshBillingHistory();
+    setBillingHistory((prev) => prev.filter((n) => n.readAt));
+    setBillingUnreadCount(0);
+    try {
+      await markAllAdminNotificationsRead();
+    } catch {
+      await refreshBillingHistory();
+    }
   }
 
   return (

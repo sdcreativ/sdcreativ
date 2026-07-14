@@ -83,7 +83,7 @@ export function NotificationHistoryList({
                 <button
                   type="button"
                   onClick={() => {
-                    if (unread) onMarkRead?.(n.id);
+                    onMarkRead?.(n.id);
                     onNavigate?.();
                     router.push(n.linkHref!);
                   }}
@@ -100,7 +100,7 @@ export function NotificationHistoryList({
               <Link
                 href={n.linkHref}
                 onClick={() => {
-                  if (unread) onMarkRead?.(n.id);
+                  onMarkRead?.(n.id);
                   onNavigate?.();
                 }}
                 className="flex items-start gap-2 px-4 py-2.5 text-sm hover:bg-gray-light/50"
@@ -113,7 +113,16 @@ export function NotificationHistoryList({
 
         return (
           <li key={n.id}>
-            <div className="flex items-start gap-2 px-4 py-2.5 text-sm">{content}</div>
+            <button
+              type="button"
+              onClick={() => {
+                onMarkRead?.(n.id);
+                onNavigate?.();
+              }}
+              className="flex w-full items-start gap-2 px-4 py-2.5 text-left text-sm hover:bg-gray-light/50"
+            >
+              {content}
+            </button>
           </li>
         );
       })}

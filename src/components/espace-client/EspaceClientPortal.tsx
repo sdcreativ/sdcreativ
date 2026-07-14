@@ -157,13 +157,23 @@ export function EspaceClientPortal() {
   }, []);
 
   async function handleMarkBillingRead(id: string) {
-    await markPortalNotificationsRead([id]);
-    await refreshBillingHistory();
+    setBillingHistory((prev) => prev.filter((n) => n.id !== id));
+    setBillingUnreadCount((prev) => Math.max(0, prev - 1));
+    try {
+      await markPortalNotificationsRead([id]);
+    } catch {
+      await refreshBillingHistory();
+    }
   }
 
   async function handleMarkAllBillingRead() {
-    await markAllPortalNotificationsRead();
-    await refreshBillingHistory();
+    setBillingHistory((prev) => prev.filter((n) => n.readAt));
+    setBillingUnreadCount(0);
+    try {
+      await markAllPortalNotificationsRead();
+    } catch {
+      await refreshBillingHistory();
+    }
   }
 
   const checkSession = useCallback(async () => {

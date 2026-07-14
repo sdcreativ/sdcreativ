@@ -58,7 +58,6 @@ export function ClientPortalNotificationEngine({ onNotificationsChange }: Props)
       }
 
       setToasts((prev) => [...fresh, ...prev].slice(0, 3));
-      await markPortalNotificationsRead(fresh.map((n) => n.id));
       await refreshHistory();
     } catch {
       /* ignore */
@@ -96,6 +95,10 @@ export function ClientPortalNotificationEngine({ onNotificationsChange }: Props)
               {notification.linkHref && (
                 <Link
                   href={notification.linkHref}
+                  onClick={() => {
+                    void markPortalNotificationsRead([notification.id]).then(() => refreshHistory());
+                    setToasts((prev) => prev.filter((t) => t.id !== notification.id));
+                  }}
                   className="mt-2 inline-flex items-center gap-1 text-xs font-semibold text-primary hover:underline"
                 >
                   Consulter

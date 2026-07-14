@@ -7,6 +7,7 @@ import type { CrmNotification } from "@/lib/billing/notifications";
 import { clientSectionTitles } from "@/content/client-portal-nav";
 import type { ClientPortalSection } from "@/content/client-portal-types";
 import { NotificationHistoryList } from "@/components/notifications/NotificationHistoryList";
+import { cn } from "@/lib/utils";
 
 type Props = {
   profile: ClientProfileData;
@@ -57,12 +58,14 @@ export function ClientPortalHeader({
     invoicesUnpaidCount +
     billingUnreadCount;
 
+  const unreadBillingHistory = billingHistory.filter((n) => !n.readAt);
+
   const hasActionItems =
     messagesBadgeCount > 0 ||
     openTicketCount > 0 ||
     quotesPendingCount > 0 ||
     invoicesUnpaidCount > 0;
-  const hasAnyContent = hasActionItems || billingHistory.length > 0;
+  const hasAnyContent = hasActionItems || unreadBillingHistory.length > 0;
 
   useEffect(() => {
     notifBtnRef.current?.setAttribute("aria-expanded", notifOpen ? "true" : "false");
@@ -128,7 +131,12 @@ export function ClientPortalHeader({
             </button>
 
             {notifOpen && (
-              <div className="absolute right-0 top-full z-20 mt-2 w-80 rounded-xl border border-gray/40 bg-white py-2 shadow-xl">
+              <div
+                className={cn(
+                  "absolute right-0 top-full z-20 mt-2 w-[min(20rem,calc(100vw-1.5rem))] rounded-xl border border-gray/40 bg-white py-2 shadow-xl",
+                  "max-sm:fixed max-sm:left-1/2 max-sm:right-auto max-sm:top-[4.75rem] max-sm:-translate-x-1/2 max-sm:mt-0",
+                )}
+              >
                 <div className="flex items-center justify-between px-4 py-2">
                   <p className="text-xs font-bold uppercase tracking-wide text-gray-text">
                     Notifications
@@ -226,7 +234,7 @@ export function ClientPortalHeader({
                       </div>
                     )}
 
-                    {billingHistory.length > 0 && (
+                    {unreadBillingHistory.length > 0 && (
                       <div>
                         <p className="px-4 py-2 text-[10px] font-bold uppercase tracking-wide text-emerald-700">
                           Historique
@@ -237,7 +245,7 @@ export function ClientPortalHeader({
                           )}
                         </p>
                         <NotificationHistoryList
-                          notifications={billingHistory}
+                          notifications={unreadBillingHistory}
                           onNavigate={() => setNotifOpen(false)}
                           onMarkRead={onMarkBillingRead}
                           accentClass="text-emerald-700"

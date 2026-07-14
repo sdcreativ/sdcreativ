@@ -61,6 +61,7 @@ export function CrmHeader({
 }: Props) {
   const [newOpen, setNewOpen] = useState(false);
   const [notifOpen, setNotifOpen] = useState(false);
+  const [dismissedOperational, setDismissedOperational] = useState<Set<string>>(() => new Set());
   const { session, permissions } = useCrmPermissions();
   const canTasks = hasCrmPermission(permissions, "tasks.read");
   const canTickets = hasCrmPermission(permissions, "tickets.read");
@@ -116,16 +117,30 @@ export function CrmHeader({
   const overdueTasks = canTasks ? (taskStats?.overdue ?? 0) : 0;
   const slaBreached = canTickets ? (ticketStats?.slaBreached ?? 0) : 0;
   const openTickets = canTickets ? (ticketStats?.open ?? 0) + (ticketStats?.inProgress ?? 0) : 0;
-  const taskNotifications = billingHistory.filter((n) => n.category === "tasks");
-  const billingOnly = billingHistory.filter((n) => n.category !== "tasks");
-  const alertCount =
-    overdueTasks + slaBreached + calendarReminders.length + billingUnreadCount;
-  const hasOperationalAlerts =
-    calendarReminders.length > 0 ||
-    (canTasks && overdueTasks > 0) ||
-    (canTickets && (slaBreached > 0 || openTickets > 0));
-  const hasAnyAlerts = alertCount > 0 || billingHistory.length > 0;
+  const unreadHistory = billingHistory.filter((n) => !n.readAt);
+  const taskNotifications = unreadHistory.filter((n) => n.category === "tasks");
+  const billingOnly = unreadHistory.filter((n) => n.category !== "tasks");
+
+  const operationalAlerts = [
+    calendarReminders.length > 0 ? "calendar" : null,
+    canTasks && overdueTasks > 0 ? "overdue-tasks" : null,
+    canTickets && slaBreached > 0 ? "sla-breached" : null,
+    canTickets && openTickets > 0 ? "open-tickets" : null,
+  ].filter((key): key is string => key !== null && !dismissedOperational.has(key));
+
+  const operationalCount = operationalAlerts.length;
+  const alertCount = operationalCount + billingUnreadCount;
+  const hasOperationalAlerts = operationalCount > 0;
+  const hasAnyAlerts = alertCount > 0;
   const [hydrated, setHydrated] = useState(false);
+
+  function dismissOperational(key: string) {
+    setDismissedOperational((prev) => new Set(prev).add(key));
+  }
+
+  useEffect(() => {
+    setDismissedOperational(new Set());
+  }, [overdueTasks, slaBreached, openTickets, calendarReminders.length]);
 
   useEffect(() => {
     setHydrated(true);
@@ -185,7 +200,12 @@ export function CrmHeader({
             </button>
 
             {notifOpen && (
-              <div className="absolute right-0 top-full z-20 mt-2 w-80 rounded-xl border border-gray/40 bg-white py-2 shadow-xl">
+              <div
+                className={cn(
+                  "absolute right-0 top-full z-20 mt-2 w-[min(20rem,calc(100vw-1.5rem))] rounded-xl border border-gray/40 bg-white py-2 shadow-xl",
+                  "max-sm:fixed max-sm:left-1/2 max-sm:right-auto max-sm:top-[4.75rem] max-sm:-translate-x-1/2 max-sm:mt-0",
+                )}
+              >
                 <div className="flex items-center justify-between px-4 py-2">
                   <p className="text-xs font-bold uppercase tracking-wide text-gray-text">
                     Notifications
@@ -213,11 +233,15 @@ export function CrmHeader({
                         </p>
                         <ul>
                           {calendarReminders.length > 0 &&
+                            !dismissedOperational.has("calendar") &&
                             calendarReminders.slice(0, 5).map((r) => (
                               <li key={r.key}>
                                 <Link
                                   href={r.linkHref ?? "/admin/crm/calendrier"}
-                                  onClick={() => setNotifOpen(false)}
+                                  onClick={() => {
+                                    dismissOperational("calendar");
+                                    setNotifOpen(false);
+                                  }}
                                   className="flex items-start gap-2 px-4 py-2.5 text-sm hover:bg-gray-light/50"
                                 >
                                   <CalendarClock className="mt-0.5 h-4 w-4 shrink-0 text-primary" aria-hidden />
@@ -225,11 +249,14 @@ export function CrmHeader({
                                 </Link>
                               </li>
                             ))}
-                          {canTasks && overdueTasks > 0 && (
+                          {canTasks && overdueTasks > 0 && !dismissedOperational.has("overdue-tasks") && (
                             <li>
                               <Link
                                 href="/admin/crm/taches"
-                                onClick={() => setNotifOpen(false)}
+                                onClick={() => {
+                                  dismissOperational("overdue-tasks");
+                                  setNotifOpen(false);
+                                }}
                                 className="block px-4 py-3 text-sm hover:bg-gray-light/50"
                               >
                                 <span className="font-semibold text-foreground">
@@ -238,11 +265,14 @@ export function CrmHeader({
                               </Link>
                             </li>
                           )}
-                          {canTickets && slaBreached > 0 && (
+                          {canTickets && slaBreached > 0 && !dismissedOperational.has("sla-breached") && (
                             <li>
                               <Link
                                 href="/admin/crm/tickets"
-                                onClick={() => setNotifOpen(false)}
+                                onClick={() => {
+                                  dismissOperational("sla-breached");
+                                  setNotifOpen(false);
+                                }}
                                 className="block px-4 py-3 text-sm hover:bg-gray-light/50"
                               >
                                 <span className="font-semibold text-accent">
@@ -251,11 +281,14 @@ export function CrmHeader({
                               </Link>
                             </li>
                           )}
-                          {canTickets && openTickets > 0 && (
+                          {canTickets && openTickets > 0 && !dismissedOperational.has("open-tickets") && (
                             <li>
                               <Link
                                 href="/admin/crm/tickets"
-                                onClick={() => setNotifOpen(false)}
+                                onClick={() => {
+                                  dismissOperational("open-tickets");
+                                  setNotifOpen(false);
+                                }}
                                 className="block px-4 py-3 text-sm hover:bg-gray-light/50"
                               >
                                 <span className="text-gray-text">

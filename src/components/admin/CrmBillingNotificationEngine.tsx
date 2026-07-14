@@ -74,7 +74,6 @@ export function CrmBillingNotificationEngine({ onNotificationsChange }: Props) {
       }
 
       setToasts((prev) => [...fresh, ...prev].slice(0, 4));
-      await markAdminNotificationsRead(fresh.map((n) => n.id));
       await refreshHistory();
     } catch {
       /* ignore poll errors */
@@ -121,6 +120,10 @@ export function CrmBillingNotificationEngine({ onNotificationsChange }: Props) {
               {notification.linkHref && (
                 <Link
                   href={notification.linkHref}
+                  onClick={() => {
+                    void markAdminNotificationsRead([notification.id]).then(() => refreshHistory());
+                    dismissToast(notification.id);
+                  }}
                   className="mt-2 inline-flex items-center gap-1 text-xs font-semibold text-primary hover:underline"
                 >
                   <Bell className="h-3 w-3" aria-hidden />
