@@ -72,6 +72,17 @@ export async function updateCrmEmailTemplateApi(input: {
   return json.template;
 }
 
+export async function uploadSiteLogoApi(file: File): Promise<{ url: string }> {
+  const form = new FormData();
+  form.append("file", file);
+  const res = await fetch("/api/admin/site-public/logo/upload", {
+    method: "POST",
+    credentials: "include",
+    body: form,
+  });
+  return parseJson<{ url: string }>(res);
+}
+
 export async function updateSitePublicSettingsApi(
   sitePublic: SitePublicSettings,
 ): Promise<SitePublicSettings> {

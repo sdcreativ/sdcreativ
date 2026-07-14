@@ -1,6 +1,10 @@
+"use client";
+
 import Image from "next/image";
 import Link from "next/link";
 import { LOGO, LOGO_FOOTER, SITE } from "@/lib/constants";
+import { resolveImageDisplayUrl, isProxiedMediaUrl } from "@/lib/image-url";
+import { useSitePublic } from "@/components/site/SitePublicProvider";
 import { cn } from "@/lib/utils";
 
 export type LogoSize = "header" | "footer" | "panel" | "panelMobile" | "centered" | "sidebar";
@@ -32,23 +36,44 @@ export function Logo({
   href = "/",
   onDark = false,
 }: LogoProps) {
+  const sitePublic = useSitePublic();
   const showTagline = variant === "default";
   const imageSize = size ?? (variant === "footer" ? "footer" : "header");
-  const asset = variant === "footer" ? LOGO_FOOTER : LOGO;
+  const defaultAsset = variant === "footer" ? LOGO_FOOTER : LOGO;
+  const customLogo = sitePublic.logoUrl?.trim();
+  const usesCustomLogo = Boolean(customLogo && customLogo !== LOGO.src);
+  const tagline = sitePublic.tagline || SITE.tagline;
+  const altName = sitePublic.companyName || SITE.name;
 
-  const image = (
+  const imageSrc = usesCustomLogo
+    ? resolveImageDisplayUrl(customLogo!)
+    : defaultAsset.src;
+  const proxied = isProxiedMediaUrl(imageSrc);
+
+  const image = usesCustomLogo ? (
+    // eslint-disable-next-line @next/next/no-img-element
+    <img
+      src={imageSrc}
+      alt={variant === "footer" ? `${altName} — ${tagline}` : altName}
+      className={cn(
+        LOGO_IMAGE_SIZES[imageSize],
+        onDark && "brightness-0 invert",
+        href !== null && "transition-opacity group-hover:opacity-90",
+      )}
+    />
+  ) : (
     <Image
-      src={asset.src}
-      alt={variant === "footer" ? `${SITE.name} — ${SITE.tagline}` : SITE.name}
-      width={asset.width}
-      height={asset.height}
+      src={defaultAsset.src}
+      alt={variant === "footer" ? `${altName} — ${tagline}` : altName}
+      width={defaultAsset.width}
+      height={defaultAsset.height}
       className={cn(
         LOGO_IMAGE_SIZES[imageSize],
         onDark && "brightness-0 invert",
         href !== null && "transition-opacity group-hover:opacity-90",
       )}
       priority={priority}
-      unoptimized={variant !== "footer"}
+      unoptimized={variant !== "footer" && !proxied}
     />
   );
 
@@ -65,7 +90,7 @@ export function Logo({
           <>
             <span className="hidden h-8 w-px bg-gray/80 lg:block" aria-hidden />
             <span className="hidden max-w-[200px] text-[11px] font-medium leading-snug text-[#475569] lg:block">
-              {SITE.tagline}
+              {tagline}
             </span>
           </>
         )}
@@ -95,7 +120,7 @@ export function Logo({
         <>
           <span className="hidden h-8 w-px bg-gray/80 lg:block" aria-hidden />
           <span className="hidden max-w-[200px] text-[11px] font-medium leading-snug text-[#475569] lg:block">
-            {SITE.tagline}
+            {tagline}
           </span>
         </>
       )}

@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useState } from "react";
 import type { SitePublicSettings } from "@/lib/site-public-types";
 import { fetchCrmSettings, updateSitePublicSettingsApi } from "@/lib/crm-settings-api";
+import { SiteLogoUploadField } from "@/components/admin/SiteLogoUploadField";
 import { cn } from "@/lib/utils";
 import { Globe, Loader2 } from "lucide-react";
 
@@ -99,29 +100,19 @@ export function SitePublicSection() {
               aria-label="Slogan"
             />
           </label>
-          <label className="block sm:col-span-2">
+          <div className="block sm:col-span-2">
             <span className="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-gray-text">
-              Logo (URL ou chemin)
+              Logo
             </span>
-            <input
+            <SiteLogoUploadField
               value={form.logoUrl}
-              onChange={(e) => updateField("logoUrl", e.target.value)}
-              className={fieldClass}
-              placeholder="/images/logo_sd.svg ou https://…"
-              aria-label="URL du logo"
+              onChange={(url) => updateField("logoUrl", url)}
             />
-            {form.logoUrl.trim() && (
-              <div className="mt-3 flex items-center gap-3 rounded-xl border border-gray/30 bg-gray-light/30 p-3">
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img
-                  src={form.logoUrl.startsWith("/") ? form.logoUrl : form.logoUrl}
-                  alt="Aperçu logo"
-                  className="h-12 max-w-[160px] object-contain"
-                />
-                <span className="text-xs text-gray-text">Aperçu du logo facture</span>
-              </div>
-            )}
-          </label>
+            <p className="mt-2 text-xs text-gray-text">
+              Affiché dans la navbar, le footer et les factures PDF. Enregistrez pour appliquer sur le
+              site public.
+            </p>
+          </div>
         </div>
       </fieldset>
 
