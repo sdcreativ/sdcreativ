@@ -9,6 +9,7 @@ import { CrmHeader } from "@/components/admin/CrmHeader";
 import { CrmReminderEngine } from "@/components/admin/CrmReminderEngine";
 import { CrmBillingNotificationEngine } from "@/components/admin/CrmBillingNotificationEngine";
 import { CrmSidebar } from "@/components/admin/CrmSidebar";
+import { CrmMobileNav } from "@/components/admin/CrmMobileNav";
 import { getCrmPageTitle } from "@/content/crm-nav";
 import type { CalendarReminder } from "@/lib/calendar-reminders";
 import type { CrmNotification } from "@/lib/billing/notifications";
@@ -32,7 +33,6 @@ export function CrmShell({ children, subtitle, showNewButton }: Props) {
   const [calendarReminders, setCalendarReminders] = useState<CalendarReminder[]>([]);
   const [billingHistory, setBillingHistory] = useState<CrmNotification[]>([]);
   const [billingUnreadCount, setBillingUnreadCount] = useState(0);
-  const [sidebarOpen, setSidebarOpen] = useState(false);
 
   async function refreshBillingHistory() {
     try {
@@ -68,16 +68,8 @@ export function CrmShell({ children, subtitle, showNewButton }: Props) {
     <CrmBrandingProvider>
       <div className="flex min-h-screen bg-[#eef2f7]">
         <CrmBrandingStyles />
-        {sidebarOpen && (
-          <button
-            type="button"
-            aria-label="Fermer le menu"
-            className="fixed inset-0 z-40 bg-black/50 lg:hidden"
-            onClick={() => setSidebarOpen(false)}
-          />
-        )}
 
-        <CrmSidebar mobileOpen={sidebarOpen} onNavigate={() => setSidebarOpen(false)} />
+        <CrmSidebar />
 
         <div className="flex min-h-screen min-w-0 flex-1 flex-col lg:ml-[15.5rem]">
           <CrmHeader
@@ -89,13 +81,14 @@ export function CrmShell({ children, subtitle, showNewButton }: Props) {
             billingUnreadCount={billingUnreadCount}
             onMarkBillingRead={(id) => void handleMarkBillingRead(id)}
             onMarkAllBillingRead={() => void handleMarkAllBillingRead()}
-            onMenuClick={() => setSidebarOpen(true)}
           />
-          <div className={cn("flex-1 overflow-auto p-4 md:p-6 lg:p-8")}>
+          <div className={cn("flex-1 overflow-auto p-4 pb-24 md:p-6 md:pb-24 lg:p-8 lg:pb-8")}>
             <CrmBreadcrumbs />
             <CrmAccessGuard>{children}</CrmAccessGuard>
           </div>
         </div>
+
+        <CrmMobileNav />
 
         <CrmReminderEngine onRemindersChange={setCalendarReminders} />
         <CrmBillingNotificationEngine

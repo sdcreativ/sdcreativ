@@ -13,7 +13,6 @@ import { CRM_SESSION_CHANGED_EVENT } from "@/lib/crm-session-events";
 import { cn } from "@/lib/utils";
 
 type Props = {
-  mobileOpen?: boolean;
   onNavigate?: () => void;
 };
 
@@ -28,7 +27,7 @@ function getActiveHref(pathname: string): string | null {
   return match?.href ?? null;
 }
 
-export function CrmSidebar({ mobileOpen = false, onNavigate }: Props) {
+export function CrmSidebar({ onNavigate }: Props) {
   const pathname = usePathname() ?? "";
   const activeHref = getActiveHref(pathname);
   const [session, setSession] = useState<CrmSessionInfo | null>(null);
@@ -57,10 +56,7 @@ export function CrmSidebar({ mobileOpen = false, onNavigate }: Props) {
 
   return (
     <aside
-      className={cn(
-        "fixed inset-y-0 left-0 z-50 flex h-screen w-[15.5rem] shrink-0 flex-col bg-[#071525] text-white transition-transform duration-200 ease-out",
-        mobileOpen ? "translate-x-0" : "-translate-x-full lg:translate-x-0",
-      )}
+      className="fixed inset-y-0 left-0 z-50 hidden h-screen w-[15.5rem] shrink-0 flex-col bg-[#071525] text-white lg:flex"
       aria-label="Navigation CRM"
     >
       <div className="border-b border-white/10 px-5 py-5">

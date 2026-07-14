@@ -20,7 +20,6 @@ import {
   FolderKanban,
   LifeBuoy,
   LogOut,
-  Menu,
   Plus,
   Target,
   Users,
@@ -45,7 +44,6 @@ type Props = {
   billingUnreadCount?: number;
   onMarkBillingRead?: (id: string) => void;
   onMarkAllBillingRead?: () => void;
-  onMenuClick?: () => void;
 };
 
 export function CrmHeader({
@@ -57,7 +55,6 @@ export function CrmHeader({
   billingUnreadCount = 0,
   onMarkBillingRead,
   onMarkAllBillingRead,
-  onMenuClick,
 }: Props) {
   const [newOpen, setNewOpen] = useState(false);
   const [notifOpen, setNotifOpen] = useState(false);
@@ -163,16 +160,6 @@ export function CrmHeader({
     <header className="sticky top-0 z-30 border-b border-gray/40 bg-white px-4 py-4 md:px-8">
       <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
         <div className="flex items-center gap-3">
-          {onMenuClick && (
-            <button
-              type="button"
-              onClick={onMenuClick}
-              className="rounded-xl border border-gray/60 p-2.5 text-gray-text hover:text-foreground lg:hidden"
-              aria-label="Ouvrir le menu"
-            >
-              <Menu className="h-5 w-5" aria-hidden />
-            </button>
-          )}
           <div>
             <h1 className="text-xl font-bold text-foreground">{title}</h1>
             {subtitle && <p className="mt-0.5 text-sm text-gray-text">{subtitle}</p>}
