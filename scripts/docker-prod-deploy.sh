@@ -61,7 +61,8 @@ load_env_docker_for_build() {
   if [ -f .env.docker ]; then
     set -a
     # shellcheck disable=SC1091
-    source .env.docker
+    source "$ROOT_DIR/scripts/lib/load-env-file.sh"
+    load_env_file "$ROOT_DIR/.env.docker"
     set +a
   fi
 }

@@ -35,16 +35,20 @@ echo "→ git pull"
 git pull --ff-only
 
 if [ -f .env.docker ]; then
+  bash "$ROOT_DIR/scripts/validate-env-docker.sh" "$ROOT_DIR/.env.docker"
+fi
+
+if [ -f .env.docker ]; then
   set -a
   # shellcheck disable=SC1091
-  source .env.docker
+  source "$ROOT_DIR/scripts/lib/load-env-file.sh"
+  load_env_file "$ROOT_DIR/.env.docker"
   set +a
 fi
 
 if [ -f .env ]; then
   set -a
-  # shellcheck disable=SC1091
-  source .env
+  load_env_file "$ROOT_DIR/.env"
   set +a
 fi
 
