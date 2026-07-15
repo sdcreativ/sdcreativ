@@ -11,6 +11,7 @@ import { isDatabaseConfigured, withDb } from "@/lib/db";
 import { isS3Configured } from "@/lib/s3";
 import { getStorageErrorMessage } from "@/lib/s3-errors";
 import { isCinetPayConfigured } from "@/lib/payment-settings";
+import { readPublicEnv } from "@/lib/env-runtime";
 import { BOOKING } from "@/lib/constants";
 
 export type IntegrationHealth = {
@@ -161,7 +162,8 @@ function checkAdmin(): IntegrationHealth {
 
 function checkBooking(): IntegrationHealth {
   const envVars = ["NEXT_PUBLIC_BOOKING_URL"];
-  if (!BOOKING.url) {
+  const bookingUrl = readPublicEnv("NEXT_PUBLIC_BOOKING_URL") || BOOKING.url;
+  if (!bookingUrl) {
     return {
       id: "booking",
       name: "Cal.com (RDV)",
@@ -245,7 +247,8 @@ function checkCinetPay(): IntegrationHealth {
 
 function checkAnalytics(): IntegrationHealth {
   const envVars = ["NEXT_PUBLIC_GA_MEASUREMENT_ID"];
-  if (!process.env.NEXT_PUBLIC_GA_MEASUREMENT_ID) {
+  const gaId = readPublicEnv("NEXT_PUBLIC_GA_MEASUREMENT_ID");
+  if (!gaId) {
     return {
       id: "analytics",
       name: "Google Analytics",
