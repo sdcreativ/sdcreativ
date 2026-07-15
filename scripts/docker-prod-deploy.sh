@@ -35,7 +35,8 @@ echo
 
 set -a
 # shellcheck disable=SC1091
-source .env
+source "$ROOT_DIR/scripts/lib/load-env-file.sh"
+load_env_file "$ROOT_DIR/.env"
 set +a
 
 DOMAIN="${DOMAIN:-sdcreativ.com}"

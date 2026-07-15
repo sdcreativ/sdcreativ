@@ -34,6 +34,12 @@ fi
 echo "→ git pull"
 git pull --ff-only
 
+# Le pull peut mettre à jour ce script : re-exécuter pour charger la nouvelle version.
+if [ -z "${VPS_DEPLOY_REEXEC:-}" ]; then
+  export VPS_DEPLOY_REEXEC=1
+  exec bash "$ROOT_DIR/scripts/vps-deploy-pull.sh" "$@"
+fi
+
 if [ -f .env.docker ]; then
   bash "$ROOT_DIR/scripts/validate-env-docker.sh" "$ROOT_DIR/.env.docker"
 fi

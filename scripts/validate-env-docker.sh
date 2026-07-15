@@ -13,6 +13,7 @@ fi
 echo "→ Validation de $FILE"
 errors=0
 line_no=0
+open_quote=""
 
 while IFS= read -r line || [ -n "$line" ]; do
   line_no=$((line_no + 1))
@@ -20,10 +21,24 @@ while IFS= read -r line || [ -n "$line" ]; do
   [[ "$line" =~ ^[[:space:]]*# ]] && continue
   [[ -z "${line//[[:space:]]/}" ]] && continue
 
+  if [ -n "$open_quote" ]; then
+    echo "✗ Ligne $line_no : guillemet non fermé (début ligne $open_quote)"
+    echo "  $line"
+    errors=$((errors + 1))
+    open_quote=""
+    continue
+  fi
+
   if [[ ! "$line" =~ ^[A-Za-z_][A-Za-z0-9_]*= ]]; then
     echo "✗ Ligne $line_no : format invalide (attendu KEY=VALUE)"
     echo "  $line"
     errors=$((errors + 1))
+    continue
+  fi
+
+  value="${line#*=}"
+  if [[ "$value" =~ ^\"[^\"]*$ ]]; then
+    open_quote="$line_no"
   fi
 done < "$FILE"
 
