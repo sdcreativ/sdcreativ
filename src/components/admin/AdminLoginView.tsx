@@ -295,7 +295,6 @@ export function AdminLoginView() {
                 </div>
                 <div>
                   <p className="text-sm font-semibold text-foreground">Session sécurisée</p>
-                  <p className="text-xs text-gray-text">Cookie httpOnly · 8 h</p>
                 </div>
               </div>
 
