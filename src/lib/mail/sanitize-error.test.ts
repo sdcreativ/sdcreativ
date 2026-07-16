@@ -22,4 +22,17 @@ describe("sanitizeMailError", () => {
     const out = sanitizeMailError(new Error(long));
     expect(out.length).toBeLessThanOrEqual(280);
   });
+
+  it("remplace Command failed par un message exploitable", () => {
+    expect(sanitizeMailError(new Error("Command failed"))).toMatch(/Hostinger|IMAP/i);
+  });
+
+  it("expose responseText imapflow si présent", () => {
+    const err = Object.assign(new Error("Command failed"), {
+      responseText: "Invalid messageset",
+      serverResponseCode: "BAD",
+    });
+    const out = sanitizeMailError(err);
+    expect(out).toContain("Invalid messageset");
+  });
 });

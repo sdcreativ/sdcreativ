@@ -12,6 +12,7 @@ import {
   listMailAttachmentsByMessageIds,
   listMailMessagesByThreadId,
   markMailThreadRead,
+  softDeleteMailThreads,
 } from "@/lib/mail/repository";
 
 type RouteContext = { params: Promise<{ id: string }> };
@@ -149,6 +150,36 @@ export async function PATCH(request: Request, context: RouteContext) {
     return NextResponse.json({ thread });
   } catch (error) {
     console.error("[api/admin/mail/threads/[id]] PATCH", error);
+    return NextResponse.json({ error: "Erreur serveur." }, { status: 500 });
+  }
+}
+
+/** Soft-delete d’une conversation. Permission mail.write. */
+export async function DELETE(_request: Request, context: RouteContext) {
+  const authError = await requireAdminAuth({ permission: "mail.write" });
+  if (authError) return authError;
+
+  if (!isDatabaseConfigured()) {
+    return NextResponse.json({ error: "Base non configurée." }, { status: 503 });
+  }
+
+  try {
+    const { id } = await context.params;
+    const result = await softDeleteMailThreads([id]);
+    if (result.deleted === 0) {
+      return NextResponse.json({ error: "Conversation introuvable." }, { status: 404 });
+    }
+
+    await auditCrmAction({
+      action: "delete",
+      entityType: "mail_thread",
+      entityId: id,
+      summary: "Conversation messagerie supprimée",
+    });
+
+    return NextResponse.json({ ok: true, deleted: result.deleted });
+  } catch (error) {
+    console.error("[api/admin/mail/threads/[id]] DELETE", error);
     return NextResponse.json({ error: "Erreur serveur." }, { status: 500 });
   }
 }

@@ -10,12 +10,34 @@ import { sanitizeMailError } from "@/lib/mail/sanitize-error";
 type RouteContext = { params: Promise<{ id: string }> };
 
 const replySchema = z.object({
-  bodyText: z.string().trim().min(1).max(100_000),
+  bodyText: z.string().trim().max(100_000).default(""),
   bodyHtml: z.string().max(500_000).nullable().optional(),
   includeSignature: z.boolean().optional(),
+  mode: z.enum(["reply", "replyAll", "forward"]).optional(),
+  to: z.union([z.string().trim(), z.array(z.string().trim())]).optional(),
+  cc: z.union([z.string().trim(), z.array(z.string().trim())]).optional(),
+  bcc: z.union([z.string().trim(), z.array(z.string().trim())]).optional(),
+  subject: z.string().trim().max(500).optional(),
+  attachments: z
+    .array(
+      z.object({
+        filename: z.string().trim().min(1).max(260),
+        contentType: z.string().trim().max(160).default("application/octet-stream"),
+        contentBase64: z.string().min(1).max(8_000_000),
+      }),
+    )
+    .max(8)
+    .optional(),
 });
 
-/** Réponse SMTP Hostinger + enregistrement outbound. Permission mail.write. */
+function splitAddresses(value: string | string[] | undefined): string[] | undefined {
+  if (!value) return undefined;
+  const parts = Array.isArray(value) ? value : value.split(/[,;\s]+/);
+  const emails = parts.map((p) => p.trim()).filter(Boolean);
+  return emails.length ? emails : undefined;
+}
+
+/** Réponse / reply-all / forward SMTP Hostinger. Permission mail.write. */
 export async function POST(request: Request, context: RouteContext) {
   const authError = await requireAdminAuth({ permission: "mail.write" });
   if (authError) return authError;
@@ -43,30 +65,40 @@ export async function POST(request: Request, context: RouteContext) {
     }
 
     const session = await getAdminSession();
+    const mode = parsed.data.mode ?? "reply";
     const result = await replyToMailThread({
       threadId: id,
       bodyText: parsed.data.bodyText,
       bodyHtml: parsed.data.bodyHtml,
       includeSignature: parsed.data.includeSignature,
       userId: session?.userId,
+      mode,
+      to: splitAddresses(parsed.data.to),
+      cc: splitAddresses(parsed.data.cc),
+      bcc: splitAddresses(parsed.data.bcc),
+      subject: parsed.data.subject,
+      attachments: parsed.data.attachments,
     });
 
     await auditCrmAction({
-      action: "reply",
+      action: mode,
       entityType: "mail_thread",
-      entityId: id,
-      summary: `Réponse messagerie → ${result.to.join(", ")}`,
+      entityId: result.message.threadId,
+      summary: `${mode} messagerie → ${result.to.join(", ")}`,
       metadata: {
         messageId: result.message.id,
         smtpMessageId: result.smtpMessageId,
         to: result.to,
+        cc: result.cc,
         actor: session?.email ?? session?.name ?? null,
       },
     });
 
     return NextResponse.json({
       message: result.message,
+      thread: result.thread ?? null,
       to: result.to,
+      cc: result.cc,
     });
   } catch (error) {
     const message = sanitizeMailError(error, "Échec de l’envoi.");
@@ -74,7 +106,10 @@ export async function POST(request: Request, context: RouteContext) {
     const status =
       message.includes("introuvable") || message.includes("archivée")
         ? 404
-        : message.includes("vide") || message.includes("destinataire")
+        : message.includes("vide") ||
+            message.includes("destinataire") ||
+            message.includes("transfert") ||
+            message.includes("Pièce")
           ? 400
           : 502;
     return NextResponse.json({ error: message }, { status });

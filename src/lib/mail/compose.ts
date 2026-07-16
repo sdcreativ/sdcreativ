@@ -11,6 +11,7 @@ import {
   createMailThread,
   getMailboxById,
   getMailThreadById,
+  insertMailAttachments,
   insertMailMessage,
 } from "@/lib/mail/repository";
 import {
@@ -19,15 +20,24 @@ import {
   uniqueEmails,
 } from "@/lib/mail/threading";
 import type { CrmMailMessage, CrmMailThread } from "@/lib/mail/types";
+import { isS3Configured, sanitizeFilename, uploadObjectBuffer } from "@/lib/s3";
+
+export type MailOutgoingAttachment = {
+  filename: string;
+  contentType: string;
+  contentBase64: string;
+};
 
 export type ComposeMailInput = {
   mailboxId: string;
   to: string[];
   cc?: string[];
+  bcc?: string[];
   subject: string;
   bodyText: string;
   bodyHtml?: string | null;
   includeSignature?: boolean;
+  attachments?: MailOutgoingAttachment[];
 };
 
 export type ComposeMailResult = {
@@ -37,7 +47,10 @@ export type ComposeMailResult = {
   to: string[];
 };
 
-function parseRecipients(raw: string[]): string[] {
+const MAX_ATTACHMENT_BYTES = 4 * 1024 * 1024;
+const MAX_TOTAL_ATTACHMENT_BYTES = 8 * 1024 * 1024;
+
+export function parseRecipients(raw: string[]): string[] {
   const emails = uniqueEmails(raw.map((v) => v.trim()).filter(Boolean));
   if (emails.length === 0) {
     throw new Error("Indiquez au moins un destinataire valide.");
@@ -50,6 +63,62 @@ function parseRecipients(raw: string[]): string[] {
   return emails;
 }
 
+export function decodeOutgoingAttachments(
+  attachments: MailOutgoingAttachment[] | undefined,
+): Array<{ filename: string; contentType: string; content: Buffer }> {
+  if (!attachments?.length) return [];
+  let total = 0;
+  const decoded: Array<{ filename: string; contentType: string; content: Buffer }> = [];
+  for (const att of attachments) {
+    const filename = sanitizeFilename(att.filename || "piece-jointe");
+    const contentType = (att.contentType || "application/octet-stream").slice(0, 160);
+    const content = Buffer.from(att.contentBase64, "base64");
+    if (!content.length) {
+      throw new Error(`Pièce jointe vide : ${filename}`);
+    }
+    if (content.length > MAX_ATTACHMENT_BYTES) {
+      throw new Error(`Pièce jointe trop lourde (max 4 Mo) : ${filename}`);
+    }
+    total += content.length;
+    if (total > MAX_TOTAL_ATTACHMENT_BYTES) {
+      throw new Error("Pièces jointes trop lourdes (max 8 Mo au total).");
+    }
+    decoded.push({ filename, contentType, content });
+  }
+  return decoded;
+}
+
+async function persistOutboundAttachments(
+  messageId: string,
+  mailboxId: string,
+  attachments: Array<{ filename: string; contentType: string; content: Buffer }>,
+): Promise<void> {
+  if (attachments.length === 0) return;
+
+  const meta: Array<{
+    filename: string;
+    contentType: string;
+    sizeBytes: number;
+    s3Key?: string | null;
+  }> = [];
+
+  for (const att of attachments) {
+    let s3Key: string | null = null;
+    if (isS3Configured()) {
+      s3Key = `mail/${mailboxId}/${messageId}/${randomUUID()}-${att.filename}`;
+      await uploadObjectBuffer(s3Key, att.content, att.contentType);
+    }
+    meta.push({
+      filename: att.filename,
+      contentType: att.contentType,
+      sizeBytes: att.content.length,
+      s3Key,
+    });
+  }
+
+  await insertMailAttachments(messageId, meta);
+}
+
 /**
  * Crée une conversation sortante, envoie via SMTP Hostinger, enregistre en base.
  */
@@ -57,7 +126,7 @@ export async function composeNewMail(
   input: ComposeMailInput,
 ): Promise<ComposeMailResult> {
   const bodyText = input.bodyText?.trim() ?? "";
-  if (!bodyText) {
+  if (!bodyText && !input.bodyHtml?.trim()) {
     throw new Error("Le corps du message est vide.");
   }
   if (bodyText.length > 100_000) {
@@ -71,6 +140,8 @@ export async function composeNewMail(
 
   const to = parseRecipients(input.to);
   const cc = input.cc?.length ? parseRecipients(input.cc) : [];
+  const bcc = input.bcc?.length ? parseRecipients(input.bcc) : [];
+  const fileAttachments = decodeOutgoingAttachments(input.attachments);
 
   const mailbox = await getMailboxById(input.mailboxId, {
     includeCredentials: true,
@@ -80,14 +151,14 @@ export async function composeNewMail(
   }
 
   const our = extractEmailAddress(mailbox.email);
-  if (to.includes(our) && to.length === 1 && cc.length === 0) {
+  if (to.includes(our) && to.length === 1 && cc.length === 0 && bcc.length === 0) {
     throw new Error("Choisissez un destinataire autre que votre propre boîte.");
   }
 
   const signature = await buildMailSignature();
   const includeSignature = input.includeSignature !== false;
   const composed = appendSignature(
-    bodyText,
+    bodyText || (input.bodyHtml ?? "").replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim(),
     input.bodyHtml,
     signature,
     includeSignature,
@@ -104,10 +175,12 @@ export async function composeNewMail(
     fromName: mailbox.displayName,
     to,
     cc: cc.length ? cc : undefined,
+    bcc: bcc.length ? bcc : undefined,
     subject,
     text: composed.text,
     html: composed.html,
     messageId: outboundMessageId,
+    attachments: fileAttachments,
   });
 
   const receivedAt = new Date();
@@ -115,7 +188,7 @@ export async function composeNewMail(
   const threadId = await createMailThread({
     mailboxId: mailbox.id,
     subject,
-    snippet: snippetFromBody(bodyText),
+    snippet: snippetFromBody(bodyText || composed.text),
     participants,
     lastMessageAt: receivedAt,
     unreadCount: 0,
@@ -138,6 +211,8 @@ export async function composeNewMail(
     receivedAt,
     direction: "outbound",
   });
+
+  await persistOutboundAttachments(saved.id, mailbox.id, fileAttachments);
 
   const thread = await getMailThreadById(threadId);
   if (!thread) {

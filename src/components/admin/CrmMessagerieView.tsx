@@ -2,6 +2,9 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState, type FormEvent } from "react";
 import {
+  Forward,
+  Reply,
+  ReplyAll,
   AlertCircle,
   ExternalLink,
   Loader2,
@@ -12,15 +15,23 @@ import {
   Search,
   Send,
   Settings2,
+  Trash2,
   X,
 } from "lucide-react";
+import { useDialog } from "@/components/ui/DialogProvider";
 import { MailThreadLinkControls } from "@/components/admin/MailThreadLinkControls";
+import { MailComposeModal, filesToAttachmentDrafts } from "@/components/admin/MailComposeModal";
+import { MailRichEditor } from "@/components/admin/MailRichEditor";
 import {
-  composeMailApi,
+  bulkDeleteMailMessagesApi,
+  bulkDeleteMailThreadsApi,
   connectMailMailboxApi,
+  deleteMailMessageApi,
+  deleteMailThreadApi,
   fetchMailMailboxes,
   fetchMailThreadDetail,
   fetchMailThreads,
+  mailAttachmentDownloadUrl,
   replyMailThreadApi,
   saveMailDraftApi,
   syncMailMailbox,
@@ -30,6 +41,7 @@ import {
 import { MAIL_V1_SHARED_MAILBOX } from "@/lib/mail/config";
 import type { CrmMailAttachment, CrmMailThread, CrmMailbox } from "@/lib/mail/types";
 import { cn } from "@/lib/utils";
+import type { OutgoingAttachmentDraft } from "@/components/admin/MailComposeModal";
 
 function formatMailDate(iso: string | null): string {
   if (!iso) return "—";
@@ -64,12 +76,15 @@ function participantsLabel(participants: string[]): string {
 }
 
 export function CrmMessagerieView() {
+  const { confirm } = useDialog();
   const [mailboxes, setMailboxes] = useState<CrmMailbox[]>([]);
   const [threads, setThreads] = useState<CrmMailThread[]>([]);
   const [unreadCount, setUnreadCount] = useState(0);
   const [loading, setLoading] = useState(true);
   const [syncing, setSyncing] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [selectedThreadIds, setSelectedThreadIds] = useState<string[]>([]);
+  const [deletingThreads, setDeletingThreads] = useState(false);
   const [filter, setFilter] = useState<"open" | "unread" | "archived">("open");
   const [mailboxScope, setMailboxScope] = useState<"all" | "shared" | "mine" | string>("all");
   const [accountUserId, setAccountUserId] = useState<string | null>(null);
@@ -80,6 +95,11 @@ export function CrmMessagerieView() {
   const [detail, setDetail] = useState<MailThreadDetail | null>(null);
   const [detailLoading, setDetailLoading] = useState(false);
   const [composeOpen, setComposeOpen] = useState(false);
+  const [forwardDraft, setForwardDraft] = useState<{
+    to: string;
+    subject: string;
+    bodyHtml: string;
+  } | null>(null);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [rotatePassword, setRotatePassword] = useState("");
   const [rotating, setRotating] = useState(false);
@@ -160,7 +180,9 @@ export function CrmMessagerieView() {
       setMailboxes(boxes);
       setThreads(list.threads);
       setUnreadCount(list.unreadCount);
-    } catch (err) {
+      setSelectedThreadIds((prev) =>
+        prev.filter((id) => list.threads.some((t) => t.id === id)),
+      );    } catch (err) {
       setError(err instanceof Error ? err.message : "Impossible de charger la messagerie.");
       setThreads([]);
     } finally {
@@ -266,6 +288,90 @@ export function CrmMessagerieView() {
   function handleSearchSubmit(e: FormEvent) {
     e.preventDefault();
     setSearch(searchDraft.trim());
+  }
+
+  function toggleThreadSelection(threadId: string) {
+    setSelectedThreadIds((prev) =>
+      prev.includes(threadId) ? prev.filter((id) => id !== threadId) : [...prev, threadId],
+    );
+  }
+
+  function toggleSelectAllThreads() {
+    setSelectedThreadIds((prev) =>
+      prev.length === threads.length ? [] : threads.map((t) => t.id),
+    );
+  }
+
+  async function handleBulkDeleteThreads() {
+    if (selectedThreadIds.length === 0 || deletingThreads) return;
+    const count = selectedThreadIds.length;
+    const ok = await confirm({
+      title: "Supprimer les conversations",
+      message:
+        count === 1
+          ? "Cette conversation et ses messages seront retirés de la messagerie CRM (ils ne réapparaîtront pas au Sync)."
+          : `${count} conversations et leurs messages seront retirés de la messagerie CRM (ils ne réapparaîtront pas au Sync).`,
+      confirmLabel: "Supprimer",
+      variant: "danger",
+    });
+    if (!ok) return;
+    setDeletingThreads(true);
+    setError(null);
+    try {
+      await bulkDeleteMailThreadsApi(selectedThreadIds);
+      if (selectedId && selectedThreadIds.includes(selectedId)) {
+        setSelectedId(null);
+        setDetail(null);
+      }
+      setSelectedThreadIds([]);
+      await loadList();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Suppression impossible.");
+    } finally {
+      setDeletingThreads(false);
+    }
+  }
+
+  async function handleDeleteThread(threadId: string) {
+    const ok = await confirm({
+      title: "Supprimer la conversation",
+      message:
+        "Cette conversation et ses messages seront retirés de la messagerie CRM (ils ne réapparaîtront pas au Sync).",
+      confirmLabel: "Supprimer",
+      variant: "danger",
+    });
+    if (!ok) return;
+    setError(null);
+    try {
+      await deleteMailThreadApi(threadId);
+      if (selectedId === threadId) {
+        setSelectedId(null);
+        setDetail(null);
+      }
+      setSelectedThreadIds((prev) => prev.filter((id) => id !== threadId));
+      await loadList();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Suppression impossible.");
+    }
+  }
+
+  async function handleMessagesDeleted(messageIds: string[], threadsDeleted: string[]) {
+    setDetail((prev) => {
+      if (!prev) return prev;
+      const nextMessages = prev.messages.filter((m) => !messageIds.includes(m.id));
+      return { ...prev, messages: nextMessages };
+    });
+    if (threadsDeleted.length > 0) {
+      if (selectedId && threadsDeleted.includes(selectedId)) {
+        setSelectedId(null);
+        setDetail(null);
+      }
+      setThreads((prev) => prev.filter((t) => !threadsDeleted.includes(t.id)));
+      setSelectedThreadIds((prev) => prev.filter((id) => !threadsDeleted.includes(id)));
+      await loadList();
+    } else {
+      await loadList();
+    }
   }
 
   const attachmentsByMessage = useMemo(() => {
@@ -491,6 +597,37 @@ export function CrmMessagerieView() {
             </form>
           </div>
 
+          {selectedThreadIds.length > 0 && (
+            <div className="flex items-center justify-between gap-2 border-b border-accent/20 bg-accent/5 px-3 py-2">
+              <p className="text-xs font-semibold text-foreground">
+                {selectedThreadIds.length} sélectionnée
+                {selectedThreadIds.length > 1 ? "s" : ""}
+              </p>
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => setSelectedThreadIds([])}
+                  className="text-xs font-medium text-gray-text hover:text-foreground"
+                >
+                  Annuler
+                </button>
+                <button
+                  type="button"
+                  onClick={() => void handleBulkDeleteThreads()}
+                  disabled={deletingThreads}
+                  className="inline-flex items-center gap-1.5 rounded-lg bg-accent px-2.5 py-1.5 text-xs font-semibold text-white disabled:opacity-50"
+                >
+                  {deletingThreads ? (
+                    <Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden />
+                  ) : (
+                    <Trash2 className="h-3.5 w-3.5" aria-hidden />
+                  )}
+                  Supprimer
+                </button>
+              </div>
+            </div>
+          )}
+
           <div className="min-h-0 flex-1 overflow-y-auto">
             {loading ? (
               <div className="flex items-center justify-center gap-2 px-4 py-16 text-sm text-gray-text">
@@ -535,17 +672,34 @@ export function CrmMessagerieView() {
                 )}
               </div>
             ) : (
+              <>
+                <div className="flex items-center gap-2 border-b border-gray/20 px-4 py-2">
+                  <input
+                    type="checkbox"
+                    checked={threads.length > 0 && selectedThreadIds.length === threads.length}
+                    ref={(el) => {
+                      if (el) {
+                        el.indeterminate =
+                          selectedThreadIds.length > 0 &&
+                          selectedThreadIds.length < threads.length;
+                      }
+                    }}
+                    onChange={toggleSelectAllThreads}
+                    aria-label="Tout sélectionner"
+                    className="h-3.5 w-3.5 rounded border-gray/50"
+                  />
+                  <span className="text-[11px] font-medium text-gray-text">Tout sélectionner</span>
+                </div>
               <ul>
                 {threads.map((thread) => {
                   const unread = thread.unreadCount > 0;
                   const active = selectedId === thread.id;
+                  const checked = selectedThreadIds.includes(thread.id);
                   return (
                     <li key={thread.id} className="border-b border-gray/20 last:border-0">
-                      <button
-                        type="button"
-                        onClick={() => setSelectedId(thread.id)}
+                      <div
                         className={cn(
-                          "flex w-full items-start gap-3 px-4 py-3.5 text-left transition",
+                          "flex w-full items-start gap-2 px-3 py-3.5 transition",
                           active
                             ? "bg-primary-light/70"
                             : unread
@@ -553,42 +707,57 @@ export function CrmMessagerieView() {
                               : "hover:bg-gray-light/60",
                         )}
                       >
-                        <span
-                          className={cn(
-                            "mt-2 h-2 w-2 shrink-0 rounded-full",
-                            unread ? "bg-primary" : "bg-transparent",
-                          )}
-                          aria-hidden
+                        <input
+                          type="checkbox"
+                          checked={checked}
+                          onChange={() => toggleThreadSelection(thread.id)}
+                          onClick={(e) => e.stopPropagation()}
+                          aria-label={`Sélectionner ${thread.subject || "conversation"}`}
+                          className="mt-2 h-3.5 w-3.5 shrink-0 rounded border-gray/50"
                         />
-                        <div className="min-w-0 flex-1">
-                          <div className="flex items-baseline justify-between gap-2">
-                            <p
-                              className={cn(
-                                "truncate text-sm",
-                                unread ? "font-bold text-foreground" : "font-medium text-foreground",
-                              )}
-                            >
-                              {thread.subject || "(sans objet)"}
+                        <button
+                          type="button"
+                          onClick={() => setSelectedId(thread.id)}
+                          className="flex min-w-0 flex-1 items-start gap-3 text-left"
+                        >
+                          <span
+                            className={cn(
+                              "mt-2 h-2 w-2 shrink-0 rounded-full",
+                              unread ? "bg-primary" : "bg-transparent",
+                            )}
+                            aria-hidden
+                          />
+                          <div className="min-w-0 flex-1">
+                            <div className="flex items-baseline justify-between gap-2">
+                              <p
+                                className={cn(
+                                  "truncate text-sm",
+                                  unread ? "font-bold text-foreground" : "font-medium text-foreground",
+                                )}
+                              >
+                                {thread.subject || "(sans objet)"}
+                              </p>
+                              <span className="shrink-0 text-[11px] tabular-nums text-gray-text">
+                                {formatMailDate(thread.lastMessageAt)}
+                              </span>
+                            </div>
+                            <p className="truncate text-xs text-gray-text">
+                              {participantsLabel(thread.participants)}
                             </p>
-                            <span className="shrink-0 text-[11px] tabular-nums text-gray-text">
-                              {formatMailDate(thread.lastMessageAt)}
-                            </span>
+                            <p className="mt-0.5 truncate text-xs text-gray-text/90">{thread.snippet}</p>
                           </div>
-                          <p className="truncate text-xs text-gray-text">
-                            {participantsLabel(thread.participants)}
-                          </p>
-                          <p className="mt-0.5 truncate text-xs text-gray-text/90">{thread.snippet}</p>
-                        </div>
-                        {unread && (
-                          <span className="mt-1 shrink-0 rounded-full bg-primary px-1.5 py-0.5 text-[10px] font-bold text-white">
-                            {thread.unreadCount}
-                          </span>
-                        )}
-                      </button>
+                          {unread && (
+                            <span className="mt-1 shrink-0 rounded-full bg-primary px-1.5 py-0.5 text-[10px] font-bold text-white">
+                              {thread.unreadCount}
+                            </span>
+                          )}
+                        </button>
+                      </div>
                     </li>
                   );
                 })}
               </ul>
+              </>
             )}
           </div>
         </aside>
@@ -623,6 +792,16 @@ export function CrmMessagerieView() {
               attachmentsByMessage={attachmentsByMessage}
               onClose={() => setSelectedId(null)}
               onDetailPatch={(next) => setDetail(next)}
+              onDeleteThread={() => {
+                if (detail?.thread.id) void handleDeleteThread(detail.thread.id);
+              }}
+              onMessagesDeleted={(ids, threadsDeleted) => {
+                void handleMessagesDeleted(ids, threadsDeleted);
+              }}
+              onForward={(draft) => {
+                setForwardDraft(draft);
+                setComposeOpen(true);
+              }}
               onReplied={(message) => {
                 setDetail((prev) =>
                   prev
@@ -655,12 +834,20 @@ export function CrmMessagerieView() {
       </div>
 
       {composeOpen && composeMailbox && (
-        <ComposeModal
+        <MailComposeModal
           mailbox={composeMailbox}
           mailboxes={composeFromOptions.length > 0 ? composeFromOptions : [composeMailbox]}
-          onClose={() => setComposeOpen(false)}
+          initialTo={forwardDraft?.to ?? ""}
+          initialSubject={forwardDraft?.subject ?? ""}
+          initialBodyHtml={forwardDraft?.bodyHtml ?? ""}
+          title={forwardDraft ? "Transférer" : "Nouveau message"}
+          onClose={() => {
+            setComposeOpen(false);
+            setForwardDraft(null);
+          }}
           onSent={(thread) => {
             setComposeOpen(false);
+            setForwardDraft(null);
             setThreads((prev) => [thread, ...prev.filter((t) => t.id !== thread.id)]);
             setSelectedId(thread.id);
             setFilter("open");
@@ -828,187 +1015,29 @@ function ConnectMailboxPanel({
   );
 }
 
-function ComposeModal({
-  mailbox,
-  mailboxes,
-  onClose,
-  onSent,
-}: {
-  mailbox: CrmMailbox;
-  mailboxes: CrmMailbox[];
-  onClose: () => void;
-  onSent: (thread: CrmMailThread) => void;
-}) {
-  const [fromId, setFromId] = useState(mailbox.id);
-  const [to, setTo] = useState("");
-  const [cc, setCc] = useState("");
-  const [showCc, setShowCc] = useState(false);
-  const [subject, setSubject] = useState("");
-  const [body, setBody] = useState("");
-  const [includeSignature, setIncludeSignature] = useState(true);
-  const [sending, setSending] = useState(false);
-  const [sendError, setSendError] = useState<string | null>(null);
 
-  async function handleSend(e: FormEvent) {
-    e.preventDefault();
-    if (!to.trim() || !body.trim() || sending) return;
-    setSending(true);
-    setSendError(null);
-    try {
-      const result = await composeMailApi({
-        mailboxId: fromId,
-        to: to.trim(),
-        cc: cc.trim() || undefined,
-        subject: subject.trim(),
-        bodyText: body.trim(),
-        includeSignature,
-      });
-      onSent(result.thread);
-    } catch (err) {
-      setSendError(err instanceof Error ? err.message : "Échec de l’envoi.");
-    } finally {
-      setSending(false);
-    }
+function buildForwardDraft(detail: MailThreadDetail): {
+  to: string;
+  subject: string;
+  bodyHtml: string;
+} {
+  const last = detail.messages[detail.messages.length - 1];
+  const subject = detail.thread.subject.trim() || "(sans objet)";
+  const fwSubject = /^(fw|fwd|tr)\s*:/i.test(subject) ? subject : `Fw: ${subject}`;
+  if (!last) {
+    return { to: "", subject: fwSubject, bodyHtml: "" };
   }
-
-  return (
-    <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/45 p-3 backdrop-blur-[2px] sm:items-center sm:p-6">
-      <form
-        onSubmit={(e) => void handleSend(e)}
-        className="flex max-h-[92vh] w-full max-w-2xl flex-col overflow-hidden rounded-2xl bg-white shadow-2xl"
-      >
-        <div className="flex items-center justify-between border-b border-gray/30 bg-gradient-to-r from-primary-light/80 to-white px-5 py-4">
-          <div>
-            <p className="text-[11px] font-semibold uppercase tracking-wide text-primary">
-              Nouveau message
-            </p>
-            <h3 className="font-bold text-foreground">Composer</h3>
-          </div>
-          <button type="button" onClick={onClose} aria-label="Fermer" className="rounded-lg p-1 hover:bg-gray/20">
-            <X className="h-5 w-5" aria-hidden />
-          </button>
-        </div>
-
-        <div className="space-y-3 overflow-y-auto px-5 py-4">
-          {sendError && (
-            <p className="flex items-start gap-1.5 rounded-xl border border-accent/25 bg-accent/5 px-3 py-2 text-xs text-accent">
-              <AlertCircle className="mt-0.5 h-3.5 w-3.5 shrink-0" aria-hidden />
-              {sendError}
-            </p>
-          )}
-
-          <label className="block text-sm">
-            <span className="text-xs font-semibold uppercase tracking-wide text-gray-text">De</span>
-            <select
-              value={fromId}
-              onChange={(e) => setFromId(e.target.value)}
-              disabled={sending || mailboxes.length < 2}
-              className="mt-1 w-full rounded-xl border border-gray/50 bg-white px-3 py-2.5 outline-none focus:border-primary"
-            >
-              {mailboxes.map((m) => (
-                <option key={m.id} value={m.id}>
-                  {m.email}
-                </option>
-              ))}
-            </select>
-          </label>
-
-          <div className="flex items-end gap-2">
-            <label className="block min-w-0 flex-1 text-sm">
-              <span className="text-xs font-semibold uppercase tracking-wide text-gray-text">À</span>
-              <input
-                value={to}
-                onChange={(e) => setTo(e.target.value)}
-                disabled={sending}
-                required
-                placeholder="destinataire@exemple.com"
-                className="mt-1 w-full rounded-xl border border-gray/50 px-3 py-2.5 outline-none focus:border-primary"
-              />
-            </label>
-            {!showCc && (
-              <button
-                type="button"
-                onClick={() => setShowCc(true)}
-                className="mb-0.5 shrink-0 text-xs font-semibold text-primary hover:underline"
-              >
-                Cc
-              </button>
-            )}
-          </div>
-
-          {showCc && (
-            <label className="block text-sm">
-              <span className="text-xs font-semibold uppercase tracking-wide text-gray-text">Cc</span>
-              <input
-                value={cc}
-                onChange={(e) => setCc(e.target.value)}
-                disabled={sending}
-                placeholder="copie@exemple.com"
-                className="mt-1 w-full rounded-xl border border-gray/50 px-3 py-2.5 outline-none focus:border-primary"
-              />
-            </label>
-          )}
-
-          <label className="block text-sm">
-            <span className="text-xs font-semibold uppercase tracking-wide text-gray-text">Objet</span>
-            <input
-              value={subject}
-              onChange={(e) => setSubject(e.target.value)}
-              disabled={sending}
-              placeholder="Sujet du message"
-              className="mt-1 w-full rounded-xl border border-gray/50 px-3 py-2.5 outline-none focus:border-primary"
-            />
-          </label>
-
-          <label className="block text-sm">
-            <span className="text-xs font-semibold uppercase tracking-wide text-gray-text">Message</span>
-            <textarea
-              value={body}
-              onChange={(e) => setBody(e.target.value)}
-              disabled={sending}
-              required
-              rows={10}
-              placeholder="Écrivez votre message…"
-              className="mt-1 w-full resize-y rounded-xl border border-gray/50 px-3 py-2.5 outline-none focus:border-primary"
-            />
-          </label>
-
-          <label className="flex items-center gap-2 text-xs text-gray-text">
-            <input
-              type="checkbox"
-              checked={includeSignature}
-              onChange={(e) => setIncludeSignature(e.target.checked)}
-              disabled={sending}
-            />
-            Inclure la signature SD CREATIV
-          </label>
-        </div>
-
-        <div className="flex items-center justify-end gap-2 border-t border-gray/30 px-5 py-4">
-          <button
-            type="button"
-            onClick={onClose}
-            disabled={sending}
-            className="rounded-xl px-4 py-2.5 text-sm font-medium text-gray-text hover:bg-gray/20"
-          >
-            Annuler
-          </button>
-          <button
-            type="submit"
-            disabled={sending || !to.trim() || !body.trim()}
-            className="inline-flex items-center gap-2 rounded-xl bg-primary px-5 py-2.5 text-sm font-semibold text-white disabled:opacity-50"
-          >
-            {sending ? (
-              <Loader2 className="h-4 w-4 animate-spin" aria-hidden />
-            ) : (
-              <Send className="h-4 w-4" aria-hidden />
-            )}
-            Envoyer
-          </button>
-        </div>
-      </form>
-    </div>
-  );
+  const quoted =
+    last.bodyHtml?.trim() ||
+    `<pre style="white-space:pre-wrap;font-family:inherit">${(last.bodyText || "")
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;")}</pre>`;
+  return {
+    to: "",
+    subject: fwSubject,
+    bodyHtml: `<p></p><p><br/></p><blockquote style="border-left:3px solid #cbd5e1;margin:12px 0;padding-left:12px;color:#475569"><p><strong>---------- Message transféré ----------</strong><br/>De : ${last.fromAddress}<br/>Date : ${formatMailDate(last.receivedAt)}<br/>Objet : ${last.subject}</p>${quoted}</blockquote>`,
+  };
 }
 
 function ThreadPane({
@@ -1018,6 +1047,9 @@ function ThreadPane({
   onClose,
   onReplied,
   onDetailPatch,
+  onForward,
+  onDeleteThread,
+  onMessagesDeleted,
 }: {
   loading: boolean;
   detail: MailThreadDetail | null;
@@ -1025,13 +1057,23 @@ function ThreadPane({
   onClose: () => void;
   onReplied: (message: MailThreadMessage) => void;
   onDetailPatch: (detail: MailThreadDetail) => void;
+  onForward: (draft: { to: string; subject: string; bodyHtml: string }) => void;
+  onDeleteThread: () => void;
+  onMessagesDeleted: (messageIds: string[], threadsDeleted: string[]) => void;
 }) {
-  const [reply, setReply] = useState("");
+  const { confirm } = useDialog();
+  const [replyMode, setReplyMode] = useState<"reply" | "replyAll">("reply");
+  const [replyHtml, setReplyHtml] = useState("");
+  const [replyText, setReplyText] = useState("");
   const [includeSignature, setIncludeSignature] = useState(true);
+  const [attachments, setAttachments] = useState<OutgoingAttachmentDraft[]>([]);
   const [sending, setSending] = useState(false);
   const [sendError, setSendError] = useState<string | null>(null);
   const [draftStatus, setDraftStatus] = useState<"idle" | "saving" | "saved" | "error">("idle");
   const [draftLoadedFor, setDraftLoadedFor] = useState<string | null>(null);
+  const [editorKey, setEditorKey] = useState(0);
+  const [selectedMessageIds, setSelectedMessageIds] = useState<string[]>([]);
+  const [deletingMessages, setDeletingMessages] = useState(false);
   const skipNextSave = useRef(false);
 
   useEffect(() => {
@@ -1039,8 +1081,16 @@ function ThreadPane({
     if (draftLoadedFor === detail.thread.id) return;
     const draft = detail.draft;
     skipNextSave.current = true;
-    setReply(draft?.bodyText ?? "");
+    const html =
+      draft?.bodyHtml ??
+      (draft?.bodyText ? `<p>${draft.bodyText.replace(/\n/g, "<br/>")}</p>` : "");
+    setReplyHtml(html);
+    setReplyText(draft?.bodyText ?? "");
     setIncludeSignature(draft?.includeSignature ?? true);
+    setAttachments([]);
+    setReplyMode("reply");
+    setSelectedMessageIds([]);
+    setEditorKey((k) => k + 1);
     setDraftLoadedFor(detail.thread.id);
     setDraftStatus(draft ? "saved" : "idle");
   }, [detail, draftLoadedFor]);
@@ -1057,10 +1107,11 @@ function ThreadPane({
         setDraftStatus("saving");
         try {
           await saveMailDraftApi(detail.thread.id, {
-            bodyText: reply,
+            bodyText: replyText,
+            bodyHtml: replyHtml || null,
             includeSignature,
           });
-          setDraftStatus(reply.trim() ? "saved" : "idle");
+          setDraftStatus(replyText.trim() || replyHtml.trim() ? "saved" : "idle");
         } catch {
           setDraftStatus("error");
         }
@@ -1068,21 +1119,96 @@ function ThreadPane({
     }, 900);
 
     return () => window.clearTimeout(timer);
-  }, [reply, includeSignature, detail?.thread.id, draftLoadedFor]);
+  }, [replyText, replyHtml, includeSignature, detail?.thread.id, draftLoadedFor]);
+
+  async function handleFiles(files: FileList | null) {
+    if (!files?.length) return;
+    try {
+      const drafts = await filesToAttachmentDrafts(files);
+      setAttachments((prev) => [...prev, ...drafts].slice(0, 8));
+    } catch {
+      setSendError("Impossible de lire une pièce jointe.");
+    }
+  }
+
+  function toggleMessageSelection(messageId: string) {
+    setSelectedMessageIds((prev) =>
+      prev.includes(messageId) ? prev.filter((id) => id !== messageId) : [...prev, messageId],
+    );
+  }
+
+  async function handleDeleteOneMessage(messageId: string) {
+    const ok = await confirm({
+      title: "Supprimer le message",
+      message:
+        "Ce message sera retiré de la conversation CRM. Il ne réapparaîtra pas au Sync.",
+      confirmLabel: "Supprimer",
+      variant: "danger",
+    });
+    if (!ok) return;
+    setDeletingMessages(true);
+    setSendError(null);
+    try {
+      const result = await deleteMailMessageApi(messageId);
+      setSelectedMessageIds((prev) => prev.filter((id) => id !== messageId));
+      onMessagesDeleted([messageId], result.threadsDeleted);
+    } catch (err) {
+      setSendError(err instanceof Error ? err.message : "Suppression impossible.");
+    } finally {
+      setDeletingMessages(false);
+    }
+  }
+
+  async function handleBulkDeleteMessages() {
+    if (selectedMessageIds.length === 0 || deletingMessages) return;
+    const count = selectedMessageIds.length;
+    const ok = await confirm({
+      title: "Supprimer les messages",
+      message:
+        count === 1
+          ? "Ce message sera retiré de la conversation CRM."
+          : `${count} messages seront retirés de la conversation CRM.`,
+      confirmLabel: "Supprimer",
+      variant: "danger",
+    });
+    if (!ok) return;
+    setDeletingMessages(true);
+    setSendError(null);
+    try {
+      const ids = [...selectedMessageIds];
+      const result = await bulkDeleteMailMessagesApi(ids);
+      setSelectedMessageIds([]);
+      onMessagesDeleted(ids, result.threadsDeleted);
+    } catch (err) {
+      setSendError(err instanceof Error ? err.message : "Suppression impossible.");
+    } finally {
+      setDeletingMessages(false);
+    }
+  }
 
   async function handleSend(e: FormEvent) {
     e.preventDefault();
-    if (!detail || !reply.trim() || sending) return;
+    if (!detail || (!replyText.trim() && !replyHtml.trim()) || sending) return;
     setSending(true);
     setSendError(null);
     try {
       const result = await replyMailThreadApi(detail.thread.id, {
-        bodyText: reply.trim(),
+        bodyText: replyText.trim() || replyHtml.replace(/<[^>]+>/g, " ").trim(),
+        bodyHtml: replyHtml.trim() || null,
         includeSignature,
+        mode: replyMode,
+        attachments: attachments.map(({ filename, contentType, contentBase64 }) => ({
+          filename,
+          contentType,
+          contentBase64,
+        })),
       });
       onReplied(result.message);
       skipNextSave.current = true;
-      setReply("");
+      setReplyHtml("");
+      setReplyText("");
+      setAttachments([]);
+      setEditorKey((k) => k + 1);
       setDraftStatus("idle");
     } catch (err) {
       setSendError(err instanceof Error ? err.message : "Échec de l’envoi.");
@@ -1118,19 +1244,65 @@ function ThreadPane({
           </button>
         </div>
         {detail && (
-          <MailThreadLinkControls
-            thread={detail.thread}
-            linkedClient={detail.linkedClient ?? null}
-            linkedLead={detail.linkedLead ?? null}
-            onLinked={(thread, client, lead) => {
-              onDetailPatch({
-                ...detail,
-                thread,
-                linkedClient: client,
-                linkedLead: lead,
-              });
-            }}
-          />
+          <>
+            <div className="mt-3 flex flex-wrap gap-2">
+              <button
+                type="button"
+                onClick={() => setReplyMode("reply")}
+                className={cn(
+                  "inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-xs font-semibold",
+                  replyMode === "reply"
+                    ? "bg-primary text-white"
+                    : "bg-white text-gray-text ring-1 ring-gray/40 hover:ring-primary/40",
+                )}
+              >
+                <Reply className="h-3.5 w-3.5" aria-hidden />
+                Répondre
+              </button>
+              <button
+                type="button"
+                onClick={() => setReplyMode("replyAll")}
+                className={cn(
+                  "inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-xs font-semibold",
+                  replyMode === "replyAll"
+                    ? "bg-primary text-white"
+                    : "bg-white text-gray-text ring-1 ring-gray/40 hover:ring-primary/40",
+                )}
+              >
+                <ReplyAll className="h-3.5 w-3.5" aria-hidden />
+                Répondre à tous
+              </button>
+              <button
+                type="button"
+                onClick={() => onForward(buildForwardDraft(detail))}
+                className="inline-flex items-center gap-1.5 rounded-lg bg-white px-2.5 py-1.5 text-xs font-semibold text-gray-text ring-1 ring-gray/40 hover:ring-primary/40"
+              >
+                <Forward className="h-3.5 w-3.5" aria-hidden />
+                Transférer
+              </button>
+              <button
+                type="button"
+                onClick={onDeleteThread}
+                className="inline-flex items-center gap-1.5 rounded-lg bg-white px-2.5 py-1.5 text-xs font-semibold text-accent ring-1 ring-accent/30 hover:bg-accent/5"
+              >
+                <Trash2 className="h-3.5 w-3.5" aria-hidden />
+                Supprimer
+              </button>
+            </div>
+            <MailThreadLinkControls
+              thread={detail.thread}
+              linkedClient={detail.linkedClient ?? null}
+              linkedLead={detail.linkedLead ?? null}
+              onLinked={(thread, client, lead) => {
+                onDetailPatch({
+                  ...detail,
+                  thread,
+                  linkedClient: client,
+                  linkedLead: lead,
+                });
+              }}
+            />
+          </>
         )}
       </div>
 
@@ -1140,15 +1312,52 @@ function ThreadPane({
             <Loader2 className="h-6 w-6 animate-spin text-primary" aria-hidden />
           </div>
         ) : (
-          <ul className="space-y-3">
-            {(detail?.messages ?? []).map((msg) => (
-              <MessageBubble
-                key={msg.id}
-                message={msg}
-                attachments={attachmentsByMessage.get(msg.id) ?? []}
-              />
-            ))}
-          </ul>
+          <>
+            {selectedMessageIds.length > 0 && (
+              <div className="mb-3 flex items-center justify-between gap-2 rounded-xl border border-accent/20 bg-accent/5 px-3 py-2">
+                <p className="text-xs font-semibold text-foreground">
+                  {selectedMessageIds.length} message
+                  {selectedMessageIds.length > 1 ? "s" : ""} sélectionné
+                  {selectedMessageIds.length > 1 ? "s" : ""}
+                </p>
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setSelectedMessageIds([])}
+                    className="text-xs font-medium text-gray-text hover:text-foreground"
+                  >
+                    Annuler
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => void handleBulkDeleteMessages()}
+                    disabled={deletingMessages}
+                    className="inline-flex items-center gap-1.5 rounded-lg bg-accent px-2.5 py-1.5 text-xs font-semibold text-white disabled:opacity-50"
+                  >
+                    {deletingMessages ? (
+                      <Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden />
+                    ) : (
+                      <Trash2 className="h-3.5 w-3.5" aria-hidden />
+                    )}
+                    Supprimer
+                  </button>
+                </div>
+              </div>
+            )}
+            <ul className="space-y-3">
+              {(detail?.messages ?? []).map((msg) => (
+                <MessageBubble
+                  key={msg.id}
+                  message={msg}
+                  attachments={attachmentsByMessage.get(msg.id) ?? []}
+                  selected={selectedMessageIds.includes(msg.id)}
+                  onToggleSelect={() => toggleMessageSelection(msg.id)}
+                  onDelete={() => void handleDeleteOneMessage(msg.id)}
+                  deleting={deletingMessages}
+                />
+              ))}
+            </ul>
+          </>
         )}
       </div>
 
@@ -1159,14 +1368,50 @@ function ThreadPane({
             {sendError}
           </p>
         )}
-        <textarea
-          value={reply}
-          onChange={(e) => setReply(e.target.value)}
-          rows={3}
+        <p className="mb-2 text-[11px] font-medium text-gray-text">
+          {replyMode === "replyAll" ? "Réponse à tous" : "Réponse"}
+        </p>
+        <MailRichEditor
+          valueHtml={replyHtml}
+          editorKey={`${detail?.thread.id ?? "none"}-${editorKey}`}
           disabled={!detail || sending}
           placeholder="Votre réponse…"
-          className="w-full rounded-xl border border-gray/50 bg-white px-3 py-2.5 text-sm outline-none focus:border-primary disabled:opacity-50"
+          onChange={(html, text) => {
+            setReplyHtml(html);
+            setReplyText(text);
+          }}
         />
+        <div className="mt-2 flex flex-wrap items-center gap-2">
+          <label className="inline-flex cursor-pointer items-center gap-1.5 rounded-lg border border-gray/40 px-2.5 py-1.5 text-[11px] font-semibold text-foreground hover:border-primary/40">
+            <Paperclip className="h-3.5 w-3.5" aria-hidden />
+            Joindre
+            <input
+              type="file"
+              multiple
+              className="hidden"
+              disabled={!detail || sending}
+              onChange={(e) => {
+                void handleFiles(e.target.files);
+                e.target.value = "";
+              }}
+            />
+          </label>
+          {attachments.map((att) => (
+            <span
+              key={`${att.filename}-${att.sizeBytes}`}
+              className="inline-flex items-center gap-1 rounded-full bg-gray/20 px-2 py-1 text-[11px]"
+            >
+              {att.filename}
+              <button
+                type="button"
+                onClick={() => setAttachments((prev) => prev.filter((a) => a !== att))}
+                aria-label={`Retirer ${att.filename}`}
+              >
+                <X className="h-3 w-3" />
+              </button>
+            </span>
+          ))}
+        </div>
         <div className="mt-2 flex flex-wrap items-center justify-between gap-2">
           <div className="flex flex-col gap-1">
             <label className="flex items-center gap-2 text-xs text-gray-text">
@@ -1187,7 +1432,7 @@ function ThreadPane({
           </div>
           <button
             type="submit"
-            disabled={!detail || sending || !reply.trim()}
+            disabled={!detail || sending || (!replyText.trim() && !replyHtml.trim())}
             className="inline-flex items-center gap-2 rounded-xl bg-primary px-4 py-2 text-sm font-semibold text-white disabled:opacity-50"
           >
             {sending ? <Loader2 className="h-4 w-4 animate-spin" aria-hidden /> : <Send className="h-4 w-4" aria-hidden />}
@@ -1202,9 +1447,17 @@ function ThreadPane({
 function MessageBubble({
   message,
   attachments,
+  selected,
+  onToggleSelect,
+  onDelete,
+  deleting,
 }: {
   message: MailThreadMessage;
   attachments: CrmMailAttachment[];
+  selected: boolean;
+  onToggleSelect: () => void;
+  onDelete: () => void;
+  deleting: boolean;
 }) {
   const outbound = message.direction === "outbound";
   const body =
@@ -1220,20 +1473,47 @@ function MessageBubble({
         outbound
           ? "ml-6 border border-primary/15 bg-primary-light/60"
           : "mr-6 border border-gray/25 bg-white",
+        selected && "ring-2 ring-accent/40",
       )}
     >
       <div className="flex justify-between gap-2 text-[11px] text-gray-text">
-        <span className="font-semibold text-foreground">{message.fromAddress}</span>
-        <span className="tabular-nums">{formatMailDate(message.receivedAt)}</span>
+        <label className="flex min-w-0 items-center gap-2">
+          <input
+            type="checkbox"
+            checked={selected}
+            onChange={onToggleSelect}
+            className="h-3.5 w-3.5 shrink-0 rounded border-gray/50"
+            aria-label="Sélectionner le message"
+          />
+          <span className="truncate font-semibold text-foreground">{message.fromAddress}</span>
+        </label>
+        <div className="flex shrink-0 items-center gap-2">
+          <span className="tabular-nums">{formatMailDate(message.receivedAt)}</span>
+          <button
+            type="button"
+            onClick={onDelete}
+            disabled={deleting}
+            aria-label="Supprimer le message"
+            className="rounded-md p-1 text-gray-text hover:bg-accent/10 hover:text-accent disabled:opacity-40"
+          >
+            <Trash2 className="h-3.5 w-3.5" aria-hidden />
+          </button>
+        </div>
       </div>
       <p className="mt-1.5 whitespace-pre-wrap wrap-break-word leading-relaxed">{body}</p>
       {attachments.length > 0 && (
         <ul className="mt-2 space-y-1">
           {attachments.map((att) => (
-            <li key={att.id} className="flex items-center gap-1.5 text-xs text-gray-text">
-              <Paperclip className="h-3.5 w-3.5 shrink-0" aria-hidden />
-              <span className="truncate">{att.filename}</span>
-              <span className="shrink-0">({formatBytes(att.sizeBytes)})</span>
+            <li key={att.id}>
+              <a
+                href={mailAttachmentDownloadUrl(att.id)}
+                className="inline-flex max-w-full items-center gap-1.5 text-xs font-medium text-primary hover:underline"
+                download={att.filename}
+              >
+                <Paperclip className="h-3.5 w-3.5 shrink-0" aria-hidden />
+                <span className="truncate">{att.filename}</span>
+                <span className="shrink-0 text-gray-text">({formatBytes(att.sizeBytes)})</span>
+              </a>
             </li>
           ))}
         </ul>

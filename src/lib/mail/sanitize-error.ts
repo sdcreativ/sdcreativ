@@ -10,19 +10,55 @@ const SENSITIVE_PATTERNS: RegExp[] = [
   /v1:[A-Za-z0-9+/=]+/g,
 ];
 
+function extractImapDetail(error: unknown): string | null {
+  if (!error || typeof error !== "object") return null;
+  const err = error as {
+    message?: string;
+    responseText?: string;
+    responseStatus?: string;
+    serverResponseCode?: string;
+    authenticationFailed?: boolean;
+    response?: string | { text?: string; command?: string };
+  };
+
+  if (err.authenticationFailed) {
+    return "Authentification IMAP refusée — vérifiez le mot de passe Hostinger.";
+  }
+
+  const parts: string[] = [];
+  if (err.serverResponseCode) parts.push(String(err.serverResponseCode));
+  if (err.responseText) parts.push(String(err.responseText));
+  else if (typeof err.response === "string") parts.push(err.response);
+  else if (err.response && typeof err.response === "object" && err.response.text) {
+    parts.push(String(err.response.text));
+  }
+
+  if (parts.length > 0) return parts.join(" — ");
+  return null;
+}
+
 export function sanitizeMailError(error: unknown, fallback = "Erreur messagerie."): string {
+  const detail = extractImapDetail(error);
   let message =
-    error instanceof Error
+    detail ||
+    (error instanceof Error
       ? error.message
       : typeof error === "string"
         ? error
-        : fallback;
+        : fallback);
+
+  // Remplace le générique imapflow
+  if (/^command failed$/i.test(message.trim()) && detail) {
+    message = detail;
+  } else if (/^command failed$/i.test(message.trim())) {
+    message =
+      "Commande IMAP refusée par Hostinger (plage UID, auth ou boîte). Réessayez Sync ou mettez à jour le mot de passe.";
+  }
 
   for (const pattern of SENSITIVE_PATTERNS) {
     message = message.replace(pattern, "[redacted]");
   }
 
-  // Tronque les payloads trop longs (stack / dumps).
   message = message.replace(/\s+/g, " ").trim();
   if (message.length > 280) {
     message = `${message.slice(0, 279)}…`;

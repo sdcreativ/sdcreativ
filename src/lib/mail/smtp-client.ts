@@ -15,6 +15,7 @@ export type SmtpSendInput = {
   fromName?: string;
   to: string | string[];
   cc?: string | string[];
+  bcc?: string | string[];
   subject: string;
   text: string;
   html?: string;
@@ -22,6 +23,11 @@ export type SmtpSendInput = {
   references?: string[];
   /** Message-ID à forcer (avec chevrons). */
   messageId?: string;
+  attachments?: Array<{
+    filename: string;
+    contentType: string;
+    content: Buffer;
+  }>;
 };
 
 export type SmtpSendResult = {
@@ -72,6 +78,7 @@ export async function sendMailViaSmtp(input: SmtpSendInput): Promise<SmtpSendRes
       from,
       to: input.to,
       cc: input.cc,
+      bcc: input.bcc,
       subject: input.subject,
       text: input.text,
       html: input.html,
@@ -80,6 +87,11 @@ export async function sendMailViaSmtp(input: SmtpSendInput): Promise<SmtpSendRes
         ? input.references.join(" ")
         : undefined,
       messageId: input.messageId,
+      attachments: input.attachments?.map((att) => ({
+        filename: att.filename,
+        contentType: att.contentType,
+        content: att.content,
+      })),
     });
 
     const messageId = String(info.messageId ?? input.messageId ?? "").trim();

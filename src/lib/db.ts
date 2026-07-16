@@ -536,6 +536,9 @@ async function ensureSchema(): Promise<void> {
       WHERE client_id IS NOT NULL;
     CREATE INDEX IF NOT EXISTS idx_crm_mail_threads_lead ON crm_mail_threads (lead_id)
       WHERE lead_id IS NOT NULL;
+    ALTER TABLE crm_mail_threads ADD COLUMN IF NOT EXISTS deleted_at TIMESTAMPTZ;
+    CREATE INDEX IF NOT EXISTS idx_crm_mail_threads_deleted
+      ON crm_mail_threads (deleted_at) WHERE deleted_at IS NOT NULL;
 
     CREATE TABLE IF NOT EXISTS crm_mail_messages (
       id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -563,6 +566,9 @@ async function ensureSchema(): Promise<void> {
       ON crm_mail_messages (thread_id, received_at DESC);
     CREATE INDEX IF NOT EXISTS idx_crm_mail_messages_mailbox_uid
       ON crm_mail_messages (mailbox_id, uid);
+    ALTER TABLE crm_mail_messages ADD COLUMN IF NOT EXISTS deleted_at TIMESTAMPTZ;
+    CREATE INDEX IF NOT EXISTS idx_crm_mail_messages_deleted
+      ON crm_mail_messages (deleted_at) WHERE deleted_at IS NOT NULL;
 
     CREATE TABLE IF NOT EXISTS crm_mail_attachments (
       id UUID PRIMARY KEY DEFAULT gen_random_uuid(),

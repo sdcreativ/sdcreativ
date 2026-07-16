@@ -5,6 +5,7 @@ import {
   getMailImapPort,
 } from "@/lib/mail/config";
 import type { MailboxCredentials } from "@/lib/mail/crypto";
+import { sanitizeMailError } from "@/lib/mail/sanitize-error";
 import {
   extractEmailAddress,
   parseMessageIdList,
@@ -15,6 +16,8 @@ export type FetchedMailAttachment = {
   filename: string;
   contentType: string;
   sizeBytes: number;
+  /** Contenu binaire si disponible (sync / téléchargement à la demande). */
+  content?: Buffer;
 };
 
 export type FetchedMailMessage = {
@@ -47,7 +50,10 @@ function addressList(
   return uniqueEmails(emails);
 }
 
-function mapAttachments(attachments: Attachment[] | undefined): FetchedMailAttachment[] {
+function mapAttachments(
+  attachments: Attachment[] | undefined,
+  options?: { includeContent?: boolean },
+): FetchedMailAttachment[] {
   if (!attachments?.length) return [];
   return attachments
     .filter((att) => Boolean(att.filename || att.contentType))
@@ -55,6 +61,9 @@ function mapAttachments(attachments: Attachment[] | undefined): FetchedMailAttac
       filename: (att.filename || "attachment").slice(0, 260),
       contentType: (att.contentType || "application/octet-stream").slice(0, 160),
       sizeBytes: att.size ?? (att.content ? Buffer.byteLength(att.content) : 0),
+      ...(options?.includeContent && att.content
+        ? { content: Buffer.isBuffer(att.content) ? att.content : Buffer.from(att.content) }
+        : {}),
     }));
 }
 
@@ -77,6 +86,10 @@ export function createImapClient(credentials: MailboxCredentials, options?: {
   });
 }
 
+/**
+ * Import incrémental par UID IMAP (pas par numéro de séquence).
+ * Corrige le « Command failed » Hostinger sur plages invalides.
+ */
 export async function fetchMessagesSinceUid(input: {
   credentials: MailboxCredentials;
   host?: string;
@@ -100,21 +113,31 @@ export async function fetchMessagesSinceUid(input: {
     await client.connect();
     const lock = await client.getMailboxLock(folder);
     try {
-      const range =
-        input.sinceUid > 0 ? `${input.sinceUid + 1}:*` : "1:*";
-
-      // exists === 0 → boîte vide
       if (!client.mailbox || client.mailbox.exists === 0) {
         return [];
       }
 
+      const uidNext = Number(client.mailbox.uidNext ?? 0);
+      // Plus rien à récupérer après sinceUid
+      if (input.sinceUid > 0 && uidNext > 0 && input.sinceUid + 1 >= uidNext) {
+        return [];
+      }
+
+      const range =
+        input.sinceUid > 0 ? `${input.sinceUid + 1}:*` : "1:*";
+
       let count = 0;
-      for await (const msg of client.fetch(range, {
-        uid: true,
-        envelope: true,
-        source: true,
-        internalDate: true,
-      })) {
+      // 3e argument { uid: true } : la plage est en UIDs, pas en numéros de séquence
+      for await (const msg of client.fetch(
+        range,
+        {
+          uid: true,
+          envelope: true,
+          source: true,
+          internalDate: true,
+        },
+        { uid: true },
+      )) {
         if (!msg.uid || msg.uid <= input.sinceUid) continue;
         if (!msg.source) continue;
 
@@ -157,6 +180,8 @@ export async function fetchMessagesSinceUid(input: {
     } finally {
       lock.release();
     }
+  } catch (error) {
+    throw new Error(sanitizeMailError(error, "Échec sync IMAP."));
   } finally {
     try {
       await client.logout();
@@ -167,4 +192,60 @@ export async function fetchMessagesSinceUid(input: {
 
   results.sort((a, b) => a.uid - b.uid);
   return results;
+}
+
+/** Télécharge une pièce jointe depuis IMAP (UID + nom de fichier). */
+export async function fetchImapAttachment(input: {
+  credentials: MailboxCredentials;
+  host?: string;
+  port?: number;
+  folder: string;
+  uid: number;
+  filename: string;
+}): Promise<{ content: Buffer; contentType: string; filename: string }> {
+  const client = createImapClient(input.credentials, {
+    host: input.host,
+    port: input.port,
+  });
+
+  try {
+    await client.connect();
+    const lock = await client.getMailboxLock(input.folder || "INBOX");
+    try {
+      const msg = await client.fetchOne(
+        String(input.uid),
+        { source: true, uid: true },
+        { uid: true },
+      );
+      if (!msg || !("source" in msg) || !msg.source) {
+        throw new Error("Message IMAP introuvable pour cette pièce jointe.");
+      }
+      const parsed = await simpleParser(msg.source);
+      const wanted = input.filename.toLowerCase();
+      const att = (parsed.attachments ?? []).find(
+        (a) => (a.filename || "attachment").toLowerCase() === wanted,
+      );
+      if (!att?.content) {
+        throw new Error("Pièce jointe introuvable sur le serveur mail.");
+      }
+      const content = Buffer.isBuffer(att.content)
+        ? att.content
+        : Buffer.from(att.content);
+      return {
+        content,
+        contentType: att.contentType || "application/octet-stream",
+        filename: att.filename || input.filename,
+      };
+    } finally {
+      lock.release();
+    }
+  } catch (error) {
+    throw new Error(sanitizeMailError(error, "Échec téléchargement pièce jointe."));
+  } finally {
+    try {
+      await client.logout();
+    } catch {
+      client.close();
+    }
+  }
 }

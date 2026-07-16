@@ -415,6 +415,7 @@ export async function findThreadBySubjectFallback(input: {
        FROM crm_mail_threads
        WHERE mailbox_id = $1
          AND status = 'open'
+         AND deleted_at IS NULL
          AND last_message_at > NOW() - INTERVAL '60 days'
        ORDER BY last_message_at DESC NULLS LAST
        LIMIT 40`,
@@ -556,15 +557,20 @@ export async function insertMailMessage(input: {
 
 export async function insertMailAttachments(
   messageId: string,
-  attachments: Array<{ filename: string; contentType: string; sizeBytes: number }>,
+  attachments: Array<{
+    filename: string;
+    contentType: string;
+    sizeBytes: number;
+    s3Key?: string | null;
+  }>,
 ): Promise<void> {
   if (attachments.length === 0) return;
   await withDb(async (query) => {
     for (const att of attachments) {
       await query(
-        `INSERT INTO crm_mail_attachments (message_id, filename, content_type, size_bytes)
-         VALUES ($1, $2, $3, $4)`,
-        [messageId, att.filename, att.contentType, att.sizeBytes],
+        `INSERT INTO crm_mail_attachments (message_id, filename, content_type, size_bytes, s3_key)
+         VALUES ($1, $2, $3, $4, $5)`,
+        [messageId, att.filename, att.contentType, att.sizeBytes, att.s3Key ?? null],
       );
     }
   });
@@ -598,7 +604,7 @@ export async function listMailThreads(
 ): Promise<CrmMailThread[]> {
   const limit = Math.min(Math.max(filters.limit ?? 50, 1), 200);
   const params: unknown[] = [];
-  const where: string[] = [];
+  const where: string[] = ["deleted_at IS NULL"];
 
   if (filters.mailboxId) {
     params.push(filters.mailboxId);
@@ -627,7 +633,7 @@ export async function listMailThreads(
   }
 
   params.push(limit);
-  const whereSql = where.length > 0 ? `WHERE ${where.join(" AND ")}` : "";
+  const whereSql = `WHERE ${where.join(" AND ")}`;
 
   return withDb(async (query) => {
     const { rows } = await query<ThreadRow>(
@@ -682,7 +688,7 @@ export async function getMailThreadById(
     const { rows } = await query<ThreadRow>(
       `SELECT ${THREAD_COLUMNS}
        FROM crm_mail_threads
-       WHERE id = $1
+       WHERE id = $1 AND deleted_at IS NULL
        LIMIT 1`,
       [threadId],
     );
@@ -697,7 +703,7 @@ export async function listMailMessagesByThreadId(
     const { rows } = await query<MessageRow>(
       `SELECT ${MESSAGE_COLUMNS}
        FROM crm_mail_messages
-       WHERE thread_id = $1
+       WHERE thread_id = $1 AND deleted_at IS NULL
        ORDER BY received_at ASC, created_at ASC`,
       [threadId],
     );
@@ -721,6 +727,46 @@ export async function listMailAttachmentsByMessageIds(
   });
 }
 
+export type MailAttachmentDownloadContext = {
+  attachment: CrmMailAttachment;
+  messageId: string;
+  mailboxId: string;
+  folder: string;
+  uid: number;
+};
+
+export async function getMailAttachmentDownloadContext(
+  attachmentId: string,
+): Promise<MailAttachmentDownloadContext | null> {
+  return withDb(async (query) => {
+    const { rows } = await query<
+      AttachmentRow & {
+        msg_id: string;
+        mailbox_id: string;
+        folder: string;
+        uid: string | number;
+      }
+    >(
+      `SELECT a.id, a.message_id, a.filename, a.content_type, a.size_bytes, a.s3_key, a.created_at,
+              m.id AS msg_id, m.mailbox_id, m.folder, m.uid
+       FROM crm_mail_attachments a
+       JOIN crm_mail_messages m ON m.id = a.message_id
+       WHERE a.id = $1 AND m.deleted_at IS NULL
+       LIMIT 1`,
+      [attachmentId],
+    );
+    const row = rows[0];
+    if (!row) return null;
+    return {
+      attachment: mapAttachment(row),
+      messageId: row.msg_id,
+      mailboxId: row.mailbox_id,
+      folder: row.folder,
+      uid: Number(row.uid),
+    };
+  });
+}
+
 export async function markMailThreadRead(threadId: string): Promise<CrmMailThread | null> {
   return withDb(async (query) => {
     const { rows } = await query<ThreadRow>(
@@ -740,13 +786,133 @@ export async function countUnreadMailThreads(mailboxId?: string): Promise<number
       mailboxId
         ? `SELECT COUNT(*)::text AS count
            FROM crm_mail_threads
-           WHERE mailbox_id = $1 AND unread_count > 0 AND status = 'open'`
+           WHERE mailbox_id = $1 AND unread_count > 0 AND status = 'open' AND deleted_at IS NULL`
         : `SELECT COUNT(*)::text AS count
            FROM crm_mail_threads
-           WHERE unread_count > 0 AND status = 'open'`,
+           WHERE unread_count > 0 AND status = 'open' AND deleted_at IS NULL`,
       mailboxId ? [mailboxId] : [],
     );
     return Number(rows[0]?.count ?? 0);
+  });
+}
+
+/**
+ * Soft-delete de messages (tombstone IMAP : ne réapparaissent pas au sync).
+ * Si plus aucun message visible, soft-delete aussi le thread.
+ */
+export async function softDeleteMailMessages(
+  messageIds: string[],
+): Promise<{ deleted: number; threadIds: string[]; threadsDeleted: string[] }> {
+  const ids = [...new Set(messageIds.filter(Boolean))];
+  if (ids.length === 0) {
+    return { deleted: 0, threadIds: [], threadsDeleted: [] };
+  }
+
+  return withDb(async (query) => {
+    const { rows: targets } = await query<{ id: string; thread_id: string }>(
+      `SELECT id, thread_id
+       FROM crm_mail_messages
+       WHERE id = ANY($1::uuid[]) AND deleted_at IS NULL`,
+      [ids],
+    );
+    if (targets.length === 0) {
+      return { deleted: 0, threadIds: [], threadsDeleted: [] };
+    }
+
+    const targetIds = targets.map((t) => t.id);
+    const threadIds = [...new Set(targets.map((t) => t.thread_id))];
+
+    await query(
+      `UPDATE crm_mail_messages
+       SET deleted_at = NOW()
+       WHERE id = ANY($1::uuid[]) AND deleted_at IS NULL`,
+      [targetIds],
+    );
+
+    const threadsDeleted: string[] = [];
+    for (const threadId of threadIds) {
+      const { rows: remainingRows } = await query<{ count: string }>(
+        `SELECT COUNT(*)::text AS count
+         FROM crm_mail_messages
+         WHERE thread_id = $1 AND deleted_at IS NULL`,
+        [threadId],
+      );
+      const remaining = Number(remainingRows[0]?.count ?? 0);
+      if (remaining === 0) {
+        await query(
+          `UPDATE crm_mail_threads
+           SET deleted_at = COALESCE(deleted_at, NOW()), updated_at = NOW()
+           WHERE id = $1 AND deleted_at IS NULL`,
+          [threadId],
+        );
+        threadsDeleted.push(threadId);
+        continue;
+      }
+
+      await query(
+        `UPDATE crm_mail_threads t SET
+           snippet = COALESCE(
+             (SELECT LEFT(TRIM(body_text), 180)
+              FROM crm_mail_messages
+              WHERE thread_id = t.id AND deleted_at IS NULL
+              ORDER BY received_at DESC, created_at DESC
+              LIMIT 1),
+             ''
+           ),
+           last_message_at = (
+             SELECT received_at
+             FROM crm_mail_messages
+             WHERE thread_id = t.id AND deleted_at IS NULL
+             ORDER BY received_at DESC, created_at DESC
+             LIMIT 1
+           ),
+           updated_at = NOW()
+         WHERE t.id = $1 AND t.deleted_at IS NULL`,
+        [threadId],
+      );
+    }
+
+    return { deleted: targetIds.length, threadIds, threadsDeleted };
+  });
+}
+
+/** Soft-delete conversations (+ messages associés). */
+export async function softDeleteMailThreads(
+  threadIds: string[],
+): Promise<{ deleted: number }> {
+  const ids = [...new Set(threadIds.filter(Boolean))];
+  if (ids.length === 0) return { deleted: 0 };
+
+  return withDb(async (query) => {
+    await query(
+      `UPDATE crm_mail_messages
+       SET deleted_at = COALESCE(deleted_at, NOW())
+       WHERE thread_id = ANY($1::uuid[]) AND deleted_at IS NULL`,
+      [ids],
+    );
+    const { rowCount } = await query(
+      `UPDATE crm_mail_threads
+       SET deleted_at = NOW(), updated_at = NOW()
+       WHERE id = ANY($1::uuid[]) AND deleted_at IS NULL`,
+      [ids],
+    );
+    return { deleted: rowCount ?? 0 };
+  });
+}
+
+export async function updateMailThreadStatus(
+  threadId: string,
+  status: CrmMailThreadStatus,
+): Promise<CrmMailThread | null> {
+  return withDb(async (query) => {
+    const { rows } = await query<ThreadRow>(
+      `UPDATE crm_mail_threads
+       SET status = $2, updated_at = NOW()
+       WHERE id = $1 AND deleted_at IS NULL
+       RETURNING ${THREAD_COLUMNS}`,
+      [threadId, status],
+    );
+    return rows[0] ? mapThread(rows[0]) : null;
   });
 }
 

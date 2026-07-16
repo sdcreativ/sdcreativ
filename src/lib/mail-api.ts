@@ -138,8 +138,23 @@ export async function replyMailThreadApi(
     bodyText: string;
     bodyHtml?: string | null;
     includeSignature?: boolean;
+    mode?: "reply" | "replyAll" | "forward";
+    to?: string;
+    cc?: string;
+    bcc?: string;
+    subject?: string;
+    attachments?: Array<{
+      filename: string;
+      contentType: string;
+      contentBase64: string;
+    }>;
   },
-): Promise<{ message: MailThreadMessage; to: string[] }> {
+): Promise<{
+  message: MailThreadMessage;
+  to: string[];
+  cc?: string[];
+  thread?: CrmMailThread | null;
+}> {
   const res = await fetch(`/api/admin/mail/threads/${threadId}/reply`, {
     method: "POST",
     credentials: "include",
@@ -153,10 +168,16 @@ export async function composeMailApi(input: {
   mailboxId: string;
   to: string;
   cc?: string;
+  bcc?: string;
   subject: string;
   bodyText: string;
   bodyHtml?: string | null;
   includeSignature?: boolean;
+  attachments?: Array<{
+    filename: string;
+    contentType: string;
+    contentBase64: string;
+  }>;
 }): Promise<{
   thread: CrmMailThread;
   message: MailThreadMessage;
@@ -169,6 +190,25 @@ export async function composeMailApi(input: {
     body: JSON.stringify(input),
   });
   return parseJson(res);
+}
+
+export type MailContactSuggestion = {
+  email: string;
+  name: string;
+  source: "client" | "lead";
+};
+
+export async function searchMailContactsApi(q: string): Promise<MailContactSuggestion[]> {
+  const params = new URLSearchParams({ q });
+  const res = await fetch(`/api/admin/mail/contacts?${params}`, {
+    credentials: "include",
+  });
+  const json = await parseJson<{ contacts: MailContactSuggestion[] }>(res);
+  return json.contacts;
+}
+
+export function mailAttachmentDownloadUrl(attachmentId: string): string {
+  return `/api/admin/mail/attachments/${attachmentId}`;
 }
 
 export async function saveMailDraftApi(
@@ -195,6 +235,48 @@ export async function deleteMailDraftApi(threadId: string): Promise<void> {
     credentials: "include",
   });
   await parseJson<{ ok: boolean }>(res);
+}
+
+export async function deleteMailMessageApi(
+  messageId: string,
+): Promise<{ deleted: number; threadsDeleted: string[] }> {
+  const res = await fetch(`/api/admin/mail/messages/${messageId}`, {
+    method: "DELETE",
+    credentials: "include",
+  });
+  return parseJson(res);
+}
+
+export async function bulkDeleteMailMessagesApi(
+  ids: string[],
+): Promise<{ deleted: number; threadsDeleted: string[] }> {
+  const res = await fetch("/api/admin/mail/messages/bulk-delete", {
+    method: "POST",
+    credentials: "include",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ ids }),
+  });
+  return parseJson(res);
+}
+
+export async function deleteMailThreadApi(threadId: string): Promise<{ deleted: number }> {
+  const res = await fetch(`/api/admin/mail/threads/${threadId}`, {
+    method: "DELETE",
+    credentials: "include",
+  });
+  return parseJson(res);
+}
+
+export async function bulkDeleteMailThreadsApi(
+  ids: string[],
+): Promise<{ deleted: number }> {
+  const res = await fetch("/api/admin/mail/threads/bulk-delete", {
+    method: "POST",
+    credentials: "include",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ ids }),
+  });
+  return parseJson(res);
 }
 
 export async function linkMailThreadApi(

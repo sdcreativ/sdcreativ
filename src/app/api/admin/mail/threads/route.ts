@@ -18,10 +18,21 @@ const composeSchema = z.object({
   mailboxId: z.string().uuid(),
   to: z.union([z.string().trim().min(1), z.array(z.string().trim().min(1)).min(1)]),
   cc: z.union([z.string().trim(), z.array(z.string().trim())]).optional(),
+  bcc: z.union([z.string().trim(), z.array(z.string().trim())]).optional(),
   subject: z.string().trim().max(500).default(""),
-  bodyText: z.string().trim().min(1).max(100_000),
+  bodyText: z.string().trim().max(100_000).default(""),
   bodyHtml: z.string().max(500_000).nullable().optional(),
   includeSignature: z.boolean().optional(),
+  attachments: z
+    .array(
+      z.object({
+        filename: z.string().trim().min(1).max(260),
+        contentType: z.string().trim().max(160).default("application/octet-stream"),
+        contentBase64: z.string().min(1).max(8_000_000),
+      }),
+    )
+    .max(8)
+    .optional(),
 });
 
 function splitAddresses(value: string | string[] | undefined): string[] {
@@ -104,10 +115,12 @@ export async function POST(request: Request) {
       mailboxId: parsed.data.mailboxId,
       to: splitAddresses(parsed.data.to),
       cc: splitAddresses(parsed.data.cc),
+      bcc: splitAddresses(parsed.data.bcc),
       subject: parsed.data.subject,
       bodyText: parsed.data.bodyText,
       bodyHtml: parsed.data.bodyHtml,
       includeSignature: parsed.data.includeSignature,
+      attachments: parsed.data.attachments,
     });
 
     await auditCrmAction({
