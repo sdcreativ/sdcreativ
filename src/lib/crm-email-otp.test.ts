@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   generateLoginEmailOtp,
   hashLoginEmailOtp,
+  resolveLoginOtpDestination,
 } from "@/lib/crm-email-otp";
 import { normalizeLoginEmailOtp } from "@/lib/crm-email-otp-utils";
 
@@ -10,6 +11,35 @@ describe("generateLoginEmailOtp", () => {
     const code = generateLoginEmailOtp();
     expect(code).toMatch(/^SD-[A-Z2-9]{6}$/);
     expect(code).not.toMatch(/[01IO]/);
+  });
+});
+
+describe("resolveLoginOtpDestination", () => {
+  it("préfère l’email personnel", () => {
+    expect(
+      resolveLoginOtpDestination({
+        professionalEmail: "paterne.g@sdcreativ.com",
+        personalEmail: "paterne@gmail.com",
+      }),
+    ).toEqual({ to: "paterne@gmail.com", channel: "personal" });
+  });
+
+  it("retombe sur le pro si pas de perso", () => {
+    expect(
+      resolveLoginOtpDestination({
+        professionalEmail: "paterne.g@sdcreativ.com",
+        personalEmail: null,
+      }),
+    ).toEqual({ to: "paterne.g@sdcreativ.com", channel: "professional" });
+  });
+
+  it("ignore le perso s’il est identique au pro", () => {
+    expect(
+      resolveLoginOtpDestination({
+        professionalEmail: "contact@sdcreativ.com",
+        personalEmail: "contact@sdcreativ.com",
+      }),
+    ).toEqual({ to: "contact@sdcreativ.com", channel: "professional" });
   });
 });
 

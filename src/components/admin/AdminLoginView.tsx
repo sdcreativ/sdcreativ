@@ -66,6 +66,8 @@ export function AdminLoginView() {
   const [resendBusy, setResendBusy] = useState(false);
   const [resendMessage, setResendMessage] = useState("");
   const [pendingUser, setPendingUser] = useState<{ name: string; email: string } | null>(null);
+  const [otpSentTo, setOtpSentTo] = useState<string | null>(null);
+  const [otpChannel, setOtpChannel] = useState<"personal" | "professional" | null>(null);
 
   function isOtpCodeValid(): boolean {
     if (twoFactorMethod === "totp") return otpCode.length === 6;
@@ -82,9 +84,19 @@ export function AdminLoginView() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ challengeToken }),
       });
-      const data = (await res.json()) as { error?: string };
+      const data = (await res.json()) as {
+        error?: string;
+        otpSentTo?: string;
+        otpChannel?: "personal" | "professional";
+      };
       if (!res.ok) throw new Error(data.error ?? "Renvoi impossible.");
-      setResendMessage("Un nouveau code a été envoyé par email.");
+      if (data.otpSentTo) setOtpSentTo(data.otpSentTo);
+      if (data.otpChannel) setOtpChannel(data.otpChannel);
+      setResendMessage(
+        data.otpChannel === "personal"
+          ? "Un nouveau code a été envoyé sur votre email personnel."
+          : "Un nouveau code a été envoyé par email.",
+      );
       setOtpCode("");
     } catch (err) {
       setError(err instanceof Error ? err.message : "Renvoi impossible.");
@@ -135,6 +147,8 @@ export function AdminLoginView() {
         method?: Login2faMethod;
         mustChangePassword?: boolean;
         challengeToken?: string;
+        otpSentTo?: string;
+        otpChannel?: "personal" | "professional";
         user?: { name: string; email: string };
       };
 
@@ -146,6 +160,8 @@ export function AdminLoginView() {
         setChallengeToken(data.challengeToken);
         setTwoFactorMethod(data.method ?? "email");
         setPendingUser(data.user ?? null);
+        setOtpSentTo(data.otpSentTo ?? data.user?.email ?? null);
+        setOtpChannel(data.otpChannel ?? "professional");
         setStep("2fa");
         setOtpCode("");
         setResendMessage("");
@@ -235,9 +251,23 @@ export function AdminLoginView() {
               <p className="mt-4 rounded-xl border border-primary/20 bg-primary-light/30 px-4 py-2.5 text-sm text-gray-text">
                 {twoFactorMethod === "email" ? (
                   <>
-                    Code envoyé à{" "}
-                    <span className="font-semibold text-foreground">{pendingUser.email}</span>
-                    {" "}(format SD-XXXXXX, valable 10 min).
+                    Code envoyé{" "}
+                    {otpChannel === "personal" ? (
+                      <>
+                        sur votre <span className="font-semibold text-foreground">email personnel</span>{" "}
+                        <span className="font-semibold text-foreground">
+                          {otpSentTo ?? "…"}
+                        </span>
+                      </>
+                    ) : (
+                      <>
+                        à{" "}
+                        <span className="font-semibold text-foreground">
+                          {otpSentTo ?? pendingUser.email}
+                        </span>
+                      </>
+                    )}{" "}
+                    (format SD-XXXXXX, valable 10 min).
                   </>
                 ) : (
                   <>

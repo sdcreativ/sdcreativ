@@ -62,7 +62,11 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: result.error }, { status: 503 });
     }
 
-    return NextResponse.json({ success: true });
+    return NextResponse.json({
+      success: true,
+      otpSentTo: result.sentTo,
+      otpChannel: result.channel,
+    });
   } catch (error) {
     console.error("[api/admin/login/2fa/resend] POST", error);
     return NextResponse.json({ error: "Erreur serveur." }, { status: 500 });

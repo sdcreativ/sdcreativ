@@ -102,6 +102,7 @@ export async function POST(request: Request) {
       userId: user.id,
       email: user.email,
       name: user.name,
+      personalEmail: user.personalEmail,
       ipAddress,
     });
     if (!otpResult.ok) {
@@ -120,6 +121,8 @@ export async function POST(request: Request) {
       requires2fa: true,
       method: "email",
       challengeToken,
+      otpSentTo: otpResult.sentTo,
+      otpChannel: otpResult.channel,
       user: { name: user.name, email: user.email },
       mustChangePassword: user.mustChangePassword,
     });

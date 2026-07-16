@@ -9,6 +9,13 @@ export { normalizeLoginEmailOtp } from "@/lib/crm-email-otp-utils";
 export const LOGIN_OTP_EXPIRY_MINUTES = 10;
 export const LOGIN_OTP_RESEND_COOLDOWN_SEC = 60;
 
+export type LoginOtpChannel = "personal" | "professional";
+
+export type LoginOtpDestination = {
+  to: string;
+  channel: LoginOtpChannel;
+};
+
 /** Sans 0/O/1/I pour une saisie fiable. */
 const OTP_CHARSET = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
 
@@ -22,6 +29,36 @@ export function generateLoginEmailOtp(): string {
 
 export function hashLoginEmailOtp(code: string): string {
   return createHash("sha256").update(code.trim().toUpperCase()).digest("hex");
+}
+
+/** Préfère l’email personnel ; sinon email pro (comptes legacy). */
+export function resolveLoginOtpDestination(input: {
+  professionalEmail: string;
+  personalEmail?: string | null;
+}): LoginOtpDestination {
+  const personal = input.personalEmail?.trim().toLowerCase() || null;
+  const professional = input.professionalEmail.trim().toLowerCase();
+  if (personal && personal.includes("@") && personal !== professional) {
+    return { to: personal, channel: "personal" };
+  }
+  return { to: professional, channel: "professional" };
+}
+
+export async function lookupLoginOtpDestination(
+  userId: string,
+): Promise<LoginOtpDestination | null> {
+  return withDb(async (query) => {
+    const { rows } = await query<{ email: string; personal_email: string | null }>(
+      `SELECT email, personal_email FROM crm_users WHERE id = $1 LIMIT 1`,
+      [userId],
+    );
+    const row = rows[0];
+    if (!row?.email) return null;
+    return resolveLoginOtpDestination({
+      professionalEmail: row.email,
+      personalEmail: row.personal_email,
+    });
+  });
 }
 
 export function buildLoginOtpEmailHtml(params: {
@@ -83,15 +120,24 @@ export async function issueLoginEmailOtp(params: {
   userId: string;
   email: string;
   name: string;
+  personalEmail?: string | null;
   ipAddress?: string;
-}): Promise<{ ok: true } | { ok: false; error: string }> {
+}): Promise<
+  | { ok: true; sentTo: string; channel: LoginOtpChannel }
+  | { ok: false; error: string }
+> {
+  const destination = resolveLoginOtpDestination({
+    professionalEmail: params.email,
+    personalEmail: params.personalEmail,
+  });
+
   const code = generateLoginEmailOtp();
   const hash = hashLoginEmailOtp(code);
   const expiresAt = new Date(Date.now() + LOGIN_OTP_EXPIRY_MINUTES * 60_000);
 
   const sent = await sendLoginOtpEmail({
     name: params.name,
-    email: params.email,
+    email: destination.to,
     code,
     ipAddress: params.ipAddress,
   });
@@ -112,15 +158,19 @@ export async function issueLoginEmailOtp(params: {
     );
   });
 
-  return { ok: true };
+  return { ok: true, sentTo: destination.to, channel: destination.channel };
 }
 
 export async function resendLoginEmailOtp(params: {
   userId: string;
   email: string;
   name: string;
+  personalEmail?: string | null;
   ipAddress?: string;
-}): Promise<{ ok: true } | { ok: false; error: string; retryAfterSec?: number }> {
+}): Promise<
+  | { ok: true; sentTo: string; channel: LoginOtpChannel }
+  | { ok: false; error: string; retryAfterSec?: number }
+> {
   const cooldown = await withDb(async (query) => {
     const { rows } = await query<{ login_otp_sent_at: string | null }>(
       `SELECT login_otp_sent_at FROM crm_users WHERE id = $1`,
@@ -141,7 +191,18 @@ export async function resendLoginEmailOtp(params: {
     }
   }
 
-  return issueLoginEmailOtp(params);
+  const lookedUp = await lookupLoginOtpDestination(params.userId);
+  if (!lookedUp) {
+    return { ok: false, error: "Utilisateur introuvable." };
+  }
+
+  return issueLoginEmailOtp({
+    userId: params.userId,
+    email: params.email,
+    name: params.name,
+    personalEmail: lookedUp.channel === "personal" ? lookedUp.to : null,
+    ipAddress: params.ipAddress,
+  });
 }
 
 export async function verifyLoginEmailOtp(userId: string, rawCode: string): Promise<boolean> {
