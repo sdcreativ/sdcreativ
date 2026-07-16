@@ -149,6 +149,28 @@ export async function replyMailThreadApi(
   return parseJson(res);
 }
 
+export async function composeMailApi(input: {
+  mailboxId: string;
+  to: string;
+  cc?: string;
+  subject: string;
+  bodyText: string;
+  bodyHtml?: string | null;
+  includeSignature?: boolean;
+}): Promise<{
+  thread: CrmMailThread;
+  message: MailThreadMessage;
+  to: string[];
+}> {
+  const res = await fetch("/api/admin/mail/threads", {
+    method: "POST",
+    credentials: "include",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(input),
+  });
+  return parseJson(res);
+}
+
 export async function saveMailDraftApi(
   threadId: string,
   input: {

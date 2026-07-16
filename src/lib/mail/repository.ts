@@ -439,13 +439,15 @@ export async function createMailThread(input: {
   lastMessageAt: Date;
   clientId?: string | null;
   leadId?: string | null;
+  /** Défaut 1 (inbound). 0 pour un envoi sortant. */
+  unreadCount?: number;
 }): Promise<string> {
   return withDb(async (query) => {
     const { rows } = await query<{ id: string }>(
       `INSERT INTO crm_mail_threads (
          mailbox_id, subject, snippet, participants, last_message_at,
          unread_count, status, client_id, lead_id
-       ) VALUES ($1, $2, $3, $4::jsonb, $5, 1, 'open', $6, $7)
+       ) VALUES ($1, $2, $3, $4::jsonb, $5, $6, 'open', $7, $8)
        RETURNING id`,
       [
         input.mailboxId,
@@ -453,6 +455,7 @@ export async function createMailThread(input: {
         input.snippet,
         JSON.stringify(input.participants),
         input.lastMessageAt.toISOString(),
+        input.unreadCount ?? 1,
         input.clientId ?? null,
         input.leadId ?? null,
       ],
