@@ -83,6 +83,7 @@ export async function ensureCrmRolesCache(): Promise<void> {
   if (!permissionsCache) {
     await refreshCrmRolesCache();
     await mergeAdminPermissionsCatalog();
+    await mergeSystemRoleDefaultPermissions();
   }
 }
 
@@ -104,6 +105,43 @@ async function mergeAdminPermissionsCatalog(): Promise<void> {
     invalidateCrmRolesCache();
     await refreshCrmRolesCache();
   });
+}
+
+/**
+ * Pour les rôles système non-admin : ajoute les permissions présentes dans
+ * ROLE_PERMISSIONS mais absentes en base (ex. nouveaux mail.*).
+ */
+async function mergeSystemRoleDefaultPermissions(): Promise<void> {
+  let changed = false;
+  await withDb(async (query) => {
+    for (const slug of SYSTEM_CRM_ROLES) {
+      if (slug === "admin") continue;
+      const defaults = ROLE_PERMISSIONS[slug];
+      if (!defaults?.length) continue;
+
+      const { rows } = await query<{ permissions: CrmPermission[] }>(
+        `SELECT permissions FROM crm_roles WHERE slug = $1 AND is_system = true LIMIT 1`,
+        [slug],
+      );
+      const row = rows[0];
+      if (!row) continue;
+
+      const current = row.permissions ?? [];
+      const merged = [...new Set([...current, ...defaults])];
+      if (merged.length === current.length) continue;
+
+      await query(
+        `UPDATE crm_roles SET permissions = $2::jsonb, updated_at = NOW() WHERE slug = $1`,
+        [slug, JSON.stringify(merged)],
+      );
+      changed = true;
+    }
+  });
+
+  if (changed) {
+    invalidateCrmRolesCache();
+    await refreshCrmRolesCache();
+  }
 }
 
 export function getCachedRolePermissions(slug: string): CrmPermission[] {

@@ -31,6 +31,7 @@ import { KanbanDropColumn, KANBAN_DRAG_MIME } from "@/lib/kanban-dnd";
 import { useCrmAssignees } from "@/hooks/useCrmTeamMembers";
 import { LeadActivityTimeline } from "@/components/admin/LeadActivityTimeline";
 import { LeadEmailComposer } from "@/components/admin/LeadEmailComposer";
+import { MailLinkedThreadsSection } from "@/components/admin/MailLinkedThreadsSection";
 import { getLeadPresentationMeta } from "@/lib/presentation-lead-meta";
 import { PRESENTATION_LOCATION_LABELS } from "@/lib/presentation-slides";
 import { cn } from "@/lib/utils";
@@ -826,6 +827,8 @@ function LeadDetailPanel({
             )}
 
             <LeadActivityTimeline leadId={lead.id} refreshKey={activityRefreshKey} />
+
+            <MailLinkedThreadsSection leadId={lead.id} />
           </div>
           <div className="flex gap-2 border-t border-gray/40 px-5 py-4">
             <button

@@ -11,6 +11,15 @@ import { isDatabaseConfigured, withDb } from "@/lib/db";
 import { isS3Configured } from "@/lib/s3";
 import { getStorageErrorMessage } from "@/lib/s3-errors";
 import { isCinetPayConfigured } from "@/lib/payment-settings";
+import {
+  getMailPhase0Readiness,
+  isHostingerMailWebhookConfigured,
+  isMailCredentialsSecretConfigured,
+  isMailSyncEnabled,
+  MAIL_V1_SHARED_MAILBOX,
+} from "@/lib/mail/config";
+import { getMailPhase1Validation } from "@/lib/mail/validation";
+import { listActiveMailboxes } from "@/lib/mail/repository";
 import { readPublicEnv } from "@/lib/env-runtime";
 import { BOOKING } from "@/lib/constants";
 
@@ -245,6 +254,133 @@ function checkCinetPay(): IntegrationHealth {
   };
 }
 
+async function checkMailMessagerie(): Promise<IntegrationHealth> {
+  const envVars = [
+    "MAIL_CREDENTIALS_SECRET",
+    "MAIL_SYNC_ENABLED",
+    "MAIL_IMAP_HOST",
+    "MAIL_SMTP_HOST",
+    "HOSTINGER_MAIL_WEBHOOK_SECRET",
+  ];
+  const readiness = getMailPhase0Readiness();
+
+  if (!isMailCredentialsSecretConfigured()) {
+    return {
+      id: "mail",
+      name: "Messagerie (Hostinger)",
+      status: "missing",
+      detail: "Phase 0 — secret de chiffrement absent",
+      hint: `Ajoutez MAIL_CREDENTIALS_SECRET (≥32 car.) avant la sync IMAP de ${MAIL_V1_SHARED_MAILBOX}.`,
+      envVars,
+    };
+  }
+
+  if (isDatabaseConfigured()) {
+    try {
+      const [validation, activeBoxes] = await Promise.all([
+        getMailPhase1Validation(),
+        listActiveMailboxes(),
+      ]);
+
+      const withError = activeBoxes.filter((b) => Boolean(b.lastError));
+      const synced = activeBoxes.filter((b) => Boolean(b.lastSyncAt));
+      const boxesSummary =
+        activeBoxes.length === 0
+          ? "aucune boîte active"
+          : `${synced.length}/${activeBoxes.length} sync OK` +
+            (withError.length > 0 ? `, ${withError.length} erreur(s)` : "");
+
+      const lastSyncHint = activeBoxes
+        .slice(0, 4)
+        .map((b) => {
+          if (b.lastError) return `${b.email}: erreur`;
+          if (!b.lastSyncAt) return `${b.email}: jamais`;
+          const t = new Date(b.lastSyncAt).toLocaleString("fr-FR", {
+            day: "numeric",
+            month: "short",
+            hour: "2-digit",
+            minute: "2-digit",
+          });
+          return `${b.email}: ${t}`;
+        })
+        .join(" · ");
+
+      if (withError.length > 0) {
+        return {
+          id: "mail",
+          name: "Messagerie (Hostinger)",
+          status: "degraded",
+          detail: `Boîtes : ${boxesSummary}`,
+          hint: lastSyncHint || withError[0]?.lastError || "Vérifiez les MDP IMAP.",
+          envVars,
+        };
+      }
+
+      if (validation.go && activeBoxes.length > 0) {
+        const webhookHint = isHostingerMailWebhookConfigured()
+          ? "Webhook Agentic Mail actif (+ cron fallback)."
+          : "Optionnel : HOSTINGER_MAIL_WEBHOOK_SECRET + webhook hPanel pour le temps réel.";
+        return {
+          id: "mail",
+          name: "Messagerie (Hostinger)",
+          status: "ok",
+          detail: `${validation.messageCount} msg — ${boxesSummary}`,
+          hint:
+            lastSyncHint ||
+            (validation.syncEnabled
+              ? `Cron mail-sync 5 min. ${webhookHint}`
+              : `Activez MAIL_SYNC_ENABLED=1 + cron. ${webhookHint}`),
+          envVars,
+        };
+      }
+
+      const blocker = validation.blockers[0];
+      return {
+        id: "mail",
+        name: "Messagerie (Hostinger)",
+        status: validation.mailboxConfigured || activeBoxes.length > 0 ? "configured" : "missing",
+        detail: blocker
+          ? `En cours — ${blocker}`
+          : `En cours (${validation.messageCount} messages, ${boxesSummary})`,
+        hint: lastSyncHint || "Messagerie CRM → Synchroniser / Connecter boîte.",
+        envVars,
+      };
+    } catch {
+      // fallback env-only ci-dessous
+    }
+  }
+
+  if (!isMailSyncEnabled()) {
+    return {
+      id: "mail",
+      name: "Messagerie (Hostinger)",
+      status: "configured",
+      detail: `Prêt — sync off (${MAIL_V1_SHARED_MAILBOX})`,
+      hint: "Configurez la boîte puis synchronisez depuis Messagerie ; activez MAIL_SYNC_ENABLED=1 + cron.",
+      envVars,
+    };
+  }
+
+  if (!readiness.go) {
+    return {
+      id: "mail",
+      name: "Messagerie (Hostinger)",
+      status: "missing",
+      detail: readiness.blockers[0] ?? "Configuration incomplète",
+      hint: readiness.blockers.join(" "),
+      envVars,
+    };
+  }
+
+  return {
+    id: "mail",
+    name: "Messagerie (Hostinger)",
+    status: "ok",
+    detail: `Sync activée — ${MAIL_V1_SHARED_MAILBOX} + boîtes individuelles`,
+    envVars,
+  };
+}
+
 function checkAnalytics(): IntegrationHealth {
   const envVars = ["NEXT_PUBLIC_GA_MEASUREMENT_ID"];
   const gaId = readPublicEnv("NEXT_PUBLIC_GA_MEASUREMENT_ID");
@@ -272,7 +408,11 @@ export async function getSettingsHealth(session?: {
   role: CrmRole;
   roleLabel?: string;
 } | null): Promise<SettingsHealth> {
-  const [database, s3] = await Promise.all([checkDatabase(), checkS3()]);
+  const [database, s3, mail] = await Promise.all([
+    checkDatabase(),
+    checkS3(),
+    checkMailMessagerie(),
+  ]);
 
   const integrations = [
     checkAdmin(),
@@ -280,6 +420,7 @@ export async function getSettingsHealth(session?: {
     s3,
     checkResend(),
     checkCinetPay(),
+    mail,
     checkBooking(),
     checkSanity(),
     checkOpenAI(),

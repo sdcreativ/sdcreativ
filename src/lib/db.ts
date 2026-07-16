@@ -493,6 +493,104 @@ async function ensureSchema(): Promise<void> {
     ALTER TABLE crm_users ADD COLUMN IF NOT EXISTS personal_email VARCHAR(255);
     ALTER TABLE crm_users ADD COLUMN IF NOT EXISTS mailbox_onboarding_pending BOOLEAN NOT NULL DEFAULT false;
 
+    -- Messagerie CRM (Hostinger IMAP) — Phase 1.1
+    CREATE TABLE IF NOT EXISTS crm_mailboxes (
+      id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+      email VARCHAR(255) NOT NULL UNIQUE,
+      display_name VARCHAR(160) NOT NULL DEFAULT '',
+      imap_host VARCHAR(255) NOT NULL DEFAULT 'imap.hostinger.com',
+      imap_port INTEGER NOT NULL DEFAULT 993,
+      smtp_host VARCHAR(255) NOT NULL DEFAULT 'smtp.hostinger.com',
+      smtp_port INTEGER NOT NULL DEFAULT 465,
+      credentials_encrypted TEXT NOT NULL DEFAULT '',
+      active BOOLEAN NOT NULL DEFAULT true,
+      user_id UUID REFERENCES crm_users(id) ON DELETE SET NULL,
+      last_sync_at TIMESTAMPTZ,
+      last_uid BIGINT NOT NULL DEFAULT 0,
+      last_error TEXT,
+      created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+      updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    );
+    CREATE INDEX IF NOT EXISTS idx_crm_mailboxes_active ON crm_mailboxes (active) WHERE active = true;
+    CREATE INDEX IF NOT EXISTS idx_crm_mailboxes_user ON crm_mailboxes (user_id) WHERE user_id IS NOT NULL;
+
+    CREATE TABLE IF NOT EXISTS crm_mail_threads (
+      id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+      mailbox_id UUID NOT NULL REFERENCES crm_mailboxes(id) ON DELETE CASCADE,
+      subject VARCHAR(500) NOT NULL DEFAULT '',
+      snippet TEXT NOT NULL DEFAULT '',
+      participants JSONB NOT NULL DEFAULT '[]',
+      last_message_at TIMESTAMPTZ,
+      unread_count INTEGER NOT NULL DEFAULT 0,
+      client_id UUID REFERENCES clients(id) ON DELETE SET NULL,
+      lead_id UUID REFERENCES leads(id) ON DELETE SET NULL,
+      status VARCHAR(20) NOT NULL DEFAULT 'open',
+      created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+      updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+      CONSTRAINT crm_mail_threads_status_check CHECK (status IN ('open', 'archived'))
+    );
+    CREATE INDEX IF NOT EXISTS idx_crm_mail_threads_mailbox_last
+      ON crm_mail_threads (mailbox_id, last_message_at DESC NULLS LAST);
+    CREATE INDEX IF NOT EXISTS idx_crm_mail_threads_status ON crm_mail_threads (status);
+    CREATE INDEX IF NOT EXISTS idx_crm_mail_threads_client ON crm_mail_threads (client_id)
+      WHERE client_id IS NOT NULL;
+    CREATE INDEX IF NOT EXISTS idx_crm_mail_threads_lead ON crm_mail_threads (lead_id)
+      WHERE lead_id IS NOT NULL;
+
+    CREATE TABLE IF NOT EXISTS crm_mail_messages (
+      id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+      thread_id UUID NOT NULL REFERENCES crm_mail_threads(id) ON DELETE CASCADE,
+      mailbox_id UUID NOT NULL REFERENCES crm_mailboxes(id) ON DELETE CASCADE,
+      message_id VARCHAR(512) NOT NULL,
+      in_reply_to VARCHAR(512),
+      uid BIGINT NOT NULL,
+      folder VARCHAR(120) NOT NULL DEFAULT 'INBOX',
+      from_address VARCHAR(320) NOT NULL,
+      to_addresses JSONB NOT NULL DEFAULT '[]',
+      cc_addresses JSONB NOT NULL DEFAULT '[]',
+      subject VARCHAR(500) NOT NULL DEFAULT '',
+      body_text TEXT NOT NULL DEFAULT '',
+      body_html TEXT,
+      received_at TIMESTAMPTZ NOT NULL,
+      direction VARCHAR(10) NOT NULL DEFAULT 'inbound',
+      raw_headers JSONB NOT NULL DEFAULT '{}',
+      created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+      CONSTRAINT crm_mail_messages_direction_check CHECK (direction IN ('inbound', 'outbound')),
+      CONSTRAINT crm_mail_messages_mailbox_message_id_unique UNIQUE (mailbox_id, message_id),
+      CONSTRAINT crm_mail_messages_mailbox_folder_uid_unique UNIQUE (mailbox_id, folder, uid)
+    );
+    CREATE INDEX IF NOT EXISTS idx_crm_mail_messages_thread_received
+      ON crm_mail_messages (thread_id, received_at DESC);
+    CREATE INDEX IF NOT EXISTS idx_crm_mail_messages_mailbox_uid
+      ON crm_mail_messages (mailbox_id, uid);
+
+    CREATE TABLE IF NOT EXISTS crm_mail_attachments (
+      id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+      message_id UUID NOT NULL REFERENCES crm_mail_messages(id) ON DELETE CASCADE,
+      filename VARCHAR(260) NOT NULL,
+      content_type VARCHAR(160) NOT NULL DEFAULT 'application/octet-stream',
+      size_bytes BIGINT NOT NULL DEFAULT 0,
+      s3_key VARCHAR(512),
+      created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    );
+    CREATE INDEX IF NOT EXISTS idx_crm_mail_attachments_message
+      ON crm_mail_attachments (message_id);
+
+    -- Brouillons réponses messagerie (Phase 2) — 1 brouillon par thread + utilisateur
+    CREATE TABLE IF NOT EXISTS crm_mail_drafts (
+      id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+      thread_id UUID NOT NULL REFERENCES crm_mail_threads(id) ON DELETE CASCADE,
+      user_id UUID NOT NULL REFERENCES crm_users(id) ON DELETE CASCADE,
+      body_text TEXT NOT NULL DEFAULT '',
+      body_html TEXT,
+      include_signature BOOLEAN NOT NULL DEFAULT true,
+      created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+      updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+      CONSTRAINT crm_mail_drafts_thread_user_unique UNIQUE (thread_id, user_id)
+    );
+    CREATE INDEX IF NOT EXISTS idx_crm_mail_drafts_user_updated
+      ON crm_mail_drafts (user_id, updated_at DESC);
+
     CREATE INDEX IF NOT EXISTS idx_clients_updated_at ON clients (updated_at DESC);
     CREATE INDEX IF NOT EXISTS idx_projects_updated_at ON projects (updated_at DESC);
     CREATE INDEX IF NOT EXISTS idx_projects_status ON projects (status);

@@ -26,6 +26,7 @@ import {
 } from "@/lib/clients-api";
 import type { Client, ClientInteraction, ClientOverview, DuplicateClientGroup } from "@/lib/clients";
 import { ClientPortalAccessPanel } from "@/components/admin/ClientPortalAccessPanel";
+import { MailLinkedThreadsSection } from "@/components/admin/MailLinkedThreadsSection";
 import { useCrmAssignees } from "@/hooks/useCrmTeamMembers";
 import { PROJECT_STATUS_LABELS } from "@/content/projects-labels";
 import { QUOTE_STATUS_LABELS } from "@/content/quotes-labels";
@@ -646,6 +647,8 @@ function ClientDetailPanel({
           )}
 
           <ClientOverviewSection client={client} />
+
+          <MailLinkedThreadsSection clientId={client.id} />
 
           <div>
             <h3 className="flex items-center gap-2 font-bold text-foreground">

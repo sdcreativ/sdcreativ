@@ -565,6 +565,7 @@ function CrmUsersSection({ roles }: { roles: CrmRoleRecord[] }) {
   const [inviteNameBase, setInviteNameBase] = useState("");
   const [emailLocalPartManual, setEmailLocalPartManual] = useState(false);
   const [mailboxConfirmed, setMailboxConfirmed] = useState(false);
+  const [connectMailboxToCrm, setConnectMailboxToCrm] = useState(true);
   const [creating, setCreating] = useState(false);
   const [copyHint, setCopyHint] = useState("");
 
@@ -599,6 +600,7 @@ function CrmUsersSection({ roles }: { roles: CrmRoleRecord[] }) {
     setInviteNameBase("");
     setEmailLocalPartManual(false);
     setMailboxConfirmed(false);
+    setConnectMailboxToCrm(true);
     setCopyHint("");
     setError("");
   }
@@ -731,11 +733,30 @@ function CrmUsersSection({ roles }: { roles: CrmRoleRecord[] }) {
         mailboxPassword: inviteMailboxPassword,
         role: String(data.get("role")),
       });
+
+      let mailboxLinked = false;
+      if (connectMailboxToCrm && inviteMailboxPassword) {
+        try {
+          const { connectMailMailboxApi } = await import("@/lib/mail-api");
+          await connectMailMailboxApi({
+            email: user.email,
+            password: inviteMailboxPassword,
+            userId: user.id,
+            displayName: user.name,
+          });
+          mailboxLinked = true;
+        } catch {
+          // Invitation OK même si la connexion IMAP échoue (MDP / secret)
+        }
+      }
+
       closeInviteForm();
       await loadUsers();
       setSuccess(
         invitationSent
-          ? `Invitation et accès mail envoyés à ${personalEmail} (boîte pro : ${user.email}).`
+          ? `Invitation et accès mail envoyés à ${personalEmail} (boîte pro : ${user.email})${
+              mailboxLinked ? " — boîte connectée au CRM." : ""
+            }`
           : `Compte créé pour ${user.email}, mais l'email n'a pas pu être envoyé (vérifiez Resend).`,
       );
     } catch (err) {
@@ -1176,6 +1197,19 @@ function CrmUsersSection({ roles }: { roles: CrmRoleRecord[] }) {
                   J&apos;ai créé la boîte Hostinger{" "}
                   <span className="font-medium text-foreground">{inviteEmail}</span> avec le mot de
                   passe ci-dessus (sinon l&apos;invité ne pourra pas recevoir ses emails pro).
+                </span>
+              </label>
+
+              <label className="flex cursor-pointer items-start gap-3 rounded-xl border border-gray/25 bg-white px-3.5 py-3">
+                <input
+                  type="checkbox"
+                  checked={connectMailboxToCrm}
+                  onChange={(e) => setConnectMailboxToCrm(e.target.checked)}
+                  className="mt-0.5 h-4 w-4 rounded border-gray/60 text-primary focus:ring-primary/30"
+                />
+                <span className="text-sm text-gray-text">
+                  Connecter aussi la boîte au CRM (IMAP chiffré) pour la Messagerie — le mot de
+                  passe n&apos;est jamais loggé.
                 </span>
               </label>
 

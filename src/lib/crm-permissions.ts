@@ -27,6 +27,9 @@ export const CRM_PERMISSIONS = [
   "blog.write",
   "site.read",
   "site.write",
+  "mail.read",
+  "mail.write",
+  "mail.manage",
 ] as const;
 
 export type CrmPermission = (typeof CRM_PERMISSIONS)[number];
@@ -66,6 +69,11 @@ export const CRM_PERMISSION_GROUPS: Array<{
     label: "Reporting & infra",
     permissions: ["reports.view", "infra.view"],
   },
+  {
+    id: "mail",
+    label: "Messagerie",
+    permissions: ["mail.read", "mail.write", "mail.manage"],
+  },
 ];
 
 export const CRM_PERMISSION_LABELS: Record<CrmPermission, string> = {
@@ -94,6 +102,9 @@ export const CRM_PERMISSION_LABELS: Record<CrmPermission, string> = {
   "blog.write": "Gérer le blog",
   "site.read": "Voir le contenu du site vitrine",
   "site.write": "Gérer le contenu du site vitrine",
+  "mail.read": "Voir la messagerie (emails Hostinger)",
+  "mail.write": "Répondre depuis la messagerie",
+  "mail.manage": "Configurer les boîtes mail synchronisées",
 };
 
 const ALL: CrmPermission[] = [...CRM_PERMISSIONS];
@@ -121,6 +132,10 @@ export const ROLE_PERMISSIONS: Record<CrmRole, CrmPermission[]> = {
     // Facturation & documents (lecture)
     "invoices.read",
     "documents.read",
+
+    // Messagerie partagée
+    "mail.read",
+    "mail.write",
   ],
   commercial: [
     "leads.read",
@@ -133,6 +148,8 @@ export const ROLE_PERMISSIONS: Record<CrmRole, CrmPermission[]> = {
     "tasks.write",
     "reports.view",
     "documents.read",
+    "mail.read",
+    "mail.write",
   ],
   project_manager: [
     "clients.read",
@@ -145,6 +162,8 @@ export const ROLE_PERMISSIONS: Record<CrmRole, CrmPermission[]> = {
     "reports.view",
     "documents.read",
     "documents.write",
+    "mail.read",
+    "mail.write",
   ],
   readonly: [
     "leads.read",
@@ -156,6 +175,7 @@ export const ROLE_PERMISSIONS: Record<CrmRole, CrmPermission[]> = {
     "tickets.read",
     "reports.view",
     "documents.read",
+    "mail.read",
   ],
 };
 
