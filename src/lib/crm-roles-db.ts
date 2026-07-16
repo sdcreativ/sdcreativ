@@ -1,6 +1,11 @@
 import { z } from "zod";
 import type { CrmPermission } from "@/lib/crm-permissions";
-import { CRM_PERMISSIONS, ROLE_PERMISSIONS, setRolePermissionsCache } from "@/lib/crm-permissions";
+import {
+  CRM_PERMISSIONS,
+  ROLE_PERMISSIONS,
+  TEAM_MAIL_PERMISSIONS,
+  setRolePermissionsCache,
+} from "@/lib/crm-permissions";
 import type { SystemCrmRole } from "@/content/crm-roles";
 import { CRM_ROLE_LABELS, SYSTEM_CRM_ROLES } from "@/content/crm-roles";
 import { withDb } from "@/lib/db";
@@ -47,6 +52,8 @@ export const updateCrmRoleSchema = z.object({
 
 let permissionsCache: Map<string, CrmPermission[]> | null = null;
 let labelsCache: Map<string, string> | null = null;
+/** Une fois par process : fusion catalogue / mail équipe (indépendant du cache rôles). */
+let catalogDefaultsMerged = false;
 
 export function invalidateCrmRolesCache(): void {
   permissionsCache = null;
@@ -82,8 +89,12 @@ export async function refreshCrmRolesCache(): Promise<void> {
 export async function ensureCrmRolesCache(): Promise<void> {
   if (!permissionsCache) {
     await refreshCrmRolesCache();
+  }
+  if (!catalogDefaultsMerged) {
     await mergeAdminPermissionsCatalog();
     await mergeSystemRoleDefaultPermissions();
+    await mergeTeamMailPermissions();
+    catalogDefaultsMerged = true;
   }
 }
 
@@ -144,6 +155,32 @@ async function mergeSystemRoleDefaultPermissions(): Promise<void> {
   }
 }
 
+/** mail.read + mail.write sur tous les rôles (système et personnalisés). */
+async function mergeTeamMailPermissions(): Promise<void> {
+  let changed = false;
+  await withDb(async (query) => {
+    const { rows } = await query<{ slug: string; permissions: CrmPermission[] }>(
+      `SELECT slug, permissions FROM crm_roles`,
+    );
+    for (const row of rows) {
+      const current = row.permissions ?? [];
+      const merged = [...new Set([...current, ...TEAM_MAIL_PERMISSIONS])];
+      if (merged.length === current.length) continue;
+
+      await query(
+        `UPDATE crm_roles SET permissions = $2::jsonb, updated_at = NOW() WHERE slug = $1`,
+        [row.slug, JSON.stringify(merged)],
+      );
+      changed = true;
+    }
+  });
+
+  if (changed) {
+    invalidateCrmRolesCache();
+    await refreshCrmRolesCache();
+  }
+}
+
 export function getCachedRolePermissions(slug: string): CrmPermission[] {
   if (permissionsCache?.has(slug)) {
     return permissionsCache.get(slug)!;
@@ -176,12 +213,13 @@ export async function roleSlugExists(slug: string): Promise<boolean> {
 }
 
 export async function createCrmRole(input: z.infer<typeof createCrmRoleSchema>): Promise<CrmRoleRecord> {
+  const permissions = [...new Set([...input.permissions, ...TEAM_MAIL_PERMISSIONS])];
   const role = await withDb(async (query) => {
     const { rows } = await query<RoleRow>(
       `INSERT INTO crm_roles (slug, label, permissions, is_system)
        VALUES ($1, $2, $3::jsonb, false)
        RETURNING id, slug, label, permissions, is_system, created_at, updated_at, '0' AS user_count`,
-      [input.slug, input.label, JSON.stringify(input.permissions)],
+      [input.slug, input.label, JSON.stringify(permissions)],
     );
     return mapRole(rows[0]!);
   });
@@ -193,6 +231,10 @@ export async function updateCrmRole(
   id: string,
   input: z.infer<typeof updateCrmRoleSchema>,
 ): Promise<CrmRoleRecord | null> {
+  const permissions = input.permissions
+    ? [...new Set([...input.permissions, ...TEAM_MAIL_PERMISSIONS])]
+    : null;
+
   const role = await withDb(async (query) => {
     const { rows: existing } = await query<{ slug: string; is_system: boolean }>(
       `SELECT slug, is_system FROM crm_roles WHERE id = $1`,
@@ -210,7 +252,7 @@ export async function updateCrmRole(
       [
         id,
         input.label ?? null,
-        input.permissions ? JSON.stringify(input.permissions) : null,
+        permissions ? JSON.stringify(permissions) : null,
       ],
     );
     const updated = rows[0];

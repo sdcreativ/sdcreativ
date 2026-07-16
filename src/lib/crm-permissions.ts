@@ -176,8 +176,12 @@ export const ROLE_PERMISSIONS: Record<CrmRole, CrmPermission[]> = {
     "reports.view",
     "documents.read",
     "mail.read",
+    "mail.write",
   ],
 };
+
+/** Accès messagerie pour toute l’équipe (hors mail.manage, réservé admin). */
+export const TEAM_MAIL_PERMISSIONS: CrmPermission[] = ["mail.read", "mail.write"];
 
 let dynamicRolePermissions: Map<string, CrmPermission[]> | null = null;
 
