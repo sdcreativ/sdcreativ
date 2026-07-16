@@ -11,7 +11,11 @@ import { hashPassword, verifyPassword } from "@/lib/crm-password";
 import { getCachedRoleLabel, ensureCrmRolesCache, roleSlugExists } from "@/lib/crm-roles-db";
 import { withDb } from "@/lib/db";
 import { getRolePermissions, roleHasPermission } from "@/lib/crm-permissions";
-import { isCrmTeamEmail, teamEmailValidationMessage } from "@/lib/crm-team-email";
+import {
+  generateMailboxPassword,
+  isCrmTeamEmail,
+  teamEmailValidationMessage,
+} from "@/lib/crm-team-email";
 
 export type CrmUser = {
   id: string;
@@ -21,6 +25,8 @@ export type CrmUser = {
   active: boolean;
   invitationPending: boolean;
   mustChangePassword: boolean;
+  personalEmail: string | null;
+  mailboxOnboardingPending: boolean;
   createdAt: string;
   updatedAt: string;
 };
@@ -35,6 +41,8 @@ type CrmUserRow = {
   must_change_password: boolean;
   invite_token_hash: string | null;
   invite_token_expires_at: Date | null;
+  personal_email: string | null;
+  mailbox_onboarding_pending: boolean;
   created_at: Date;
   updated_at: Date;
 };
@@ -42,6 +50,7 @@ type CrmUserRow = {
 const USER_COLUMNS = `
   id, email, password_hash, name, role, active, must_change_password,
   invite_token_hash, invite_token_expires_at,
+  personal_email, mailbox_onboarding_pending,
   created_at, updated_at
 `;
 
@@ -54,6 +63,8 @@ function mapUser(row: CrmUserRow): CrmUser {
     active: row.active,
     invitationPending: row.password_hash === null,
     mustChangePassword: row.must_change_password,
+    personalEmail: row.personal_email,
+    mailboxOnboardingPending: row.mailbox_onboarding_pending,
     createdAt: row.created_at.toISOString(),
     updatedAt: row.updated_at.toISOString(),
   };
@@ -68,12 +79,28 @@ const teamEmailField = z
     message: teamEmailValidationMessage(),
   });
 
-export const createCrmUserSchema = z.object({
-  email: teamEmailField,
-  name: z.string().trim().min(2).max(160),
-  role: z.string().trim().min(2).max(50).default("commercial"),
-  active: z.boolean().default(true),
-});
+const personalEmailField = z
+  .string()
+  .trim()
+  .email("Email personnel invalide.")
+  .max(255)
+  .refine((email) => !isCrmTeamEmail(email), {
+    message: "Utilisez l'email personnel de l'invité (Gmail, etc.), pas une adresse @sdcreativ.com.",
+  });
+
+export const createCrmUserSchema = z
+  .object({
+    email: teamEmailField,
+    personalEmail: personalEmailField,
+    name: z.string().trim().min(2).max(160),
+    role: z.string().trim().min(2).max(50).default("commercial"),
+    active: z.boolean().default(true),
+    mailboxPassword: z.string().min(12).max(64).optional(),
+  })
+  .refine((data) => data.personalEmail.toLowerCase() !== data.email.toLowerCase(), {
+    message: "L'email personnel doit être différent de l'email professionnel.",
+    path: ["personalEmail"],
+  });
 
 export const updateCrmUserSchema = z.object({
   email: teamEmailField.optional(),
@@ -107,8 +134,10 @@ function inviteExpiryDate(): Date {
 async function issueInvitation(
   userId: string,
   name: string,
-  email: string,
+  proEmail: string,
+  personalEmail: string,
   role: CrmRole,
+  mailboxPassword: string,
 ): Promise<{ token: string; sent: boolean }> {
   await ensureCrmRolesCache();
   const token = generateInviteToken();
@@ -128,7 +157,14 @@ async function issueInvitation(
 
   const roleLabel = getCachedRoleLabel(role);
   const inviteUrl = getInvitationUrl(token);
-  const sent = await sendUserInvitationEmail({ name, email, roleLabel, inviteUrl });
+  const sent = await sendUserInvitationEmail({
+    name,
+    personalEmail,
+    proEmail,
+    roleLabel,
+    inviteUrl,
+    mailboxPassword,
+  });
 
   return { token, sent };
 }
@@ -262,17 +298,35 @@ export async function createCrmUser(
     throw new Error("Cet email est déjà utilisé par un membre de l'équipe.");
   }
 
+  const mailboxPassword = input.mailboxPassword ?? generateMailboxPassword();
+
   const user = await withDb(async (query) => {
     const { rows } = await query<CrmUserRow>(
-      `INSERT INTO crm_users (email, password_hash, name, role, active)
-       VALUES ($1, NULL, $2, $3, $4)
+      `INSERT INTO crm_users (
+        email, password_hash, name, role, active,
+        personal_email, mailbox_onboarding_pending
+      )
+       VALUES ($1, NULL, $2, $3, $4, $5, true)
        RETURNING ${USER_COLUMNS}`,
-      [input.email.toLowerCase(), input.name, input.role, input.active],
+      [
+        input.email.toLowerCase(),
+        input.name,
+        input.role,
+        input.active,
+        input.personalEmail.toLowerCase(),
+      ],
     );
     return mapUser(rows[0]!);
   });
 
-  const { sent } = await issueInvitation(user.id, user.name, user.email, user.role);
+  const { sent } = await issueInvitation(
+    user.id,
+    user.name,
+    user.email,
+    input.personalEmail.toLowerCase(),
+    user.role,
+    mailboxPassword,
+  );
   return { user, invitationSent: sent };
 }
 
@@ -294,9 +348,33 @@ export async function resendUserInvitation(
   if (!row.active) {
     return { ok: false, error: "Ce compte est inactif." };
   }
+  if (!row.personal_email) {
+    return { ok: false, error: "Email personnel manquant — recréez l'invitation." };
+  }
 
-  const { sent } = await issueInvitation(row.id, row.name, row.email, row.role);
+  const mailboxPassword = generateMailboxPassword();
+  const { sent } = await issueInvitation(
+    row.id,
+    row.name,
+    row.email,
+    row.personal_email,
+    row.role,
+    mailboxPassword,
+  );
   return { ok: true, invitationSent: sent };
+}
+
+export async function dismissMailboxOnboarding(userId: string): Promise<boolean> {
+  return withDb(async (query) => {
+    const { rowCount } = await query(
+      `UPDATE crm_users SET
+        mailbox_onboarding_pending = false,
+        updated_at = NOW()
+       WHERE id = $1 AND mailbox_onboarding_pending = true`,
+      [userId],
+    );
+    return (rowCount ?? 0) > 0;
+  });
 }
 
 export async function validateInviteToken(token: string): Promise<InviteValidation> {

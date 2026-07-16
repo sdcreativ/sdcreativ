@@ -2,6 +2,7 @@ import { describe, expect, it, vi } from "vitest";
 import {
   allocateUniqueTeamEmailLocalPart,
   buildTeamEmail,
+  generateMailboxPassword,
   isCrmTeamEmail,
   isTeamEmailTaken,
   normalizeTeamEmailLocalPart,
@@ -54,6 +55,14 @@ describe("crm-team-email", () => {
     expect(isTeamEmailTaken(`${local}@sdcreativ.com`, taken)).toBe(false);
 
     vi.restoreAllMocks();
+  });
+
+  it("génère un mot de passe boîte mail de 14 caractères", () => {
+    const pwd = generateMailboxPassword();
+    expect(pwd.length).toBe(14);
+    expect(/[A-Z]/.test(pwd)).toBe(true);
+    expect(/[a-z]/.test(pwd)).toBe(true);
+    expect(/[0-9]/.test(pwd)).toBe(true);
   });
 
   it("accepte les emails @sdcreativ.com valides", () => {

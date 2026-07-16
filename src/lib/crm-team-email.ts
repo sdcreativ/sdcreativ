@@ -7,6 +7,7 @@ export function getCrmTeamEmailDomain(): string {
 }
 
 export const HOSTINGER_EMAIL_PANEL_URL = "https://hpanel.hostinger.com/emails";
+export const HOSTINGER_WEBMAIL_URL = "https://webmail.hostinger.com";
 
 /** Partie locale Hostinger : lettres, chiffres, points (pas de points consécutifs). */
 export const CRM_TEAM_EMAIL_LOCAL_PART_RE = /^[a-z0-9]+(?:\.[a-z0-9]+)*$/i;
@@ -93,6 +94,43 @@ export function allocateUniqueTeamEmailLocalPart(
   }
 
   throw new Error("Impossible de générer un email professionnel unique. Réessayez.");
+}
+
+const MAILBOX_PASSWORD_CHARS = {
+  upper: "ABCDEFGHJKLMNPQRSTUVWXYZ",
+  lower: "abcdefghijkmnopqrstuvwxyz",
+  digit: "23456789",
+  symbol: "!@#$%&*+-",
+};
+
+/** Mot de passe temporaire boîte Hostinger (12+ caractères, mixte). */
+export function generateMailboxPassword(length = 14): string {
+  const minLen = Math.max(12, length);
+  const pools = [
+    MAILBOX_PASSWORD_CHARS.upper,
+    MAILBOX_PASSWORD_CHARS.lower,
+    MAILBOX_PASSWORD_CHARS.digit,
+    MAILBOX_PASSWORD_CHARS.symbol,
+  ];
+  const all = pools.join("");
+  const bytes = new Uint8Array(minLen);
+  if (typeof crypto !== "undefined" && typeof crypto.getRandomValues === "function") {
+    crypto.getRandomValues(bytes);
+  } else {
+    for (let i = 0; i < minLen; i++) bytes[i] = Math.floor(Math.random() * 256);
+  }
+
+  const chars = pools.map(
+    (pool, i) => pool[bytes[i]! % pool.length]!,
+  );
+  for (let i = pools.length; i < minLen; i++) {
+    chars.push(all[bytes[i]! % all.length]!);
+  }
+  for (let i = chars.length - 1; i > 0; i--) {
+    const j = bytes[i]! % (i + 1);
+    [chars[i], chars[j]] = [chars[j]!, chars[i]!];
+  }
+  return chars.join("");
 }
 
 export function buildTeamEmail(localPart: string, domain = getCrmTeamEmailDomain()): string {

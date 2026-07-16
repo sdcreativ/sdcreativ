@@ -15,6 +15,7 @@ import {
   buildCrmSessionCookie,
 } from "@/lib/crm-session";
 import { getSessionMaxAgeSeconds } from "@/lib/crm-security-settings";
+import { HOSTINGER_WEBMAIL_URL } from "@/lib/crm-team-email";
 import { z } from "zod";
 
 const patchAccountSchema = z
@@ -46,6 +47,9 @@ async function buildAccountResponse(userId: string) {
     role: user.role,
     roleLabel: getCachedRoleLabel(user.role),
     mustChangePassword: user.mustChangePassword,
+    mailboxOnboardingPending:
+      user.mailboxOnboardingPending && !user.invitationPending,
+    webmailUrl: HOSTINGER_WEBMAIL_URL,
     avatarUrl: profile.avatarUrl,
     dashboardLayout: profile.dashboardLayout,
   };

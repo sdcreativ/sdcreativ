@@ -490,6 +490,9 @@ async function ensureSchema(): Promise<void> {
     CREATE INDEX IF NOT EXISTS idx_crm_users_invite_token ON crm_users (invite_token_hash)
       WHERE invite_token_hash IS NOT NULL;
 
+    ALTER TABLE crm_users ADD COLUMN IF NOT EXISTS personal_email VARCHAR(255);
+    ALTER TABLE crm_users ADD COLUMN IF NOT EXISTS mailbox_onboarding_pending BOOLEAN NOT NULL DEFAULT false;
+
     CREATE INDEX IF NOT EXISTS idx_clients_updated_at ON clients (updated_at DESC);
     CREATE INDEX IF NOT EXISTS idx_projects_updated_at ON projects (updated_at DESC);
     CREATE INDEX IF NOT EXISTS idx_projects_status ON projects (status);

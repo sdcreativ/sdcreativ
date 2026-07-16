@@ -10,6 +10,7 @@ import { CrmReminderEngine } from "@/components/admin/CrmReminderEngine";
 import { CrmBillingNotificationEngine } from "@/components/admin/CrmBillingNotificationEngine";
 import { CrmSidebar } from "@/components/admin/CrmSidebar";
 import { CrmMobileNav } from "@/components/admin/CrmMobileNav";
+import { CrmMailboxOnboardingBanner } from "@/components/admin/CrmMailboxOnboardingBanner";
 import { getCrmPageTitle } from "@/content/crm-nav";
 import type { CalendarReminder } from "@/lib/calendar-reminders";
 import type { CrmNotification } from "@/lib/billing/notifications";
@@ -84,6 +85,7 @@ export function CrmShell({ children, subtitle, showNewButton }: Props) {
           />
           <div className={cn("flex-1 overflow-auto p-4 pb-24 md:p-6 md:pb-24 lg:p-8 lg:pb-8")}>
             <CrmBreadcrumbs />
+            <CrmMailboxOnboardingBanner />
             <CrmAccessGuard>{children}</CrmAccessGuard>
           </div>
         </div>
