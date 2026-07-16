@@ -16,7 +16,8 @@ export async function buildMailSignature(): Promise<MailSignature> {
   let tagline = DEFAULT_CRM_BRANDING.tagline;
   let email = MAIL_V1_SHARED_MAILBOX;
   let phone = "";
-  let website = process.env.NEXT_PUBLIC_SITE_URL?.replace(/\/$/, "") || "https://sdcreativ.com";
+  const website =
+    process.env.NEXT_PUBLIC_SITE_URL?.replace(/\/$/, "") || "https://sdcreativ.com";
 
   try {
     const [settings, site] = await Promise.all([

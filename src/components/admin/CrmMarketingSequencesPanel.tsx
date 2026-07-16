@@ -67,7 +67,7 @@ export function CrmMarketingSequencesPanel() {
             </button>
           </div>
           <ol className="mt-3 space-y-2 text-sm">
-            {seq.steps.map((step, i) => (
+            {seq.steps.map((step) => (
               <li key={step.id} className="rounded-lg bg-gray/20 px-3 py-2">
                 <span className="font-medium">J+{step.delayDays}</span> — {step.subject}
               </li>

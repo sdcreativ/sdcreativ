@@ -58,7 +58,12 @@ export async function GET(request: Request, context: RouteContext) {
       thread.leadId ? getLeadById(thread.leadId) : null,
     ]);
 
-    const safeMessages = messages.map(({ rawHeaders: _raw, ...rest }) => rest);
+    const safeMessages = messages.map((msg) => {
+      // Strip rawHeaders — ne pas exposer au client
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars -- omit intentionally
+      const { rawHeaders, ...rest } = msg;
+      return rest;
+    });
 
     return NextResponse.json({
       thread,
