@@ -891,15 +891,55 @@ function CrmUsersSection({ roles }: { roles: CrmRoleRecord[] }) {
                   <div className="min-w-0 flex-1">
                     <p className="truncate font-bold text-foreground">{user.name}</p>
                     <p className="truncate text-xs text-gray-text">{user.email}</p>
-                    {user.invitationPending && user.personalEmail ? (
+                    {user.personalEmail ? (
                       <p className="truncate text-[11px] text-gray-text/80">
                         Perso : {user.personalEmail}
                       </p>
-                    ) : null}
+                    ) : (
+                      <p className="truncate text-[11px] text-amber-700">
+                        Email personnel manquant (2FA)
+                      </p>
+                    )}
                     <p className="mt-2 inline-flex items-center gap-1 rounded-full bg-white px-2.5 py-1 text-[11px] font-medium text-gray-text ring-1 ring-gray/15">
                       <Shield className="h-3 w-3 text-primary" aria-hidden />
                       {getRoleLabel(user.role)}
                     </p>
+                  </div>
+                </div>
+
+                <div className="mt-4 space-y-2">
+                  <label className="block text-[11px] font-semibold uppercase tracking-wide text-gray-text">
+                    Email personnel (2FA)
+                  </label>
+                  <div className="flex gap-2">
+                    <input
+                      type="email"
+                      defaultValue={user.personalEmail ?? ""}
+                      placeholder="perso@gmail.com"
+                      id={`personal-email-${user.id}`}
+                      className="min-w-0 flex-1 rounded-xl border border-gray/50 bg-white px-3 py-2 text-sm shadow-sm focus:border-primary focus:outline-none focus:ring-4 focus:ring-primary/10"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const input = document.getElementById(
+                          `personal-email-${user.id}`,
+                        ) as HTMLInputElement | null;
+                        const value = input?.value.trim() ?? "";
+                        void updateCrmUserApi(user.id, {
+                          personalEmail: value || null,
+                        })
+                          .then(loadUsers)
+                          .catch((err) =>
+                            setError(
+                              err instanceof Error ? err.message : "Mise à jour impossible.",
+                            ),
+                          );
+                      }}
+                      className="shrink-0 rounded-xl border border-gray/40 bg-white px-3 py-2 text-xs font-semibold text-foreground hover:border-primary/40"
+                    >
+                      OK
+                    </button>
                   </div>
                 </div>
 

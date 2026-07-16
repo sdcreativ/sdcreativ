@@ -76,6 +76,14 @@ export async function PATCH(request: Request, context: RouteContext) {
     });
     return NextResponse.json({ user });
   } catch (error) {
+    const message = error instanceof Error ? error.message : "Erreur serveur.";
+    if (
+      message.includes("déjà utilisé") ||
+      message.includes("différent") ||
+      message.includes("Rôle invalide")
+    ) {
+      return NextResponse.json({ error: message }, { status: 400 });
+    }
     console.error("[api/admin/users/[id]] PATCH", error);
     return NextResponse.json({ error: "Erreur serveur." }, { status: 500 });
   }

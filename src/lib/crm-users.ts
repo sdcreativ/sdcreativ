@@ -102,13 +102,28 @@ export const createCrmUserSchema = z
     path: ["personalEmail"],
   });
 
-export const updateCrmUserSchema = z.object({
-  email: teamEmailField.optional(),
-  name: z.string().trim().min(2).max(160).optional(),
-  password: z.string().min(8).max(128).optional(),
-  role: z.string().trim().min(2).max(50).optional(),
-  active: z.boolean().optional(),
-});
+export const updateCrmUserSchema = z
+  .object({
+    email: teamEmailField.optional(),
+    personalEmail: personalEmailField.optional().nullable(),
+    name: z.string().trim().min(2).max(160).optional(),
+    password: z.string().min(8).max(128).optional(),
+    role: z.string().trim().min(2).max(50).optional(),
+    active: z.boolean().optional(),
+  })
+  .superRefine((data, ctx) => {
+    if (
+      data.personalEmail &&
+      data.email &&
+      data.personalEmail.toLowerCase() === data.email.toLowerCase()
+    ) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "L'email personnel doit être différent de l'email professionnel.",
+        path: ["personalEmail"],
+      });
+    }
+  });
 
 export const acceptInvitationSchema = z.object({
   token: z.string().trim().min(16).max(128),
@@ -465,6 +480,17 @@ export async function updateCrmUser(
       }
     }
 
+    const nextPersonalEmail =
+      input.personalEmail === undefined
+        ? existing.personal_email
+        : input.personalEmail === null
+          ? null
+          : input.personalEmail.toLowerCase();
+
+    if (nextPersonalEmail && nextPersonalEmail === nextEmail) {
+      throw new Error("L'email personnel doit être différent de l'email professionnel.");
+    }
+
     let passwordHash = existing.password_hash;
     if (input.password) {
       passwordHash = await hashPassword(input.password);
@@ -477,6 +503,7 @@ export async function updateCrmUser(
         name = $4,
         role = $5,
         active = $6,
+        personal_email = $8,
         must_change_password = CASE WHEN $7::varchar IS NOT NULL THEN false ELSE must_change_password END,
         invite_token_hash = CASE WHEN $7::varchar IS NOT NULL THEN NULL ELSE invite_token_hash END,
         invite_token_expires_at = CASE WHEN $7::varchar IS NOT NULL THEN NULL ELSE invite_token_expires_at END,
@@ -491,6 +518,7 @@ export async function updateCrmUser(
         input.role ?? existing.role,
         input.active ?? existing.active,
         input.password ?? null,
+        nextPersonalEmail,
       ],
     );
     return mapUser(rows[0]!);

@@ -4,7 +4,7 @@ import {
   ensureCrmRolesCache,
   getCachedRoleLabel,
 } from "@/lib/crm-roles-db";
-import { changeOwnPassword, changeOwnPasswordSchema, getCrmUserById } from "@/lib/crm-users";
+import { changeOwnPassword, changeOwnPasswordSchema, getCrmUserById, updateCrmUser } from "@/lib/crm-users";
 import {
   getCrmUserProfile,
   updateCrmUserProfile,
@@ -15,14 +15,24 @@ import {
   buildCrmSessionCookie,
 } from "@/lib/crm-session";
 import { getSessionMaxAgeSeconds } from "@/lib/crm-security-settings";
-import { HOSTINGER_WEBMAIL_URL } from "@/lib/crm-team-email";
+import { HOSTINGER_WEBMAIL_URL, isCrmTeamEmail } from "@/lib/crm-team-email";
 import { z } from "zod";
+
+const personalEmailPatchField = z
+  .string()
+  .trim()
+  .email("Email personnel invalide.")
+  .max(255)
+  .refine((email) => !isCrmTeamEmail(email), {
+    message: "Utilisez un email personnel (Gmail, etc.), pas une adresse @sdcreativ.com.",
+  });
 
 const patchAccountSchema = z
   .object({
     name: updateOwnProfileSchema.shape.name,
     avatarUrl: updateOwnProfileSchema.shape.avatarUrl,
     dashboardLayout: updateOwnProfileSchema.shape.dashboardLayout,
+    personalEmail: personalEmailPatchField.optional().nullable(),
     currentPassword: changeOwnPasswordSchema.shape.currentPassword,
     newPassword: changeOwnPasswordSchema.shape.newPassword.optional(),
   })
@@ -31,6 +41,7 @@ const patchAccountSchema = z
       data.name !== undefined ||
       data.avatarUrl !== undefined ||
       data.dashboardLayout !== undefined ||
+      data.personalEmail !== undefined ||
       data.newPassword !== undefined,
     { message: "Aucune modification demandée." },
   );
@@ -43,6 +54,7 @@ async function buildAccountResponse(userId: string) {
   return {
     userId: user.id,
     email: user.email,
+    personalEmail: user.personalEmail,
     name: user.name,
     role: user.role,
     roleLabel: getCachedRoleLabel(user.role),
@@ -93,10 +105,24 @@ export async function PATCH(request: Request) {
       return NextResponse.json({ error: "Données invalides." }, { status: 400 });
     }
 
-    const { name, avatarUrl, dashboardLayout, currentPassword, newPassword } = parsed.data;
+    const { name, avatarUrl, dashboardLayout, personalEmail, currentPassword, newPassword } =
+      parsed.data;
 
     if (name !== undefined || avatarUrl !== undefined || dashboardLayout !== undefined) {
       await updateCrmUserProfile(session.userId, { name, avatarUrl, dashboardLayout });
+    }
+
+    if (personalEmail !== undefined) {
+      if (personalEmail && personalEmail.toLowerCase() === session.email.toLowerCase()) {
+        return NextResponse.json(
+          { error: "L'email personnel doit être différent de l'email professionnel." },
+          { status: 400 },
+        );
+      }
+      const updated = await updateCrmUser(session.userId, { personalEmail });
+      if (!updated) {
+        return NextResponse.json({ error: "Compte introuvable." }, { status: 404 });
+      }
     }
 
     if (newPassword) {

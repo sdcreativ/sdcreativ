@@ -265,6 +265,10 @@ export function AdminLoginView() {
                         <span className="font-semibold text-foreground">
                           {otpSentTo ?? pendingUser.email}
                         </span>
+                        {" "}
+                        <span className="text-accent">
+                          (aucun email personnel configuré — renseignez-le dans Mon compte)
+                        </span>
                       </>
                     )}{" "}
                     (format SD-XXXXXX, valable 10 min).

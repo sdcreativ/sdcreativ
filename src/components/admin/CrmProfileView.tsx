@@ -21,6 +21,7 @@ const fieldClass =
 type AccountInfo = {
   userId: string;
   email: string;
+  personalEmail: string | null;
   name: string;
   role: string;
   roleLabel?: string;
@@ -36,6 +37,7 @@ export function CrmProfileView() {
   const [savingPassword, setSavingPassword] = useState(false);
   const [account, setAccount] = useState<AccountInfo | null>(null);
   const [name, setName] = useState("");
+  const [personalEmail, setPersonalEmail] = useState("");
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
   const [currentPassword, setCurrentPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
@@ -53,6 +55,7 @@ export function CrmProfileView() {
       const acc = data.account ?? null;
       setAccount(acc);
       setName(acc?.name ?? "");
+      setPersonalEmail(acc?.personalEmail ?? "");
       setAvatarUrl(acc?.avatarUrl ?? null);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Chargement impossible.");
@@ -75,11 +78,15 @@ export function CrmProfileView() {
         method: "PATCH",
         credentials: "include",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name: name.trim() }),
+        body: JSON.stringify({
+          name: name.trim(),
+          personalEmail: personalEmail.trim() || null,
+        }),
       });
       const data = (await res.json()) as { error?: string; account?: AccountInfo };
       if (!res.ok) throw new Error(data.error ?? "Enregistrement impossible.");
       setAccount(data.account ?? null);
+      setPersonalEmail(data.account?.personalEmail ?? "");
       setSuccess("Profil mis à jour.");
       notifyCrmSessionChanged();
     } catch (err) {
@@ -225,7 +232,7 @@ export function CrmProfileView() {
 
           <div>
             <label htmlFor="profile-email" className="mb-1.5 block text-sm font-medium text-foreground">
-              Email
+              Email professionnel
             </label>
             <input
               id="profile-email"
@@ -239,9 +246,30 @@ export function CrmProfileView() {
             </p>
           </div>
 
+          <div>
+            <label htmlFor="profile-personal-email" className="mb-1.5 block text-sm font-medium text-foreground">
+              Email personnel (2FA)
+            </label>
+            <input
+              id="profile-personal-email"
+              type="email"
+              value={personalEmail}
+              onChange={(e) => setPersonalEmail(e.target.value)}
+              placeholder="vous@gmail.com"
+              className={fieldClass}
+            />
+            <p className="mt-1 text-xs text-gray-text">
+              Le code de connexion SD-XXXXXX est envoyé ici, pas sur la boîte Hostinger.
+            </p>
+          </div>
+
           <button
             type="submit"
-            disabled={savingProfile || name.trim() === account.name}
+            disabled={
+              savingProfile ||
+              (name.trim() === account.name &&
+                (personalEmail.trim() || null) === (account.personalEmail || null))
+            }
             className="inline-flex items-center gap-2 rounded-xl bg-primary px-5 py-2.5 text-sm font-semibold text-white hover:bg-primary-dark disabled:opacity-50"
           >
             {savingProfile && <Loader2 className="h-4 w-4 animate-spin" aria-hidden />}

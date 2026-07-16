@@ -126,10 +126,14 @@ export async function issueLoginEmailOtp(params: {
   | { ok: true; sentTo: string; channel: LoginOtpChannel }
   | { ok: false; error: string }
 > {
-  const destination = resolveLoginOtpDestination({
-    professionalEmail: params.email,
-    personalEmail: params.personalEmail,
-  });
+  // Toujours relire en base : source de vérité pour personal_email.
+  const lookedUp = await lookupLoginOtpDestination(params.userId);
+  const destination =
+    lookedUp ??
+    resolveLoginOtpDestination({
+      professionalEmail: params.email,
+      personalEmail: params.personalEmail,
+    });
 
   const code = generateLoginEmailOtp();
   const hash = hashLoginEmailOtp(code);
