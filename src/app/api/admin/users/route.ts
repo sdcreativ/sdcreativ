@@ -51,9 +51,13 @@ export async function POST(request: Request) {
     return NextResponse.json({ user, invitationSent }, { status: 201 });
   } catch (error) {
     console.error("[api/admin/users] POST", error);
-    const message = error instanceof Error && error.message.includes("unique")
-      ? "Cet email est déjà utilisé."
-      : "Erreur serveur.";
+    if (error instanceof Error && error.message.includes("déjà utilisé")) {
+      return NextResponse.json({ error: error.message }, { status: 409 });
+    }
+    const message =
+      error instanceof Error && /unique|duplicate/i.test(error.message)
+        ? "Cet email est déjà utilisé."
+        : "Erreur serveur.";
     return NextResponse.json({ error: message }, { status: 500 });
   }
 }

@@ -239,11 +239,27 @@ export async function authenticateCrmUser(
   });
 }
 
+export async function crmUserEmailExists(email: string): Promise<boolean> {
+  return withDb(async (query) => {
+    const { rows } = await query<{ exists: boolean }>(
+      `SELECT EXISTS(
+         SELECT 1 FROM crm_users WHERE LOWER(email) = LOWER($1)
+       ) AS exists`,
+      [email.trim()],
+    );
+    return Boolean(rows[0]?.exists);
+  });
+}
+
 export async function createCrmUser(
   input: z.infer<typeof createCrmUserSchema>,
 ): Promise<{ user: CrmUser; invitationSent: boolean }> {
   if (!(await roleSlugExists(input.role))) {
     throw new Error("Rôle invalide ou inexistant.");
+  }
+
+  if (await crmUserEmailExists(input.email)) {
+    throw new Error("Cet email est déjà utilisé par un membre de l'équipe.");
   }
 
   const user = await withDb(async (query) => {
@@ -360,6 +376,17 @@ export async function updateCrmUser(
       throw new Error("Rôle invalide ou inexistant.");
     }
 
+    const nextEmail = (input.email ?? existing.email).toLowerCase();
+    if (nextEmail !== existing.email.toLowerCase()) {
+      const { rows: dupRows } = await query<{ id: string }>(
+        `SELECT id FROM crm_users WHERE LOWER(email) = LOWER($1) AND id <> $2 LIMIT 1`,
+        [nextEmail, id],
+      );
+      if (dupRows[0]) {
+        throw new Error("Cet email est déjà utilisé par un membre de l'équipe.");
+      }
+    }
+
     let passwordHash = existing.password_hash;
     if (input.password) {
       passwordHash = await hashPassword(input.password);
@@ -380,7 +407,7 @@ export async function updateCrmUser(
        RETURNING ${USER_COLUMNS}`,
       [
         id,
-        (input.email ?? existing.email).toLowerCase(),
+        nextEmail,
         passwordHash,
         input.name ?? existing.name,
         input.role ?? existing.role,

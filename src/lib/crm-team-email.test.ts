@@ -1,8 +1,11 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import {
+  allocateUniqueTeamEmailLocalPart,
   buildTeamEmail,
   isCrmTeamEmail,
+  isTeamEmailTaken,
   normalizeTeamEmailLocalPart,
+  suggestTeamEmailLocalPartFromName,
 } from "@/lib/crm-team-email";
 
 describe("crm-team-email", () => {
@@ -12,6 +15,45 @@ describe("crm-team-email", () => {
 
   it("construit l'email équipe", () => {
     expect(buildTeamEmail("marie", "sdcreativ.com")).toBe("marie@sdcreativ.com");
+  });
+
+  it("suggère prenom.nom depuis le nom complet", () => {
+    expect(suggestTeamEmailLocalPartFromName("Marie Koné")).toBe("marie.kone");
+    expect(suggestTeamEmailLocalPartFromName("Jean-Pierre Dupont")).toBe("jeanpierre.dupont");
+    expect(suggestTeamEmailLocalPartFromName("Awa")).toBe("awa");
+    expect(suggestTeamEmailLocalPartFromName("  ")).toBe("");
+  });
+
+  it("alloue un email unique avec suffixe aléatoire", () => {
+    vi.spyOn(crypto, "getRandomValues").mockImplementation((array) => {
+      const view = array as Uint8Array;
+      for (let i = 0; i < view.length; i++) view[i] = 0;
+      return array;
+    });
+
+    const local = allocateUniqueTeamEmailLocalPart("marie.kone", [], "sdcreativ.com");
+    expect(local).toBe("marie.kone.aaaa");
+    expect(isCrmTeamEmail(`${local}@sdcreativ.com`, "sdcreativ.com")).toBe(true);
+
+    vi.restoreAllMocks();
+  });
+
+  it("évite les emails déjà pris", () => {
+    let call = 0;
+    vi.spyOn(crypto, "getRandomValues").mockImplementation((array) => {
+      const view = array as Uint8Array;
+      const fill = call === 0 ? 0 : 1;
+      call += 1;
+      for (let i = 0; i < view.length; i++) view[i] = fill;
+      return array;
+    });
+
+    const taken = ["marie.kone.aaaa@sdcreativ.com"];
+    const local = allocateUniqueTeamEmailLocalPart("marie.kone", taken, "sdcreativ.com");
+    expect(local).toBe("marie.kone.bbbb");
+    expect(isTeamEmailTaken(`${local}@sdcreativ.com`, taken)).toBe(false);
+
+    vi.restoreAllMocks();
   });
 
   it("accepte les emails @sdcreativ.com valides", () => {
