@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type FormEvent } from "react";
 import {
   AlertCircle,
+  ExternalLink,
   Loader2,
   Mail,
   Paperclip,
@@ -26,6 +27,7 @@ import {
   type MailThreadDetail,
   type MailThreadMessage,
 } from "@/lib/mail-api";
+import { MAIL_V1_SHARED_MAILBOX } from "@/lib/mail/config";
 import type { CrmMailAttachment, CrmMailThread, CrmMailbox } from "@/lib/mail/types";
 import { cn } from "@/lib/utils";
 
@@ -81,14 +83,29 @@ export function CrmMessagerieView() {
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [rotatePassword, setRotatePassword] = useState("");
   const [rotating, setRotating] = useState(false);
+  const [canManageMail, setCanManageMail] = useState(false);
 
   useEffect(() => {
-    void fetch("/api/admin/account", { credentials: "include" })
-      .then((r) => (r.ok ? r.json() : null))
-      .then((json: { account?: { userId?: string; email?: string } } | null) => {
-        if (json?.account?.userId) setAccountUserId(json.account.userId);
-        if (json?.account?.email) setAccountEmail(json.account.email);
-      })
+    void Promise.all([
+      fetch("/api/admin/account", { credentials: "include" }).then((r) =>
+        r.ok ? r.json() : null,
+      ),
+      fetch("/api/admin/settings/session", { credentials: "include" }).then((r) =>
+        r.ok ? r.json() : null,
+      ),
+    ])
+      .then(
+        ([accountJson, sessionJson]: [
+          { account?: { userId?: string; email?: string } } | null,
+          { session?: { permissions?: string[] } } | null,
+        ]) => {
+          if (accountJson?.account?.userId) setAccountUserId(accountJson.account.userId);
+          if (accountJson?.account?.email) setAccountEmail(accountJson.account.email);
+          setCanManageMail(
+            Boolean(sessionJson?.session?.permissions?.includes("mail.manage")),
+          );
+        },
+      )
       .catch(() => undefined);
   }, []);
 
@@ -308,9 +325,14 @@ export function CrmMessagerieView() {
           <button
             type="button"
             onClick={() => setSettingsOpen((v) => !v)}
-            className="inline-flex h-10 w-10 items-center justify-center rounded-xl border border-gray/40 bg-white text-gray-text transition hover:border-primary/30 hover:text-primary"
+            disabled={mailboxes.length === 0}
+            className="inline-flex h-10 w-10 items-center justify-center rounded-xl border border-gray/40 bg-white text-gray-text transition hover:border-primary/30 hover:text-primary disabled:opacity-40"
             aria-label="Paramètres boîte"
-            title="Paramètres boîte"
+            title={
+              mailboxes.length === 0
+                ? "Connectez d’abord une boîte ci-dessous"
+                : "Paramètres boîte"
+            }
           >
             <Settings2 className="h-4 w-4" aria-hidden />
           </button>
@@ -349,6 +371,16 @@ export function CrmMessagerieView() {
             )}
           </div>
         </div>
+      )}
+
+      {mailboxes.length === 0 && !loading && (
+        <ConnectMailboxPanel
+          accountEmail={accountEmail}
+          canManageShared={canManageMail}
+          onConnected={async () => {
+            await loadList();
+          }}
+        />
       )}
 
       {settingsOpen && selectedMailbox && (
@@ -473,18 +505,33 @@ export function CrmMessagerieView() {
                 <p className="mt-4 font-semibold text-foreground">Aucune conversation</p>
                 <p className="mt-1 text-sm text-gray-text">
                   {composeMailbox
-                    ? "Écrivez un message ou synchronisez votre boîte."
-                    : "Connectez votre boîte pro pour commencer."}
+                    ? "Cliquez Sync pour importer les emails Hostinger, ou écrivez un message."
+                    : "Connectez d’abord une boîte Hostinger (formulaire ci-dessus)."}
                 </p>
                 {composeMailbox && (
-                  <button
-                    type="button"
-                    onClick={() => setComposeOpen(true)}
-                    className="mt-4 inline-flex items-center gap-2 rounded-xl bg-primary px-4 py-2 text-sm font-semibold text-white"
-                  >
-                    <PenSquare className="h-4 w-4" aria-hidden />
-                    Nouveau message
-                  </button>
+                  <div className="mt-4 flex flex-wrap items-center justify-center gap-2">
+                    <button
+                      type="button"
+                      onClick={() => void handleSync()}
+                      disabled={syncing}
+                      className="inline-flex items-center gap-2 rounded-xl border border-primary/25 bg-white px-4 py-2 text-sm font-semibold text-primary"
+                    >
+                      {syncing ? (
+                        <Loader2 className="h-4 w-4 animate-spin" aria-hidden />
+                      ) : (
+                        <RefreshCw className="h-4 w-4" aria-hidden />
+                      )}
+                      Synchroniser
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setComposeOpen(true)}
+                      className="inline-flex items-center gap-2 rounded-xl bg-primary px-4 py-2 text-sm font-semibold text-white"
+                    >
+                      <PenSquare className="h-4 w-4" aria-hidden />
+                      Nouveau message
+                    </button>
+                  </div>
                 )}
               </div>
             ) : (
@@ -621,6 +668,163 @@ export function CrmMessagerieView() {
         />
       )}
     </div>
+  );
+}
+
+function ConnectMailboxPanel({
+  accountEmail,
+  canManageShared,
+  onConnected,
+}: {
+  accountEmail: string | null;
+  canManageShared: boolean;
+  onConnected: () => Promise<void>;
+}) {
+  const options = useMemo(() => {
+    const emails: string[] = [];
+    if (canManageShared) emails.push(MAIL_V1_SHARED_MAILBOX);
+    if (accountEmail && accountEmail.toLowerCase() !== MAIL_V1_SHARED_MAILBOX) {
+      emails.push(accountEmail.toLowerCase());
+    }
+    return emails;
+  }, [accountEmail, canManageShared]);
+
+  const [email, setEmail] = useState(options[0] ?? MAIL_V1_SHARED_MAILBOX);
+  const [password, setPassword] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [localError, setLocalError] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (options.length > 0 && !options.includes(email)) {
+      setEmail(options[0]!);
+    }
+  }, [options, email]);
+
+  async function handleConnect(e: FormEvent) {
+    e.preventDefault();
+    if (!password.trim() || busy) return;
+    setBusy(true);
+    setLocalError(null);
+    try {
+      const mailbox = await connectMailMailboxApi({
+        email: email.trim().toLowerCase(),
+        password: password.trim(),
+      });
+      setPassword("");
+      await onConnected();
+      try {
+        await syncMailMailbox(mailbox.id);
+        await onConnected();
+      } catch {
+        /* sync optionnelle — la boîte est déjà connectée */
+      }
+    } catch (err) {
+      setLocalError(
+        err instanceof Error
+          ? err.message
+          : "Impossible de connecter la boîte. Vérifiez le mot de passe Hostinger et MAIL_CREDENTIALS_SECRET.",
+      );
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  if (options.length === 0) {
+    return (
+      <div className="rounded-2xl border border-primary/20 bg-primary-light/50 px-5 py-4 text-sm">
+        <p className="font-semibold text-foreground">Aucune boîte à connecter</p>
+        <p className="mt-1 text-gray-text">
+          Votre compte CRM n’a pas encore d’email professionnel @domaine, et vous n’avez pas
+          mail.manage pour configurer contact@.
+        </p>
+      </div>
+    );
+  }
+
+  return (
+    <form
+      onSubmit={(e) => void handleConnect(e)}
+      className="rounded-2xl border border-primary/20 bg-gradient-to-br from-primary-light/70 via-white to-white px-5 py-5 shadow-sm"
+    >
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div>
+          <p className="text-[11px] font-semibold uppercase tracking-wide text-primary">
+            Première connexion
+          </p>
+          <h3 className="mt-1 text-base font-bold text-foreground">
+            Brancher Hostinger au CRM
+          </h3>
+          <p className="mt-1 max-w-xl text-sm text-gray-text">
+            Les emails du webmail n’apparaissent ici qu’après connexion IMAP (mot de passe de la
+            boîte Hostinger, chiffré en base) puis synchronisation.
+          </p>
+        </div>
+        <a
+          href="https://webmail.hostinger.com"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="inline-flex items-center gap-1.5 text-sm font-semibold text-primary hover:underline"
+        >
+          Ouvrir le webmail
+          <ExternalLink className="h-3.5 w-3.5" aria-hidden />
+        </a>
+      </div>
+
+      {localError && (
+        <p className="mt-3 flex items-start gap-1.5 rounded-xl border border-accent/25 bg-accent/5 px-3 py-2 text-xs text-accent">
+          <AlertCircle className="mt-0.5 h-3.5 w-3.5 shrink-0" aria-hidden />
+          {localError}
+        </p>
+      )}
+
+      <div className="mt-4 flex flex-wrap items-end gap-3">
+        <label className="min-w-[200px] flex-1 text-sm">
+          <span className="text-xs font-semibold uppercase tracking-wide text-gray-text">
+            Boîte
+          </span>
+          <select
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            disabled={busy || options.length < 2}
+            className="mt-1.5 w-full rounded-xl border border-gray/50 bg-white px-3 py-2.5 outline-none focus:border-primary"
+          >
+            {options.map((opt) => (
+              <option key={opt} value={opt}>
+                {opt}
+                {opt === MAIL_V1_SHARED_MAILBOX ? " (partagée)" : " (ma boîte)"}
+              </option>
+            ))}
+          </select>
+        </label>
+        <label className="min-w-[200px] flex-[1.2] text-sm">
+          <span className="text-xs font-semibold uppercase tracking-wide text-gray-text">
+            Mot de passe Hostinger
+          </span>
+          <input
+            type="password"
+            autoComplete="off"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            disabled={busy}
+            required
+            placeholder="Mot de passe de la boîte"
+            className="mt-1.5 w-full rounded-xl border border-gray/50 bg-white px-3 py-2.5 outline-none focus:border-primary"
+          />
+        </label>
+        <button
+          type="submit"
+          disabled={busy || !password.trim()}
+          className="inline-flex h-[42px] items-center gap-2 rounded-xl bg-primary px-5 text-sm font-semibold text-white disabled:opacity-50"
+        >
+          {busy ? (
+            <Loader2 className="h-4 w-4 animate-spin" aria-hidden />
+          ) : (
+            <Mail className="h-4 w-4" aria-hidden />
+          )}
+          Connecter &amp; synchroniser
+        </button>
+      </div>
+    </form>
   );
 }
 
