@@ -11,6 +11,7 @@ import { hashPassword, verifyPassword } from "@/lib/crm-password";
 import { getCachedRoleLabel, ensureCrmRolesCache, roleSlugExists } from "@/lib/crm-roles-db";
 import { withDb } from "@/lib/db";
 import { getRolePermissions, roleHasPermission } from "@/lib/crm-permissions";
+import { isCrmTeamEmail, teamEmailValidationMessage } from "@/lib/crm-team-email";
 
 export type CrmUser = {
   id: string;
@@ -58,15 +59,24 @@ function mapUser(row: CrmUserRow): CrmUser {
   };
 }
 
+const teamEmailField = z
+  .string()
+  .trim()
+  .email("Email invalide.")
+  .max(255)
+  .refine((email) => isCrmTeamEmail(email), {
+    message: teamEmailValidationMessage(),
+  });
+
 export const createCrmUserSchema = z.object({
-  email: z.string().trim().email().max(255),
+  email: teamEmailField,
   name: z.string().trim().min(2).max(160),
   role: z.string().trim().min(2).max(50).default("commercial"),
   active: z.boolean().default(true),
 });
 
 export const updateCrmUserSchema = z.object({
-  email: z.string().trim().email().max(255).optional(),
+  email: teamEmailField.optional(),
   name: z.string().trim().min(2).max(160).optional(),
   password: z.string().min(8).max(128).optional(),
   role: z.string().trim().min(2).max(50).optional(),

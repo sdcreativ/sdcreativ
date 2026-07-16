@@ -26,6 +26,14 @@ import { CrmOperationsSettingsSection } from "@/components/admin/CrmOperationsSe
 import { CrmApiKeysSection } from "@/components/admin/CrmApiKeysSection";
 import { CrmLegalEntitiesSection } from "@/components/admin/CrmLegalEntitiesSection";
 import type { CrmUser } from "@/lib/crm-users";
+import {
+  buildTeamEmail,
+  getCrmTeamEmailDomain,
+  HOSTINGER_EMAIL_PANEL_URL,
+  isCrmTeamEmail,
+  normalizeTeamEmailLocalPart,
+  teamEmailValidationMessage,
+} from "@/lib/crm-team-email";
 import { fetchPortalAccounts, fetchSettingsHealth } from "@/lib/settings-api";
 import type { CrmRoleRecord } from "@/lib/crm-roles-api";
 import { fetchCrmRoles } from "@/lib/crm-roles-api";
@@ -37,6 +45,7 @@ import {
   CheckCircle2,
   CreditCard,
   Database,
+  ExternalLink,
   Globe,
   LayoutGrid,
   Grid3X3,
@@ -537,14 +546,22 @@ const userFieldClass =
 
 function CrmUsersSection({ roles }: { roles: CrmRoleRecord[] }) {
   const { confirm } = useDialog();
+  const teamDomain = getCrmTeamEmailDomain();
   const [users, setUsers] = useState<CrmUser[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
   const [showForm, setShowForm] = useState(false);
   const [resendingId, setResendingId] = useState<string | null>(null);
+  const [inviteLocalPart, setInviteLocalPart] = useState("");
+  const [mailboxConfirmed, setMailboxConfirmed] = useState(false);
+  const [creating, setCreating] = useState(false);
 
-  const loadUsers = useCallback(async () => {
+  const inviteEmail = inviteLocalPart
+    ? buildTeamEmail(inviteLocalPart, teamDomain)
+    : "";
+
+  async function loadUsers() {
     setLoading(true);
     setError("");
     try {
@@ -554,11 +571,25 @@ function CrmUsersSection({ roles }: { roles: CrmRoleRecord[] }) {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }
 
   useEffect(() => {
     void loadUsers();
-  }, [loadUsers]);
+  }, []);
+
+  function openInviteForm() {
+    setInviteLocalPart("");
+    setMailboxConfirmed(false);
+    setError("");
+    setShowForm(true);
+  }
+
+  function closeInviteForm() {
+    setShowForm(false);
+    setInviteLocalPart("");
+    setMailboxConfirmed(false);
+    setError("");
+  }
 
   const activeCount = users.filter((u) => u.active).length;
   const pendingCount = users.filter((u) => u.invitationPending).length;
@@ -568,13 +599,25 @@ function CrmUsersSection({ roles }: { roles: CrmRoleRecord[] }) {
     setError("");
     setSuccess("");
     const data = new FormData(e.currentTarget);
+    const email = buildTeamEmail(inviteLocalPart, teamDomain);
+
+    if (!isCrmTeamEmail(email, teamDomain)) {
+      setError(teamEmailValidationMessage(teamDomain));
+      return;
+    }
+    if (!mailboxConfirmed) {
+      setError("Confirmez d’abord que la boîte Hostinger a été créée.");
+      return;
+    }
+
+    setCreating(true);
     try {
       const { user, invitationSent } = await createCrmUserApi({
         name: String(data.get("name")),
-        email: String(data.get("email")),
+        email,
         role: String(data.get("role")),
       });
-      setShowForm(false);
+      closeInviteForm();
       await loadUsers();
       setSuccess(
         invitationSent
@@ -583,6 +626,8 @@ function CrmUsersSection({ roles }: { roles: CrmRoleRecord[] }) {
       );
     } catch (err) {
       setError(err instanceof Error ? err.message : "Création impossible.");
+    } finally {
+      setCreating(false);
     }
   }
 
@@ -647,10 +692,22 @@ function CrmUsersSection({ roles }: { roles: CrmRoleRecord[] }) {
         </div>
       </div>
 
-      <p className="text-sm leading-relaxed text-gray-text">
-        Invitez un collaborateur par email : il recevra un lien sécurisé pour définir son mot de
-        passe (valable 72 h).
-      </p>
+      <div className="rounded-2xl border border-sky-200/80 bg-sky-50/70 px-4 py-3.5 text-sm text-sky-950">
+        <p className="font-semibold text-sky-950">Emails professionnels @{teamDomain}</p>
+        <p className="mt-1 leading-relaxed text-sky-900/90">
+          Créez d’abord la boîte dans Hostinger Email, puis invitez le membre ici avec la même
+          adresse. Il recevra un lien sécurisé pour définir son mot de passe (valable 72&nbsp;h).
+        </p>
+        <a
+          href={HOSTINGER_EMAIL_PANEL_URL}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="mt-2 inline-flex items-center gap-1.5 text-sm font-semibold text-primary hover:underline"
+        >
+          Ouvrir Hostinger Email
+          <ExternalLink className="h-3.5 w-3.5" aria-hidden />
+        </a>
+      </div>
 
       {success && (
         <p className="rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-800">
@@ -787,7 +844,7 @@ function CrmUsersSection({ roles }: { roles: CrmRoleRecord[] }) {
 
       <button
         type="button"
-        onClick={() => setShowForm(true)}
+        onClick={openInviteForm}
         className="group inline-flex w-full items-center justify-center gap-2 rounded-2xl border border-dashed border-violet-300/50 bg-gradient-to-br from-violet-50/50 to-white px-5 py-4 text-sm font-semibold text-violet-700 transition-all hover:border-violet-400/60 hover:shadow-md sm:w-auto"
       >
         <UserPlus className="h-4 w-4 transition-transform group-hover:scale-110" aria-hidden />
@@ -798,7 +855,7 @@ function CrmUsersSection({ roles }: { roles: CrmRoleRecord[] }) {
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/45 p-4 backdrop-blur-sm">
           <form
             onSubmit={handleCreate}
-            className="w-full max-w-md overflow-hidden rounded-2xl bg-white shadow-2xl ring-1 ring-black/5"
+            className="max-h-[90vh] w-full max-w-md overflow-y-auto rounded-2xl bg-white shadow-2xl ring-1 ring-black/5"
           >
             <div className="flex items-start justify-between gap-4 border-b border-gray/20 bg-gradient-to-r from-violet-50/60 to-white px-6 py-5">
               <div>
@@ -807,27 +864,76 @@ function CrmUsersSection({ roles }: { roles: CrmRoleRecord[] }) {
                 </p>
                 <h2 className="mt-1 text-lg font-bold text-foreground">Nouvel utilisateur</h2>
                 <p className="mt-1 text-sm text-gray-text">
-                  Un email d&apos;activation sera envoyé automatiquement.
+                  Boîte Hostinger d’abord, puis invitation CRM.
                 </p>
               </div>
               <button
                 type="button"
-                onClick={() => setShowForm(false)}
+                onClick={closeInviteForm}
                 className="rounded-xl border border-gray/30 p-2 text-gray-text hover:bg-gray-light/60"
                 aria-label="Fermer"
               >
                 <X className="h-4 w-4" aria-hidden />
               </button>
             </div>
-            <div className="space-y-3 px-6 py-5">
+            <div className="space-y-4 px-6 py-5">
+              <ol className="space-y-2 rounded-xl border border-gray/20 bg-gray-light/30 px-3.5 py-3 text-sm text-gray-text">
+                <li className="flex gap-2">
+                  <span className="font-bold text-foreground">1.</span>
+                  <span>
+                    Créez la boîte{" "}
+                    <span className="font-medium text-foreground">
+                      {inviteEmail || `prenom@${teamDomain}`}
+                    </span>{" "}
+                    dans Hostinger.
+                  </span>
+                </li>
+                <li className="flex gap-2">
+                  <span className="font-bold text-foreground">2.</span>
+                  <span>Renseignez le membre ci-dessous et envoyez l’invitation CRM.</span>
+                </li>
+              </ol>
+
+              <a
+                href={HOSTINGER_EMAIL_PANEL_URL}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-1.5 text-sm font-semibold text-primary hover:underline"
+              >
+                Ouvrir Hostinger Email
+                <ExternalLink className="h-3.5 w-3.5" aria-hidden />
+              </a>
+
               <input name="name" required placeholder="Nom complet *" className={userFieldClass} />
-              <input
-                name="email"
-                type="email"
-                required
-                placeholder="Email professionnel *"
-                className={userFieldClass}
-              />
+
+              <div>
+                <label className="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-gray-text">
+                  Email professionnel *
+                </label>
+                <div className="flex overflow-hidden rounded-xl border border-gray/60 bg-white shadow-sm focus-within:border-primary focus-within:ring-4 focus-within:ring-primary/10">
+                  <input
+                    value={inviteLocalPart}
+                    onChange={(e) =>
+                      setInviteLocalPart(normalizeTeamEmailLocalPart(e.target.value))
+                    }
+                    required
+                    autoComplete="off"
+                    spellCheck={false}
+                    placeholder="prenom"
+                    aria-label="Partie locale de l’email"
+                    className="min-w-0 flex-1 border-0 bg-transparent px-3 py-2.5 text-sm focus:outline-none focus:ring-0"
+                  />
+                  <span className="flex shrink-0 items-center border-l border-gray/40 bg-gray-light/40 px-3 text-sm font-medium text-gray-text">
+                    @{teamDomain}
+                  </span>
+                </div>
+                {inviteEmail ? (
+                  <p className="mt-1.5 text-xs text-gray-text">
+                    Adresse complète : <span className="font-medium text-foreground">{inviteEmail}</span>
+                  </p>
+                ) : null}
+              </div>
+
               <select name="role" defaultValue="commercial" className={userFieldClass} aria-label="Rôle">
                 {roles.map((role) => (
                   <option key={role.id} value={role.slug}>
@@ -835,20 +941,47 @@ function CrmUsersSection({ roles }: { roles: CrmRoleRecord[] }) {
                   </option>
                 ))}
               </select>
+
+              <label className="flex cursor-pointer items-start gap-3 rounded-xl border border-gray/25 bg-white px-3.5 py-3">
+                <input
+                  type="checkbox"
+                  checked={mailboxConfirmed}
+                  onChange={(e) => setMailboxConfirmed(e.target.checked)}
+                  className="mt-0.5 h-4 w-4 rounded border-gray/60 text-primary focus:ring-primary/30"
+                />
+                <span className="text-sm text-gray-text">
+                  J’ai créé la boîte Hostinger{" "}
+                  <span className="font-medium text-foreground">
+                    {inviteEmail || `@${teamDomain}`}
+                  </span>{" "}
+                  (sinon l’invitation / 2FA ne pourra pas être reçue).
+                </span>
+              </label>
+
+              {error && (
+                <p className="rounded-xl border border-accent/30 bg-accent/5 px-3.5 py-2.5 text-sm text-accent">
+                  {error}
+                </p>
+              )}
             </div>
             <div className="flex justify-end gap-2 border-t border-gray/20 bg-gray-light/20 px-6 py-4">
               <button
                 type="button"
-                onClick={() => setShowForm(false)}
+                onClick={closeInviteForm}
                 className="rounded-xl border border-gray/60 px-4 py-2 text-sm font-medium text-gray-text hover:bg-white"
               >
                 Annuler
               </button>
               <button
                 type="submit"
-                className="inline-flex items-center gap-2 rounded-xl bg-primary px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-primary-dark"
+                disabled={creating || !mailboxConfirmed || !inviteLocalPart}
+                className="inline-flex items-center gap-2 rounded-xl bg-primary px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-primary-dark disabled:opacity-50"
               >
-                <Mail className="h-4 w-4" aria-hidden />
+                {creating ? (
+                  <Loader2 className="h-4 w-4 animate-spin" aria-hidden />
+                ) : (
+                  <Mail className="h-4 w-4" aria-hidden />
+                )}
                 Envoyer l&apos;invitation
               </button>
             </div>
