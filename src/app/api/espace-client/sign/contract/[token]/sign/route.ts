@@ -1,11 +1,9 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
-import { getClientSessionFromCookies } from "@/lib/documents-auth";
 import { isDatabaseConfigured } from "@/lib/db";
-import { signPortalQuote } from "@/lib/billing/sign-quote";
-import { BillingWorkflowError } from "@/lib/billing/workflow";
+import { signContractNative } from "@/lib/signature/native-contract";
 
-type RouteContext = { params: Promise<{ id: string }> };
+type Props = { params: Promise<{ token: string }> };
 
 const signSchema = z.object({
   signerName: z.string().trim().min(2).max(160),
@@ -14,21 +12,15 @@ const signSchema = z.object({
   acceptTerms: z.literal(true),
 });
 
-export async function POST(request: Request, context: RouteContext) {
+export async function POST(request: Request, { params }: Props) {
   if (!isDatabaseConfigured()) {
     return NextResponse.json({ error: "Service indisponible." }, { status: 503 });
   }
 
-  const session = await getClientSessionFromCookies();
-  if (!session) {
-    return NextResponse.json({ error: "Non authentifié." }, { status: 401 });
-  }
-
   try {
-    const { id } = await context.params;
+    const { token } = await params;
     const body = await request.json();
     const parsed = signSchema.safeParse(body);
-
     if (!parsed.success) {
       return NextResponse.json(
         { error: parsed.error.issues[0]?.message ?? "Données invalides." },
@@ -36,9 +28,8 @@ export async function POST(request: Request, context: RouteContext) {
       );
     }
 
-    const quote = await signPortalQuote({
-      portalClientId: session.crmPortalId,
-      quoteId: id,
+    const contract = await signContractNative({
+      token,
       signerName: parsed.data.signerName,
       signatureData: parsed.data.signatureData,
       otpCode: parsed.data.otpCode,
@@ -49,22 +40,16 @@ export async function POST(request: Request, context: RouteContext) {
 
     return NextResponse.json({
       success: true,
-      quote: {
-        id: quote.id,
-        reference: quote.reference,
-        status: quote.status,
-        signedAt: quote.signedAt,
+      contract: {
+        id: contract.id,
+        reference: contract.reference,
+        status: contract.status,
+        signedAt: contract.signedAt,
       },
     });
   } catch (error) {
-    if (error instanceof BillingWorkflowError) {
-      return NextResponse.json({ error: error.message }, { status: 409 });
-    }
     const message = error instanceof Error ? error.message : "Signature impossible.";
-    if (message.includes("Code de signature") || message.includes("Patientez")) {
-      return NextResponse.json({ error: message }, { status: 400 });
-    }
-    console.error("[api/espace-client/quotes/sign] POST", error);
-    return NextResponse.json({ error: "Signature impossible." }, { status: 500 });
+    console.error("[api/espace-client/sign/contract/sign]", error);
+    return NextResponse.json({ error: message }, { status: 400 });
   }
 }

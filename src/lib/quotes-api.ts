@@ -164,4 +164,28 @@ export function getQuotePdfUrl(id: string): string {
   return `/api/admin/quotes/${id}/pdf`;
 }
 
+export async function fetchQuoteSignatureProof(id: string) {
+  const res = await fetch(`/api/admin/quotes/${id}/signature`, { credentials: "include" });
+  return parseJson<{
+    proof: {
+      signerName: string;
+      signerEmail: string;
+      signedAt: string;
+      otpVerifiedAt: string | null;
+      signatureHash: string;
+      documentSha256: string | null;
+      provider: string;
+      ipAddress: string | null;
+      userAgent: string | null;
+      proofDocumentId: string | null;
+      events: Array<{
+        id: string;
+        eventType: string;
+        createdAt: string;
+        ipAddress: string | null;
+      }>;
+    };
+  }>(res);
+}
+
 export type { QuoteListFilters };

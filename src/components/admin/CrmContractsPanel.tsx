@@ -13,17 +13,18 @@ import {
   createContractApi,
   fetchContracts,
   sendContractForEsignApi,
+  sendContractForNativeSignApi,
   updateContractApi,
 } from "@/lib/contracts-api";
 import { useDialog } from "@/components/ui/DialogProvider";
 import { cn } from "@/lib/utils";
-import { Loader2, PenLine, Plus } from "lucide-react";
+import { FileSignature, Loader2, PenLine, Plus } from "lucide-react";
 
 const fieldClass =
   "w-full rounded-xl border border-gray/60 bg-white px-3 py-2.5 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20";
 
 export function CrmContractsPanel() {
-  const { prompt } = useDialog();
+  const { prompt, alert } = useDialog();
   const [contracts, setContracts] = useState<Contract[]>([]);
   const [clients, setClients] = useState<Array<{ id: string; name: string }>>([]);
   const [loading, setLoading] = useState(true);
@@ -31,6 +32,7 @@ export function CrmContractsPanel() {
   const [showCreate, setShowCreate] = useState(false);
   const [selected, setSelected] = useState<Contract | null>(null);
   const [esignBusy, setEsignBusy] = useState(false);
+  const [nativeBusy, setNativeBusy] = useState(false);
   const [form, setForm] = useState({
     clientId: "",
     title: "",
@@ -103,10 +105,40 @@ export function CrmContractsPanel() {
     }
   }
 
+  async function sendForNative(contract: Contract) {
+    const email = await prompt({
+      title: "Signature SD CREATIV",
+      message: "Email du signataire (lien magique + OTP)",
+      defaultValue: contract.esignSignerEmail ?? "",
+      placeholder: "client@exemple.com",
+      confirmLabel: "Envoyer",
+    });
+    if (!email?.trim()) return;
+    setNativeBusy(true);
+    setError("");
+    try {
+      const result = await sendContractForNativeSignApi(contract.id, {
+        signerEmail: email.trim(),
+      });
+      setContracts((prev) =>
+        prev.map((c) => (c.id === result.contract.id ? result.contract : c)),
+      );
+      setSelected(result.contract);
+      await alert({
+        title: "Invitation envoyée",
+        message: `Lien de signature :\n${result.signUrl}`,
+      });
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Envoi signature impossible.");
+    } finally {
+      setNativeBusy(false);
+    }
+  }
+
   async function sendForEsign(contract: Contract) {
     const email = await prompt({
-      title: "Signature Yousign",
-      message: "Email du signataire",
+      title: "Signature Yousign (forte valeur)",
+      message: "Email du signataire — prestataire tiers eIDAS",
       defaultValue: contract.esignSignerEmail ?? "",
       placeholder: "client@exemple.com",
       confirmLabel: "Envoyer",
@@ -223,6 +255,9 @@ export function CrmContractsPanel() {
                     {contract.signatureProvider === "yousign" && (
                       <p className="mt-1 text-[10px] font-medium text-primary">Yousign</p>
                     )}
+                    {contract.signatureProvider === "native" && (
+                      <p className="mt-1 text-[10px] font-medium text-emerald-700">SD CREATIV</p>
+                    )}
                   </button>
                 ))}
               </div>
@@ -239,7 +274,7 @@ export function CrmContractsPanel() {
           </p>
           {selected.esignSignerEmail && (
             <p className="mt-2 text-xs text-gray-text">
-              Signature tierce : {selected.esignSignerEmail}
+              Signature ({selected.signatureProvider ?? "—"}) : {selected.esignSignerEmail}
               {selected.esignSentAt
                 ? ` — envoyé le ${new Date(selected.esignSentAt).toLocaleDateString("fr-FR")}`
                 : ""}
@@ -255,19 +290,34 @@ export function CrmContractsPanel() {
               </button>
             )}
             {["draft", "sent"].includes(selected.status) && (
-              <button
-                type="button"
-                disabled={esignBusy}
-                onClick={() => void sendForEsign(selected)}
-                className="inline-flex items-center gap-1.5 rounded-lg border border-primary/40 px-3 py-1.5 text-xs font-semibold text-primary disabled:opacity-60"
-              >
-                {esignBusy ? (
-                  <Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden />
-                ) : (
-                  <PenLine className="h-3.5 w-3.5" aria-hidden />
-                )}
-                Envoyer via Yousign
-              </button>
+              <>
+                <button
+                  type="button"
+                  disabled={nativeBusy || esignBusy}
+                  onClick={() => void sendForNative(selected)}
+                  className="inline-flex items-center gap-1.5 rounded-lg border border-emerald-600/40 px-3 py-1.5 text-xs font-semibold text-emerald-800 disabled:opacity-60"
+                >
+                  {nativeBusy ? (
+                    <Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden />
+                  ) : (
+                    <FileSignature className="h-3.5 w-3.5" aria-hidden />
+                  )}
+                  Signer (SD CREATIV)
+                </button>
+                <button
+                  type="button"
+                  disabled={esignBusy || nativeBusy}
+                  onClick={() => void sendForEsign(selected)}
+                  className="inline-flex items-center gap-1.5 rounded-lg border border-primary/40 px-3 py-1.5 text-xs font-semibold text-primary disabled:opacity-60"
+                >
+                  {esignBusy ? (
+                    <Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden />
+                  ) : (
+                    <PenLine className="h-3.5 w-3.5" aria-hidden />
+                  )}
+                  Yousign (forte valeur)
+                </button>
+              </>
             )}
             <button type="button" onClick={() => void addAmendment(selected)} className="rounded-lg border px-3 py-1.5 text-xs font-medium">
               Ajouter un avenant

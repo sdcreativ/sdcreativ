@@ -1,15 +1,17 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import {
   CheckCircle2,
   Download,
   FileSignature,
   Loader2,
+  Mail,
   PenLine,
   XCircle,
 } from "lucide-react";
 import { formatQuoteAmount, formatQuoteDate } from "@/content/quotes-labels";
+import { SignaturePad } from "@/components/signature/SignaturePad";
 import { cn } from "@/lib/utils";
 
 type QuoteSummary = {
@@ -32,6 +34,8 @@ type QuoteDetail = QuoteSummary & {
   rejectionReason: string | null;
 };
 
+type SignStep = "review" | "otp" | "sign";
+
 function statusTone(status: string): string {
   if (status === "signed" || status === "validated" || status === "invoiced") {
     return "bg-emerald-100 text-emerald-800";
@@ -45,94 +49,6 @@ function statusTone(status: string): string {
   return "bg-sky-100 text-sky-800";
 }
 
-function SignaturePad({
-  onChange,
-}: {
-  onChange: (dataUrl: string | null) => void;
-}) {
-  const canvasRef = useRef<HTMLCanvasElement>(null);
-  const drawing = useRef(false);
-
-  const getPoint = (e: React.PointerEvent<HTMLCanvasElement>) => {
-    const canvas = canvasRef.current!;
-    const rect = canvas.getBoundingClientRect();
-    return {
-      x: e.clientX - rect.left,
-      y: e.clientY - rect.top,
-    };
-  };
-
-  function startDraw(e: React.PointerEvent<HTMLCanvasElement>) {
-    const canvas = canvasRef.current;
-    const ctx = canvas?.getContext("2d");
-    if (!canvas || !ctx) return;
-    drawing.current = true;
-    canvas.setPointerCapture(e.pointerId);
-    const p = getPoint(e);
-    ctx.strokeStyle = "#1e40af";
-    ctx.lineWidth = 2;
-    ctx.lineCap = "round";
-    ctx.beginPath();
-    ctx.moveTo(p.x, p.y);
-  }
-
-  function draw(e: React.PointerEvent<HTMLCanvasElement>) {
-    if (!drawing.current) return;
-    const canvas = canvasRef.current;
-    const ctx = canvas?.getContext("2d");
-    if (!canvas || !ctx) return;
-    const p = getPoint(e);
-    ctx.lineTo(p.x, p.y);
-    ctx.stroke();
-    onChange(canvas.toDataURL("image/png"));
-  }
-
-  function endDraw(e: React.PointerEvent<HTMLCanvasElement>) {
-    if (!drawing.current) return;
-    drawing.current = false;
-    const canvas = canvasRef.current;
-    if (canvas) {
-      try {
-        canvas.releasePointerCapture(e.pointerId);
-      } catch {
-        /* ignore */
-      }
-      onChange(canvas.toDataURL("image/png"));
-    }
-  }
-
-  function clear() {
-    const canvas = canvasRef.current;
-    const ctx = canvas?.getContext("2d");
-    if (!canvas || !ctx) return;
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
-    onChange(null);
-  }
-
-  return (
-    <div>
-      <canvas
-        ref={canvasRef}
-        width={480}
-        height={140}
-        className="w-full touch-none rounded-xl border border-dashed border-gray/50 bg-white"
-        onPointerDown={startDraw}
-        onPointerMove={draw}
-        onPointerUp={endDraw}
-        onPointerLeave={endDraw}
-        aria-label="Zone de signature"
-      />
-      <button
-        type="button"
-        onClick={clear}
-        className="mt-2 text-xs font-medium text-gray-text hover:text-foreground"
-      >
-        Effacer la signature
-      </button>
-    </div>
-  );
-}
-
 export function ClientPortalQuotesView() {
   const [quotes, setQuotes] = useState<QuoteSummary[]>([]);
   const [loading, setLoading] = useState(true);
@@ -143,6 +59,9 @@ export function ClientPortalQuotesView() {
   const [signerName, setSignerName] = useState("");
   const [signatureData, setSignatureData] = useState<string | null>(null);
   const [acceptTerms, setAcceptTerms] = useState(false);
+  const [otpCode, setOtpCode] = useState("");
+  const [otpDisplayTo, setOtpDisplayTo] = useState("");
+  const [signStep, setSignStep] = useState<SignStep>("review");
   const [rejectReason, setRejectReason] = useState("");
   const [showReject, setShowReject] = useState(false);
   const [actionLoading, setActionLoading] = useState(false);
@@ -186,9 +105,43 @@ export function ClientPortalQuotesView() {
   }, [loadList]);
 
   useEffect(() => {
-    if (selectedId) void loadDetail(selectedId);
-    else setDetail(null);
+    if (selectedId) {
+      setSignStep("review");
+      setOtpCode("");
+      setSignatureData(null);
+      setAcceptTerms(false);
+      void loadDetail(selectedId);
+    } else {
+      setDetail(null);
+    }
   }, [selectedId, loadDetail]);
+
+  async function handleSendOtp() {
+    if (!selectedId) return;
+    setActionLoading(true);
+    setActionMessage("");
+    try {
+      const res = await fetch(`/api/espace-client/quotes/${selectedId}/sign/challenge`, {
+        method: "POST",
+        credentials: "include",
+      });
+      const json = (await res.json()) as {
+        displayTo?: string;
+        expiresInMinutes?: number;
+        error?: string;
+      };
+      if (!res.ok) throw new Error(json.error);
+      setOtpDisplayTo(json.displayTo ?? "");
+      setSignStep("otp");
+      setActionMessage(
+        `Code envoyé${json.displayTo ? ` à ${json.displayTo}` : ""} (valable ${json.expiresInMinutes ?? 10} min).`,
+      );
+    } catch (err) {
+      setActionMessage(err instanceof Error ? err.message : "Envoi du code impossible.");
+    } finally {
+      setActionLoading(false);
+    }
+  }
 
   async function handleSign() {
     if (!selectedId || !signatureData) return;
@@ -199,11 +152,17 @@ export function ClientPortalQuotesView() {
         method: "POST",
         credentials: "include",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ signerName, signatureData, acceptTerms: true }),
+        body: JSON.stringify({
+          signerName,
+          signatureData,
+          otpCode,
+          acceptTerms: true,
+        }),
       });
       const json = (await res.json()) as { error?: string };
       if (!res.ok) throw new Error(json.error);
       setActionMessage("Devis signé avec succès. L'équipe SD CREATIV a été notifiée.");
+      setSignStep("review");
       await loadDetail(selectedId);
     } catch (err) {
       setActionMessage(err instanceof Error ? err.message : "Signature impossible.");
@@ -372,54 +331,141 @@ export function ClientPortalQuotesView() {
               <div className="mt-6 space-y-4 border-t border-gray/30 pt-5">
                 <h4 className="flex items-center gap-2 text-sm font-bold text-foreground">
                   <FileSignature className="h-4 w-4 text-primary" aria-hidden />
-                  Signature électronique
+                  Signature SD CREATIV
                 </h4>
-                <label className="block text-sm">
-                  <span className="text-xs font-semibold uppercase tracking-wide text-gray-text">Nom complet</span>
-                  <input
-                    value={signerName}
-                    onChange={(e) => setSignerName(e.target.value)}
-                    className="mt-1 w-full rounded-xl border border-gray/60 px-3 py-2.5"
-                    placeholder="Prénom Nom"
-                  />
-                </label>
-                <div>
-                  <p className="mb-2 flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wide text-gray-text">
-                    <PenLine className="h-3.5 w-3.5" aria-hidden />
-                    Signez dans le cadre
-                  </p>
-                  <SignaturePad onChange={setSignatureData} />
-                </div>
-                <label className="flex items-start gap-2 text-xs text-gray-text">
-                  <input
-                    type="checkbox"
-                    checked={acceptTerms}
-                    onChange={(e) => setAcceptTerms(e.target.checked)}
-                    className="mt-0.5"
-                  />
-                  <span>
-                    J&apos;accepte les conditions du devis et confirme ma signature électronique simple, équivalente à un accord contractuel.
-                  </span>
-                </label>
-                <div className="flex flex-wrap gap-2">
-                  <button
-                    type="button"
-                    disabled={actionLoading || !signerName.trim() || !signatureData || !acceptTerms}
-                    onClick={() => void handleSign()}
-                    className="inline-flex flex-1 items-center justify-center gap-2 rounded-xl bg-primary py-2.5 text-sm font-semibold text-white hover:bg-primary-dark disabled:opacity-50"
-                  >
-                    {actionLoading ? <Loader2 className="h-4 w-4 animate-spin" aria-hidden /> : <CheckCircle2 className="h-4 w-4" aria-hidden />}
-                    Signer le devis
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setShowReject((v) => !v)}
-                    className="inline-flex items-center gap-1.5 rounded-xl border border-red-200 px-4 py-2.5 text-sm font-medium text-red-700 hover:bg-red-50"
-                  >
-                    <XCircle className="h-4 w-4" aria-hidden />
-                    Refuser
-                  </button>
-                </div>
+                <p className="text-xs text-gray-text">
+                  Signature électronique simple renforcée (preuve métier) — code email, tracé et empreinte PDF.
+                  Ce n&apos;est pas une signature eIDAS qualifiée type Yousign.
+                </p>
+
+                <ol className="flex flex-wrap gap-2 text-[10px] font-bold uppercase tracking-wide">
+                  {(
+                    [
+                      ["review", "1. Revue"],
+                      ["otp", "2. Code email"],
+                      ["sign", "3. Signature"],
+                    ] as const
+                  ).map(([step, label]) => (
+                    <li
+                      key={step}
+                      className={cn(
+                        "rounded-full px-2.5 py-1",
+                        signStep === step ? "bg-primary text-white" : "bg-gray-light text-gray-text",
+                      )}
+                    >
+                      {label}
+                    </li>
+                  ))}
+                </ol>
+
+                {signStep === "review" && (
+                  <div className="space-y-3">
+                    <p className="text-sm text-gray-text">
+                      Vérifiez le montant et les lignes ci-dessus, puis demandez un code de confirmation.
+                    </p>
+                    <label className="block text-sm">
+                      <span className="text-xs font-semibold uppercase tracking-wide text-gray-text">Nom complet</span>
+                      <input
+                        value={signerName}
+                        onChange={(e) => setSignerName(e.target.value)}
+                        className="mt-1 w-full rounded-xl border border-gray/60 px-3 py-2.5"
+                        placeholder="Prénom Nom"
+                      />
+                    </label>
+                    <button
+                      type="button"
+                      disabled={actionLoading || signerName.trim().length < 2}
+                      onClick={() => void handleSendOtp()}
+                      className="inline-flex w-full items-center justify-center gap-2 rounded-xl bg-primary py-2.5 text-sm font-semibold text-white disabled:opacity-50"
+                    >
+                      {actionLoading ? (
+                        <Loader2 className="h-4 w-4 animate-spin" aria-hidden />
+                      ) : (
+                        <Mail className="h-4 w-4" aria-hidden />
+                      )}
+                      Recevoir le code par email
+                    </button>
+                  </div>
+                )}
+
+                {signStep === "otp" && (
+                  <div className="space-y-3">
+                    <p className="text-sm text-gray-text">
+                      Saisissez le code reçu{otpDisplayTo ? ` sur ${otpDisplayTo}` : ""}.
+                    </p>
+                    <input
+                      value={otpCode}
+                      onChange={(e) => setOtpCode(e.target.value.toUpperCase())}
+                      className="w-full rounded-xl border border-gray/60 px-3 py-2.5 font-mono text-lg tracking-widest"
+                      placeholder="SD-XXXXXX"
+                      autoComplete="one-time-code"
+                    />
+                    <div className="flex flex-wrap gap-2">
+                      <button
+                        type="button"
+                        disabled={actionLoading || otpCode.trim().length < 4}
+                        onClick={() => setSignStep("sign")}
+                        className="inline-flex flex-1 items-center justify-center rounded-xl bg-primary py-2.5 text-sm font-semibold text-white disabled:opacity-50"
+                      >
+                        Continuer
+                      </button>
+                      <button
+                        type="button"
+                        disabled={actionLoading}
+                        onClick={() => void handleSendOtp()}
+                        className="rounded-xl border px-4 py-2.5 text-sm font-medium"
+                      >
+                        Renvoyer
+                      </button>
+                    </div>
+                  </div>
+                )}
+
+                {signStep === "sign" && (
+                  <div className="space-y-3">
+                    <div>
+                      <p className="mb-2 flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wide text-gray-text">
+                        <PenLine className="h-3.5 w-3.5" aria-hidden />
+                        Signez dans le cadre
+                      </p>
+                      <SignaturePad onChange={setSignatureData} />
+                    </div>
+                    <label className="flex items-start gap-2 text-xs text-gray-text">
+                      <input
+                        type="checkbox"
+                        checked={acceptTerms}
+                        onChange={(e) => setAcceptTerms(e.target.checked)}
+                        className="mt-0.5"
+                      />
+                      <span>
+                        J&apos;accepte les conditions du devis et confirme ma signature électronique SD CREATIV
+                        (preuve renforcée).
+                      </span>
+                    </label>
+                    <button
+                      type="button"
+                      disabled={actionLoading || !signatureData || !acceptTerms}
+                      onClick={() => void handleSign()}
+                      className="inline-flex w-full items-center justify-center gap-2 rounded-xl bg-primary py-2.5 text-sm font-semibold text-white disabled:opacity-50"
+                    >
+                      {actionLoading ? (
+                        <Loader2 className="h-4 w-4 animate-spin" aria-hidden />
+                      ) : (
+                        <CheckCircle2 className="h-4 w-4" aria-hidden />
+                      )}
+                      Finaliser la signature
+                    </button>
+                  </div>
+                )}
+
+                <button
+                  type="button"
+                  onClick={() => setShowReject((v) => !v)}
+                  className="inline-flex items-center gap-1.5 text-sm font-medium text-red-700 hover:underline"
+                >
+                  <XCircle className="h-4 w-4" aria-hidden />
+                  Refuser ce devis
+                </button>
               </div>
             )}
 

@@ -20,6 +20,7 @@ import {
   createQuoteApi,
   deleteQuoteApi,
   fetchQuoteDocuments,
+  fetchQuoteSignatureProof,
   fetchQuoteStats,
   fetchQuoteTimeline,
   fetchQuotes,
@@ -557,6 +558,16 @@ function QuoteDetailPanel({
   const [documents, setDocuments] = useState<
     Array<{ id: string; fileName: string; kind: string; downloadUrl: string | null; createdAt: string }>
   >([]);
+  const [signatureProof, setSignatureProof] = useState<{
+    signerName: string;
+    signerEmail: string;
+    signedAt: string;
+    otpVerifiedAt: string | null;
+    signatureHash: string;
+    documentSha256: string | null;
+    provider: string;
+    ipAddress: string | null;
+  } | null>(null);
 
   const canPublish = PUBLISHABLE_STATUSES.includes(quote.status);
 
@@ -572,7 +583,17 @@ function QuoteDetailPanel({
       setTimeline([]);
       setDocuments([]);
     }
-  }, [quote.id]);
+    if (quote.status === "signed" || quote.status === "accepted" || quote.status === "validated" || quote.status === "invoiced") {
+      try {
+        const { proof } = await fetchQuoteSignatureProof(quote.id);
+        setSignatureProof(proof);
+      } catch {
+        setSignatureProof(null);
+      }
+    } else {
+      setSignatureProof(null);
+    }
+  }, [quote.id, quote.status]);
 
   useEffect(() => {
     void loadBillingMeta();
@@ -813,6 +834,61 @@ function QuoteDetailPanel({
                   </li>
                 ))}
               </ul>
+            </div>
+          )}
+
+          {signatureProof && (
+            <div className="rounded-xl border border-emerald-200/60 bg-emerald-50/40 p-3">
+              <p className="text-xs font-semibold uppercase tracking-wide text-emerald-900">
+                Preuve signature SD CREATIV
+              </p>
+              <dl className="mt-2 space-y-1.5 text-xs text-foreground">
+                <div className="flex justify-between gap-2">
+                  <dt className="text-gray-text">Signataire</dt>
+                  <dd className="font-medium text-right">
+                    {signatureProof.signerName}
+                    <span className="block text-[10px] font-normal text-gray-text">
+                      {signatureProof.signerEmail}
+                    </span>
+                  </dd>
+                </div>
+                <div className="flex justify-between gap-2">
+                  <dt className="text-gray-text">Signé le</dt>
+                  <dd>{formatQuoteDate(signatureProof.signedAt)}</dd>
+                </div>
+                <div className="flex justify-between gap-2">
+                  <dt className="text-gray-text">OTP email</dt>
+                  <dd>
+                    {signatureProof.otpVerifiedAt
+                      ? `Vérifié · ${formatQuoteDate(signatureProof.otpVerifiedAt)}`
+                      : "Non enregistré (legacy)"}
+                  </dd>
+                </div>
+                <div className="flex justify-between gap-2">
+                  <dt className="text-gray-text">Fournisseur</dt>
+                  <dd className="font-medium">{signatureProof.provider}</dd>
+                </div>
+                {signatureProof.ipAddress && (
+                  <div className="flex justify-between gap-2">
+                    <dt className="text-gray-text">IP</dt>
+                    <dd className="font-mono text-[10px]">{signatureProof.ipAddress}</dd>
+                  </div>
+                )}
+                {signatureProof.documentSha256 && (
+                  <div>
+                    <dt className="text-gray-text">Empreinte PDF (SHA-256)</dt>
+                    <dd className="mt-0.5 break-all font-mono text-[10px] text-gray-text">
+                      {signatureProof.documentSha256}
+                    </dd>
+                  </div>
+                )}
+                <div>
+                  <dt className="text-gray-text">Hash preuve</dt>
+                  <dd className="mt-0.5 break-all font-mono text-[10px] text-gray-text">
+                    {signatureProof.signatureHash}
+                  </dd>
+                </div>
+              </dl>
             </div>
           )}
 

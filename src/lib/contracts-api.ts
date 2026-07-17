@@ -73,3 +73,16 @@ export async function sendContractForEsignApi(
   const json = await parseJson<{ contract: Contract }>(res);
   return json.contract;
 }
+
+export async function sendContractForNativeSignApi(
+  contractId: string,
+  input: { signerEmail?: string | null } = {},
+): Promise<{ contract: Contract; signUrl: string }> {
+  const res = await fetch(`/api/admin/contracts/${contractId}/native-sign`, {
+    method: "POST",
+    credentials: "include",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(input),
+  });
+  return parseJson<{ contract: Contract; signUrl: string }>(res);
+}

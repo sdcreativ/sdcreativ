@@ -8,45 +8,7 @@ import {
   isYousignConfigured,
   uploadYousignDocument,
 } from "@/lib/esign/yousign";
-import { formatInvoiceAmount } from "@/content/invoices-labels";
-
-function buildContractPdfHtml(contract: Contract, siteUrl: string): string {
-  const amount =
-    contract.amount != null ? formatInvoiceAmount(contract.amount) : "—";
-  return `<!DOCTYPE html>
-<html lang="fr">
-<head><meta charset="utf-8"/><title>${escapeHtml(contract.reference)}</title>
-<style>
-  body{font-family:Georgia,serif;color:#111;margin:40px;line-height:1.5}
-  h1{font-size:22px;margin:0 0 8px}
-  .meta{color:#555;font-size:13px;margin-bottom:24px}
-  table{width:100%;border-collapse:collapse;margin-top:16px}
-  td{padding:8px 0;border-bottom:1px solid #e5e5e5;font-size:14px}
-  td:first-child{color:#666;width:40%}
-  .footer{margin-top:48px;font-size:11px;color:#888}
-</style></head>
-<body>
-  <h1>${escapeHtml(contract.title)}</h1>
-  <p class="meta">${escapeHtml(contract.reference)} · ${escapeHtml(siteUrl.replace(/^https?:\/\//, ""))}</p>
-  <table>
-    <tr><td>Client</td><td>${escapeHtml(contract.clientName ?? "—")}</td></tr>
-    <tr><td>Projet</td><td>${escapeHtml(contract.projectName ?? "—")}</td></tr>
-    <tr><td>Montant</td><td>${escapeHtml(amount)}</td></tr>
-    <tr><td>Début</td><td>${escapeHtml(contract.startDate ?? "—")}</td></tr>
-    <tr><td>Fin</td><td>${escapeHtml(contract.endDate ?? "—")}</td></tr>
-  </table>
-  ${contract.notes ? `<p style="margin-top:24px">${escapeHtml(contract.notes)}</p>` : ""}
-  <p class="footer">Document généré pour signature électronique — SD CREATIV</p>
-</body></html>`;
-}
-
-function escapeHtml(value: string): string {
-  return value
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
-    .replace(/"/g, "&quot;");
-}
+import { buildContractPdfHtml } from "@/lib/signature/contract-pdf";
 
 function splitName(full: string): { firstName: string; lastName: string } {
   const parts = full.trim().split(/\s+/).filter(Boolean);
@@ -70,6 +32,11 @@ export async function sendContractForEsign(input: {
   if (!contract) throw new Error("Contrat introuvable.");
   if (contract.status === "signed" || contract.status === "linked") {
     throw new Error("Ce contrat est déjà signé ou lié.");
+  }
+  if (contract.signatureProvider === "native" && contract.esignSentAt) {
+    throw new Error(
+      "Une signature SD CREATIV est déjà en cours. Attendez la signature ou utilisez un nouveau contrat.",
+    );
   }
 
   const email = input.signerEmail.trim().toLowerCase();
