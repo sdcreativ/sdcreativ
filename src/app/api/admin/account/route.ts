@@ -134,9 +134,16 @@ export async function PATCH(request: Request) {
       phone !== undefined ||
       smsOtpEnabled !== undefined
     ) {
-      if (personalEmail && personalEmail.toLowerCase() === session.email.toLowerCase()) {
+      if (
+        personalEmail &&
+        personalEmail.toLowerCase() === session.email.toLowerCase() &&
+        isCrmTeamEmail(session.email)
+      ) {
         return NextResponse.json(
-          { error: "L'email personnel doit être différent de l'email professionnel." },
+          {
+            error:
+              "L'email personnel doit être différent de l'email professionnel @sdcreativ.com.",
+          },
           { status: 400 },
         );
       }

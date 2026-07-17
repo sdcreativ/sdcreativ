@@ -3,6 +3,7 @@ import { escapeHtml, sendEmail } from "@/lib/email";
 import { getCrmSettings } from "@/lib/crm-settings";
 import { withDb } from "@/lib/db";
 import { normalizeLoginEmailOtp } from "@/lib/crm-email-otp-utils";
+import { isCrmTeamEmail } from "@/lib/crm-team-email";
 import { isValidPhone, maskPhone, normalizePhone, sendSms } from "@/lib/sms";
 
 export { normalizeLoginEmailOtp } from "@/lib/crm-email-otp-utils";
@@ -50,6 +51,10 @@ export function resolveLoginOtpEmailDestination(input: {
   const professional = input.professionalEmail.trim().toLowerCase();
   if (personal && personal.includes("@") && personal !== professional) {
     return { to: personal, displayTo: personal, channel: "personal" };
+  }
+  // Compte legacy : le login est déjà un email perso (Gmail, etc.)
+  if (!isCrmTeamEmail(professional)) {
+    return { to: professional, displayTo: professional, channel: "personal" };
   }
   return { to: professional, displayTo: professional, channel: "professional" };
 }

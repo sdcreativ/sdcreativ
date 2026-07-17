@@ -117,7 +117,7 @@ export const createCrmUserSchema = z
     mailboxPassword: z.string().min(12).max(64).optional(),
   })
   .refine((data) => data.personalEmail.toLowerCase() !== data.email.toLowerCase(), {
-    message: "L'email personnel doit être différent de l'email professionnel.",
+    message: "L'email personnel doit être différent de l'email professionnel @sdcreativ.com.",
     path: ["personalEmail"],
   });
 
@@ -133,14 +133,16 @@ export const updateCrmUserSchema = z
     active: z.boolean().optional(),
   })
   .superRefine((data, ctx) => {
+    // Uniquement si les deux sont fournis dans le payload (sinon vérifié côté updateCrmUser).
     if (
       data.personalEmail &&
       data.email &&
-      data.personalEmail.toLowerCase() === data.email.toLowerCase()
+      data.personalEmail.toLowerCase() === data.email.toLowerCase() &&
+      isCrmTeamEmail(data.email)
     ) {
       ctx.addIssue({
         code: z.ZodIssueCode.custom,
-        message: "L'email personnel doit être différent de l'email professionnel.",
+        message: "L'email personnel doit être différent de l'email professionnel @sdcreativ.com.",
         path: ["personalEmail"],
       });
     }
@@ -518,8 +520,14 @@ export async function updateCrmUser(
           ? null
           : input.personalEmail.toLowerCase();
 
-    if (nextPersonalEmail && nextPersonalEmail === nextEmail) {
-      throw new Error("L'email personnel doit être différent de l'email professionnel.");
+    if (
+      nextPersonalEmail &&
+      nextPersonalEmail === nextEmail &&
+      isCrmTeamEmail(nextEmail)
+    ) {
+      throw new Error(
+        "L'email personnel doit être différent de l'email professionnel @sdcreativ.com.",
+      );
     }
 
     const nextPhone =

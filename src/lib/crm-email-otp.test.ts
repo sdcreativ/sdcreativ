@@ -53,6 +53,19 @@ describe("resolveLoginOtpDestination", () => {
       channel: "professional",
     });
   });
+
+  it("traite un login Gmail legacy comme canal personnel", () => {
+    expect(
+      resolveLoginOtpDestination({
+        professionalEmail: "seyjadjeeiboh@gmail.com",
+        personalEmail: null,
+      }),
+    ).toEqual({
+      to: "seyjadjeeiboh@gmail.com",
+      displayTo: "seyjadjeeiboh@gmail.com",
+      channel: "personal",
+    });
+  });
 });
 
 describe("normalizeLoginEmailOtp", () => {
