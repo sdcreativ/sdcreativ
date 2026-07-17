@@ -11,7 +11,7 @@ import {
 type Params = { params: Promise<{ id: string }> };
 
 export async function PATCH(request: Request, { params }: Params) {
-  const authError = await crmApiAuth.projects.write();
+  const authError = await crmApiAuth.timesheets.write();
   if (authError) return authError;
 
   if (!isDatabaseConfigured()) {
@@ -40,7 +40,7 @@ export async function PATCH(request: Request, { params }: Params) {
 }
 
 export async function DELETE(_request: Request, { params }: Params) {
-  const authError = await crmApiAuth.projects.write();
+  const authError = await crmApiAuth.timesheets.write();
   if (authError) return authError;
 
   if (!isDatabaseConfigured()) {

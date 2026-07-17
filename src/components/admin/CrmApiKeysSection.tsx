@@ -2,30 +2,32 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { API_KEY_SCOPE_LABELS, type ApiKeyScope } from "@/content/priority3-labels";
+import {
+  createApiKeyApi,
+  fetchApiKeys,
+  revokeApiKeyApi,
+  type ApiKeyRow,
+} from "@/lib/api-keys-api";
+import { useDialog } from "@/components/ui/DialogProvider";
 import { Loader2, Plus, Trash2 } from "lucide-react";
 
-type ApiKeyRow = {
-  id: string;
-  name: string;
-  keyPrefix: string;
-  scopes: ApiKeyScope[];
-  lastUsedAt: string | null;
-  revokedAt: string | null;
-};
-
 export function CrmApiKeysSection() {
+  const { confirm } = useDialog();
   const [keys, setKeys] = useState<ApiKeyRow[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
   const [newKey, setNewKey] = useState<string | null>(null);
   const [name, setName] = useState("Zapier / Make");
   const [scopes, setScopes] = useState<ApiKeyScope[]>(["leads:write"]);
 
   const load = useCallback(async () => {
     setLoading(true);
+    setError("");
     try {
-      const res = await fetch("/api/admin/api-keys", { credentials: "include" });
-      const json = (await res.json()) as { apiKeys: ApiKeyRow[] };
-      setKeys(json.apiKeys ?? []);
+      setKeys(await fetchApiKeys());
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Chargement impossible.");
+      setKeys([]);
     } finally {
       setLoading(false);
     }
@@ -36,20 +38,30 @@ export function CrmApiKeysSection() {
   }, [load]);
 
   async function handleCreate() {
-    const res = await fetch("/api/admin/api-keys", {
-      method: "POST",
-      credentials: "include",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ name, scopes }),
-    });
-    const json = (await res.json()) as { apiKey: ApiKeyRow & { plainKey: string } };
-    setNewKey(json.apiKey.plainKey);
-    void load();
+    setError("");
+    try {
+      const created = await createApiKeyApi({ name, scopes });
+      setNewKey(created.plainKey);
+      await load();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Création impossible.");
+    }
   }
 
   async function handleRevoke(id: string) {
-    await fetch(`/api/admin/api-keys?id=${id}`, { method: "DELETE", credentials: "include" });
-    void load();
+    const ok = await confirm({
+      title: "Révoquer la clé ?",
+      message: "Cette clé API ne pourra plus être utilisée.",
+      confirmLabel: "Révoquer",
+      variant: "danger",
+    });
+    if (!ok) return;
+    try {
+      await revokeApiKeyApi(id);
+      await load();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Révocation impossible.");
+    }
   }
 
   if (loading) {
@@ -67,6 +79,12 @@ export function CrmApiKeysSection() {
         <code className="text-xs">GET /api/v1/invoices</code> — header{" "}
         <code className="text-xs">Authorization: Bearer sk_...</code>
       </p>
+
+      {error && (
+        <p className="rounded-xl border border-accent/30 bg-accent/5 px-4 py-3 text-sm text-accent">
+          {error}
+        </p>
+      )}
 
       {newKey && (
         <div className="rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm">

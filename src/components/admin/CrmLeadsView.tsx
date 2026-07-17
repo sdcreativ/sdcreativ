@@ -88,6 +88,11 @@ export function CrmLeadsView() {
 
   const assignees = useCrmAssignees();
 
+  useEffect(() => {
+    const assignee = searchParams.get("assignee")?.trim();
+    if (assignee) setAssigneeFilter(decodeURIComponent(assignee));
+  }, [searchParams]);
+
   const loadLeads = useCallback(async () => {
     setLoading(true);
     setError("");
@@ -148,6 +153,29 @@ export function CrmLeadsView() {
       setSourceFilter(source as LeadSource);
     }
   }, [searchParams]);
+
+  useEffect(() => {
+    const id = searchParams.get("id")?.trim();
+    if (!id) return;
+    const fromList = leads.find((l) => l.id === id);
+    if (fromList) {
+      setSelected(fromList);
+      return;
+    }
+    let cancelled = false;
+    void fetch(`/api/admin/leads/${id}`, { credentials: "include" })
+      .then(async (res) => {
+        if (!res.ok) return;
+        const json = (await res.json()) as { lead?: Lead };
+        if (!cancelled && json.lead) setSelected(json.lead);
+      })
+      .catch(() => {
+        /* ignore deep-link errors */
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [searchParams, leads]);
 
   useEffect(() => {
     setPage(1);

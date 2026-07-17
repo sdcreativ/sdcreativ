@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { CURRENCY_LABELS, SUPPORTED_CURRENCIES } from "@/lib/currencies";
 import type { LegalEntity } from "@/lib/legal-entities";
+import { createLegalEntityApi, fetchLegalEntities } from "@/lib/legal-entities-api";
 import { Loader2 } from "lucide-react";
 
 const fieldClass =
@@ -20,11 +21,9 @@ export function CrmLegalEntitiesSection() {
   const load = useCallback(async () => {
     setLoading(true);
     try {
-      const res = await fetch("/api/admin/legal-entities", { credentials: "include" });
-      if (res.ok) {
-        const json = (await res.json()) as { entities: LegalEntity[] };
-        setEntities(json.entities);
-      }
+      setEntities(await fetchLegalEntities());
+    } catch {
+      setEntities([]);
     } finally {
       setLoading(false);
     }
@@ -39,14 +38,7 @@ export function CrmLegalEntitiesSection() {
     setSaving(true);
     setMessage("");
     try {
-      const res = await fetch("/api/admin/legal-entities", {
-        method: "POST",
-        credentials: "include",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name, slug, currency }),
-      });
-      const json = (await res.json()) as { error?: string };
-      if (!res.ok) throw new Error(json.error ?? "Création impossible.");
+      await createLegalEntityApi({ name, slug, currency });
       setName("");
       setSlug("");
       setCurrency("XOF");

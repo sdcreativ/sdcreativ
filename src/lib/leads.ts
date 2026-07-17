@@ -37,6 +37,7 @@ export type Lead = {
   message: string | null;
   estimatedValue: number | null;
   assignee: string | null;
+  assigneeId: string | null;
   metadata: Record<string, unknown>;
   createdAt: string;
   updatedAt: string;
@@ -56,6 +57,7 @@ type LeadRow = {
   message: string | null;
   estimated_value: number | null;
   assignee: string | null;
+  assignee_id: string | null;
   metadata: Record<string, unknown> | null;
   created_at: Date;
   updated_at: Date;
@@ -76,6 +78,7 @@ function mapLead(row: LeadRow): Lead {
     message: row.message,
     estimatedValue: row.estimated_value,
     assignee: row.assignee ?? null,
+    assigneeId: row.assignee_id ?? null,
     metadata: row.metadata ?? {},
     createdAt: row.created_at.toISOString(),
     updatedAt: row.updated_at.toISOString(),
@@ -95,6 +98,7 @@ export type CreateLeadInput = {
   message?: string | null;
   estimatedValue?: number | null;
   assignee?: string | null;
+  assigneeId?: string | null;
   actorName?: string | null;
   metadata?: Record<string, unknown>;
 };
@@ -112,6 +116,7 @@ export const createLeadSchema = z.object({
   message: z.string().trim().max(5000).optional().nullable(),
   estimatedValue: z.number().int().min(0).optional().nullable(),
   assignee: z.string().trim().max(100).optional().nullable(),
+  assigneeId: z.string().uuid().optional().nullable(),
   metadata: z.record(z.string(), z.unknown()).optional(),
 });
 
@@ -126,6 +131,7 @@ export const updateLeadSchema = z.object({
   message: z.string().trim().max(5000).optional().nullable(),
   estimatedValue: z.number().int().min(0).optional().nullable(),
   assignee: z.string().trim().max(100).optional().nullable(),
+  assigneeId: z.string().uuid().optional().nullable(),
   metadata: z.record(z.string(), z.unknown()).optional(),
 });
 
@@ -134,11 +140,16 @@ export async function createLead(input: CreateLeadInput): Promise<Lead | null> {
 
   try {
     return await withDb(async (query) => {
+      const { resolveAssigneeInput } = await import("@/lib/crm-assignee");
+      const assigneeFields = await resolveAssigneeInput({
+        assigneeId: (input as { assigneeId?: string | null }).assigneeId,
+        assignee: input.assignee,
+      });
       const { rows } = await query<LeadRow>(
         `INSERT INTO leads (
           name, email, phone, company, source, status,
-          service, budget, timeline, message, estimated_value, assignee, metadata
-        ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13)
+          service, budget, timeline, message, estimated_value, assignee, assignee_id, metadata
+        ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14)
         RETURNING *`,
         [
           input.name,
@@ -152,7 +163,8 @@ export async function createLead(input: CreateLeadInput): Promise<Lead | null> {
           input.timeline ?? null,
           input.message ?? null,
           input.estimatedValue ?? null,
-          input.assignee ?? null,
+          assigneeFields.assignee,
+          assigneeFields.assigneeId,
           JSON.stringify(input.metadata ?? {}),
         ],
       );
@@ -177,8 +189,11 @@ export async function createLead(input: CreateLeadInput): Promise<Lead | null> {
 }
 
 export async function listLeads(status?: LeadStatus): Promise<Lead[]> {
-  const result = await listLeadsPaginated({ status, pageSize: 10_000 });
-  return result.leads;
+  const { paginateAll } = await import("@/lib/paginate-all");
+  return paginateAll(async (page, pageSize) => {
+    const result = await listLeadsPaginated({ status, page, pageSize });
+    return { items: result.leads, totalPages: result.totalPages };
+  });
 }
 
 export type LeadListFilters = {
@@ -275,8 +290,11 @@ export async function listLeadsPaginated(filters: LeadListFilters = {}): Promise
 }
 
 export async function listAllLeadsForExport(filters: Omit<LeadListFilters, "page" | "pageSize"> = {}): Promise<Lead[]> {
-  const result = await listLeadsPaginated({ ...filters, page: 1, pageSize: 10_000 });
-  return result.leads;
+  const { paginateAll } = await import("@/lib/paginate-all");
+  return paginateAll(async (page, pageSize) => {
+    const result = await listLeadsPaginated({ ...filters, page, pageSize });
+    return { items: result.leads, totalPages: result.totalPages };
+  });
 }
 
 export async function getLeadById(id: string): Promise<Lead | null> {
@@ -302,6 +320,18 @@ export async function updateLead(
       ? { ...(existing.metadata ?? {}), ...input.metadata }
       : existing.metadata ?? {};
 
+    let nextAssignee = existing.assignee;
+    let nextAssigneeId = existing.assignee_id;
+    if (input.assigneeId !== undefined || input.assignee !== undefined) {
+      const { resolveAssigneeInput } = await import("@/lib/crm-assignee");
+      const resolved = await resolveAssigneeInput({
+        assigneeId: input.assigneeId,
+        assignee: input.assignee,
+      });
+      nextAssignee = resolved.assignee;
+      nextAssigneeId = resolved.assigneeId;
+    }
+
     const { rows } = await query<LeadRow>(
       `UPDATE leads SET
         status = $2,
@@ -314,7 +344,8 @@ export async function updateLead(
         message = $9,
         estimated_value = $10,
         assignee = $11,
-        metadata = $12::jsonb,
+        assignee_id = $12,
+        metadata = $13::jsonb,
         updated_at = NOW()
       WHERE id = $1
       RETURNING *`,
@@ -329,7 +360,8 @@ export async function updateLead(
         input.timeline !== undefined ? input.timeline : existing.timeline,
         input.message !== undefined ? input.message : existing.message,
         input.estimatedValue !== undefined ? input.estimatedValue : existing.estimated_value,
-        input.assignee !== undefined ? input.assignee : existing.assignee,
+        nextAssignee,
+        nextAssigneeId,
         JSON.stringify(mergedMetadata),
       ],
     );
@@ -399,7 +431,7 @@ function pickMergedLeadStatus(a: LeadStatus, b: LeadStatus): LeadStatus {
 }
 
 export async function findDuplicateLeadGroups(): Promise<DuplicateLeadGroup[]> {
-  const { leads } = await listLeadsPaginated({ page: 1, pageSize: 10_000 });
+  const leads = await listLeads();
   const byEmail = new Map<string, Lead[]>();
   const byPhone = new Map<string, Lead[]>();
 

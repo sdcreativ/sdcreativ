@@ -2,7 +2,7 @@ import type { Project } from "@/lib/projects";
 import type { Client } from "@/lib/clients";
 import { formatProjectDate } from "@/content/projects-labels";
 
-export type PortalPaymentStatus = "paid" | "pending" | "overdue";
+export type PortalPaymentStatus = "paid" | "pending" | "due" | "overdue";
 
 export type PaymentScheduleDraftItem = {
   id: string;
@@ -15,6 +15,7 @@ export type PaymentScheduleDraftItem = {
 export const PAYMENT_STATUS_LABELS: Record<PortalPaymentStatus, string> = {
   paid: "Payé",
   pending: "À venir",
+  due: "Échue",
   overdue: "En retard",
 };
 
@@ -56,6 +57,7 @@ function readAmount(value: unknown): number | undefined {
 function normalizePaymentStatus(raw: string | undefined): PortalPaymentStatus {
   if (raw === "paid" || raw === "payé") return "paid";
   if (raw === "overdue" || raw === "retard") return "overdue";
+  if (raw === "due" || raw === "échue" || raw === "echue") return "due";
   return "pending";
 }
 

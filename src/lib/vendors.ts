@@ -110,6 +110,43 @@ export async function createVendor(input: z.infer<typeof createVendorSchema>): P
   });
 }
 
+export const updateVendorSchema = createVendorSchema.partial();
+
+export async function updateVendor(
+  id: string,
+  input: z.infer<typeof updateVendorSchema>,
+): Promise<Vendor | null> {
+  return withDb(async (query) => {
+    const list = await listVendors();
+    const existing = list.find((v) => v.id === id);
+    if (!existing) return null;
+    await query(
+      `UPDATE crm_vendors SET
+        name = $2, email = $3, phone = $4, specialty = $5,
+        hourly_rate = $6, currency = $7, notes = $8, updated_at = NOW()
+       WHERE id = $1`,
+      [
+        id,
+        input.name ?? existing.name,
+        input.email !== undefined ? input.email : existing.email,
+        input.phone !== undefined ? input.phone : existing.phone,
+        input.specialty !== undefined ? input.specialty : existing.specialty,
+        input.hourlyRate !== undefined ? input.hourlyRate : existing.hourlyRate,
+        input.currency ?? existing.currency,
+        input.notes !== undefined ? input.notes : existing.notes,
+      ],
+    );
+    return (await listVendors()).find((v) => v.id === id) ?? null;
+  });
+}
+
+export async function deleteVendor(id: string): Promise<boolean> {
+  return withDb(async (query) => {
+    const { rowCount } = await query(`DELETE FROM crm_vendors WHERE id = $1`, [id]);
+    return (rowCount ?? 0) > 0;
+  });
+}
+
 export async function listPurchaseOrders(filters?: {
   projectId?: string;
 }): Promise<VendorPurchaseOrder[]> {

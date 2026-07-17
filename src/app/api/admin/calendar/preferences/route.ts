@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { getAdminSession, requireAdminAuth } from "@/lib/admin-auth";
+import { crmApiAuth } from "@/lib/crm-api-auth";
 import { isDatabaseConfigured } from "@/lib/db";
 import {
   getCalendarReminderPreferences,
@@ -9,7 +10,7 @@ import {
 import { isTwilioConfigured } from "@/lib/sms";
 
 export async function GET() {
-  const authError = await requireAdminAuth();
+  const authError = await crmApiAuth.calendar.read();
   if (authError) return authError;
 
   if (!isDatabaseConfigured()) {
@@ -40,7 +41,7 @@ export async function GET() {
 }
 
 export async function PATCH(request: Request) {
-  const authError = await requireAdminAuth({ write: true });
+  const authError = await crmApiAuth.calendar.write();
   if (authError) return authError;
 
   if (!isDatabaseConfigured()) {

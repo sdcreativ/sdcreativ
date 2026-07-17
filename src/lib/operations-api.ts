@@ -40,6 +40,20 @@ export async function createTimeEntryApi(input: Record<string, unknown>): Promis
   return json.entry;
 }
 
+export async function updateTimeEntryApi(
+  id: string,
+  input: Record<string, unknown>,
+): Promise<TimeEntry> {
+  const res = await fetch(`/api/admin/time-entries/${id}`, {
+    method: "PATCH",
+    credentials: "include",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(input),
+  });
+  const json = await parseJson<{ entry: TimeEntry }>(res);
+  return json.entry;
+}
+
 export async function deleteTimeEntryApi(id: string): Promise<void> {
   const res = await fetch(`/api/admin/time-entries/${id}`, {
     method: "DELETE",

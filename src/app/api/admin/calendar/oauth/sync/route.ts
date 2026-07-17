@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { getAdminSession, requireAdminAuth } from "@/lib/admin-auth";
+import { crmApiAuth } from "@/lib/crm-api-auth";
 import type { CalendarOAuthProvider } from "@/lib/calendar-oauth-config";
 import { syncCalendarOAuthForUser } from "@/lib/calendar-sync";
 import { isDatabaseConfigured } from "@/lib/db";
@@ -10,7 +11,7 @@ const bodySchema = z.object({
 });
 
 export async function POST(request: Request) {
-  const authError = await requireAdminAuth({ write: true });
+  const authError = await crmApiAuth.calendar.write();
   if (authError) return authError;
 
   if (!isDatabaseConfigured()) {

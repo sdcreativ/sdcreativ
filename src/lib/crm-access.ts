@@ -8,8 +8,8 @@ import { isCrmMessagerieUiEnabled } from "@/lib/mail/config";
 export const CRM_NAV_PERMISSIONS: Record<string, CrmPermission | CrmPermission[] | null> = {
   dashboard: null,
   leads: "leads.read",
-  deals: "leads.read",
-  marketing: "leads.read",
+  deals: "deals.read",
+  marketing: "marketing.read",
   presentation: "leads.write",
   clients: "clients.read",
   projects: "projects.read",
@@ -18,15 +18,16 @@ export const CRM_NAV_PERMISSIONS: Record<string, CrmPermission | CrmPermission[]
   invoices: "invoices.read",
   inbox: "tickets.read",
   messagerie: "mail.read",
-  timesheets: "projects.read",
-  vendors: "projects.read",
+  timesheets: "timesheets.read",
+  vendors: "vendors.read",
   documents: "documents.read",
   tasks: "tasks.read",
   tickets: "tickets.read",
-  calendar: null,
+  calendar: "calendar.read",
   blog: "blog.read",
   site: "site.read",
   reports: "reports.view",
+  workload: "reports.view",
   settings: ["settings.manage", "users.manage", "audit.view"],
 };
 
@@ -81,8 +82,11 @@ export const CRM_SETTINGS_ACCESS_PERMISSIONS: CrmPermission[] = [
 
 const ACTIVITY_HREF_PERMISSIONS: Array<{ prefix: string; permission: CrmPermission }> = [
   { prefix: "/admin/crm/leads", permission: "leads.read" },
-  { prefix: "/admin/crm/opportunites", permission: "leads.read" },
-  { prefix: "/admin/crm/marketing", permission: "leads.read" },
+  { prefix: "/admin/crm/opportunites", permission: "deals.read" },
+  { prefix: "/admin/crm/marketing", permission: "marketing.read" },
+  { prefix: "/admin/crm/temps", permission: "timesheets.read" },
+  { prefix: "/admin/crm/prestataires", permission: "vendors.read" },
+  { prefix: "/admin/crm/calendrier", permission: "calendar.read" },
   { prefix: "/admin/crm/projets", permission: "projects.read" },
   { prefix: "/admin/crm/devis", permission: "quotes.read" },
   { prefix: "/admin/crm/catalogue", permission: "quotes.read" },
@@ -109,6 +113,18 @@ export function filterCrmNavItems(
     if (!item.ready && item.id === "messagerie") return false;
     return hasCrmPermission(permissions, CRM_NAV_PERMISSIONS[item.id]);
   });
+}
+
+export function filterCrmNavGroups(
+  groups: Array<{ id: string; label: string; items: CrmNavItem[] }>,
+  permissions: CrmPermission[],
+): Array<{ id: string; label: string; items: CrmNavItem[] }> {
+  return groups
+    .map((group) => ({
+      ...group,
+      items: filterCrmNavItems(group.items, permissions),
+    }))
+    .filter((group) => group.items.length > 0);
 }
 
 export function filterDashboardKpis(kpis: DashboardKpi[], permissions: CrmPermission[]): DashboardKpi[] {

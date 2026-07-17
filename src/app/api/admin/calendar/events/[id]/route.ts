@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { getAdminSession, requireAdminAuth } from "@/lib/admin-auth";
+import { crmApiAuth } from "@/lib/crm-api-auth";
 import { isDatabaseConfigured } from "@/lib/db";
 import {
   deleteCalendarEvent,
@@ -23,7 +24,7 @@ const patchBodySchema = updateEventSchema.extend({
 type Props = { params: Promise<{ id: string }> };
 
 export async function GET(_request: Request, { params }: Props) {
-  const authError = await requireAdminAuth();
+  const authError = await crmApiAuth.calendar.read();
   if (authError) return authError;
 
   if (!isDatabaseConfigured()) {
@@ -44,7 +45,7 @@ export async function GET(_request: Request, { params }: Props) {
 }
 
 export async function PATCH(request: Request, { params }: Props) {
-  const authError = await requireAdminAuth();
+  const authError = await crmApiAuth.calendar.write();
   if (authError) return authError;
 
   if (!isDatabaseConfigured()) {
@@ -88,7 +89,7 @@ export async function PATCH(request: Request, { params }: Props) {
 }
 
 export async function DELETE(_request: Request, { params }: Props) {
-  const authError = await requireAdminAuth();
+  const authError = await crmApiAuth.calendar.write();
   if (authError) return authError;
 
   if (!isDatabaseConfigured()) {

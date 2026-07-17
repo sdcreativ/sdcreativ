@@ -9,7 +9,7 @@ import {
 } from "@/lib/time-entries";
 
 export async function GET(request: Request) {
-  const authError = await crmApiAuth.projects.read();
+  const authError = await crmApiAuth.timesheets.read();
   if (authError) return authError;
 
   if (!isDatabaseConfigured()) {
@@ -38,7 +38,7 @@ export async function GET(request: Request) {
 }
 
 export async function POST(request: Request) {
-  const authError = await crmApiAuth.projects.write();
+  const authError = await crmApiAuth.timesheets.write();
   if (authError) return authError;
 
   if (!isDatabaseConfigured()) {

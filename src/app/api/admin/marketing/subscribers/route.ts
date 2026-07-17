@@ -8,7 +8,7 @@ import {
 } from "@/lib/marketing-subscribers";
 
 export async function GET() {
-  const authError = await crmApiAuth.leads.read();
+  const authError = await crmApiAuth.marketing.read();
   if (authError) return authError;
 
   if (!isDatabaseConfigured()) {
@@ -25,7 +25,7 @@ export async function GET() {
 }
 
 export async function PATCH(request: Request) {
-  const authError = await crmApiAuth.leads.write();
+  const authError = await crmApiAuth.marketing.write();
   if (authError) return authError;
 
   if (!isDatabaseConfigured()) {

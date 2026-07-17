@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { getAdminSession, requireAdminAuth } from "@/lib/admin-auth";
+import { crmApiAuth } from "@/lib/crm-api-auth";
 import {
   CALENDAR_OAUTH_PROVIDERS,
   isCalendarOAuthConfigured,
@@ -11,7 +12,7 @@ import { signOAuthState } from "@/lib/calendar-oauth-state";
 type Props = { params: Promise<{ provider: string }> };
 
 export async function GET(_request: Request, { params }: Props) {
-  const authError = await requireAdminAuth();
+  const authError = await crmApiAuth.calendar.write();
   if (authError) return authError;
 
   const { provider: raw } = await params;

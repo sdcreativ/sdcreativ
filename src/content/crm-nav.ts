@@ -21,6 +21,7 @@ import {
   Tablet,
   UserCog,
   Users,
+  UsersRound,
 } from "lucide-react";
 
 export type CrmNavItem = {
@@ -31,31 +32,71 @@ export type CrmNavItem = {
   ready: boolean;
 };
 
-export const crmNavItems: CrmNavItem[] = [
-  { id: "dashboard", label: "Tableau de bord", href: "/admin/crm", icon: LayoutDashboard, ready: true },
-  { id: "leads", label: "Leads", href: "/admin/crm/leads", icon: Target, ready: true },
-  { id: "deals", label: "Opportunités", href: "/admin/crm/opportunites", icon: GitMerge, ready: true },
-  { id: "marketing", label: "Marketing", href: "/admin/crm/marketing", icon: Megaphone, ready: true },
-  { id: "presentation", label: "Présentation tablette", href: "/presentation", icon: Tablet, ready: true },
-  { id: "clients", label: "Clients", href: "/admin/crm/clients", icon: Users, ready: true },
-  { id: "projects", label: "Projets", href: "/admin/crm/projets", icon: FolderKanban, ready: true },
-  { id: "quotes", label: "Devis", href: "/admin/crm/devis", icon: FileText, ready: true },
-  { id: "catalogue", label: "Catalogue", href: "/admin/crm/catalogue", icon: LayoutList, ready: true },
-  { id: "invoices", label: "Factures", href: "/admin/crm/factures", icon: Receipt, ready: true },
-  { id: "inbox", label: "Inbox", href: "/admin/crm/inbox", icon: Inbox, ready: true },
-  /** ready: false — UI désactivée tant que CRM_MESSAGERIE_ENABLED ≠ 1 (code conservé). */
-  { id: "messagerie", label: "Messagerie", href: "/admin/crm/messagerie", icon: Mail, ready: false },
-  { id: "timesheets", label: "Temps", href: "/admin/crm/temps", icon: Clock, ready: true },
-  { id: "vendors", label: "Prestataires", href: "/admin/crm/prestataires", icon: UserCog, ready: true },
-  { id: "documents", label: "Documents", href: "/admin/crm/documents", icon: FileText, ready: true },
-  { id: "tasks", label: "Tâches", href: "/admin/crm/taches", icon: CheckSquare, ready: true },
-  { id: "tickets", label: "Tickets support", href: "/admin/crm/tickets", icon: LifeBuoy, ready: true },
-  { id: "calendar", label: "Calendrier", href: "/admin/crm/calendrier", icon: Calendar, ready: true },
-  { id: "blog", label: "Blog", href: "/admin/crm/blog", icon: Newspaper, ready: true },
-  { id: "site", label: "Site vitrine", href: "/admin/crm/site", icon: Globe, ready: true },
-  { id: "reports", label: "Rapports", href: "/admin/crm/rapports", icon: BarChart3, ready: true },
-  { id: "settings", label: "Paramètres", href: "/admin/crm/parametres", icon: Settings, ready: true },
+export type CrmNavGroup = {
+  id: string;
+  label: string;
+  items: CrmNavItem[];
+};
+
+export const crmNavGroups: CrmNavGroup[] = [
+  {
+    id: "overview",
+    label: "Vue d'ensemble",
+    items: [
+      { id: "dashboard", label: "Tableau de bord", href: "/admin/crm", icon: LayoutDashboard, ready: true },
+      { id: "inbox", label: "Inbox", href: "/admin/crm/inbox", icon: Inbox, ready: true },
+      { id: "workload", label: "Charge", href: "/admin/crm/charge", icon: UsersRound, ready: true },
+      { id: "reports", label: "Rapports", href: "/admin/crm/rapports", icon: BarChart3, ready: true },
+    ],
+  },
+  {
+    id: "commercial",
+    label: "Commercial",
+    items: [
+      { id: "leads", label: "Leads", href: "/admin/crm/leads", icon: Target, ready: true },
+      { id: "deals", label: "Opportunités", href: "/admin/crm/opportunites", icon: GitMerge, ready: true },
+      { id: "marketing", label: "Marketing", href: "/admin/crm/marketing", icon: Megaphone, ready: true },
+      { id: "clients", label: "Clients", href: "/admin/crm/clients", icon: Users, ready: true },
+      { id: "quotes", label: "Devis", href: "/admin/crm/devis", icon: FileText, ready: true },
+      { id: "catalogue", label: "Catalogue", href: "/admin/crm/catalogue", icon: LayoutList, ready: true },
+      { id: "presentation", label: "Présentation tablette", href: "/presentation", icon: Tablet, ready: true },
+    ],
+  },
+  {
+    id: "ops",
+    label: "Ops",
+    items: [
+      { id: "projects", label: "Projets", href: "/admin/crm/projets", icon: FolderKanban, ready: true },
+      { id: "tasks", label: "Tâches", href: "/admin/crm/taches", icon: CheckSquare, ready: true },
+      { id: "tickets", label: "Tickets support", href: "/admin/crm/tickets", icon: LifeBuoy, ready: true },
+      { id: "timesheets", label: "Temps", href: "/admin/crm/temps", icon: Clock, ready: true },
+      { id: "vendors", label: "Prestataires", href: "/admin/crm/prestataires", icon: UserCog, ready: true },
+      { id: "calendar", label: "Calendrier", href: "/admin/crm/calendrier", icon: Calendar, ready: true },
+      { id: "documents", label: "Documents", href: "/admin/crm/documents", icon: FileText, ready: true },
+      { id: "invoices", label: "Factures", href: "/admin/crm/factures", icon: Receipt, ready: true },
+      /** ready: false — UI désactivée tant que CRM_MESSAGERIE_ENABLED ≠ 1. */
+      { id: "messagerie", label: "Messagerie", href: "/admin/crm/messagerie", icon: Mail, ready: false },
+    ],
+  },
+  {
+    id: "content",
+    label: "Contenu",
+    items: [
+      { id: "blog", label: "Blog", href: "/admin/crm/blog", icon: Newspaper, ready: true },
+      { id: "site", label: "Site vitrine", href: "/admin/crm/site", icon: Globe, ready: true },
+    ],
+  },
+  {
+    id: "admin",
+    label: "Admin",
+    items: [
+      { id: "settings", label: "Paramètres", href: "/admin/crm/parametres", icon: Settings, ready: true },
+    ],
+  },
 ];
+
+/** Liste plate (compat mobile, breadcrumbs, AccessGuard). */
+export const crmNavItems: CrmNavItem[] = crmNavGroups.flatMap((g) => g.items);
 
 function findCrmNavItem(pathname: string): CrmNavItem | undefined {
   return crmNavItems

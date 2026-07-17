@@ -134,6 +134,7 @@ export const createTicketSchema = z.object({
   clientEmail: z.string().trim().email().max(255),
   projectId: z.string().uuid().optional().nullable(),
   assignee: z.string().trim().max(100).optional().nullable(),
+  assigneeId: z.string().uuid().optional().nullable(),
   initialMessage: z.string().trim().min(1).max(5000),
   authorType: z.enum(["client", "staff"]).default("staff"),
   authorName: z.string().trim().min(1).max(100),
@@ -145,6 +146,7 @@ export const updateTicketSchema = z.object({
   priority: z.enum(TICKET_PRIORITIES).optional(),
   category: z.enum(TICKET_CATEGORIES).optional(),
   assignee: z.string().trim().max(100).optional().nullable(),
+  assigneeId: z.string().uuid().optional().nullable(),
   metadata: z.record(z.string(), z.unknown()).optional(),
 });
 
@@ -241,13 +243,18 @@ export async function createTicket(
     const reference = await nextReference(query);
     const priority = input.priority ?? "normal";
     const slaDueAt = computeSlaDueAt(priority);
+    const { resolveAssigneeInput } = await import("@/lib/crm-assignee");
+    const assigneeFields = await resolveAssigneeInput({
+      assigneeId: input.assigneeId,
+      assignee: input.assignee,
+    });
 
     const { rows } = await query<{ id: string }>(
       `INSERT INTO support_tickets (
         reference, subject, category, status, priority,
         client_id, portal_client_id, client_name, client_email,
-        project_id, assignee, sla_due_at, metadata
-      ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13)
+        project_id, assignee, assignee_id, sla_due_at, metadata
+      ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14)
       RETURNING id`,
       [
         reference,
@@ -260,7 +267,8 @@ export async function createTicket(
         input.clientName,
         input.clientEmail,
         input.projectId ?? null,
-        input.assignee ?? null,
+        assigneeFields.assignee,
+        assigneeFields.assigneeId,
         slaDueAt,
         JSON.stringify(input.metadata ?? {}),
       ],

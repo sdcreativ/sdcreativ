@@ -4,18 +4,25 @@ import { useCallback, useEffect, useState } from "react";
 import type { CareerApplication } from "@/lib/career-applications";
 import { CAREER_APPLICATION_STATUS_LABELS } from "@/content/priority3-labels";
 import type { CareerApplicationStatus } from "@/content/priority3-labels";
+import {
+  fetchCareerApplications,
+  patchCareerApplicationApi,
+} from "@/lib/career-applications-api";
 import { Loader2 } from "lucide-react";
 
 export function CrmCareerApplicationsPanel() {
   const [applications, setApplications] = useState<CareerApplication[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
 
   const load = useCallback(async () => {
     setLoading(true);
+    setError("");
     try {
-      const res = await fetch("/api/admin/career-applications", { credentials: "include" });
-      const json = (await res.json()) as { applications: CareerApplication[] };
-      setApplications(json.applications ?? []);
+      setApplications(await fetchCareerApplications());
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Chargement impossible.");
+      setApplications([]);
     } finally {
       setLoading(false);
     }
@@ -26,13 +33,12 @@ export function CrmCareerApplicationsPanel() {
   }, [load]);
 
   async function updateStatus(id: string, status: CareerApplicationStatus) {
-    await fetch("/api/admin/career-applications", {
-      method: "PATCH",
-      credentials: "include",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ id, status }),
-    });
-    void load();
+    try {
+      await patchCareerApplicationApi(id, status);
+      await load();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Mise à jour impossible.");
+    }
   }
 
   if (loading) {
@@ -45,6 +51,11 @@ export function CrmCareerApplicationsPanel() {
 
   return (
     <div className="space-y-4">
+      {error && (
+        <p className="rounded-xl border border-accent/30 bg-accent/5 px-4 py-3 text-sm text-accent">
+          {error}
+        </p>
+      )}
       <p className="text-sm text-gray-text">{applications.length} candidature(s) persistée(s).</p>
       {applications.length === 0 ? (
         <p className="rounded-xl border bg-white px-4 py-8 text-center text-gray-text">Aucune candidature.</p>

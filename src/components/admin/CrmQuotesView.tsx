@@ -42,6 +42,7 @@ import { createComposerLine } from "@/lib/quote-composer";
 import type { QuoteComposerLine } from "@/lib/quote-composer";
 import { CURRENCY_LABELS, SUPPORTED_CURRENCIES } from "@/lib/currencies";
 import type { LegalEntity } from "@/lib/legal-entities";
+import { fetchLegalEntities } from "@/lib/legal-entities-api";
 import { KanbanDropColumn, KANBAN_DRAG_MIME } from "@/lib/kanban-dnd";
 import { cn } from "@/lib/utils";
 import { useDialog } from "@/components/ui/DialogProvider";
@@ -975,9 +976,8 @@ function CreateQuoteModal({
   const [legalEntities, setLegalEntities] = useState<LegalEntity[]>([]);
 
   useEffect(() => {
-    void fetch("/api/admin/legal-entities", { credentials: "include" })
-      .then((res) => (res.ok ? res.json() : { entities: [] }))
-      .then((json: { entities: LegalEntity[] }) => setLegalEntities(json.entities ?? []))
+    void fetchLegalEntities()
+      .then(setLegalEntities)
       .catch(() => setLegalEntities([]));
   }, []);
 

@@ -213,8 +213,11 @@ function buildClientFilterClause(filters: ClientListFilters): { where: string; p
 }
 
 export async function listClients(status?: ClientStatus): Promise<Client[]> {
-  const result = await listClientsPaginated(status ? { status, pageSize: 10_000 } : { pageSize: 10_000 });
-  return result.clients;
+  const { paginateAll } = await import("@/lib/paginate-all");
+  return paginateAll(async (page, pageSize) => {
+    const result = await listClientsPaginated(status ? { status, page, pageSize } : { page, pageSize });
+    return { items: result.clients, totalPages: result.totalPages };
+  });
 }
 
 export async function listClientsPaginated(filters: ClientListFilters = {}): Promise<ClientListResult> {
@@ -246,8 +249,14 @@ export async function listClientsPaginated(filters: ClientListFilters = {}): Pro
 }
 
 export async function listClientsFiltered(filters: ClientListFilters = {}): Promise<Client[]> {
-  const result = await listClientsPaginated({ ...filters, pageSize: filters.pageSize ?? 10_000 });
-  return result.clients;
+  const { paginateAll } = await import("@/lib/paginate-all");
+  const { page: _page, pageSize: _pageSize, ...rest } = filters;
+  void _page;
+  void _pageSize;
+  return paginateAll(async (page, pageSize) => {
+    const result = await listClientsPaginated({ ...rest, page, pageSize });
+    return { items: result.clients, totalPages: result.totalPages };
+  });
 }
 
 export async function listDistinctClientTags(): Promise<string[]> {

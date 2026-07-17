@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { requireAdminAuth } from "@/lib/admin-auth";
+import { crmApiAuth } from "@/lib/crm-api-auth";
 import { listCalendarItems } from "@/lib/calendar";
 import { buildRemindersForItems } from "@/lib/calendar-reminders";
 import { isDatabaseConfigured } from "@/lib/db";
@@ -8,7 +9,7 @@ import { listFiredReminderKeysForChannel, markRemindersFired } from "@/lib/crm-r
 const GRACE_MS = 5 * 60_000;
 
 export async function GET() {
-  const authError = await requireAdminAuth();
+  const authError = await crmApiAuth.calendar.read();
   if (authError) return authError;
 
   if (!isDatabaseConfigured()) {
@@ -49,7 +50,7 @@ export async function GET() {
 }
 
 export async function POST(request: Request) {
-  const authError = await requireAdminAuth();
+  const authError = await crmApiAuth.calendar.write();
   if (authError) return authError;
 
   if (!isDatabaseConfigured()) {

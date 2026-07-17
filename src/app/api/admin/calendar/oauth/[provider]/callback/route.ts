@@ -1,3 +1,4 @@
+import { crmApiAuth } from "@/lib/crm-api-auth";
 import { NextResponse } from "next/server";
 import {
   CALENDAR_OAUTH_PROVIDERS,

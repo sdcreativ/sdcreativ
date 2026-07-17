@@ -59,3 +59,17 @@ export async function createAmendmentApi(
   const json = await parseJson<{ amendment: ContractAmendment }>(res);
   return json.amendment;
 }
+
+export async function sendContractForEsignApi(
+  contractId: string,
+  input: { signerEmail: string; signerName?: string | null },
+): Promise<Contract> {
+  const res = await fetch(`/api/admin/contracts/${contractId}/esign`, {
+    method: "POST",
+    credentials: "include",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(input),
+  });
+  const json = await parseJson<{ contract: Contract }>(res);
+  return json.contract;
+}

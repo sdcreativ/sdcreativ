@@ -13,7 +13,11 @@ import {
   serializePaymentScheduleDraft,
 } from "@/lib/client-portal-payments";
 import type { Project } from "@/lib/projects";
-import { updateProjectApi } from "@/lib/projects-api";
+import {
+  fetchProjectPaymentMilestonesApi,
+  replaceProjectPaymentMilestonesApi,
+  updateProjectApi,
+} from "@/lib/projects-api";
 import { cn } from "@/lib/utils";
 import { Loader2, Plus, Trash2 } from "lucide-react";
 
@@ -44,8 +48,26 @@ export function ProjectPaymentScheduleEditor({ project }: Props) {
   useEffect(() => {
     setLoading(true);
     setSaved(false);
-    void fetchCrmClientById(project.clientId)
-      .then((client) => {
+    void (async () => {
+      try {
+        const milestones = await fetchProjectPaymentMilestonesApi(project.id);
+        if (milestones.length) {
+          setItems(
+            milestones.map((m) => ({
+              id: m.id,
+              label: m.label,
+              amount: String(m.amount),
+              status: m.status,
+              date: m.dueDate ?? "",
+            })),
+          );
+          return;
+        }
+      } catch {
+        /* fallback metadata */
+      }
+      try {
+        const client = await fetchCrmClientById(project.clientId);
         const paid =
           typeof client.metadata?.paidAmount === "number" ? client.metadata.paidAmount : undefined;
         setItems(
@@ -55,16 +77,17 @@ export function ProjectPaymentScheduleEditor({ project }: Props) {
             paidAmount: paid,
           }),
         );
-      })
-      .catch(() => {
+      } catch {
         setItems(
           paymentScheduleDraftFromMetadata(project.metadata?.paymentSchedule, {
             budget: project.budget,
             dueDate: project.dueDate,
           }),
         );
-      })
-      .finally(() => setLoading(false));
+      } finally {
+        setLoading(false);
+      }
+    })();
   }, [project.id, project.clientId, project.budget, project.dueDate, project.metadata?.paymentSchedule]);
 
   const scheduleTotal = useMemo(
@@ -117,14 +140,23 @@ export function ProjectPaymentScheduleEditor({ project }: Props) {
     setSaving(true);
     try {
       const paidAmount = paidAmountFromScheduleDraft(items);
-      await Promise.all([
-        updateProjectApi(project.id, {
+      const payload = serialized.map((s) => ({
+        label: s.label,
+        amount: s.amount,
+        status: s.status,
+        dueDate: s.date && s.date !== "—" ? s.date : null,
+      }));
+      try {
+        await replaceProjectPaymentMilestonesApi(project.id, payload);
+      } catch {
+        // Fallback metadata si table pas encore migrée
+        await updateProjectApi(project.id, {
           metadata: { paymentSchedule: serialized },
-        }),
-        updateCrmClient(project.clientId, {
-          metadata: { paidAmount },
-        }),
-      ]);
+        });
+      }
+      await updateCrmClient(project.clientId, {
+        metadata: { paidAmount },
+      });
       setSaved(true);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Enregistrement impossible.");

@@ -38,36 +38,24 @@ import {
   type DashboardLayout,
   type DashboardWidgetId,
 } from "@/lib/dashboard-config";
+import { fetchDashboardSnapshot } from "@/lib/dashboard-api";
 import { fetchCrmSession, saveDashboardLayoutApi } from "@/lib/crm-settings-api";
 import {
   canShowDashboardWidget,
-  filterDashboardActivities,
-  filterDashboardKpis,
   filterDashboardWidgets,
   hasCrmPermission,
 } from "@/lib/crm-access";
 import { fetchInfraHealth } from "@/lib/infra-api";
 import type { InfraHealth } from "@/lib/infra-health-types";
-import { fetchLeads } from "@/lib/leads-api";
-import { fetchProjects } from "@/lib/projects-api";
-import { fetchQuotes } from "@/lib/quotes-api";
-import { fetchReportsSummary, getReportsExportUrl } from "@/lib/reports-api";
+import { getReportsExportUrl } from "@/lib/reports-api";
 import type { ReportsSummary } from "@/lib/reports";
-import { fetchTasks, updateTaskApi } from "@/lib/tasks-api";
+import { updateTaskApi } from "@/lib/tasks-api";
 import { useCrmAssignees } from "@/hooks/useCrmTeamMembers";
 import { useCrmPermissions } from "@/hooks/useCrmPermissions";
-import {
-  buildActivities,
-  buildDashboardKpis,
-  buildLeadPipeline,
-  buildOpenTasks,
-  buildRecentProjects,
-  filterLeadsByDashboard,
-  filterProjectsByDashboard,
-  filterTasksByDashboard,
-  type DashboardActivity,
-  type DashboardKpi,
-  type DashboardPipelineColumn,
+import type {
+  DashboardActivity,
+  DashboardKpi,
+  DashboardPipelineColumn,
 } from "@/lib/dashboard-utils";
 import { cn } from "@/lib/utils";
 
@@ -78,7 +66,14 @@ const statusStyles = {
 } as const;
 
 type OpenTask = { id: string; label: string; due: string; done: boolean };
-type RecentProject = ReturnType<typeof buildRecentProjects>[number];
+type RecentProject = {
+  id: string;
+  name: string;
+  type: string;
+  status: "EN COURS" | "EN TEST" | "TERMINÉ";
+  progress: number;
+  href: string;
+};
 
 type DashboardFilters = {
   assignee: string;
@@ -88,11 +83,7 @@ type DashboardFilters = {
 export function CrmDashboard() {
   const assignees = useCrmAssignees();
   const { permissions } = useCrmPermissions();
-  const canLeads = hasCrmPermission(permissions, "leads.read");
-  const canProjects = hasCrmPermission(permissions, "projects.read");
-  const canTasks = hasCrmPermission(permissions, "tasks.read");
   const canTasksWrite = hasCrmPermission(permissions, "tasks.write");
-  const canQuotes = hasCrmPermission(permissions, "quotes.read");
   const canReports = hasCrmPermission(permissions, "reports.view");
   const canClients = hasCrmPermission(permissions, "clients.read");
   const canInfra = hasCrmPermission(permissions, "infra.view");
@@ -126,7 +117,7 @@ export function CrmDashboard() {
       })
       .catch(() => setLayout(loadDashboardLayout("admin")));
     if (canClients) {
-      void fetchCrmClients()
+      void fetchCrmClients({ pageSize: 100 })
         .then(setClients)
         .catch(() => setClients([]));
     } else {
@@ -161,49 +152,19 @@ export function CrmDashboard() {
     setError("");
     void loadInfra();
     try {
-      const [leads, allProjects, allTasks, quotes, reportsData] = await Promise.all([
-        canLeads ? fetchLeads() : Promise.resolve([]),
-        canProjects ? fetchProjects() : Promise.resolve([]),
-        canTasks ? fetchTasks() : Promise.resolve([]),
-        canQuotes ? fetchQuotes() : Promise.resolve([]),
-        canReports ? fetchReportsSummary(period, apiFilters) : Promise.resolve(null),
-      ]);
-
-      const filteredLeads = filterLeadsByDashboard(leads, apiFilters);
-      const filteredProjects = filterProjectsByDashboard(allProjects, apiFilters);
-      const filteredTasks = filterTasksByDashboard(allTasks, apiFilters);
-
-      if (reportsData) {
-        setReports(reportsData.summary);
-        setKpis(
-          filterDashboardKpis(
-            buildDashboardKpis({
-              reports: reportsData.summary.kpis,
-              periodLabel: reportsData.summary.period.label,
-            }),
-            permissions,
-          ),
-        );
-      } else {
-        setReports(null);
-        setKpis([]);
-      }
-
-      setPipeline(canLeads ? buildLeadPipeline(filteredLeads) : []);
-      setTasks(canTasks ? buildOpenTasks(filteredTasks) : []);
-      setProjects(canProjects ? buildRecentProjects(filteredProjects) : []);
-      setActivities(
-        filterDashboardActivities(
-          buildActivities(filteredLeads, filteredProjects, quotes, filteredTasks),
-          permissions,
-        ),
-      );
+      const snapshot = await fetchDashboardSnapshot(period, apiFilters);
+      setReports(snapshot.reports);
+      setKpis(snapshot.kpis);
+      setPipeline(snapshot.pipeline);
+      setTasks(snapshot.openTasks);
+      setProjects(snapshot.recentProjects);
+      setActivities(snapshot.activities);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Impossible de charger le tableau de bord.");
     } finally {
       setLoading(false);
     }
-  }, [period, apiFilters, permissions, canLeads, canProjects, canTasks, canQuotes, canReports, loadInfra]);
+  }, [period, apiFilters, loadInfra]);
 
   useEffect(() => {
     void load();

@@ -3,10 +3,11 @@ import { NextResponse } from "next/server";
 import { isDatabaseConfigured } from "@/lib/db";
 import { getQuoteById } from "@/lib/quotes";
 import { buildQuotePdfHtml } from "@/lib/quote-pdf";
+import { htmlToPdfResponse } from "@/lib/server-pdf";
 
 type RouteContext = { params: Promise<{ id: string }> };
 
-export async function GET(_request: Request, context: RouteContext) {
+export async function GET(request: Request, context: RouteContext) {
   const authError = await crmApiAuth.quotes.read();
   if (authError) return authError;
 
@@ -21,15 +22,11 @@ export async function GET(_request: Request, context: RouteContext) {
       return NextResponse.json({ error: "Devis introuvable." }, { status: 404 });
     }
 
+    const preferHtml = new URL(request.url).searchParams.get("format") === "html";
     const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? "https://sdcreativ.com";
     const html = buildQuotePdfHtml(quote, siteUrl);
 
-    return new NextResponse(html, {
-      headers: {
-        "Content-Type": "text/html; charset=utf-8",
-        "Cache-Control": "no-store",
-      },
-    });
+    return htmlToPdfResponse(html, quote.reference || `devis-${id}`, { preferHtml });
   } catch (error) {
     console.error("[api/admin/quotes/pdf] GET", error);
     return NextResponse.json({ error: "Erreur serveur." }, { status: 500 });

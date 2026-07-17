@@ -127,7 +127,13 @@ export function CrmMarketingView() {
                     <button
                       type="button"
                       onClick={() =>
-                        void patchNewsletterSubscriberApi(sub.id, "unsubscribe").then(load)
+                        void patchNewsletterSubscriberApi(sub.id, "unsubscribe")
+                          .then(load)
+                          .catch((err) =>
+                            setError(
+                              err instanceof Error ? err.message : "Désabonnement impossible.",
+                            ),
+                          )
                       }
                       className="rounded-lg px-2 py-1 text-xs font-medium text-gray-text hover:bg-gray-light/60"
                     >
@@ -144,8 +150,12 @@ export function CrmMarketingView() {
                         variant: "danger",
                       });
                       if (!ok) return;
-                      await patchNewsletterSubscriberApi(sub.id, "delete");
-                      await load();
+                      try {
+                        await patchNewsletterSubscriberApi(sub.id, "delete");
+                        await load();
+                      } catch (err) {
+                        setError(err instanceof Error ? err.message : "Suppression impossible.");
+                      }
                     }}
                     className="rounded-lg p-1.5 text-accent hover:bg-accent/5"
                     aria-label="Supprimer"
@@ -197,8 +207,12 @@ export function CrmMarketingView() {
                       variant: "danger",
                     });
                     if (!ok) return;
-                    await deleteWaitlistEntryApi(entry.id);
-                    await load();
+                    try {
+                      await deleteWaitlistEntryApi(entry.id);
+                      await load();
+                    } catch (err) {
+                      setError(err instanceof Error ? err.message : "Suppression impossible.");
+                    }
                   }}
                   className="inline-flex items-center gap-1 rounded-lg px-2 py-1 text-xs font-medium text-accent hover:bg-accent/5"
                 >
@@ -216,8 +230,12 @@ export function CrmMarketingView() {
 
 function EmptyState({ children }: { children: React.ReactNode }) {
   return (
-    <p className="rounded-2xl border border-dashed border-gray/40 bg-gray-light/20 px-4 py-12 text-center text-sm text-gray-text">
-      {children}
-    </p>
+    <div className="rounded-2xl border border-dashed border-gray/40 bg-gray-light/20 px-4 py-12 text-center">
+      <Mail className="mx-auto h-9 w-9 text-gray-text/40" aria-hidden />
+      <p className="mt-3 text-sm font-medium text-foreground">{children}</p>
+      <p className="mx-auto mt-1 max-w-sm text-xs text-gray-text">
+        Les inscriptions du site public apparaîtront ici automatiquement.
+      </p>
+    </div>
   );
 }

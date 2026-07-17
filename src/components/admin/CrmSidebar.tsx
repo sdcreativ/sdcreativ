@@ -6,9 +6,9 @@ import { usePathname } from "next/navigation";
 import { CrmLogo } from "@/components/admin/CrmLogo";
 import { CrmUserAvatar } from "@/components/admin/CrmUserAvatar";
 import { CRM_ROLE_LABELS } from "@/content/crm-roles";
-import { crmNavItems } from "@/content/crm-nav";
+import { crmNavGroups, crmNavItems } from "@/content/crm-nav";
 import { fetchCrmSession, type CrmSessionInfo } from "@/lib/crm-settings-api";
-import { filterCrmNavItems } from "@/lib/crm-access";
+import { filterCrmNavGroups } from "@/lib/crm-access";
 import { CRM_SESSION_CHANGED_EVENT } from "@/lib/crm-session-events";
 import { cn } from "@/lib/utils";
 
@@ -48,9 +48,9 @@ export function CrmSidebar({ onNavigate }: Props) {
     session?.roleLabel ??
     (session ? CRM_ROLE_LABELS[session.role as keyof typeof CRM_ROLE_LABELS] : null);
 
-  const visibleNavItems = session
-    ? filterCrmNavItems(crmNavItems, session.permissions)
-    : crmNavItems;
+  const visibleGroups = session
+    ? filterCrmNavGroups(crmNavGroups, session.permissions)
+    : crmNavGroups;
 
   const profileActive = pathname.startsWith("/admin/crm/compte");
 
@@ -71,26 +71,35 @@ export function CrmSidebar({ onNavigate }: Props) {
         </p>
       </div>
 
-      <nav className="flex-1 space-y-0.5 overflow-y-auto px-3 py-4">
-        {visibleNavItems.map(({ label, href, icon: Icon }) => {
-          const active = activeHref === href;
-          return (
-            <Link
-              key={href}
-              href={href}
-              onClick={onNavigate}
-              className={cn(
-                "flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors",
-                active
-                  ? "bg-primary text-white shadow-sm"
-                  : "text-white/70 hover:bg-white/5 hover:text-white",
-              )}
-            >
-              <Icon className="h-4 w-4 shrink-0 opacity-90" aria-hidden />
-              <span className="truncate">{label}</span>
-            </Link>
-          );
-        })}
+      <nav className="flex-1 space-y-4 overflow-y-auto px-3 py-4">
+        {visibleGroups.map((group) => (
+          <div key={group.id}>
+            <p className="mb-1.5 px-3 text-[10px] font-bold uppercase tracking-[0.16em] text-white/35">
+              {group.label}
+            </p>
+            <div className="space-y-0.5">
+              {group.items.map(({ label, href, icon: Icon }) => {
+                const active = activeHref === href;
+                return (
+                  <Link
+                    key={href}
+                    href={href}
+                    onClick={onNavigate}
+                    className={cn(
+                      "flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors",
+                      active
+                        ? "bg-primary text-white shadow-sm"
+                        : "text-white/70 hover:bg-white/5 hover:text-white",
+                    )}
+                  >
+                    <Icon className="h-4 w-4 shrink-0 opacity-90" aria-hidden />
+                    <span className="truncate">{label}</span>
+                  </Link>
+                );
+              })}
+            </div>
+          </div>
+        ))}
       </nav>
 
       <div className="border-t border-white/10 px-4 py-4">

@@ -5,7 +5,7 @@ import { isDatabaseConfigured } from "@/lib/db";
 import { listDeals } from "@/lib/deals";
 
 export async function GET(request: Request) {
-  const authError = await crmApiAuth.leads.read();
+  const authError = await crmApiAuth.deals.read();
   if (authError) return authError;
 
   if (!isDatabaseConfigured()) {

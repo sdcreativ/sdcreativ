@@ -2,18 +2,25 @@
 
 import { useCallback, useEffect, useState } from "react";
 import type { MarketingSequence } from "@/lib/marketing-sequences";
+import {
+  fetchMarketingSequences,
+  patchMarketingSequenceApi,
+} from "@/lib/marketing-api";
 import { Loader2 } from "lucide-react";
 
 export function CrmMarketingSequencesPanel() {
   const [sequences, setSequences] = useState<MarketingSequence[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
 
   const load = useCallback(async () => {
     setLoading(true);
+    setError("");
     try {
-      const res = await fetch("/api/admin/marketing-sequences", { credentials: "include" });
-      const json = (await res.json()) as { sequences: MarketingSequence[] };
-      setSequences(json.sequences ?? []);
+      setSequences(await fetchMarketingSequences());
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Chargement impossible.");
+      setSequences([]);
     } finally {
       setLoading(false);
     }
@@ -24,13 +31,12 @@ export function CrmMarketingSequencesPanel() {
   }, [load]);
 
   async function toggleActive(id: string, isActive: boolean) {
-    await fetch("/api/admin/marketing-sequences", {
-      method: "PATCH",
-      credentials: "include",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ id, isActive: !isActive }),
-    });
-    void load();
+    try {
+      await patchMarketingSequenceApi(id, { isActive: !isActive });
+      await load();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Mise à jour impossible.");
+    }
   }
 
   if (loading) {
@@ -47,6 +53,11 @@ export function CrmMarketingSequencesPanel() {
         Séquences automatiques sur les leads (audit → J+3 → J+7). Cron :{" "}
         <code className="text-xs">/api/cron/marketing-sequences</code>
       </p>
+      {error && (
+        <p className="rounded-xl border border-accent/30 bg-accent/5 px-4 py-3 text-sm text-accent">
+          {error}
+        </p>
+      )}
       {sequences.map((seq) => (
         <div key={seq.id} className="rounded-2xl border bg-white p-4 shadow-sm">
           <div className="flex items-center justify-between gap-3">

@@ -305,6 +305,8 @@ export async function createInvoice(input: z.infer<typeof createInvoiceSchema>):
       ],
     );
     const id = rows[0]!.id;
+    const { syncInvoiceLines } = await import("@/lib/line-items-sync");
+    await syncInvoiceLines(query, id, input.lines);
     const { rows: fullRows } = await query<InvoiceRow>(`${listSelect} WHERE i.id = $1`, [id]);
     return mapInvoice(fullRows[0]!);
   });
@@ -386,6 +388,11 @@ export async function updateInvoice(
         ),
       ],
     );
+
+    if (input.lines) {
+      const { syncInvoiceLines } = await import("@/lib/line-items-sync");
+      await syncInvoiceLines(query, id, lines);
+    }
 
     const { rows: fullRows } = await query<InvoiceRow>(`${listSelect} WHERE i.id = $1`, [id]);
     return fullRows[0] ? mapInvoice(fullRows[0]) : null;

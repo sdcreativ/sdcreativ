@@ -1,3 +1,4 @@
+import { randomUUID } from "node:crypto";
 import { decryptMailboxCredentials } from "@/lib/mail/crypto";
 import {
   getMailImapHost,
@@ -6,7 +7,10 @@ import {
   isMailCredentialsSecretConfigured,
   isMailSyncEnabled,
 } from "@/lib/mail/config";
-import { fetchMessagesSinceUid } from "@/lib/mail/imap-client";
+import {
+  fetchMessagesSinceUid,
+  type FetchedMailAttachment,
+} from "@/lib/mail/imap-client";
 import { sanitizeMailError } from "@/lib/mail/sanitize-error";
 import { tryAutoLinkMailThread } from "@/lib/mail/link";
 import {
@@ -28,6 +32,7 @@ import {
   uniqueEmails,
 } from "@/lib/mail/threading";
 import type { CrmMailbox } from "@/lib/mail/types";
+import { isS3Configured, sanitizeFilename, uploadObjectBuffer } from "@/lib/s3";
 
 export type MailboxSyncResult = {
   mailboxId: string;
@@ -67,6 +72,47 @@ async function resolveThreadId(input: {
     normalizedSubject: normalizeMailSubject(input.subject),
     participantEmails: input.participants,
   });
+}
+
+/** Métadonnées + upload S3 des PJ inbound (plafond Hostinger). */
+async function persistInboundAttachments(
+  messageId: string,
+  mailboxId: string,
+  attachments: FetchedMailAttachment[],
+): Promise<void> {
+  if (attachments.length === 0) return;
+
+  const maxBytes = HOSTINGER_MAIL_LIMITS.attachmentInlineMaxBytes;
+  const meta: Array<{
+    filename: string;
+    contentType: string;
+    sizeBytes: number;
+    s3Key?: string | null;
+  }> = [];
+
+  for (const att of attachments) {
+    let s3Key: string | null = null;
+    const sizeBytes = att.sizeBytes || (att.content ? att.content.length : 0);
+    const content =
+      att.content && att.content.length > 0 && att.content.length <= maxBytes
+        ? att.content
+        : null;
+
+    if (content && isS3Configured()) {
+      const safe = sanitizeFilename(att.filename);
+      s3Key = `mail/${mailboxId}/${messageId}/${randomUUID()}-${safe}`;
+      await uploadObjectBuffer(s3Key, content, att.contentType);
+    }
+
+    meta.push({
+      filename: att.filename,
+      contentType: att.contentType,
+      sizeBytes,
+      s3Key,
+    });
+  }
+
+  await insertMailAttachments(messageId, meta);
 }
 
 export async function syncMailbox(
@@ -163,7 +209,7 @@ export async function syncMailbox(
       if (saved.inserted) {
         inserted += 1;
         if (msg.attachments.length > 0) {
-          await insertMailAttachments(saved.id, msg.attachments);
+          await persistInboundAttachments(saved.id, mailbox.id, msg.attachments);
         }
       } else {
         skipped += 1;

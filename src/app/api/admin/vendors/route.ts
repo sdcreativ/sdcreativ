@@ -4,6 +4,9 @@ import { isDatabaseConfigured } from "@/lib/db";
 import {
   createVendor,
   createVendorSchema,
+  updateVendor,
+  updateVendorSchema,
+  deleteVendor,
   listVendors,
   listPurchaseOrders,
   createPurchaseOrder,
@@ -11,9 +14,10 @@ import {
   updatePurchaseOrderStatus,
   getProjectVendorMargin,
 } from "@/lib/vendors";
+import { PO_STATUSES } from "@/content/priority3-labels";
 
 export async function GET(request: Request) {
-  const authError = await crmApiAuth.projects.read();
+  const authError = await crmApiAuth.vendors.read();
   if (authError) return authError;
   if (!isDatabaseConfigured()) {
     return NextResponse.json({ error: "Base non configurée." }, { status: 503 });
@@ -30,7 +34,7 @@ export async function GET(request: Request) {
 }
 
 export async function POST(request: Request) {
-  const authError = await crmApiAuth.projects.write();
+  const authError = await crmApiAuth.vendors.write();
   if (authError) return authError;
   if (!isDatabaseConfigured()) {
     return NextResponse.json({ error: "Base non configurée." }, { status: 503 });
@@ -53,12 +57,40 @@ export async function POST(request: Request) {
 }
 
 export async function PATCH(request: Request) {
-  const authError = await crmApiAuth.projects.write();
+  const authError = await crmApiAuth.vendors.write();
   if (authError) return authError;
+  if (!isDatabaseConfigured()) {
+    return NextResponse.json({ error: "Base non configurée." }, { status: 503 });
+  }
   const body = await request.json();
   if (body.purchaseOrderId && body.status) {
+    if (!PO_STATUSES.includes(body.status)) {
+      return NextResponse.json({ error: "Statut invalide." }, { status: 400 });
+    }
     await updatePurchaseOrderStatus(String(body.purchaseOrderId), body.status);
     return NextResponse.json({ ok: true });
   }
+  if (body.vendorId) {
+    const parsed = updateVendorSchema.safeParse(body);
+    if (!parsed.success) {
+      return NextResponse.json({ error: parsed.error.issues[0]?.message ?? "Invalid" }, { status: 400 });
+    }
+    const vendor = await updateVendor(String(body.vendorId), parsed.data);
+    if (!vendor) return NextResponse.json({ error: "Prestataire introuvable." }, { status: 404 });
+    return NextResponse.json({ vendor });
+  }
   return NextResponse.json({ error: "Action invalide." }, { status: 400 });
+}
+
+export async function DELETE(request: Request) {
+  const authError = await crmApiAuth.vendors.write();
+  if (authError) return authError;
+  if (!isDatabaseConfigured()) {
+    return NextResponse.json({ error: "Base non configurée." }, { status: 503 });
+  }
+  const id = new URL(request.url).searchParams.get("id");
+  if (!id) return NextResponse.json({ error: "id requis." }, { status: 400 });
+  const ok = await deleteVendor(id);
+  if (!ok) return NextResponse.json({ error: "Prestataire introuvable." }, { status: 404 });
+  return NextResponse.json({ ok: true });
 }

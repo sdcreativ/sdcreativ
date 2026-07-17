@@ -30,6 +30,7 @@ type TaskRow = {
   priority: TaskPriority;
   due_date: Date | null;
   assignee: string | null;
+  assignee_id: string | null;
   project_id: string | null;
   project_name: string | null;
   client_id: string | null;
@@ -78,6 +79,7 @@ export const createTaskSchema = z.object({
   priority: z.enum(TASK_PRIORITIES).default("medium"),
   dueDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional().nullable(),
   assignee: z.string().trim().max(100).optional().nullable(),
+  assigneeId: z.string().uuid().optional().nullable(),
   projectId: z.string().uuid().optional().nullable(),
   clientId: z.string().uuid().optional().nullable(),
   leadId: z.string().uuid().optional().nullable(),
@@ -150,12 +152,17 @@ export async function createTask(
   return withDb(async (query) => {
     const status = input.status ?? "todo";
     const completedAt = status === "done" ? new Date() : null;
+    const { resolveAssigneeInput } = await import("@/lib/crm-assignee");
+    const assigneeFields = await resolveAssigneeInput({
+      assigneeId: input.assigneeId,
+      assignee: input.assignee,
+    });
 
     const { rows } = await query<{ id: string }>(
       `INSERT INTO tasks (
-        title, description, status, priority, due_date, assignee,
+        title, description, status, priority, due_date, assignee, assignee_id,
         project_id, client_id, lead_id, metadata, completed_at
-      ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11)
+      ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12)
       RETURNING id`,
       [
         input.title,
@@ -163,7 +170,8 @@ export async function createTask(
         status,
         input.priority ?? "medium",
         input.dueDate ?? null,
-        input.assignee ?? null,
+        assigneeFields.assignee,
+        assigneeFields.assigneeId,
         input.projectId ?? null,
         input.clientId ?? null,
         input.leadId ?? null,
@@ -197,6 +205,18 @@ export async function updateTask(
       completedAt = null;
     }
 
+    let nextAssignee = existing.assignee;
+    let nextAssigneeId = existing.assignee_id ?? null;
+    if (input.assigneeId !== undefined || input.assignee !== undefined) {
+      const { resolveAssigneeInput } = await import("@/lib/crm-assignee");
+      const resolved = await resolveAssigneeInput({
+        assigneeId: input.assigneeId,
+        assignee: input.assignee,
+      });
+      nextAssignee = resolved.assignee;
+      nextAssigneeId = resolved.assigneeId;
+    }
+
     await query(
       `UPDATE tasks SET
         title = $2,
@@ -205,11 +225,12 @@ export async function updateTask(
         priority = $5,
         due_date = $6,
         assignee = $7,
-        project_id = $8,
-        client_id = $9,
-        lead_id = $10,
-        metadata = $11::jsonb,
-        completed_at = $12,
+        assignee_id = $8,
+        project_id = $9,
+        client_id = $10,
+        lead_id = $11,
+        metadata = $12::jsonb,
+        completed_at = $13,
         updated_at = NOW()
       WHERE id = $1`,
       [
@@ -219,7 +240,8 @@ export async function updateTask(
         nextStatus,
         input.priority ?? existing.priority,
         input.dueDate !== undefined ? input.dueDate : existing.due_date,
-        input.assignee !== undefined ? input.assignee : existing.assignee,
+        nextAssignee,
+        nextAssigneeId,
         input.projectId !== undefined ? input.projectId : existing.project_id,
         input.clientId !== undefined ? input.clientId : existing.client_id,
         input.leadId !== undefined ? input.leadId : existing.lead_id,

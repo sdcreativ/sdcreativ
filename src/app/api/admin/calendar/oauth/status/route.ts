@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { getAdminSession, requireAdminAuth } from "@/lib/admin-auth";
+import { crmApiAuth } from "@/lib/crm-api-auth";
 import {
   isGoogleOAuthConfigured,
   isMicrosoftOAuthConfigured,
@@ -8,7 +9,7 @@ import { listCalendarOAuthConnections } from "@/lib/calendar-oauth";
 import { isDatabaseConfigured } from "@/lib/db";
 
 export async function GET() {
-  const authError = await requireAdminAuth();
+  const authError = await crmApiAuth.calendar.read();
   if (authError) return authError;
 
   if (!isDatabaseConfigured()) {

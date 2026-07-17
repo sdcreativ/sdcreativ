@@ -6,8 +6,11 @@ async function parseJson<T>(res: Response): Promise<T> {
   return parseFetchJson<T>(res);
 }
 
+/** Première page uniquement (max 100). */
 export async function fetchProjects(status?: ProjectStatus): Promise<Project[]> {
-  const result = await fetchProjectsPaginated(status ? { status, pageSize: 10_000 } : { pageSize: 10_000 });
+  const result = await fetchProjectsPaginated(
+    status ? { status, page: 1, pageSize: 100 } : { page: 1, pageSize: 100 },
+  );
   return result.projects;
 }
 
@@ -140,6 +143,56 @@ export async function fetchProjectNextEvent(projectId: string) {
   const res = await fetch(`/api/admin/projects/${projectId}/next-event`, { credentials: "include" });
   const json = await parseJson<{ event: import("@/lib/calendar").CalendarEvent | null }>(res);
   return json.event;
+}
+
+export async function fetchProjectTeamApi(projectId: string) {
+  const res = await fetch(`/api/admin/projects/${projectId}/team`, {
+    credentials: "include",
+  });
+  const json = await parseJson<{ members: import("@/lib/project-team").ProjectTeamMember[] }>(res);
+  return json.members;
+}
+
+export async function setProjectTeamApi(projectId: string, userIds: string[]) {
+  const res = await fetch(`/api/admin/projects/${projectId}/team`, {
+    method: "PUT",
+    credentials: "include",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ userIds }),
+  });
+  const json = await parseJson<{ members: import("@/lib/project-team").ProjectTeamMember[] }>(res);
+  return json.members;
+}
+
+export async function fetchProjectPaymentMilestonesApi(projectId: string) {
+  const res = await fetch(`/api/admin/projects/${projectId}/payment-milestones`, {
+    credentials: "include",
+  });
+  const json = await parseJson<{
+    milestones: import("@/lib/project-payment-milestones").ProjectPaymentMilestone[];
+  }>(res);
+  return json.milestones;
+}
+
+export async function replaceProjectPaymentMilestonesApi(
+  projectId: string,
+  items: Array<{
+    label: string;
+    amount: number;
+    status: import("@/lib/client-portal-payments").PortalPaymentStatus;
+    dueDate?: string | null;
+  }>,
+) {
+  const res = await fetch(`/api/admin/projects/${projectId}/payment-milestones`, {
+    method: "PUT",
+    credentials: "include",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ items }),
+  });
+  const json = await parseJson<{
+    milestones: import("@/lib/project-payment-milestones").ProjectPaymentMilestone[];
+  }>(res);
+  return json.milestones;
 }
 
 export function getProjectsExportUrl(format: "csv" | "pdf" = "csv"): string {

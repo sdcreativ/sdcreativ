@@ -171,7 +171,7 @@ export async function fetchMessagesSinceUid(input: {
           receivedAt:
             parsed.date ??
             (msg.internalDate instanceof Date ? msg.internalDate : new Date()),
-          attachments: mapAttachments(parsed.attachments),
+          attachments: mapAttachments(parsed.attachments, { includeContent: true }),
         });
 
         count += 1;

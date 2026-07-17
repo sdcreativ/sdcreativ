@@ -18,6 +18,7 @@ import {
   fetchClientInteractions,
   fetchClientOverview,
   fetchClientsPaginated,
+  fetchCrmClientById,
   fetchDuplicateClientGroups,
   getClientsExportUrl,
   mergeClientsApi,
@@ -150,6 +151,27 @@ export function CrmClientsView() {
   useEffect(() => {
     if (searchParams.get("create") === "1") setShowCreate(true);
   }, [searchParams]);
+
+  useEffect(() => {
+    const id = searchParams.get("id")?.trim();
+    if (!id) return;
+    const fromList = clients.find((c) => c.id === id);
+    if (fromList) {
+      setSelected(fromList);
+      return;
+    }
+    let cancelled = false;
+    void fetchCrmClientById(id)
+      .then((client) => {
+        if (!cancelled) setSelected(client);
+      })
+      .catch(() => {
+        /* ignore deep-link errors */
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [searchParams, clients]);
 
   const hasActiveFilters =
     statusFilter !== "all" ||

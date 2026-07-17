@@ -6,10 +6,11 @@ import { buildInvoicePdfHtml } from "@/lib/invoice-pdf";
 import { buildPaymentInstructionsHtml, buildPaymentInstructionsPayload, buildPortalInvoiceUrl } from "@/lib/payment-instructions";
 import { getPaymentSettings } from "@/lib/payment-settings";
 import { getInvoiceDocumentCompany } from "@/lib/billing/document-company";
+import { htmlToPdfResponse } from "@/lib/server-pdf";
 
 type RouteContext = { params: Promise<{ id: string }> };
 
-export async function GET(_request: Request, context: RouteContext) {
+export async function GET(request: Request, context: RouteContext) {
   const authError = await crmApiAuth.invoices.read();
   if (authError) return authError;
 
@@ -24,6 +25,7 @@ export async function GET(_request: Request, context: RouteContext) {
       return NextResponse.json({ error: "Facture introuvable." }, { status: 404 });
     }
 
+    const preferHtml = new URL(request.url).searchParams.get("format") === "html";
     const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? "https://sdcreativ.com";
     const remaining = getInvoiceRemaining(invoice);
     const paymentPayload =
@@ -44,12 +46,7 @@ export async function GET(_request: Request, context: RouteContext) {
         : undefined,
     });
 
-    return new NextResponse(html, {
-      headers: {
-        "Content-Type": "text/html; charset=utf-8",
-        "Cache-Control": "private, no-cache",
-      },
-    });
+    return htmlToPdfResponse(html, invoice.reference || `facture-${id}`, { preferHtml });
   } catch (error) {
     console.error("[api/admin/invoices/[id]/pdf] GET", error);
     return NextResponse.json({ error: "Erreur serveur." }, { status: 500 });

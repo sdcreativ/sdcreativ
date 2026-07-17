@@ -25,6 +25,7 @@ export type Project = {
   budget: number | null;
   description: string | null;
   assignee: string | null;
+  assigneeId: string | null;
   metadata: Record<string, unknown>;
   milestoneCount: number;
   createdAt: string;
@@ -56,6 +57,7 @@ type ProjectRow = {
   budget: number | null;
   description: string | null;
   assignee: string | null;
+  assignee_id: string | null;
   metadata: Record<string, unknown> | null;
   milestone_count?: string;
   created_at: Date;
@@ -98,6 +100,7 @@ function mapProject(row: ProjectRow): Project {
     budget: row.budget,
     description: row.description,
     assignee: row.assignee ?? null,
+    assigneeId: row.assignee_id ?? null,
     metadata: row.metadata ?? {},
     milestoneCount: Number(row.milestone_count ?? 0),
     createdAt: row.created_at.toISOString(),
@@ -129,6 +132,7 @@ export const createProjectSchema = z.object({
   budget: z.number().int().min(0).optional().nullable(),
   description: z.string().trim().max(5000).optional().nullable(),
   assignee: z.string().trim().max(100).optional().nullable(),
+  assigneeId: z.string().uuid().optional().nullable(),
   seedMilestones: z.boolean().optional(),
   metadata: z.record(z.string(), z.unknown()).optional(),
 });
@@ -222,8 +226,13 @@ export async function syncProjectMilestonesToProgress(
 }
 
 export async function listProjects(status?: ProjectStatus): Promise<Project[]> {
-  const result = await listProjectsPaginated(status ? { status, pageSize: 10_000 } : { pageSize: 10_000 });
-  return result.projects;
+  const { paginateAll } = await import("@/lib/paginate-all");
+  return paginateAll(async (page, pageSize) => {
+    const result = await listProjectsPaginated(
+      status ? { status, page, pageSize } : { page, pageSize },
+    );
+    return { items: result.projects, totalPages: result.totalPages };
+  });
 }
 
 export type ProjectListFilters = {
@@ -359,12 +368,17 @@ export async function createProject(
   return withDb(async (query) => {
     const status = input.status ?? "discovery";
     const progress = input.progress ?? statusToProgress(status);
+    const { resolveAssigneeInput } = await import("@/lib/crm-assignee");
+    const assigneeFields = await resolveAssigneeInput({
+      assigneeId: input.assigneeId,
+      assignee: input.assignee,
+    });
 
     const { rows } = await query<ProjectRow>(
       `INSERT INTO projects (
         client_id, name, type, status, progress,
-        start_date, due_date, budget, description, assignee, metadata
-      ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11)
+        start_date, due_date, budget, description, assignee, assignee_id, metadata
+      ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12)
       RETURNING *`,
       [
         input.clientId,
@@ -376,7 +390,8 @@ export async function createProject(
         input.dueDate ?? null,
         input.budget ?? null,
         input.description ?? null,
-        input.assignee ?? null,
+        assigneeFields.assignee,
+        assigneeFields.assigneeId,
         JSON.stringify(input.metadata ?? {}),
       ],
     );
@@ -412,6 +427,18 @@ export async function updateProject(
           ? statusToProgress(nextStatus)
           : existing.progress;
 
+    let nextAssignee = existing.assignee;
+    let nextAssigneeId = existing.assignee_id;
+    if (input.assigneeId !== undefined || input.assignee !== undefined) {
+      const { resolveAssigneeInput } = await import("@/lib/crm-assignee");
+      const resolved = await resolveAssigneeInput({
+        assigneeId: input.assigneeId,
+        assignee: input.assignee,
+      });
+      nextAssignee = resolved.assignee;
+      nextAssigneeId = resolved.assigneeId;
+    }
+
     await query(
       `UPDATE projects SET
         client_id = $2,
@@ -424,7 +451,8 @@ export async function updateProject(
         budget = $9,
         description = $10,
         assignee = $11,
-        metadata = $12::jsonb,
+        assignee_id = $12,
+        metadata = $13::jsonb,
         updated_at = NOW()
       WHERE id = $1`,
       [
@@ -438,7 +466,8 @@ export async function updateProject(
         input.dueDate !== undefined ? input.dueDate : existing.due_date,
         input.budget !== undefined ? input.budget : existing.budget,
         input.description !== undefined ? input.description : existing.description,
-        input.assignee !== undefined ? input.assignee : existing.assignee,
+        nextAssignee,
+        nextAssigneeId,
         JSON.stringify(
           input.metadata
             ? { ...(existing.metadata ?? {}), ...input.metadata }

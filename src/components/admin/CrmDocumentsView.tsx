@@ -134,18 +134,18 @@ export function CrmDocumentsView() {
       </div>
 
       {selectedClient && (
-        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
+        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
           <StatCard label="Total" value={stats.total} />
-          {(["invoices", "contracts", "deliverables", "uploads"] as DocumentCategory[]).map(
-            (cat) => (
-              <StatCard
-                key={cat}
-                label={DOCUMENT_CATEGORY_LABELS[cat]}
-                value={stats.byCategory[cat]}
-                muted
-              />
-            ),
-          )}
+          {(
+            ["invoices", "contracts", "deliverables", "uploads", "misc"] as DocumentCategory[]
+          ).map((cat) => (
+            <StatCard
+              key={cat}
+              label={DOCUMENT_CATEGORY_LABELS[cat] ?? cat}
+              value={stats.byCategory[cat] ?? 0}
+              muted
+            />
+          ))}
         </div>
       )}
 
@@ -167,25 +167,31 @@ export function CrmDocumentsView() {
           </label>
 
           <ul className="mt-3 max-h-[420px] space-y-1 overflow-y-auto">
-            {filteredClients.map((client) => (
-              <li key={client.id}>
-                <button
-                  type="button"
-                  onClick={() => setSelectedClient(client.id)}
-                  className={cn(
-                    "w-full rounded-xl px-3 py-2.5 text-left text-sm transition-colors",
-                    selectedClient === client.id
-                      ? "bg-primary-light font-semibold text-primary"
-                      : "text-foreground hover:bg-gray-light/70",
-                  )}
-                >
-                  <span className="block truncate">{client.label}</span>
-                  <span className="block truncate font-mono text-[10px] text-gray-text">
-                    {client.id}
-                  </span>
-                </button>
+            {filteredClients.length === 0 ? (
+              <li className="rounded-xl border border-dashed border-gray/40 px-3 py-8 text-center text-xs text-gray-text">
+                Aucun client ne correspond à « {search.trim()} ».
               </li>
-            ))}
+            ) : (
+              filteredClients.map((client) => (
+                <li key={client.id}>
+                  <button
+                    type="button"
+                    onClick={() => setSelectedClient(client.id)}
+                    className={cn(
+                      "w-full rounded-xl px-3 py-2.5 text-left text-sm transition-colors",
+                      selectedClient === client.id
+                        ? "bg-primary-light font-semibold text-primary"
+                        : "text-foreground hover:bg-gray-light/70",
+                    )}
+                  >
+                    <span className="block truncate">{client.label}</span>
+                    <span className="block truncate font-mono text-[10px] text-gray-text">
+                      {client.id}
+                    </span>
+                  </button>
+                </li>
+              ))
+            )}
           </ul>
         </aside>
 

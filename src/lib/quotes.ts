@@ -398,7 +398,10 @@ export async function createQuote(
       ],
     );
 
-    return mapQuote(rows[0]);
+    const quote = mapQuote(rows[0]);
+    const { syncQuoteLines } = await import("@/lib/line-items-sync");
+    await syncQuoteLines(query, quote.id, input.lines ?? []);
+    return quote;
   });
 }
 

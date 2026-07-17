@@ -24,8 +24,13 @@ function buildClientsQuery(filters: ClientListFilters = {}): string {
   return qs ? `?${qs}` : "";
 }
 
+/** Première page uniquement (max 100). Pour export / doublons, utiliser les routes dédiées. */
 export async function fetchCrmClients(filters: ClientListFilters = {}): Promise<Client[]> {
-  const result = await fetchClientsPaginated({ ...filters, pageSize: filters.pageSize ?? 10_000 });
+  const result = await fetchClientsPaginated({
+    ...filters,
+    page: filters.page ?? 1,
+    pageSize: filters.pageSize ?? 100,
+  });
   return result.clients;
 }
 

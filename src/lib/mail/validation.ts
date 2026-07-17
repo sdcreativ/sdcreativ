@@ -131,12 +131,12 @@ export async function getMailPhase1Validation(): Promise<MailPhase1Validation> {
     },
     {
       id: "attachments_meta",
-      label: "Pièces jointes listées (métadonnées)",
+      label: "Pièces jointes listées + S3 (inbound ≤ 5 Mo)",
       ok: true,
       detail:
         attachmentCount > 0
-          ? `${attachmentCount} pièce(s) jointe(s) en base (téléchargement S3 → Phase 2)`
-          : "Listing UI prêt — aucune PJ importée pour l’instant (S3 reporté Phase 2)",
+          ? `${attachmentCount} pièce(s) jointe(s) en base — contenu uploadé S3 à la sync IMAP si AWS configuré`
+          : "Listing UI prêt — aucune PJ importée pour l’instant (upload S3 à la prochaine sync)",
       required: false,
     },
     {

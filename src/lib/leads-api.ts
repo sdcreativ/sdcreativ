@@ -27,8 +27,9 @@ function buildLeadsQuery(filters: LeadListFilters = {}): string {
   return qs ? `?${qs}` : "";
 }
 
-export async function fetchLeads(): Promise<Lead[]> {
-  const result = await fetchLeadsPaginated({ pageSize: 10_000 });
+/** Première page uniquement (max 100). Pour tout charger, boucler via fetchLeadsPaginated. */
+export async function fetchLeads(filters: LeadListFilters = {}): Promise<Lead[]> {
+  const result = await fetchLeadsPaginated({ ...filters, page: 1, pageSize: filters.pageSize ?? 100 });
   return result.leads;
 }
 

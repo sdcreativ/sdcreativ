@@ -22,6 +22,12 @@ export type Contract = {
   sentAt: string | null;
   notes: string | null;
   metadata: Record<string, unknown>;
+  signatureProvider: string | null;
+  esignExternalId: string | null;
+  esignDocumentId: string | null;
+  esignSignerEmail: string | null;
+  esignSentAt: string | null;
+  esignCompletedAt: string | null;
   createdAt: string;
   updatedAt: string;
 };
@@ -55,6 +61,12 @@ type ContractRow = {
   sent_at: Date | null;
   notes: string | null;
   metadata: Record<string, unknown> | null;
+  signature_provider: string | null;
+  esign_external_id: string | null;
+  esign_document_id: string | null;
+  esign_signer_email: string | null;
+  esign_sent_at: Date | null;
+  esign_completed_at: Date | null;
   created_at: Date;
   updated_at: Date;
 };
@@ -96,6 +108,12 @@ function mapContract(row: ContractRow): Contract {
     sentAt: row.sent_at?.toISOString() ?? null,
     notes: row.notes,
     metadata: row.metadata ?? {},
+    signatureProvider: row.signature_provider ?? null,
+    esignExternalId: row.esign_external_id ?? null,
+    esignDocumentId: row.esign_document_id ?? null,
+    esignSignerEmail: row.esign_signer_email ?? null,
+    esignSentAt: row.esign_sent_at?.toISOString() ?? null,
+    esignCompletedAt: row.esign_completed_at?.toISOString() ?? null,
     createdAt: row.created_at.toISOString(),
     updatedAt: row.updated_at.toISOString(),
   };

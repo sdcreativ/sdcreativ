@@ -21,6 +21,15 @@ export async function fetchTeamMemberNames(): Promise<string[]> {
   return json.names;
 }
 
+export async function fetchTeamMembers(): Promise<Array<{ id: string; name: string }>> {
+  const res = await fetch("/api/admin/users/team?withIds=1", { credentials: "include" });
+  const json = await parseJson<{ members?: Array<{ id: string; name: string }>; names: string[] }>(
+    res,
+  );
+  if (json.members?.length) return json.members;
+  return json.names.map((name, i) => ({ id: `legacy-${i}`, name }));
+}
+
 export async function createCrmUserApi(input: Record<string, unknown>): Promise<{
   user: CrmUser;
   invitationSent: boolean;

@@ -12,21 +12,25 @@ import {
   createAmendmentApi,
   createContractApi,
   fetchContracts,
+  sendContractForEsignApi,
   updateContractApi,
 } from "@/lib/contracts-api";
+import { useDialog } from "@/components/ui/DialogProvider";
 import { cn } from "@/lib/utils";
-import { Loader2, Plus } from "lucide-react";
+import { Loader2, PenLine, Plus } from "lucide-react";
 
 const fieldClass =
   "w-full rounded-xl border border-gray/60 bg-white px-3 py-2.5 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20";
 
 export function CrmContractsPanel() {
+  const { prompt } = useDialog();
   const [contracts, setContracts] = useState<Contract[]>([]);
   const [clients, setClients] = useState<Array<{ id: string; name: string }>>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [showCreate, setShowCreate] = useState(false);
   const [selected, setSelected] = useState<Contract | null>(null);
+  const [esignBusy, setEsignBusy] = useState(false);
   const [form, setForm] = useState({
     clientId: "",
     title: "",
@@ -85,10 +89,43 @@ export function CrmContractsPanel() {
   }
 
   async function addAmendment(contract: Contract) {
-    const title = window.prompt("Titre de l'avenant :");
+    const title = await prompt({
+      title: "Nouvel avenant",
+      message: "Titre de l'avenant",
+      placeholder: "Ex. Prolongation de délai",
+    });
     if (!title?.trim()) return;
-    await createAmendmentApi(contract.id, { title: title.trim() });
-    setSelected(contract);
+    try {
+      await createAmendmentApi(contract.id, { title: title.trim() });
+      setSelected(contract);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Avenant impossible.");
+    }
+  }
+
+  async function sendForEsign(contract: Contract) {
+    const email = await prompt({
+      title: "Signature Yousign",
+      message: "Email du signataire",
+      defaultValue: contract.esignSignerEmail ?? "",
+      placeholder: "client@exemple.com",
+      confirmLabel: "Envoyer",
+    });
+    if (!email?.trim()) return;
+    setEsignBusy(true);
+    setError("");
+    try {
+      const updated = await sendContractForEsignApi(contract.id, {
+        signerEmail: email.trim(),
+        signerName: contract.clientName,
+      });
+      setContracts((prev) => prev.map((c) => (c.id === updated.id ? updated : c)));
+      setSelected(updated);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Envoi signature impossible.");
+    } finally {
+      setEsignBusy(false);
+    }
   }
 
   if (loading) {
@@ -183,6 +220,9 @@ export function CrmContractsPanel() {
                     {contract.endDate && (
                       <p className="mt-1 text-xs text-amber-700">Échéance {contract.endDate}</p>
                     )}
+                    {contract.signatureProvider === "yousign" && (
+                      <p className="mt-1 text-[10px] font-medium text-primary">Yousign</p>
+                    )}
                   </button>
                 ))}
               </div>
@@ -197,10 +237,36 @@ export function CrmContractsPanel() {
           <p className="text-sm text-gray-text mt-1">
             {selected.clientName} — {selected.amount ? formatInvoiceAmount(selected.amount) : "Montant non défini"}
           </p>
+          {selected.esignSignerEmail && (
+            <p className="mt-2 text-xs text-gray-text">
+              Signature tierce : {selected.esignSignerEmail}
+              {selected.esignSentAt
+                ? ` — envoyé le ${new Date(selected.esignSentAt).toLocaleDateString("fr-FR")}`
+                : ""}
+              {selected.esignCompletedAt
+                ? ` — signé le ${new Date(selected.esignCompletedAt).toLocaleDateString("fr-FR")}`
+                : ""}
+            </p>
+          )}
           <div className="mt-4 flex flex-wrap gap-2">
             {["draft", "sent", "signed"].includes(selected.status) && (
               <button type="button" onClick={() => void advanceStatus(selected)} className="rounded-lg bg-primary px-3 py-1.5 text-xs font-semibold text-white">
                 Étape suivante
+              </button>
+            )}
+            {["draft", "sent"].includes(selected.status) && (
+              <button
+                type="button"
+                disabled={esignBusy}
+                onClick={() => void sendForEsign(selected)}
+                className="inline-flex items-center gap-1.5 rounded-lg border border-primary/40 px-3 py-1.5 text-xs font-semibold text-primary disabled:opacity-60"
+              >
+                {esignBusy ? (
+                  <Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden />
+                ) : (
+                  <PenLine className="h-3.5 w-3.5" aria-hidden />
+                )}
+                Envoyer via Yousign
               </button>
             )}
             <button type="button" onClick={() => void addAmendment(selected)} className="rounded-lg border px-3 py-1.5 text-xs font-medium">

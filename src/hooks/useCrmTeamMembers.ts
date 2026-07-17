@@ -1,6 +1,8 @@
 import { useEffect, useState } from "react";
 import { CRM_TEAM_MEMBERS } from "@/content/crm-team";
-import { fetchTeamMemberNames } from "@/lib/crm-users-api";
+import { fetchTeamMemberNames, fetchTeamMembers } from "@/lib/crm-users-api";
+
+export type CrmAssigneeOption = { id: string; name: string };
 
 /** Membres actifs pour assignation — synchronisés depuis les comptes CRM. */
 export function useCrmTeamMembers(includeUnassigned = true): string[] {
@@ -21,7 +23,23 @@ export function useCrmTeamMembers(includeUnassigned = true): string[] {
   return members;
 }
 
+/** @deprecated Préférer useCrmAssigneeOptions (UUID). */
 export function useCrmAssignees(): string[] {
   const members = useCrmTeamMembers(false);
   return members.filter((m) => m !== "Non assigné");
+}
+
+/** Options d'assignation avec ID crm_users (source de vérité). */
+export function useCrmAssigneeOptions(): CrmAssigneeOption[] {
+  const [options, setOptions] = useState<CrmAssigneeOption[]>([]);
+
+  useEffect(() => {
+    void fetchTeamMembers()
+      .then(setOptions)
+      .catch(() =>
+        setOptions(CRM_TEAM_MEMBERS.map((name, i) => ({ id: `legacy-${i}`, name }))),
+      );
+  }, []);
+
+  return options;
 }
