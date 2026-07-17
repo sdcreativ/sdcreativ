@@ -64,9 +64,11 @@ function formatDateFr(date: Date): string {
 }
 
 async function readHostStatus(): Promise<InfraHostStatus | null> {
-  const path = process.env.INFRA_STATUS_PATH ?? "/app/data/backups/infra-status.json";
+  const statusPath =
+    process.env.INFRA_STATUS_PATH ?? "/app/data/backups/infra-status.json";
   try {
-    const raw = await readFile(path, "utf8");
+    // Fichier runtime VPS hors du bundle — ne pas tracer via NFT Turbopack.
+    const raw = await readFile(/* turbopackIgnore: true */ statusPath, "utf8");
     return JSON.parse(raw) as InfraHostStatus;
   } catch {
     return null;

@@ -13,8 +13,8 @@ import {
   User,
   Users,
 } from "lucide-react";
-import type { DealRecord, DealStage } from "@/lib/deals";
-import { DEAL_STAGES } from "@/lib/deals";
+import type { DealRecord, DealStage } from "@/lib/deals-types";
+import { DEAL_STAGES } from "@/lib/deals-types";
 import { fetchDeals, updateDealStageApi } from "@/lib/deals-api";
 import { formatQuoteAmount } from "@/content/quotes-labels";
 import { KanbanDropColumn, KANBAN_DRAG_MIME } from "@/lib/kanban-dnd";

@@ -2,20 +2,19 @@
 
 import { useEffect, useState } from "react";
 import { formatFcfaShort } from "@/lib/format";
-import type { PortalPaymentsPayload } from "@/lib/client-portal-payments";
+import {
+  PAYMENT_STATUS_LABELS,
+  type PortalPaymentStatus,
+  type PortalPaymentsPayload,
+} from "@/lib/client-portal-payments";
 import { Loader2 } from "lucide-react";
 
-const STATUS_LABELS = {
-  paid: "Payé",
-  pending: "À venir",
-  overdue: "En retard",
-} as const;
-
-const STATUS_COLORS = {
+const STATUS_COLORS: Record<PortalPaymentStatus, string> = {
   paid: "text-emerald-600",
   pending: "text-amber-600",
+  due: "text-orange-600",
   overdue: "text-accent",
-} as const;
+};
 
 export function ClientPortalPaymentsView() {
   const [data, setData] = useState<PortalPaymentsPayload | null>(null);
@@ -106,7 +105,7 @@ export function ClientPortalPaymentsView() {
                   {formatFcfaShort(item.amount)} FCFA
                 </p>
                 <span className={`text-xs font-semibold ${STATUS_COLORS[item.status]}`}>
-                  {STATUS_LABELS[item.status]}
+                  {PAYMENT_STATUS_LABELS[item.status]}
                 </span>
               </div>
             </li>

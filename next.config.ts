@@ -14,6 +14,10 @@ const securityHeaders = [
 
 const nextConfig: NextConfig = {
   output: "standalone",
+  // Migrations SQL lues au runtime (ensureSchema) — copiées aussi par le Dockerfile.
+  outputFileTracingIncludes: {
+    "/*": ["./migrations/**/*"],
+  },
   async headers() {
     return [
       {

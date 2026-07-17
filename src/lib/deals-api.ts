@@ -1,4 +1,4 @@
-import type { DealRecord, DealStage } from "@/lib/deals";
+import type { DealRecord, DealStage } from "@/lib/deals-types";
 import { parseFetchJson } from "@/lib/fetch-json";
 
 export async function fetchDeals(filters?: {

@@ -2,7 +2,11 @@ import { readdir, readFile } from "fs/promises";
 import path from "path";
 import type { Pool } from "pg";
 
-const MIGRATIONS_DIR = path.join(process.cwd(), "migrations");
+/** Dossier SQL versionné — ignore NFT pour éviter le tracé « whole project ». */
+const MIGRATIONS_DIR = path.join(
+  /* turbopackIgnore: true */ process.cwd(),
+  "migrations",
+);
 
 /**
  * Applique les fichiers SQL versionnés dans `migrations/` (0001_*.sql, …).
@@ -23,7 +27,7 @@ export async function applySqlMigrations(pool: Pool): Promise<void> {
 
   let files: string[];
   try {
-    files = (await readdir(MIGRATIONS_DIR))
+    files = (await readdir(/* turbopackIgnore: true */ MIGRATIONS_DIR))
       .filter((f) => /^\d{4}_.+\.sql$/i.test(f))
       .sort();
   } catch (err) {
@@ -39,7 +43,8 @@ export async function applySqlMigrations(pool: Pool): Promise<void> {
     const version = file.replace(/\.sql$/i, "");
     if (applied.has(version)) continue;
 
-    const sql = await readFile(path.join(MIGRATIONS_DIR, file), "utf8");
+    const filePath = path.join(MIGRATIONS_DIR, file);
+    const sql = await readFile(/* turbopackIgnore: true */ filePath, "utf8");
     const client = await pool.connect();
     try {
       await client.query("BEGIN");

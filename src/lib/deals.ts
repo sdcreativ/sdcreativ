@@ -1,57 +1,21 @@
 import { z } from "zod";
 import { withDb } from "@/lib/db";
-import type { LeadStatus } from "@/lib/leads";
 import { getLeadById, updateLead } from "@/lib/leads";
 import { createClientFromLead } from "@/lib/clients";
 import { createQuote } from "@/lib/quotes";
 import { createProject } from "@/lib/projects";
 import type { QuoteStatus } from "@/content/quotes-labels";
+import type { DealLeadStatus, DealRecord, DealStage } from "@/lib/deals-types";
 
-export type DealStage =
-  | "lead"
-  | "quote"
-  | "client"
-  | "project"
-  | "invoiced"
-  | "lost";
-
-export const DEAL_STAGES: DealStage[] = [
-  "lead",
-  "quote",
-  "client",
-  "project",
-  "invoiced",
-  "lost",
-];
-
-export type DealRecord = {
-  id: string;
-  leadId: string;
-  leadName: string;
-  leadEmail: string;
-  leadStatus: LeadStatus;
-  leadAssignee: string | null;
-  quoteId: string | null;
-  quoteReference: string | null;
-  quoteStatus: QuoteStatus | null;
-  quoteAmount: number | null;
-  clientId: string | null;
-  clientName: string | null;
-  projectId: string | null;
-  projectName: string | null;
-  projectStatus: string | null;
-  invoiceCount: number;
-  invoicedAmount: number;
-  stage: DealStage;
-  updatedAt: string;
-};
+export type { DealLeadStatus, DealRecord, DealStage } from "@/lib/deals-types";
+export { DEAL_STAGES } from "@/lib/deals-types";
 
 type DealRow = {
   id: string;
   lead_id: string;
   lead_name: string;
   lead_email: string;
-  lead_status: LeadStatus;
+  lead_status: DealLeadStatus;
   lead_assignee: string | null;
   quote_id: string | null;
   quote_reference: string | null;
