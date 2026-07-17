@@ -12,10 +12,10 @@ import { getCachedRoleLabel, ensureCrmRolesCache, roleSlugExists } from "@/lib/c
 import { withDb } from "@/lib/db";
 import { getRolePermissions, roleHasPermission } from "@/lib/crm-permissions";
 import {
-  generateMailboxPassword,
   isCrmTeamEmail,
   teamEmailValidationMessage,
 } from "@/lib/crm-team-email";
+import { isValidPhone, normalizePhone } from "@/lib/sms";
 
 export type CrmUser = {
   id: string;
@@ -26,6 +26,8 @@ export type CrmUser = {
   invitationPending: boolean;
   mustChangePassword: boolean;
   personalEmail: string | null;
+  phone: string | null;
+  smsOtpEnabled: boolean;
   mailboxOnboardingPending: boolean;
   createdAt: string;
   updatedAt: string;
@@ -42,6 +44,8 @@ type CrmUserRow = {
   invite_token_hash: string | null;
   invite_token_expires_at: Date | null;
   personal_email: string | null;
+  phone: string | null;
+  sms_otp_enabled: boolean;
   mailbox_onboarding_pending: boolean;
   created_at: Date;
   updated_at: Date;
@@ -50,7 +54,7 @@ type CrmUserRow = {
 const USER_COLUMNS = `
   id, email, password_hash, name, role, active, must_change_password,
   invite_token_hash, invite_token_expires_at,
-  personal_email, mailbox_onboarding_pending,
+  personal_email, phone, sms_otp_enabled, mailbox_onboarding_pending,
   created_at, updated_at
 `;
 
@@ -64,6 +68,8 @@ function mapUser(row: CrmUserRow): CrmUser {
     invitationPending: row.password_hash === null,
     mustChangePassword: row.must_change_password,
     personalEmail: row.personal_email,
+    phone: row.phone,
+    smsOtpEnabled: Boolean(row.sms_otp_enabled),
     mailboxOnboardingPending: row.mailbox_onboarding_pending,
     createdAt: row.created_at.toISOString(),
     updatedAt: row.updated_at.toISOString(),
@@ -88,13 +94,26 @@ const personalEmailField = z
     message: "Utilisez l'email personnel de l'invité (Gmail, etc.), pas une adresse @sdcreativ.com.",
   });
 
+const phoneField = z
+  .string()
+  .trim()
+  .min(8, "Numéro de téléphone trop court.")
+  .max(32)
+  .refine((value) => isValidPhone(value), {
+    message: "Numéro invalide (ex. +2250700000000 ou 0700000000).",
+  })
+  .transform((value) => normalizePhone(value));
+
 export const createCrmUserSchema = z
   .object({
     email: teamEmailField,
     personalEmail: personalEmailField,
+    phone: phoneField,
+    smsOtpEnabled: z.boolean().optional().default(false),
     name: z.string().trim().min(2).max(160),
     role: z.string().trim().min(2).max(50).default("commercial"),
     active: z.boolean().default(true),
+    /** Conservé pour compat API — ignoré (pas de boîte Hostinger requise). */
     mailboxPassword: z.string().min(12).max(64).optional(),
   })
   .refine((data) => data.personalEmail.toLowerCase() !== data.email.toLowerCase(), {
@@ -106,6 +125,8 @@ export const updateCrmUserSchema = z
   .object({
     email: teamEmailField.optional(),
     personalEmail: personalEmailField.optional().nullable(),
+    phone: phoneField.optional().nullable(),
+    smsOtpEnabled: z.boolean().optional(),
     name: z.string().trim().min(2).max(160).optional(),
     password: z.string().min(8).max(128).optional(),
     role: z.string().trim().min(2).max(50).optional(),
@@ -121,6 +142,13 @@ export const updateCrmUserSchema = z
         code: z.ZodIssueCode.custom,
         message: "L'email personnel doit être différent de l'email professionnel.",
         path: ["personalEmail"],
+      });
+    }
+    if (data.smsOtpEnabled === true && data.phone === null) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "Indiquez un téléphone pour activer le code SMS.",
+        path: ["smsOtpEnabled"],
       });
     }
   });
@@ -152,7 +180,7 @@ async function issueInvitation(
   proEmail: string,
   personalEmail: string,
   role: CrmRole,
-  mailboxPassword: string,
+  options?: { phone?: string | null; smsOtpEnabled?: boolean },
 ): Promise<{ token: string; sent: boolean }> {
   await ensureCrmRolesCache();
   const token = generateInviteToken();
@@ -178,7 +206,8 @@ async function issueInvitation(
     proEmail,
     roleLabel,
     inviteUrl,
-    mailboxPassword,
+    phone: options?.phone,
+    smsOtpEnabled: options?.smsOtpEnabled,
   });
 
   return { token, sent };
@@ -313,15 +342,16 @@ export async function createCrmUser(
     throw new Error("Cet email est déjà utilisé par un membre de l'équipe.");
   }
 
-  const mailboxPassword = input.mailboxPassword ?? generateMailboxPassword();
+  const smsOtpEnabled = Boolean(input.smsOtpEnabled);
+  const phone = input.phone;
 
   const user = await withDb(async (query) => {
     const { rows } = await query<CrmUserRow>(
       `INSERT INTO crm_users (
         email, password_hash, name, role, active,
-        personal_email, mailbox_onboarding_pending
+        personal_email, phone, sms_otp_enabled, mailbox_onboarding_pending
       )
-       VALUES ($1, NULL, $2, $3, $4, $5, true)
+       VALUES ($1, NULL, $2, $3, $4, $5, $6, $7, false)
        RETURNING ${USER_COLUMNS}`,
       [
         input.email.toLowerCase(),
@@ -329,6 +359,8 @@ export async function createCrmUser(
         input.role,
         input.active,
         input.personalEmail.toLowerCase(),
+        phone,
+        smsOtpEnabled,
       ],
     );
     return mapUser(rows[0]!);
@@ -340,7 +372,7 @@ export async function createCrmUser(
     user.email,
     input.personalEmail.toLowerCase(),
     user.role,
-    mailboxPassword,
+    { phone, smsOtpEnabled },
   );
   return { user, invitationSent: sent };
 }
@@ -367,14 +399,13 @@ export async function resendUserInvitation(
     return { ok: false, error: "Email personnel manquant — recréez l'invitation." };
   }
 
-  const mailboxPassword = generateMailboxPassword();
   const { sent } = await issueInvitation(
     row.id,
     row.name,
     row.email,
     row.personal_email,
     row.role,
-    mailboxPassword,
+    { phone: row.phone, smsOtpEnabled: row.sms_otp_enabled },
   );
   return { ok: true, invitationSent: sent };
 }
@@ -491,6 +522,22 @@ export async function updateCrmUser(
       throw new Error("L'email personnel doit être différent de l'email professionnel.");
     }
 
+    const nextPhone =
+      input.phone === undefined
+        ? existing.phone
+        : input.phone === null
+          ? null
+          : input.phone;
+
+    let nextSmsOtp =
+      input.smsOtpEnabled === undefined
+        ? existing.sms_otp_enabled
+        : input.smsOtpEnabled;
+    if (nextSmsOtp && !nextPhone) {
+      throw new Error("Indiquez un téléphone pour activer le code SMS.");
+    }
+    if (!nextPhone) nextSmsOtp = false;
+
     let passwordHash = existing.password_hash;
     if (input.password) {
       passwordHash = await hashPassword(input.password);
@@ -504,6 +551,8 @@ export async function updateCrmUser(
         role = $5,
         active = $6,
         personal_email = $8,
+        phone = $9,
+        sms_otp_enabled = $10,
         must_change_password = CASE WHEN $7::varchar IS NOT NULL THEN false ELSE must_change_password END,
         invite_token_hash = CASE WHEN $7::varchar IS NOT NULL THEN NULL ELSE invite_token_hash END,
         invite_token_expires_at = CASE WHEN $7::varchar IS NOT NULL THEN NULL ELSE invite_token_expires_at END,
@@ -519,6 +568,8 @@ export async function updateCrmUser(
         input.active ?? existing.active,
         input.password ?? null,
         nextPersonalEmail,
+        nextPhone,
+        nextSmsOtp,
       ],
     );
     return mapUser(rows[0]!);

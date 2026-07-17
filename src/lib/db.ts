@@ -492,6 +492,8 @@ async function ensureSchema(): Promise<void> {
 
     ALTER TABLE crm_users ADD COLUMN IF NOT EXISTS personal_email VARCHAR(255);
     ALTER TABLE crm_users ADD COLUMN IF NOT EXISTS mailbox_onboarding_pending BOOLEAN NOT NULL DEFAULT false;
+    ALTER TABLE crm_users ADD COLUMN IF NOT EXISTS phone VARCHAR(32);
+    ALTER TABLE crm_users ADD COLUMN IF NOT EXISTS sms_otp_enabled BOOLEAN NOT NULL DEFAULT false;
 
     -- Messagerie CRM (Hostinger IMAP) — Phase 1.1
     CREATE TABLE IF NOT EXISTS crm_mailboxes (

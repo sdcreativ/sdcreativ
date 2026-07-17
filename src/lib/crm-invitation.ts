@@ -1,7 +1,6 @@
 import { createHash, randomBytes } from "crypto";
 import { escapeHtml, sendEmail } from "@/lib/email";
 import { getCrmSettings } from "@/lib/crm-settings";
-import { HOSTINGER_WEBMAIL_URL } from "@/lib/crm-team-email";
 
 export const INVITE_EXPIRY_HOURS = 72;
 
@@ -25,8 +24,9 @@ export function buildUserInvitationEmailHtml(params: {
   agencyName: string;
   expiresHours: number;
   proEmail: string;
-  mailboxPassword: string;
-  webmailUrl: string;
+  personalEmail: string;
+  phone?: string | null;
+  smsOtpEnabled?: boolean;
 }): string {
   const {
     name,
@@ -35,9 +35,16 @@ export function buildUserInvitationEmailHtml(params: {
     agencyName,
     expiresHours,
     proEmail,
-    mailboxPassword,
-    webmailUrl,
+    personalEmail,
+    phone,
+    smsOtpEnabled,
   } = params;
+
+  const smsLine =
+    smsOtpEnabled && phone
+      ? `<p style="margin:8px 0 0;font-size:13px;color:#0369a1">Codes 2FA aussi disponibles par SMS sur <strong>${escapeHtml(phone)}</strong>.</p>`
+      : `<p style="margin:8px 0 0;font-size:13px;color:#0369a1">Les codes 2FA seront envoyés sur votre email personnel.</p>`;
+
   return `
     <div style="font-family:system-ui,-apple-system,sans-serif;line-height:1.6;color:#1a1a2e;max-width:560px">
       <p>Bonjour <strong>${escapeHtml(name)}</strong>,</p>
@@ -47,16 +54,13 @@ export function buildUserInvitationEmailHtml(params: {
       </p>
 
       <div style="margin:24px 0;padding:16px 18px;border-radius:12px;background:#f0f9ff;border:1px solid #bae6fd">
-        <p style="margin:0 0 12px;font-size:13px;font-weight:600;color:#0c4a6e">Votre email professionnel</p>
-        <p style="margin:0 0 8px"><strong>Adresse :</strong> ${escapeHtml(proEmail)}</p>
-        <p style="margin:0 0 8px"><strong>Mot de passe temporaire (boîte mail) :</strong> <code style="background:#e0f2fe;padding:2px 6px;border-radius:4px">${escapeHtml(mailboxPassword)}</code></p>
-        <p style="margin:12px 0 0;font-size:13px;color:#0369a1">
-          <a href="${escapeHtml(webmailUrl)}" style="color:#2563eb;font-weight:600">Ouvrir le webmail Hostinger</a>
-          — changez ce mot de passe dès votre première connexion à la boîte mail.
-        </p>
+        <p style="margin:0 0 12px;font-size:13px;font-weight:600;color:#0c4a6e">Vos identifiants CRM</p>
+        <p style="margin:0 0 8px"><strong>Connexion :</strong> ${escapeHtml(proEmail)}</p>
+        <p style="margin:0 0 8px"><strong>Email personnel (invitation &amp; 2FA) :</strong> ${escapeHtml(personalEmail)}</p>
+        ${smsLine}
       </div>
 
-      <p>Cliquez ci-dessous pour définir votre <strong>mot de passe CRM</strong> (connexion à l'espace équipe) :</p>
+      <p>Cliquez ci-dessous pour définir votre <strong>mot de passe CRM</strong> (première connexion) :</p>
       <p style="margin:28px 0">
         <a href="${escapeHtml(inviteUrl)}"
            style="display:inline-block;background:#2563eb;color:#fff;text-decoration:none;font-weight:600;padding:14px 28px;border-radius:12px">
@@ -68,7 +72,7 @@ export function buildUserInvitationEmailHtml(params: {
         <a href="${escapeHtml(inviteUrl)}" style="color:#2563eb;word-break:break-all">${escapeHtml(inviteUrl)}</a>
       </p>
       <p style="font-size:13px;color:#64748b;margin-top:24px">
-        Après activation, connectez-vous au CRM avec <strong>${escapeHtml(proEmail)}</strong> et le mot de passe que vous choisirez.
+        Après activation, connectez-vous avec <strong>${escapeHtml(proEmail)}</strong> et le mot de passe que vous aurez choisi.
       </p>
       <p style="font-size:13px;color:#64748b;margin-top:16px">
         Si vous n'attendiez pas cette invitation, ignorez cet email.
@@ -84,16 +88,15 @@ export async function sendUserInvitationEmail(params: {
   proEmail: string;
   roleLabel: string;
   inviteUrl: string;
-  mailboxPassword: string;
-  webmailUrl?: string;
+  phone?: string | null;
+  smsOtpEnabled?: boolean;
 }): Promise<boolean> {
   const settings = await getCrmSettings();
   const agencyName = settings.branding.agencyName ?? "SD CREATIV";
-  const webmailUrl = params.webmailUrl ?? HOSTINGER_WEBMAIL_URL;
 
   return sendEmail({
     to: params.personalEmail,
-    subject: `[${agencyName}] Vos accès CRM et email professionnel`,
+    subject: `[${agencyName}] Activez votre accès CRM`,
     html: buildUserInvitationEmailHtml({
       name: params.name,
       roleLabel: params.roleLabel,
@@ -101,8 +104,9 @@ export async function sendUserInvitationEmail(params: {
       agencyName,
       expiresHours: INVITE_EXPIRY_HOURS,
       proEmail: params.proEmail,
-      mailboxPassword: params.mailboxPassword,
-      webmailUrl,
+      personalEmail: params.personalEmail,
+      phone: params.phone,
+      smsOtpEnabled: params.smsOtpEnabled,
     }),
   });
 }

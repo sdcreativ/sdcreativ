@@ -22,6 +22,8 @@ type AccountInfo = {
   userId: string;
   email: string;
   personalEmail: string | null;
+  phone: string | null;
+  smsOtpEnabled: boolean;
   name: string;
   role: string;
   roleLabel?: string;
@@ -38,6 +40,8 @@ export function CrmProfileView() {
   const [account, setAccount] = useState<AccountInfo | null>(null);
   const [name, setName] = useState("");
   const [personalEmail, setPersonalEmail] = useState("");
+  const [phone, setPhone] = useState("");
+  const [smsOtpEnabled, setSmsOtpEnabled] = useState(false);
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
   const [currentPassword, setCurrentPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
@@ -56,6 +60,8 @@ export function CrmProfileView() {
       setAccount(acc);
       setName(acc?.name ?? "");
       setPersonalEmail(acc?.personalEmail ?? "");
+      setPhone(acc?.phone ?? "");
+      setSmsOtpEnabled(Boolean(acc?.smsOtpEnabled));
       setAvatarUrl(acc?.avatarUrl ?? null);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Chargement impossible.");
@@ -81,12 +87,16 @@ export function CrmProfileView() {
         body: JSON.stringify({
           name: name.trim(),
           personalEmail: personalEmail.trim() || null,
+          phone: phone.trim() || null,
+          smsOtpEnabled,
         }),
       });
       const data = (await res.json()) as { error?: string; account?: AccountInfo };
       if (!res.ok) throw new Error(data.error ?? "Enregistrement impossible.");
       setAccount(data.account ?? null);
       setPersonalEmail(data.account?.personalEmail ?? "");
+      setPhone(data.account?.phone ?? "");
+      setSmsOtpEnabled(Boolean(data.account?.smsOtpEnabled));
       setSuccess("Profil mis à jour.");
       notifyCrmSessionChanged();
     } catch (err) {
@@ -259,16 +269,46 @@ export function CrmProfileView() {
               className={fieldClass}
             />
             <p className="mt-1 text-xs text-gray-text">
-              Le code de connexion SD-XXXXXX est envoyé ici, pas sur la boîte Hostinger.
+              Canal principal pour le code de connexion SD-XXXXXX.
             </p>
           </div>
+
+          <div>
+            <label htmlFor="profile-phone" className="mb-1.5 block text-sm font-medium text-foreground">
+              Téléphone
+            </label>
+            <input
+              id="profile-phone"
+              type="tel"
+              value={phone}
+              onChange={(e) => setPhone(e.target.value)}
+              placeholder="+225 07 00 00 00 00"
+              className={fieldClass}
+            />
+          </div>
+
+          <label className="flex cursor-pointer items-start gap-3 rounded-xl border border-gray/25 bg-white px-3.5 py-3">
+            <input
+              type="checkbox"
+              checked={smsOtpEnabled}
+              onChange={(e) => setSmsOtpEnabled(e.target.checked)}
+              disabled={!phone.trim()}
+              className="mt-0.5 h-4 w-4 rounded border-gray/60 text-primary focus:ring-primary/30"
+            />
+            <span className="text-sm text-gray-text">
+              Activer le code 2FA aussi par <span className="font-medium text-foreground">SMS</span>
+              {!phone.trim() ? " (renseignez d’abord un téléphone)" : ""}.
+            </span>
+          </label>
 
           <button
             type="submit"
             disabled={
               savingProfile ||
               (name.trim() === account.name &&
-                (personalEmail.trim() || null) === (account.personalEmail || null))
+                (personalEmail.trim() || null) === (account.personalEmail || null) &&
+                (phone.trim() || null) === (account.phone || null) &&
+                smsOtpEnabled === account.smsOtpEnabled)
             }
             className="inline-flex items-center gap-2 rounded-xl bg-primary px-5 py-2.5 text-sm font-semibold text-white hover:bg-primary-dark disabled:opacity-50"
           >

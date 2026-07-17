@@ -29,9 +29,7 @@ import type { CrmUser } from "@/lib/crm-users";
 import {
   allocateUniqueTeamEmailLocalPart,
   buildTeamEmail,
-  generateMailboxPassword,
   getCrmTeamEmailDomain,
-  HOSTINGER_EMAIL_PANEL_URL,
   isCrmTeamEmail,
   isTeamEmailTaken,
   normalizeTeamEmailLocalPart,
@@ -49,8 +47,6 @@ import {
   CheckCircle2,
   CreditCard,
   Database,
-  ExternalLink,
-  Copy,
   Globe,
   LayoutGrid,
   Grid3X3,
@@ -560,14 +556,12 @@ function CrmUsersSection({ roles }: { roles: CrmRoleRecord[] }) {
   const [resendingId, setResendingId] = useState<string | null>(null);
   const [inviteName, setInviteName] = useState("");
   const [invitePersonalEmail, setInvitePersonalEmail] = useState("");
+  const [invitePhone, setInvitePhone] = useState("");
+  const [inviteSmsOtp, setInviteSmsOtp] = useState(false);
   const [inviteLocalPart, setInviteLocalPart] = useState("");
-  const [inviteMailboxPassword, setInviteMailboxPassword] = useState("");
   const [inviteNameBase, setInviteNameBase] = useState("");
   const [emailLocalPartManual, setEmailLocalPartManual] = useState(false);
-  const [mailboxConfirmed, setMailboxConfirmed] = useState(false);
-  const [connectMailboxToCrm, setConnectMailboxToCrm] = useState(true);
   const [creating, setCreating] = useState(false);
-  const [copyHint, setCopyHint] = useState("");
 
   const inviteEmail = inviteLocalPart
     ? buildTeamEmail(inviteLocalPart, teamDomain)
@@ -595,29 +589,16 @@ function CrmUsersSection({ roles }: { roles: CrmRoleRecord[] }) {
   function resetInviteFormState() {
     setInviteName("");
     setInvitePersonalEmail("");
+    setInvitePhone("");
+    setInviteSmsOtp(false);
     setInviteLocalPart("");
-    setInviteMailboxPassword("");
     setInviteNameBase("");
     setEmailLocalPartManual(false);
-    setMailboxConfirmed(false);
-    setConnectMailboxToCrm(true);
-    setCopyHint("");
     setError("");
   }
 
-  async function copyInviteText(label: string, value: string) {
-    try {
-      await navigator.clipboard.writeText(value);
-      setCopyHint(`${label} copié.`);
-      window.setTimeout(() => setCopyHint(""), 2500);
-    } catch {
-      setCopyHint("Copie impossible — sélectionnez le texte manuellement.");
-    }
-  }
-
-  function assignGeneratedMailboxCredentials(localPart: string) {
+  function assignGeneratedLocalPart(localPart: string) {
     setInviteLocalPart(localPart);
-    setInviteMailboxPassword(generateMailboxPassword());
   }
 
   function openInviteForm() {
@@ -647,36 +628,26 @@ function CrmUsersSection({ roles }: { roles: CrmRoleRecord[] }) {
     const base = suggestTeamEmailLocalPartFromName(value);
     if (!base) {
       setInviteLocalPart("");
-      setInviteMailboxPassword("");
       setInviteNameBase("");
       return;
     }
     if (base === inviteNameBase && inviteLocalPart) return;
 
     setInviteNameBase(base);
-    assignGeneratedMailboxCredentials(generateUniqueLocalPart(value));
+    assignGeneratedLocalPart(generateUniqueLocalPart(value));
   }
 
   function handleInviteLocalPartChange(value: string) {
     setEmailLocalPartManual(true);
     setInviteLocalPart(normalizeTeamEmailLocalPart(value));
-    if (!inviteMailboxPassword) {
-      setInviteMailboxPassword(generateMailboxPassword());
-    }
   }
 
   function regenerateInviteEmail() {
     setEmailLocalPartManual(false);
     const base = suggestTeamEmailLocalPartFromName(inviteName);
     setInviteNameBase(base);
-    assignGeneratedMailboxCredentials(generateUniqueLocalPart(inviteName));
+    assignGeneratedLocalPart(generateUniqueLocalPart(inviteName));
     setError("");
-  }
-
-  function regenerateMailboxPasswordOnly() {
-    setInviteMailboxPassword(generateMailboxPassword());
-    setMailboxConfirmed(false);
-    setCopyHint("");
   }
 
   const activeCount = users.filter((u) => u.active).length;
@@ -707,8 +678,9 @@ function CrmUsersSection({ roles }: { roles: CrmRoleRecord[] }) {
       setError("L'email personnel doit être différent de l'email professionnel.");
       return;
     }
-    if (!inviteMailboxPassword || inviteMailboxPassword.length < 12) {
-      setError("Mot de passe boîte mail manquant — régénérez l'email.");
+    const phone = invitePhone.trim();
+    if (!phone) {
+      setError("Indiquez le numéro de téléphone de l'invité.");
       return;
     }
     if (!isCrmTeamEmail(email, teamDomain)) {
@@ -719,10 +691,6 @@ function CrmUsersSection({ roles }: { roles: CrmRoleRecord[] }) {
       setError("Cet email est déjà utilisé. Régénérez une adresse ou choisissez-en une autre.");
       return;
     }
-    if (!mailboxConfirmed) {
-      setError("Confirmez d’abord que la boîte Hostinger a été créée avec ces identifiants.");
-      return;
-    }
 
     setCreating(true);
     try {
@@ -730,33 +698,16 @@ function CrmUsersSection({ roles }: { roles: CrmRoleRecord[] }) {
         name,
         email,
         personalEmail,
-        mailboxPassword: inviteMailboxPassword,
+        phone,
+        smsOtpEnabled: inviteSmsOtp,
         role: String(data.get("role")),
       });
-
-      let mailboxLinked = false;
-      if (connectMailboxToCrm && inviteMailboxPassword) {
-        try {
-          const { connectMailMailboxApi } = await import("@/lib/mail-api");
-          await connectMailMailboxApi({
-            email: user.email,
-            password: inviteMailboxPassword,
-            userId: user.id,
-            displayName: user.name,
-          });
-          mailboxLinked = true;
-        } catch {
-          // Invitation OK même si la connexion IMAP échoue (MDP / secret)
-        }
-      }
 
       closeInviteForm();
       await loadUsers();
       setSuccess(
         invitationSent
-          ? `Invitation et accès mail envoyés à ${personalEmail} (boîte pro : ${user.email})${
-              mailboxLinked ? " — boîte connectée au CRM." : ""
-            }`
+          ? `Invitation envoyée à ${personalEmail} (identifiant CRM : ${user.email}).`
           : `Compte créé pour ${user.email}, mais l'email n'a pas pu être envoyé (vérifiez Resend).`,
       );
     } catch (err) {
@@ -828,21 +779,12 @@ function CrmUsersSection({ roles }: { roles: CrmRoleRecord[] }) {
       </div>
 
       <div className="rounded-2xl border border-sky-200/80 bg-sky-50/70 px-4 py-3.5 text-sm text-sky-950">
-        <p className="font-semibold text-sky-950">Emails professionnels @{teamDomain}</p>
+        <p className="font-semibold text-sky-950">Invitation équipe</p>
         <p className="mt-1 leading-relaxed text-sky-900/90">
-          Saisissez le nom et l&apos;email personnel : une adresse pro unique et un mot de passe
-          temporaire sont générés. Créez la boîte dans Hostinger avec ces identifiants — l&apos;invité
-          recevra tout par email personnel (lien CRM + accès webmail).
+          L&apos;invitation part sur l&apos;email personnel. L&apos;identifiant{" "}
+          <span className="font-medium">@{teamDomain}</span> sert de login CRM (sans boîte Hostinger
+          individuelle pour l&apos;instant). Ajoutez le téléphone pour permettre le code 2FA par SMS.
         </p>
-        <a
-          href={HOSTINGER_EMAIL_PANEL_URL}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="mt-2 inline-flex items-center gap-1.5 text-sm font-semibold text-primary hover:underline"
-        >
-          Ouvrir Hostinger Email
-          <ExternalLink className="h-3.5 w-3.5" aria-hidden />
-        </a>
       </div>
 
       {success && (
@@ -900,6 +842,12 @@ function CrmUsersSection({ roles }: { roles: CrmRoleRecord[] }) {
                         Email personnel manquant (2FA)
                       </p>
                     )}
+                    {user.phone ? (
+                      <p className="truncate text-[11px] text-gray-text/80">
+                        Tél. : {user.phone}
+                        {user.smsOtpEnabled ? " · SMS 2FA" : ""}
+                      </p>
+                    ) : null}
                     <p className="mt-2 inline-flex items-center gap-1 rounded-full bg-white px-2.5 py-1 text-[11px] font-medium text-gray-text ring-1 ring-gray/15">
                       <Shield className="h-3 w-3 text-primary" aria-hidden />
                       {getRoleLabel(user.role)}
@@ -1086,13 +1034,44 @@ function CrmUsersSection({ roles }: { roles: CrmRoleRecord[] }) {
                   className={userFieldClass}
                 />
                 <p className="mt-1.5 text-xs text-gray-text">
-                  C&apos;est à cette adresse que seront envoyés le lien CRM et les accès boîte mail.
+                  C&apos;est à cette adresse que seront envoyés le lien d&apos;activation et les codes 2FA.
                 </p>
               </div>
 
               <div>
                 <label className="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-gray-text">
-                  Email professionnel *
+                  Téléphone *
+                </label>
+                <input
+                  type="tel"
+                  value={invitePhone}
+                  onChange={(e) => setInvitePhone(e.target.value)}
+                  required
+                  autoComplete="tel"
+                  placeholder="+225 07 00 00 00 00"
+                  className={userFieldClass}
+                />
+                <p className="mt-1.5 text-xs text-gray-text">
+                  Obligatoire pour le CRM. Utilisé pour le code SMS si activé.
+                </p>
+              </div>
+
+              <label className="flex cursor-pointer items-start gap-3 rounded-xl border border-gray/25 bg-white px-3.5 py-3">
+                <input
+                  type="checkbox"
+                  checked={inviteSmsOtp}
+                  onChange={(e) => setInviteSmsOtp(e.target.checked)}
+                  className="mt-0.5 h-4 w-4 rounded border-gray/60 text-primary focus:ring-primary/30"
+                />
+                <span className="text-sm text-gray-text">
+                  Activer la réception du code 2FA aussi par <span className="font-medium text-foreground">SMS</span>{" "}
+                  (en plus de l&apos;email personnel).
+                </span>
+              </label>
+
+              <div>
+                <label className="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-gray-text">
+                  Identifiant CRM (email pro) *
                 </label>
                 <div className="flex overflow-hidden rounded-xl border border-gray/60 bg-white shadow-sm focus-within:border-primary focus-within:ring-4 focus-within:ring-primary/10">
                   <input
@@ -1101,7 +1080,7 @@ function CrmUsersSection({ roles }: { roles: CrmRoleRecord[] }) {
                     required
                     autoComplete="off"
                     spellCheck={false}
-                    placeholder="prenom.nom.xxxx"
+                    placeholder="prenom.nom"
                     aria-label="Partie locale de l’email"
                     className="min-w-0 flex-1 border-0 bg-transparent px-3 py-2.5 text-sm focus:outline-none focus:ring-0"
                   />
@@ -1118,7 +1097,7 @@ function CrmUsersSection({ roles }: { roles: CrmRoleRecord[] }) {
                   >
                     {inviteEmail ? (
                       <>
-                        Généré :{" "}
+                        Identifiant :{" "}
                         <span className="font-medium text-foreground">{inviteEmail}</span>
                         {inviteEmailTaken
                           ? " — déjà utilisé dans le CRM"
@@ -1140,56 +1119,10 @@ function CrmUsersSection({ roles }: { roles: CrmRoleRecord[] }) {
                     </button>
                   )}
                 </div>
+                <p className="mt-1.5 text-xs text-gray-text">
+                  Sert uniquement de login CRM pour l&apos;instant (pas de boîte Hostinger individuelle).
+                </p>
               </div>
-
-              {inviteEmail && inviteMailboxPassword ? (
-                <div className="rounded-xl border border-amber-200/80 bg-amber-50/60 px-3.5 py-3 text-sm">
-                  <p className="font-semibold text-amber-950">
-                    Identifiants à créer dans Hostinger
-                  </p>
-                  <p className="mt-1 text-xs text-amber-900/90">
-                    Utilisez exactement ces valeurs lors de la création de la boîte.
-                  </p>
-                  <div className="mt-3 space-y-2">
-                    <div className="flex items-center justify-between gap-2 rounded-lg bg-white/80 px-3 py-2">
-                      <span className="min-w-0 truncate font-mono text-xs">{inviteEmail}</span>
-                      <button
-                        type="button"
-                        onClick={() => void copyInviteText("Email pro", inviteEmail)}
-                        className="inline-flex shrink-0 items-center gap-1 text-xs font-semibold text-primary hover:underline"
-                      >
-                        <Copy className="h-3.5 w-3.5" aria-hidden />
-                        Copier
-                      </button>
-                    </div>
-                    <div className="flex items-center justify-between gap-2 rounded-lg bg-white/80 px-3 py-2">
-                      <span className="font-mono text-xs">{inviteMailboxPassword}</span>
-                      <div className="flex shrink-0 items-center gap-2">
-                        <button
-                          type="button"
-                          onClick={regenerateMailboxPasswordOnly}
-                          className="text-xs font-semibold text-gray-text hover:underline"
-                        >
-                          Régénérer
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() =>
-                            void copyInviteText("Mot de passe", inviteMailboxPassword)
-                          }
-                          className="inline-flex items-center gap-1 text-xs font-semibold text-primary hover:underline"
-                        >
-                          <Copy className="h-3.5 w-3.5" aria-hidden />
-                          Copier
-                        </button>
-                      </div>
-                    </div>
-                  </div>
-                  {copyHint ? (
-                    <p className="mt-2 text-xs font-medium text-emerald-700">{copyHint}</p>
-                  ) : null}
-                </div>
-              ) : null}
 
               <select name="role" defaultValue="commercial" className={userFieldClass} aria-label="Rôle">
                 {roles.map((role) => (
@@ -1199,59 +1132,14 @@ function CrmUsersSection({ roles }: { roles: CrmRoleRecord[] }) {
                 ))}
               </select>
 
-              <ol className="space-y-2 rounded-xl border border-gray/20 bg-gray-light/30 px-3.5 py-3 text-sm text-gray-text">
-                <li className="flex gap-2">
-                  <span className="font-bold text-foreground">1.</span>
-                  <span>
-                    Créez la boîte{" "}
-                    <span className="font-medium text-foreground">
-                      {inviteEmail || `prenom.nom.xxxx@${teamDomain}`}
-                    </span>{" "}
-                    dans Hostinger.
-                  </span>
-                </li>
-                <li className="flex gap-2">
-                  <span className="font-bold text-foreground">2.</span>
-                  <span>Confirmez ci-dessous, puis envoyez l’invitation CRM.</span>
-                </li>
-              </ol>
-
-              <a
-                href={HOSTINGER_EMAIL_PANEL_URL}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="inline-flex items-center gap-1.5 text-sm font-semibold text-primary hover:underline"
-              >
-                Ouvrir Hostinger Email
-                <ExternalLink className="h-3.5 w-3.5" aria-hidden />
-              </a>
-
-              <label className="flex cursor-pointer items-start gap-3 rounded-xl border border-gray/25 bg-white px-3.5 py-3">
-                <input
-                  type="checkbox"
-                  checked={mailboxConfirmed}
-                  onChange={(e) => setMailboxConfirmed(e.target.checked)}
-                  className="mt-0.5 h-4 w-4 rounded border-gray/60 text-primary focus:ring-primary/30"
-                />
-                <span className="text-sm text-gray-text">
-                  J&apos;ai créé la boîte Hostinger{" "}
-                  <span className="font-medium text-foreground">{inviteEmail}</span> avec le mot de
-                  passe ci-dessus (sinon l&apos;invité ne pourra pas recevoir ses emails pro).
+              <p className="rounded-xl border border-gray/20 bg-gray-light/30 px-3.5 py-3 text-sm text-gray-text">
+                L&apos;invité reçoit un lien sur son email personnel, définit son mot de passe CRM à
+                la première connexion, puis se connecte avec{" "}
+                <span className="font-medium text-foreground">
+                  {inviteEmail || `prenom.nom@${teamDomain}`}
                 </span>
-              </label>
-
-              <label className="flex cursor-pointer items-start gap-3 rounded-xl border border-gray/25 bg-white px-3.5 py-3">
-                <input
-                  type="checkbox"
-                  checked={connectMailboxToCrm}
-                  onChange={(e) => setConnectMailboxToCrm(e.target.checked)}
-                  className="mt-0.5 h-4 w-4 rounded border-gray/60 text-primary focus:ring-primary/30"
-                />
-                <span className="text-sm text-gray-text">
-                  Connecter aussi la boîte au CRM (IMAP chiffré) pour la Messagerie — le mot de
-                  passe n&apos;est jamais loggé.
-                </span>
-              </label>
+                .
+              </p>
 
               {error && (
                 <p className="rounded-xl border border-accent/30 bg-accent/5 px-3.5 py-2.5 text-sm text-accent">
@@ -1271,10 +1159,9 @@ function CrmUsersSection({ roles }: { roles: CrmRoleRecord[] }) {
                 type="submit"
                 disabled={
                   creating ||
-                  !mailboxConfirmed ||
                   !inviteLocalPart ||
                   !invitePersonalEmail ||
-                  !inviteMailboxPassword ||
+                  !invitePhone.trim() ||
                   inviteEmailTaken
                 }
                 className="inline-flex items-center gap-2 rounded-xl bg-primary px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-primary-dark disabled:opacity-50"

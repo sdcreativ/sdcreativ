@@ -2,6 +2,7 @@ import type { CrmNavItem } from "@/content/crm-nav";
 import type { CrmPermission } from "@/lib/crm-permissions";
 import type { DashboardWidgetId } from "@/lib/dashboard-config";
 import type { DashboardKpi } from "@/lib/dashboard-utils";
+import { isCrmMessagerieUiEnabled } from "@/lib/mail/config";
 
 /** Permissions requises par entrée de navigation (null = accessible à tout utilisateur CRM). */
 export const CRM_NAV_PERMISSIONS: Record<string, CrmPermission | CrmPermission[] | null> = {
@@ -103,7 +104,11 @@ export function filterCrmNavItems(
   items: CrmNavItem[],
   permissions: CrmPermission[],
 ): CrmNavItem[] {
-  return items.filter((item) => hasCrmPermission(permissions, CRM_NAV_PERMISSIONS[item.id]));
+  return items.filter((item) => {
+    if (item.id === "messagerie" && !isCrmMessagerieUiEnabled()) return false;
+    if (!item.ready && item.id === "messagerie") return false;
+    return hasCrmPermission(permissions, CRM_NAV_PERMISSIONS[item.id]);
+  });
 }
 
 export function filterDashboardKpis(kpis: DashboardKpi[], permissions: CrmPermission[]): DashboardKpi[] {

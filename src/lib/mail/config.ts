@@ -74,6 +74,22 @@ export function isMailSyncEnabled(): boolean {
   return flag === "1" || flag === "true" || flag === "yes";
 }
 
+/**
+ * UI Messagerie CRM (nav + page).
+ * Désactivée par défaut (boîtes Hostinger individuelles en pause).
+ * Réactiver : NEXT_PUBLIC_CRM_MESSAGERIE_ENABLED=1 (ou CRM_MESSAGERIE_ENABLED=1 côté serveur).
+ */
+export function isCrmMessagerieUiEnabled(): boolean {
+  const flag = (
+    process.env.NEXT_PUBLIC_CRM_MESSAGERIE_ENABLED ??
+    process.env.CRM_MESSAGERIE_ENABLED ??
+    ""
+  )
+    .trim()
+    .toLowerCase();
+  return flag === "1" || flag === "true" || flag === "yes";
+}
+
 export function isMailCredentialsSecretConfigured(): boolean {
   const secret = process.env.MAIL_CREDENTIALS_SECRET?.trim() ?? "";
   return secret.length >= 32;

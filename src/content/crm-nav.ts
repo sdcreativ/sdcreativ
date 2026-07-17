@@ -43,7 +43,8 @@ export const crmNavItems: CrmNavItem[] = [
   { id: "catalogue", label: "Catalogue", href: "/admin/crm/catalogue", icon: LayoutList, ready: true },
   { id: "invoices", label: "Factures", href: "/admin/crm/factures", icon: Receipt, ready: true },
   { id: "inbox", label: "Inbox", href: "/admin/crm/inbox", icon: Inbox, ready: true },
-  { id: "messagerie", label: "Messagerie", href: "/admin/crm/messagerie", icon: Mail, ready: true },
+  /** ready: false — UI désactivée tant que CRM_MESSAGERIE_ENABLED ≠ 1 (code conservé). */
+  { id: "messagerie", label: "Messagerie", href: "/admin/crm/messagerie", icon: Mail, ready: false },
   { id: "timesheets", label: "Temps", href: "/admin/crm/temps", icon: Clock, ready: true },
   { id: "vendors", label: "Prestataires", href: "/admin/crm/prestataires", icon: UserCog, ready: true },
   { id: "documents", label: "Documents", href: "/admin/crm/documents", icon: FileText, ready: true },

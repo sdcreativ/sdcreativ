@@ -105,7 +105,7 @@ export async function POST(request: Request) {
     if (method === "totp") {
       const totp = await getTotpAuthState(payload.userId);
       verified = Boolean(totp?.enabled && totp.secret && verifyTotpCode(totp.secret, code));
-    } else if (method === "email") {
+    } else if (method === "email" || method === "sms") {
       verified = normalizeLoginEmailOtp(code) !== null && (await verifyLoginEmailOtp(payload.userId, code));
     }
 
@@ -120,7 +120,14 @@ export async function POST(request: Request) {
         success: false,
       });
       return NextResponse.json(
-        { error: method === "email" ? "Code email invalide ou expiré." : "Code 2FA invalide." },
+        {
+          error:
+            method === "sms"
+              ? "Code SMS invalide ou expiré."
+              : method === "email"
+                ? "Code email invalide ou expiré."
+                : "Code 2FA invalide.",
+        },
         { status: 401 },
       );
     }

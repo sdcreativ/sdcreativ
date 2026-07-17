@@ -19,8 +19,11 @@ export async function POST(request: Request) {
   }
 
   try {
-    const body = (await request.json()) as { challengeToken?: string };
-    const { challengeToken } = body;
+    const body = (await request.json()) as {
+      challengeToken?: string;
+      channel?: "email" | "sms";
+    };
+    const { challengeToken, channel } = body;
 
     if (!challengeToken) {
       return NextResponse.json({ error: "Jeton requis." }, { status: 400 });
@@ -31,9 +34,10 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Session expirée. Reconnectez-vous." }, { status: 401 });
     }
 
-    if ((payload.method ?? "totp") !== "email") {
+    const method = payload.method ?? "totp";
+    if (method !== "email" && method !== "sms") {
       return NextResponse.json(
-        { error: "Le renvoi par email n'est pas disponible pour cette vérification." },
+        { error: "Le renvoi de code n'est pas disponible pour cette vérification." },
         { status: 400 },
       );
     }
@@ -44,11 +48,15 @@ export async function POST(request: Request) {
       return rateLimitExceededResponse(rateStatus.retryAfterSec);
     }
 
+    const preferredChannel =
+      channel === "sms" ? "sms" : channel === "email" ? "email" : method === "sms" ? "sms" : "email";
+
     const result = await resendLoginEmailOtp({
       userId: payload.userId,
       email: payload.email,
       name: payload.name,
       ipAddress: getClientIp(request),
+      preferredChannel,
     });
 
     if (!result.ok) {
@@ -66,6 +74,9 @@ export async function POST(request: Request) {
       success: true,
       otpSentTo: result.sentTo,
       otpChannel: result.channel,
+      smsAvailable: result.smsAvailable,
+      maskedPhone: result.maskedPhone,
+      method: result.channel === "sms" ? "sms" : "email",
     });
   } catch (error) {
     console.error("[api/admin/login/2fa/resend] POST", error);

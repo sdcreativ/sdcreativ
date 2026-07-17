@@ -6,13 +6,27 @@ export function isTwilioConfigured(): boolean {
   );
 }
 
-function normalizePhone(raw: string): string {
+/** Normalise un numéro (défaut indicatif CI +225 si local). */
+export function normalizePhone(raw: string): string {
   const trimmed = raw.trim();
-  if (trimmed.startsWith("+")) return trimmed;
+  if (!trimmed) return "";
+  if (trimmed.startsWith("+")) return `+${trimmed.slice(1).replace(/\D/g, "")}`;
   const digits = trimmed.replace(/\D/g, "");
   if (digits.startsWith("225")) return `+${digits}`;
   if (digits.startsWith("0")) return `+225${digits.slice(1)}`;
   return `+${digits}`;
+}
+
+export function isValidPhone(raw: string): boolean {
+  const normalized = normalizePhone(raw);
+  return /^\+[1-9]\d{7,14}$/.test(normalized);
+}
+
+/** Affichage masqué pour l’UI 2FA. */
+export function maskPhone(raw: string): string {
+  const normalized = normalizePhone(raw);
+  if (normalized.length < 6) return normalized;
+  return `${normalized.slice(0, 4)}••••${normalized.slice(-2)}`;
 }
 
 export async function sendSms(to: string, body: string): Promise<boolean> {

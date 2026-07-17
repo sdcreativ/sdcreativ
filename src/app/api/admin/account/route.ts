@@ -16,6 +16,7 @@ import {
 } from "@/lib/crm-session";
 import { getSessionMaxAgeSeconds } from "@/lib/crm-security-settings";
 import { HOSTINGER_WEBMAIL_URL, isCrmTeamEmail } from "@/lib/crm-team-email";
+import { isValidPhone, normalizePhone } from "@/lib/sms";
 import { z } from "zod";
 
 const personalEmailPatchField = z
@@ -27,12 +28,24 @@ const personalEmailPatchField = z
     message: "Utilisez un email personnel (Gmail, etc.), pas une adresse @sdcreativ.com.",
   });
 
+const phonePatchField = z
+  .string()
+  .trim()
+  .min(8)
+  .max(32)
+  .refine((value) => isValidPhone(value), {
+    message: "Numéro invalide (ex. +2250700000000).",
+  })
+  .transform((value) => normalizePhone(value));
+
 const patchAccountSchema = z
   .object({
     name: updateOwnProfileSchema.shape.name,
     avatarUrl: updateOwnProfileSchema.shape.avatarUrl,
     dashboardLayout: updateOwnProfileSchema.shape.dashboardLayout,
     personalEmail: personalEmailPatchField.optional().nullable(),
+    phone: phonePatchField.optional().nullable(),
+    smsOtpEnabled: z.boolean().optional(),
     currentPassword: changeOwnPasswordSchema.shape.currentPassword,
     newPassword: changeOwnPasswordSchema.shape.newPassword.optional(),
   })
@@ -42,6 +55,8 @@ const patchAccountSchema = z
       data.avatarUrl !== undefined ||
       data.dashboardLayout !== undefined ||
       data.personalEmail !== undefined ||
+      data.phone !== undefined ||
+      data.smsOtpEnabled !== undefined ||
       data.newPassword !== undefined,
     { message: "Aucune modification demandée." },
   );
@@ -55,6 +70,8 @@ async function buildAccountResponse(userId: string) {
     userId: user.id,
     email: user.email,
     personalEmail: user.personalEmail,
+    phone: user.phone,
+    smsOtpEnabled: user.smsOtpEnabled,
     name: user.name,
     role: user.role,
     roleLabel: getCachedRoleLabel(user.role),
@@ -105,23 +122,38 @@ export async function PATCH(request: Request) {
       return NextResponse.json({ error: "Données invalides." }, { status: 400 });
     }
 
-    const { name, avatarUrl, dashboardLayout, personalEmail, currentPassword, newPassword } =
+    const { name, avatarUrl, dashboardLayout, personalEmail, phone, smsOtpEnabled, currentPassword, newPassword } =
       parsed.data;
 
     if (name !== undefined || avatarUrl !== undefined || dashboardLayout !== undefined) {
       await updateCrmUserProfile(session.userId, { name, avatarUrl, dashboardLayout });
     }
 
-    if (personalEmail !== undefined) {
+    if (
+      personalEmail !== undefined ||
+      phone !== undefined ||
+      smsOtpEnabled !== undefined
+    ) {
       if (personalEmail && personalEmail.toLowerCase() === session.email.toLowerCase()) {
         return NextResponse.json(
           { error: "L'email personnel doit être différent de l'email professionnel." },
           { status: 400 },
         );
       }
-      const updated = await updateCrmUser(session.userId, { personalEmail });
-      if (!updated) {
-        return NextResponse.json({ error: "Compte introuvable." }, { status: 404 });
+      try {
+        const updated = await updateCrmUser(session.userId, {
+          ...(personalEmail !== undefined ? { personalEmail } : {}),
+          ...(phone !== undefined ? { phone } : {}),
+          ...(smsOtpEnabled !== undefined ? { smsOtpEnabled } : {}),
+        });
+        if (!updated) {
+          return NextResponse.json({ error: "Compte introuvable." }, { status: 404 });
+        }
+      } catch (err) {
+        return NextResponse.json(
+          { error: err instanceof Error ? err.message : "Mise à jour impossible." },
+          { status: 400 },
+        );
       }
     }
 

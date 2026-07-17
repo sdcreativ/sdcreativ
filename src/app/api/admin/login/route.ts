@@ -115,14 +115,16 @@ export async function POST(request: Request) {
       name: user.name,
       role: user.role,
       mustChangePassword: user.mustChangePassword,
-      method: "email",
+      method: otpResult.channel === "sms" ? "sms" : "email",
     });
     return NextResponse.json({
       requires2fa: true,
-      method: "email",
+      method: otpResult.channel === "sms" ? "sms" : "email",
       challengeToken,
       otpSentTo: otpResult.sentTo,
       otpChannel: otpResult.channel,
+      smsAvailable: otpResult.smsAvailable,
+      maskedPhone: otpResult.maskedPhone,
       user: { name: user.name, email: user.email },
       mustChangePassword: user.mustChangePassword,
     });

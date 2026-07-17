@@ -3,17 +3,27 @@ import { escapeHtml, sendEmail } from "@/lib/email";
 import { getCrmSettings } from "@/lib/crm-settings";
 import { withDb } from "@/lib/db";
 import { normalizeLoginEmailOtp } from "@/lib/crm-email-otp-utils";
+import { isValidPhone, maskPhone, normalizePhone, sendSms } from "@/lib/sms";
 
 export { normalizeLoginEmailOtp } from "@/lib/crm-email-otp-utils";
 
 export const LOGIN_OTP_EXPIRY_MINUTES = 10;
 export const LOGIN_OTP_RESEND_COOLDOWN_SEC = 60;
 
-export type LoginOtpChannel = "personal" | "professional";
+export type LoginOtpChannel = "personal" | "professional" | "sms";
 
 export type LoginOtpDestination = {
   to: string;
+  /** Affichage public (email ou téléphone masqué). */
+  displayTo: string;
   channel: LoginOtpChannel;
+};
+
+export type LoginOtpUserContext = {
+  professionalEmail: string;
+  personalEmail?: string | null;
+  phone?: string | null;
+  smsOtpEnabled?: boolean;
 };
 
 /** Sans 0/O/1/I pour une saisie fiable. */
@@ -32,32 +42,66 @@ export function hashLoginEmailOtp(code: string): string {
 }
 
 /** Préfère l’email personnel ; sinon email pro (comptes legacy). */
-export function resolveLoginOtpDestination(input: {
+export function resolveLoginOtpEmailDestination(input: {
   professionalEmail: string;
   personalEmail?: string | null;
 }): LoginOtpDestination {
   const personal = input.personalEmail?.trim().toLowerCase() || null;
   const professional = input.professionalEmail.trim().toLowerCase();
   if (personal && personal.includes("@") && personal !== professional) {
-    return { to: personal, channel: "personal" };
+    return { to: personal, displayTo: personal, channel: "personal" };
   }
-  return { to: professional, channel: "professional" };
+  return { to: professional, displayTo: professional, channel: "professional" };
+}
+
+/** @deprecated utiliser resolveLoginOtpEmailDestination */
+export function resolveLoginOtpDestination(input: {
+  professionalEmail: string;
+  personalEmail?: string | null;
+}): LoginOtpDestination {
+  return resolveLoginOtpEmailDestination(input);
+}
+
+export function canSendLoginOtpSms(input: {
+  phone?: string | null;
+  smsOtpEnabled?: boolean;
+}): boolean {
+  return Boolean(input.smsOtpEnabled && input.phone && isValidPhone(input.phone));
+}
+
+export async function lookupLoginOtpUserContext(
+  userId: string,
+): Promise<LoginOtpUserContext | null> {
+  return withDb(async (query) => {
+    const { rows } = await query<{
+      email: string;
+      personal_email: string | null;
+      phone: string | null;
+      sms_otp_enabled: boolean;
+    }>(
+      `SELECT email, personal_email, phone, sms_otp_enabled
+       FROM crm_users WHERE id = $1 LIMIT 1`,
+      [userId],
+    );
+    const row = rows[0];
+    if (!row?.email) return null;
+    return {
+      professionalEmail: row.email,
+      personalEmail: row.personal_email,
+      phone: row.phone,
+      smsOtpEnabled: row.sms_otp_enabled,
+    };
+  });
 }
 
 export async function lookupLoginOtpDestination(
   userId: string,
 ): Promise<LoginOtpDestination | null> {
-  return withDb(async (query) => {
-    const { rows } = await query<{ email: string; personal_email: string | null }>(
-      `SELECT email, personal_email FROM crm_users WHERE id = $1 LIMIT 1`,
-      [userId],
-    );
-    const row = rows[0];
-    if (!row?.email) return null;
-    return resolveLoginOtpDestination({
-      professionalEmail: row.email,
-      personalEmail: row.personal_email,
-    });
+  const ctx = await lookupLoginOtpUserContext(userId);
+  if (!ctx) return null;
+  return resolveLoginOtpEmailDestination({
+    professionalEmail: ctx.professionalEmail,
+    personalEmail: ctx.personalEmail,
   });
 }
 
@@ -116,28 +160,87 @@ async function sendLoginOtpEmail(params: {
   });
 }
 
+async function persistLoginOtp(userId: string, hash: string, expiresAt: Date): Promise<void> {
+  await withDb(async (query) => {
+    await query(
+      `UPDATE crm_users
+       SET login_otp_hash = $2,
+           login_otp_expires_at = $3,
+           login_otp_sent_at = NOW(),
+           updated_at = NOW()
+       WHERE id = $1`,
+      [userId, hash, expiresAt.toISOString()],
+    );
+  });
+}
+
 export async function issueLoginEmailOtp(params: {
   userId: string;
   email: string;
   name: string;
   personalEmail?: string | null;
   ipAddress?: string;
+  /** "email" (défaut) ou "sms" si activé sur le compte. */
+  preferredChannel?: "email" | "sms";
 }): Promise<
-  | { ok: true; sentTo: string; channel: LoginOtpChannel }
+  | {
+      ok: true;
+      sentTo: string;
+      channel: LoginOtpChannel;
+      smsAvailable: boolean;
+      maskedPhone?: string;
+    }
   | { ok: false; error: string }
 > {
-  // Toujours relire en base : source de vérité pour personal_email.
-  const lookedUp = await lookupLoginOtpDestination(params.userId);
-  const destination =
-    lookedUp ??
-    resolveLoginOtpDestination({
+  const ctx =
+    (await lookupLoginOtpUserContext(params.userId)) ??
+    ({
       professionalEmail: params.email,
       personalEmail: params.personalEmail,
-    });
+      phone: null,
+      smsOtpEnabled: false,
+    } satisfies LoginOtpUserContext);
+
+  const smsAvailable = canSendLoginOtpSms(ctx);
+  const wantSms = params.preferredChannel === "sms";
+
+  if (wantSms && !smsAvailable) {
+    return {
+      ok: false,
+      error:
+        "SMS indisponible — activez le code SMS et renseignez un téléphone valide dans votre profil.",
+    };
+  }
 
   const code = generateLoginEmailOtp();
   const hash = hashLoginEmailOtp(code);
   const expiresAt = new Date(Date.now() + LOGIN_OTP_EXPIRY_MINUTES * 60_000);
+
+  if (wantSms && smsAvailable && ctx.phone) {
+    const phone = normalizePhone(ctx.phone);
+    const settings = await getCrmSettings();
+    const agencyName = settings.branding.agencyName ?? "SD CREATIV";
+    const sent = await sendSms(
+      phone,
+      `${agencyName} : code CRM ${code} (valable ${LOGIN_OTP_EXPIRY_MINUTES} min). Ne le partagez pas.`,
+    );
+    if (!sent) {
+      return { ok: false, error: "Envoi du code par SMS impossible. Réessayez par email." };
+    }
+    await persistLoginOtp(params.userId, hash, expiresAt);
+    return {
+      ok: true,
+      sentTo: maskPhone(phone),
+      channel: "sms",
+      smsAvailable: true,
+      maskedPhone: maskPhone(phone),
+    };
+  }
+
+  const destination = resolveLoginOtpEmailDestination({
+    professionalEmail: ctx.professionalEmail,
+    personalEmail: ctx.personalEmail,
+  });
 
   const sent = await sendLoginOtpEmail({
     name: params.name,
@@ -147,22 +250,21 @@ export async function issueLoginEmailOtp(params: {
   });
 
   if (!sent) {
-    return { ok: false, error: "Envoi du code par email impossible. Réessayez ou contactez un administrateur." };
+    return {
+      ok: false,
+      error: "Envoi du code par email impossible. Réessayez ou contactez un administrateur.",
+    };
   }
 
-  await withDb(async (query) => {
-    await query(
-      `UPDATE crm_users
-       SET login_otp_hash = $2,
-           login_otp_expires_at = $3,
-           login_otp_sent_at = NOW(),
-           updated_at = NOW()
-       WHERE id = $1`,
-      [params.userId, hash, expiresAt.toISOString()],
-    );
-  });
+  await persistLoginOtp(params.userId, hash, expiresAt);
 
-  return { ok: true, sentTo: destination.to, channel: destination.channel };
+  return {
+    ok: true,
+    sentTo: destination.displayTo,
+    channel: destination.channel,
+    smsAvailable,
+    maskedPhone: smsAvailable && ctx.phone ? maskPhone(ctx.phone) : undefined,
+  };
 }
 
 export async function resendLoginEmailOtp(params: {
@@ -171,8 +273,15 @@ export async function resendLoginEmailOtp(params: {
   name: string;
   personalEmail?: string | null;
   ipAddress?: string;
+  preferredChannel?: "email" | "sms";
 }): Promise<
-  | { ok: true; sentTo: string; channel: LoginOtpChannel }
+  | {
+      ok: true;
+      sentTo: string;
+      channel: LoginOtpChannel;
+      smsAvailable: boolean;
+      maskedPhone?: string;
+    }
   | { ok: false; error: string; retryAfterSec?: number }
 > {
   const cooldown = await withDb(async (query) => {
@@ -195,8 +304,8 @@ export async function resendLoginEmailOtp(params: {
     }
   }
 
-  const lookedUp = await lookupLoginOtpDestination(params.userId);
-  if (!lookedUp) {
+  const ctx = await lookupLoginOtpUserContext(params.userId);
+  if (!ctx) {
     return { ok: false, error: "Utilisateur introuvable." };
   }
 
@@ -204,8 +313,9 @@ export async function resendLoginEmailOtp(params: {
     userId: params.userId,
     email: params.email,
     name: params.name,
-    personalEmail: lookedUp.channel === "personal" ? lookedUp.to : null,
+    personalEmail: ctx.personalEmail,
     ipAddress: params.ipAddress,
+    preferredChannel: params.preferredChannel,
   });
 }
 

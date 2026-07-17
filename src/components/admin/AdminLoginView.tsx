@@ -67,14 +67,16 @@ export function AdminLoginView() {
   const [resendMessage, setResendMessage] = useState("");
   const [pendingUser, setPendingUser] = useState<{ name: string; email: string } | null>(null);
   const [otpSentTo, setOtpSentTo] = useState<string | null>(null);
-  const [otpChannel, setOtpChannel] = useState<"personal" | "professional" | null>(null);
+  const [otpChannel, setOtpChannel] = useState<"personal" | "professional" | "sms" | null>(null);
+  const [smsAvailable, setSmsAvailable] = useState(false);
+  const [maskedPhone, setMaskedPhone] = useState<string | null>(null);
 
   function isOtpCodeValid(): boolean {
     if (twoFactorMethod === "totp") return otpCode.length === 6;
     return normalizeLoginEmailOtp(otpCode) !== null;
   }
 
-  async function handleResendCode() {
+  async function handleResendCode(channel?: "email" | "sms") {
     setResendBusy(true);
     setResendMessage("");
     setError("");
@@ -82,20 +84,28 @@ export function AdminLoginView() {
       const res = await fetch("/api/admin/login/2fa/resend", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ challengeToken }),
+        body: JSON.stringify({ challengeToken, channel }),
       });
       const data = (await res.json()) as {
         error?: string;
         otpSentTo?: string;
-        otpChannel?: "personal" | "professional";
+        otpChannel?: "personal" | "professional" | "sms";
+        smsAvailable?: boolean;
+        maskedPhone?: string;
+        method?: Login2faMethod;
       };
       if (!res.ok) throw new Error(data.error ?? "Renvoi impossible.");
       if (data.otpSentTo) setOtpSentTo(data.otpSentTo);
       if (data.otpChannel) setOtpChannel(data.otpChannel);
+      if (typeof data.smsAvailable === "boolean") setSmsAvailable(data.smsAvailable);
+      if (data.maskedPhone) setMaskedPhone(data.maskedPhone);
+      if (data.method) setTwoFactorMethod(data.method);
       setResendMessage(
-        data.otpChannel === "personal"
-          ? "Un nouveau code a été envoyé sur votre email personnel."
-          : "Un nouveau code a été envoyé par email.",
+        data.otpChannel === "sms"
+          ? "Un nouveau code a été envoyé par SMS."
+          : data.otpChannel === "personal"
+            ? "Un nouveau code a été envoyé sur votre email personnel."
+            : "Un nouveau code a été envoyé par email.",
       );
       setOtpCode("");
     } catch (err) {
@@ -148,7 +158,9 @@ export function AdminLoginView() {
         mustChangePassword?: boolean;
         challengeToken?: string;
         otpSentTo?: string;
-        otpChannel?: "personal" | "professional";
+        otpChannel?: "personal" | "professional" | "sms";
+        smsAvailable?: boolean;
+        maskedPhone?: string;
         user?: { name: string; email: string };
       };
 
@@ -162,6 +174,8 @@ export function AdminLoginView() {
         setPendingUser(data.user ?? null);
         setOtpSentTo(data.otpSentTo ?? data.user?.email ?? null);
         setOtpChannel(data.otpChannel ?? "professional");
+        setSmsAvailable(Boolean(data.smsAvailable));
+        setMaskedPhone(data.maskedPhone ?? null);
         setStep("2fa");
         setOtpCode("");
         setResendMessage("");
@@ -249,10 +263,17 @@ export function AdminLoginView() {
 
             {step === "2fa" && pendingUser && (
               <p className="mt-4 rounded-xl border border-primary/20 bg-primary-light/30 px-4 py-2.5 text-sm text-gray-text">
-                {twoFactorMethod === "email" ? (
+                {twoFactorMethod === "email" || twoFactorMethod === "sms" ? (
                   <>
                     Code envoyé{" "}
-                    {otpChannel === "personal" ? (
+                    {otpChannel === "sms" ? (
+                      <>
+                        par <span className="font-semibold text-foreground">SMS</span> au{" "}
+                        <span className="font-semibold text-foreground">
+                          {otpSentTo ?? maskedPhone ?? "…"}
+                        </span>
+                      </>
+                    ) : otpChannel === "personal" ? (
                       <>
                         sur votre <span className="font-semibold text-foreground">email personnel</span>{" "}
                         <span className="font-semibold text-foreground">
@@ -373,7 +394,7 @@ export function AdminLoginView() {
                   ) : (
                     <>
                       <label htmlFor="admin-email-otp" className="mb-1.5 block text-sm font-medium text-foreground">
-                        Code reçu par email
+                        {twoFactorMethod === "sms" ? "Code reçu par SMS" : "Code reçu par email"}
                       </label>
                       <input
                         id="admin-email-otp"
@@ -393,12 +414,34 @@ export function AdminLoginView() {
                       <div className="mt-3 flex flex-wrap items-center gap-x-3 gap-y-1">
                         <button
                           type="button"
-                          onClick={() => void handleResendCode()}
+                          onClick={() =>
+                            void handleResendCode(otpChannel === "sms" ? "sms" : "email")
+                          }
                           disabled={resendBusy || loading}
                           className="text-xs font-medium text-primary hover:underline disabled:opacity-50"
                         >
                           {resendBusy ? "Envoi…" : "Renvoyer le code"}
                         </button>
+                        {smsAvailable && otpChannel !== "sms" && (
+                          <button
+                            type="button"
+                            onClick={() => void handleResendCode("sms")}
+                            disabled={resendBusy || loading}
+                            className="text-xs font-medium text-primary hover:underline disabled:opacity-50"
+                          >
+                            Recevoir par SMS{maskedPhone ? ` (${maskedPhone})` : ""}
+                          </button>
+                        )}
+                        {otpChannel === "sms" && (
+                          <button
+                            type="button"
+                            onClick={() => void handleResendCode("email")}
+                            disabled={resendBusy || loading}
+                            className="text-xs font-medium text-primary hover:underline disabled:opacity-50"
+                          >
+                            Recevoir par email
+                          </button>
+                        )}
                         {resendMessage && (
                           <span className="text-xs text-emerald-700">{resendMessage}</span>
                         )}
