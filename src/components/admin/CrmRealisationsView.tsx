@@ -25,6 +25,7 @@ import {
   updateRealisationApi,
 } from "@/lib/public-realisations-api";
 import { useDialog } from "@/components/ui/DialogProvider";
+import { SiteImageUploadField } from "@/components/admin/SiteImageUploadField";
 import { cn } from "@/lib/utils";
 
 const fieldClass =
@@ -451,10 +452,19 @@ export function CrmRealisationsView() {
 
               <fieldset className="space-y-4">
                 <legend className="text-sm font-bold text-foreground">Image &amp; métrique</legend>
-                <label className="block">
-                  <span className="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-gray-text">URL de l&apos;image</span>
-                  <input required value={form.image} onChange={(e) => setForm((p) => ({ ...p, image: e.target.value }))} className={fieldClass} placeholder="/images/realisations/…" />
-                </label>
+                <div>
+                  <span className="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-gray-text">
+                    Image
+                  </span>
+                  <SiteImageUploadField
+                    value={form.image}
+                    onChange={(image) => setForm((p) => ({ ...p, image }))}
+                    required
+                    preview="wide"
+                    clearable={false}
+                    label="Choisir une image de réalisation"
+                  />
+                </div>
                 <div className="grid gap-4 sm:grid-cols-2">
                   <label className="block">
                     <span className="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-gray-text">Texte alternatif image</span>

@@ -10,19 +10,22 @@ import {
 } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { getSiteHeroSettings } from "@/lib/site-hero-settings";
+import { isProxiedMediaUrl, resolveImageDisplayUrl } from "@/lib/image-url";
 
 const highlightIcons = [Monitor, Search, Smartphone, HeadphonesIcon];
 
 export async function HeroSection() {
   const hero = await getSiteHeroSettings();
+  const backgroundSrc = resolveImageDisplayUrl(hero.backgroundImage);
 
   return (
     <section className="relative overflow-hidden bg-dark pt-[4.5rem] md:pt-[4.75rem]">
       <Image
-        src={hero.backgroundImage}
+        src={backgroundSrc}
         alt=""
         fill
         priority
+        unoptimized={isProxiedMediaUrl(backgroundSrc)}
         className="object-cover object-[center_40%]"
         sizes="100vw"
         aria-hidden

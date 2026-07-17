@@ -50,6 +50,11 @@ export function Logo({
     : defaultAsset.src;
   const proxied = isProxiedMediaUrl(imageSrc);
 
+  // logo_sd.svg est déjà conçu pour fond sombre (blanc) : ne pas appliquer
+  // brightness-0/invert (sinon tout le canvas opaque devient un carré blanc).
+  const darkFilter =
+    onDark && usesCustomLogo ? "brightness-0 invert" : undefined;
+
   const image = usesCustomLogo ? (
     // eslint-disable-next-line @next/next/no-img-element
     <img
@@ -57,7 +62,7 @@ export function Logo({
       alt={variant === "footer" ? `${altName} — ${tagline}` : altName}
       className={cn(
         LOGO_IMAGE_SIZES[imageSize],
-        onDark && "brightness-0 invert",
+        darkFilter,
         href !== null && "transition-opacity group-hover:opacity-90",
       )}
     />
@@ -69,7 +74,6 @@ export function Logo({
       height={defaultAsset.height}
       className={cn(
         LOGO_IMAGE_SIZES[imageSize],
-        onDark && "brightness-0 invert",
         href !== null && "transition-opacity group-hover:opacity-90",
       )}
       priority={priority}

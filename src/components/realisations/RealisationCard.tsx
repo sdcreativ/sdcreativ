@@ -5,6 +5,7 @@ import Link from "next/link";
 import { ArrowUpRight, Calendar, Clock, MapPin, TrendingUp } from "lucide-react";
 import { AnimatedCard } from "@/components/ui/AnimatedSection";
 import type { Realisation } from "@/content/realisations";
+import { isProxiedMediaUrl, resolveImageDisplayUrl } from "@/lib/image-url";
 import { cn } from "@/lib/utils";
 
 type RealisationCardProps = {
@@ -15,6 +16,7 @@ type RealisationCardProps = {
 
 export function RealisationCard({ project, index, large }: RealisationCardProps) {
   const href = `/realisations/${project.id}`;
+  const imageSrc = resolveImageDisplayUrl(project.image);
 
   return (
     <AnimatedCard
@@ -32,9 +34,10 @@ export function RealisationCard({ project, index, large }: RealisationCardProps)
           )}
         >
           <Image
-            src={project.image}
+            src={imageSrc}
             alt={project.imageAlt}
             fill
+            unoptimized={isProxiedMediaUrl(imageSrc)}
             sizes={large ? "(max-width: 768px) 100vw, 66vw" : "(max-width: 768px) 100vw, 33vw"}
             className="object-cover object-top transition-transform duration-700 group-hover:scale-105"
           />

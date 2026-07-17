@@ -24,6 +24,7 @@ import {
 import { LUCIDE_ICON_NAMES } from "@/lib/lucide-icon-map";
 import { slugifyServiceTitle } from "@/lib/public-slug-utils";
 import { useDialog } from "@/components/ui/DialogProvider";
+import { SiteImageUploadField } from "@/components/admin/SiteImageUploadField";
 import { cn } from "@/lib/utils";
 
 const fieldClass =
@@ -240,11 +241,16 @@ export function CrmServicesView() {
               <span className="mb-1 block text-xs text-gray-text">Points clés (un par ligne)</span>
               <textarea value={form.features} onChange={(e) => setForm({ ...form, features: e.target.value })} className={fieldClass} rows={4} required />
             </label>
-            <label className="block">
-              <span className="mb-1 block text-xs text-gray-text">Image URL</span>
-              <input value={form.image} onChange={(e) => setForm({ ...form, image: e.target.value })} className={fieldClass} />
-            </label>
-            <label className="block">
+            <div className="block sm:col-span-2">
+              <span className="mb-1 block text-xs text-gray-text">Image</span>
+              <SiteImageUploadField
+                value={form.image}
+                onChange={(image) => setForm({ ...form, image })}
+                preview="wide"
+                label="Choisir une image"
+              />
+            </div>
+            <label className="block sm:col-span-2">
               <span className="mb-1 block text-xs text-gray-text">Alt image</span>
               <input value={form.imageAlt} onChange={(e) => setForm({ ...form, imageAlt: e.target.value })} className={fieldClass} />
             </label>

@@ -17,6 +17,7 @@ import {
   CrmSecondaryButton,
   crmFieldClass,
 } from "@/components/admin/crm-site-form-ui";
+import { SiteImageUploadField } from "@/components/admin/SiteImageUploadField";
 
 async function fetchHeroAdmin(): Promise<SiteHeroSettings> {
   const res = await fetch("/api/admin/site-hero", { credentials: "include" });
@@ -176,13 +177,14 @@ export function CrmHeroView() {
           </CrmFormSection>
 
           <CrmFormSection title="Média & badges" description="Image de fond et liste des services mis en avant.">
-            <CrmFormField label="Image de fond (URL)" hint="Chemin relatif depuis /public, ex. /images/services/services-hero-bg.png">
-              <input
-                title="Image de fond (URL)"
+            <CrmFormField label="Image de fond" hint="Upload vers S3 (JPEG, PNG, WebP, GIF — max 5 Mo).">
+              <SiteImageUploadField
                 value={form.backgroundImage}
-                onChange={(e) => setForm({ ...form, backgroundImage: e.target.value })}
-                className={crmFieldClass}
+                onChange={(backgroundImage) => setForm({ ...form, backgroundImage })}
                 required
+                preview="wide"
+                clearable={false}
+                label="Choisir une image de fond"
               />
             </CrmFormField>
             <CrmLineListEditor

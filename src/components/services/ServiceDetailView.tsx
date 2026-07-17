@@ -18,6 +18,7 @@ import { getRealisation } from "@/content/realisations";
 import type { ResolvedService } from "@/lib/public-services-types";
 import { buildWhatsappUrl } from "@/lib/site-public-resolver";
 import { getSitePublicSettings } from "@/lib/site-public-settings";
+import { isProxiedMediaUrl, resolveImageDisplayUrl } from "@/lib/image-url";
 
 type Props = {
   service: ResolvedService;
@@ -31,6 +32,9 @@ export async function ServiceDetailView({ service, detail }: Props) {
   const relatedProjects = detail.relatedRealisationIds
     .map((id) => getRealisation(id))
     .filter(Boolean);
+  const serviceImageSrc = service.image
+    ? resolveImageDisplayUrl(service.image)
+    : undefined;
 
   return (
     <>
@@ -80,15 +84,16 @@ export async function ServiceDetailView({ service, detail }: Props) {
         </div>
       </section>
 
-      {service.image && (
+      {serviceImageSrc && (
         <section className="border-y border-gray/40 bg-gray-light py-12 md:py-16">
           <div className="container mx-auto px-4 md:px-6 lg:px-8">
             <div className="overflow-hidden rounded-3xl border border-gray/60 bg-white shadow-lg">
               <div className="relative aspect-[16/9]">
                 <Image
-                  src={service.image}
+                  src={serviceImageSrc}
                   alt={service.imageAlt ?? service.title}
                   fill
+                  unoptimized={isProxiedMediaUrl(serviceImageSrc)}
                   sizes="(max-width: 1280px) 100vw, 1200px"
                   className="object-cover object-top"
                   priority

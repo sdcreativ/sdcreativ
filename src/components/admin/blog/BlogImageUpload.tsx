@@ -5,10 +5,8 @@ import Image from "next/image";
 import { ImagePlus, Images, Loader2, Trash2, Upload } from "lucide-react";
 import { uploadBlogImageApi } from "@/lib/blog-posts-api";
 import { BlogMediaLibrary } from "@/components/admin/blog/BlogMediaLibrary";
+import { resolveImageDisplayUrl, isProxiedMediaUrl } from "@/lib/image-url";
 import { cn } from "@/lib/utils";
-
-const fieldClass =
-  "w-full rounded-lg border border-gray/60 bg-white px-3 py-2 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20";
 
 type Props = {
   value: string;
@@ -35,12 +33,20 @@ export function BlogImageUpload({ value, onChange, compact = false }: Props) {
     }
   }
 
+  const displaySrc = value ? resolveImageDisplayUrl(value) : "";
+
   return (
     <div className="space-y-2">
       {value ? (
         <div className="relative overflow-hidden rounded-lg border border-gray/60 bg-gray-light">
           <div className={cn("relative", compact ? "aspect-[16/10]" : "aspect-[2/1]")}>
-            <Image src={value} alt="" fill unoptimized className="object-cover" />
+            <Image
+              src={displaySrc}
+              alt=""
+              fill
+              unoptimized={isProxiedMediaUrl(displaySrc) || displaySrc.startsWith("http")}
+              className="object-cover"
+            />
           </div>
           <div className="absolute right-1.5 top-1.5 flex gap-1">
             <button
@@ -109,14 +115,6 @@ export function BlogImageUpload({ value, onChange, compact = false }: Props) {
           Bibliothèque
         </button>
       </div>
-
-      <input
-        type="text"
-        value={value}
-        onChange={(e) => onChange(e.target.value)}
-        className={fieldClass}
-        placeholder="URL de l'image (optionnel)"
-      />
 
       <input
         title="Uploader une image"

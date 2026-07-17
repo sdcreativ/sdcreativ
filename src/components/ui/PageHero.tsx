@@ -1,5 +1,6 @@
 import Image from "next/image";
 import { cn } from "@/lib/utils";
+import { isProxiedMediaUrl, resolveImageDisplayUrl } from "@/lib/image-url";
 import { Breadcrumb } from "@/components/ui/Breadcrumb";
 import { BreadcrumbJsonLd } from "@/components/seo/JsonLd";
 
@@ -26,6 +27,10 @@ export function PageHero({
   breadcrumb,
   className,
 }: PageHeroProps) {
+  const backgroundSrc = backgroundImage
+    ? resolveImageDisplayUrl(backgroundImage)
+    : null;
+
   return (
     <>
       {breadcrumb && breadcrumb.length > 0 && <BreadcrumbJsonLd items={breadcrumb} />}
@@ -35,13 +40,14 @@ export function PageHero({
         className,
       )}
     >
-      {backgroundImage ? (
+      {backgroundSrc ? (
         <>
           <Image
-            src={backgroundImage}
+            src={backgroundSrc}
             alt={backgroundAlt}
             fill
             priority
+            unoptimized={isProxiedMediaUrl(backgroundSrc)}
             className="object-cover object-center"
             sizes="100vw"
           />

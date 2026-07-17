@@ -10,9 +10,12 @@ import {
   updateCrmBrandingApi,
   updateCrmEmailTemplateApi,
 } from "@/lib/crm-settings-api";
+import { LOGO } from "@/lib/constants";
+import { resolveImageDisplayUrl } from "@/lib/image-url";
 import { cn } from "@/lib/utils";
 import { Loader2, Palette, Send } from "lucide-react";
 import { Logo, LOGO_IMAGE_SIZES } from "@/components/ui/Logo";
+import { SiteLogoUploadField } from "@/components/admin/SiteLogoUploadField";
 import { useCrmBranding } from "@/components/admin/CrmBrandingProvider";
 
 const fieldClass =
@@ -128,24 +131,23 @@ export function BrandingSection() {
               />
             </div>
           </label>
-          <label className="block sm:col-span-2">
+          <div className="block sm:col-span-2">
             <span className="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-gray-text">
-              URL du logo (optionnel)
+              Logo CRM (optionnel)
             </span>
-            <input
-              type="text"
+            <SiteLogoUploadField
               value={branding.logoUrl ?? ""}
-              onChange={(e) => setBranding({ ...branding, logoUrl: e.target.value || null })}
-              placeholder="https://… ou /images/logo_sd.svg"
-              className={fieldClass}
-              aria-label="URL du logo"
+              onChange={(url) =>
+                setBranding({
+                  ...branding,
+                  logoUrl: !url || url === LOGO.src ? null : url,
+                })
+              }
             />
             <p className="mt-1.5 text-xs text-gray-text">
-              Affiché dans la sidebar CRM. URL absolue ou chemin depuis{" "}
-              <code className="rounded bg-gray-light px-1">/public</code> (ex.{" "}
-              <code className="rounded bg-gray-light px-1">/images/logo_sd.svg</code>).
+              Affiché dans la sidebar CRM. Upload vers S3 (ou stockage local en dev).
             </p>
-          </label>
+          </div>
         </div>
 
         <div
@@ -159,7 +161,7 @@ export function BrandingSection() {
             {branding.logoUrl?.trim() ? (
               // eslint-disable-next-line @next/next/no-img-element
               <img
-                src={branding.logoUrl.trim()}
+                src={resolveImageDisplayUrl(branding.logoUrl.trim())}
                 alt={branding.agencyName}
                 className={cn(LOGO_IMAGE_SIZES.sidebar, "max-w-40 object-contain object-left")}
               />

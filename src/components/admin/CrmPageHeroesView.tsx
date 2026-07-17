@@ -17,6 +17,7 @@ import {
   CrmSecondaryButton,
   crmFieldClass,
 } from "@/components/admin/crm-site-form-ui";
+import { SiteImageUploadField } from "@/components/admin/SiteImageUploadField";
 
 export function CrmPageHeroesView() {
   const { confirm } = useDialog();
@@ -160,12 +161,14 @@ export function CrmPageHeroesView() {
                 rows={3}
               />
             </CrmFormField>
-            <CrmFormField label="Image de fond (URL)" hint="Chemin relatif depuis /public." className="sm:col-span-2">
-              <input
-                title="Image de fond (URL)"
+            <CrmFormField label="Image de fond" hint="Upload vers S3 (JPEG, PNG, WebP, GIF — max 5 Mo)." className="sm:col-span-2">
+              <SiteImageUploadField
                 value={hero.backgroundImage ?? ""}
-                onChange={(e) => setForm({ ...form, [activeKey]: { ...hero, backgroundImage: e.target.value } })}
-                className={crmFieldClass}
+                onChange={(backgroundImage) =>
+                  setForm({ ...form, [activeKey]: { ...hero, backgroundImage } })
+                }
+                preview="wide"
+                label="Choisir une image de fond"
               />
             </CrmFormField>
             <CrmFormField label="Texte alternatif de l'image" hint="Description pour l'accessibilité et le référencement." className="sm:col-span-2">

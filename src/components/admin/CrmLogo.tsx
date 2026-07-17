@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { Logo, LOGO_IMAGE_SIZES, type LogoSize } from "@/components/ui/Logo";
 import { SITE } from "@/lib/constants";
+import { resolveImageDisplayUrl } from "@/lib/image-url";
 import { cn } from "@/lib/utils";
 import { useCrmBranding } from "@/components/admin/CrmBrandingProvider";
 
@@ -33,10 +34,11 @@ export function CrmLogo({
   );
 
   if (!loading && logoUrl) {
+    const displaySrc = resolveImageDisplayUrl(logoUrl);
     const image = (
-      // URL configurable (externe ou /public) — pas de contrainte next/image
+      // URL configurable (S3 via proxy, externe ou /public)
       // eslint-disable-next-line @next/next/no-img-element
-      <img src={logoUrl} alt={agencyName} className={imageClass} />
+      <img src={displaySrc} alt={agencyName} className={imageClass} />
     );
 
     if (href === null) {
