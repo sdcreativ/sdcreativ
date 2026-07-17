@@ -86,13 +86,17 @@ WHERE NOT EXISTS (
 );
 
 -- Backfill échéancier depuis metadata.paymentSchedule
+-- Les dates métier peuvent être du texte UI (« À planifier ») — ne caster que YYYY-MM-DD.
 INSERT INTO project_payment_milestones (project_id, label, amount, status, due_date, sort_order)
 SELECT
   p.id,
   COALESCE(NULLIF(TRIM(elem->>'label'), ''), 'Échéance'),
   COALESCE((elem->>'amount')::int, 0),
   COALESCE(NULLIF(TRIM(elem->>'status'), ''), 'pending'),
-  NULLIF(elem->>'date', '')::date,
+  CASE
+    WHEN (elem->>'date') ~ '^\d{4}-\d{2}-\d{2}$' THEN (elem->>'date')::date
+    ELSE NULL
+  END,
   (ord.ordinality - 1)::int
 FROM projects p
 CROSS JOIN LATERAL jsonb_array_elements(COALESCE(p.metadata->'paymentSchedule', '[]'::jsonb)) WITH ORDINALITY AS ord(elem, ordinality)
