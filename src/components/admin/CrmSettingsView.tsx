@@ -778,16 +778,6 @@ function CrmUsersSection({ roles }: { roles: CrmRoleRecord[] }) {
         </div>
       </div>
 
-      <div className="rounded-2xl border border-sky-200/80 bg-sky-50/70 px-4 py-3.5 text-sm text-sky-950">
-        <p className="font-semibold text-sky-950">Invitation équipe</p>
-        <p className="mt-1 leading-relaxed text-sky-900/90">
-          Nouveaux membres : invitation sur email personnel + téléphone ; login CRM en{" "}
-          <span className="font-medium">@{teamDomain}</span> (sans boîte Hostinger individuelle).
-          Comptes legacy déjà en Gmail/Yahoo : le login sert aussi au 2FA email — ajoutez juste le
-          téléphone si vous voulez le SMS.
-        </p>
-      </div>
-
       {success && (
         <p className="rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-800">
           {success}
