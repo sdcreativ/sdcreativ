@@ -24,7 +24,10 @@ type LogoProps = {
   size?: LogoSize;
   priority?: boolean;
   href?: string | null;
-  /** Logo clair sur fond sombre (sidebar CRM, panneau login) */
+  /**
+   * Fond sombre (sidebar CRM, login) : utilise le PNG coloré par défaut.
+   * Ne jamais appliquer brightness/invert — ça transforme le logo en carré blanc.
+   */
   onDark?: boolean;
 };
 
@@ -39,21 +42,18 @@ export function Logo({
   const sitePublic = useSitePublic();
   const showTagline = variant === "default";
   const imageSize = size ?? (variant === "footer" ? "footer" : "header");
-  const defaultAsset = variant === "footer" ? LOGO_FOOTER : LOGO;
   const customLogo = sitePublic.logoUrl?.trim();
   const usesCustomLogo = Boolean(customLogo && customLogo !== LOGO.src);
   const tagline = sitePublic.tagline || SITE.tagline;
   const altName = sitePublic.companyName || SITE.name;
 
+  // Sur fond sombre, préférer le PNG coloré (logo_sd.svg a un canvas opaque blanc).
+  const defaultAsset = variant === "footer" || onDark ? LOGO_FOOTER : LOGO;
+
   const imageSrc = usesCustomLogo
     ? resolveImageDisplayUrl(customLogo!)
     : defaultAsset.src;
   const proxied = isProxiedMediaUrl(imageSrc);
-
-  // logo_sd.svg est déjà conçu pour fond sombre (blanc) : ne pas appliquer
-  // brightness-0/invert (sinon tout le canvas opaque devient un carré blanc).
-  const darkFilter =
-    onDark && usesCustomLogo ? "brightness-0 invert" : undefined;
 
   const image = usesCustomLogo ? (
     // eslint-disable-next-line @next/next/no-img-element
@@ -62,7 +62,6 @@ export function Logo({
       alt={variant === "footer" ? `${altName} — ${tagline}` : altName}
       className={cn(
         LOGO_IMAGE_SIZES[imageSize],
-        darkFilter,
         href !== null && "transition-opacity group-hover:opacity-90",
       )}
     />

@@ -2,20 +2,24 @@
 
 import Link from "next/link";
 import { Logo, LOGO_IMAGE_SIZES, type LogoSize } from "@/components/ui/Logo";
-import { SITE } from "@/lib/constants";
+import { LOGO, SITE } from "@/lib/constants";
 import { resolveImageDisplayUrl } from "@/lib/image-url";
 import { cn } from "@/lib/utils";
 import { useCrmBranding } from "@/components/admin/CrmBrandingProvider";
+import { useSitePublic } from "@/components/site/SitePublicProvider";
 
 type Props = {
   href?: string | null;
   size?: LogoSize;
   className?: string;
   priority?: boolean;
-  /** Filtre clair pour le logo par défaut sur fond sombre */
+  /** Conservé pour compatibilité — plus de filtre invert (carré blanc). */
   onDark?: boolean;
 };
 
+/**
+ * Logo sidebar CRM : branding CRM si défini, sinon logo site public, sinon PNG par défaut.
+ */
 export function CrmLogo({
   href = "/admin/crm",
   size = "sidebar",
@@ -24,8 +28,15 @@ export function CrmLogo({
   onDark = true,
 }: Props) {
   const { branding, loading } = useCrmBranding();
-  const logoUrl = branding.logoUrl?.trim();
-  const agencyName = branding.agencyName || SITE.name;
+  const sitePublic = useSitePublic();
+
+  const brandingLogo = branding.logoUrl?.trim() || "";
+  const siteLogo = sitePublic.logoUrl?.trim() || "";
+  const logoUrl =
+    brandingLogo ||
+    (siteLogo && siteLogo !== LOGO.src ? siteLogo : "");
+  const agencyName =
+    branding.agencyName || sitePublic.companyName || SITE.name;
 
   const imageClass = cn(
     LOGO_IMAGE_SIZES[size],
@@ -36,7 +47,6 @@ export function CrmLogo({
   if (!loading && logoUrl) {
     const displaySrc = resolveImageDisplayUrl(logoUrl);
     const image = (
-      // URL configurable (S3 via proxy, externe ou /public)
       // eslint-disable-next-line @next/next/no-img-element
       <img src={displaySrc} alt={agencyName} className={imageClass} />
     );
