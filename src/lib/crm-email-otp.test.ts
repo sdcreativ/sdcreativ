@@ -21,7 +21,11 @@ describe("resolveLoginOtpDestination", () => {
         professionalEmail: "paterne.g@sdcreativ.com",
         personalEmail: "paterne@gmail.com",
       }),
-    ).toEqual({ to: "paterne@gmail.com", channel: "personal" });
+    ).toEqual({
+      to: "paterne@gmail.com",
+      displayTo: "paterne@gmail.com",
+      channel: "personal",
+    });
   });
 
   it("retombe sur le pro si pas de perso", () => {
@@ -30,7 +34,11 @@ describe("resolveLoginOtpDestination", () => {
         professionalEmail: "paterne.g@sdcreativ.com",
         personalEmail: null,
       }),
-    ).toEqual({ to: "paterne.g@sdcreativ.com", channel: "professional" });
+    ).toEqual({
+      to: "paterne.g@sdcreativ.com",
+      displayTo: "paterne.g@sdcreativ.com",
+      channel: "professional",
+    });
   });
 
   it("ignore le perso s’il est identique au pro", () => {
@@ -39,7 +47,11 @@ describe("resolveLoginOtpDestination", () => {
         professionalEmail: "contact@sdcreativ.com",
         personalEmail: "contact@sdcreativ.com",
       }),
-    ).toEqual({ to: "contact@sdcreativ.com", channel: "professional" });
+    ).toEqual({
+      to: "contact@sdcreativ.com",
+      displayTo: "contact@sdcreativ.com",
+      channel: "professional",
+    });
   });
 });
 
