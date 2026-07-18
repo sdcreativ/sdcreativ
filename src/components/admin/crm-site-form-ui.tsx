@@ -132,7 +132,7 @@ export function CrmFormActions({ saving, label = "Enregistrer", formId }: Action
 }
 
 type LineListProps = {
-  label: string;
+  label?: string;
   hint?: string;
   values: string[];
   onChange: (values: string[]) => void;
@@ -169,11 +169,17 @@ export function CrmLineListEditor({
 
   return (
     <div className="space-y-2">
-      <p id={`${baseId}-legend`} className="mb-1.5 block text-sm font-medium text-foreground">
-        {label}
-      </p>
+      {label && (
+        <p id={`${baseId}-legend`} className="mb-1.5 block text-sm font-medium text-foreground">
+          {label}
+        </p>
+      )}
       {hint && <p className="mb-2 text-xs leading-relaxed text-gray-text">{hint}</p>}
-      <div className="space-y-2" role="group" aria-labelledby={`${baseId}-legend`}>
+      <div
+        className="space-y-2"
+        role="group"
+        aria-labelledby={label ? `${baseId}-legend` : undefined}
+      >
         {values.map((value, index) => (
           <div key={index} className="flex gap-2">
             <input
@@ -182,7 +188,7 @@ export function CrmLineListEditor({
               onChange={(e) => update(index, e.target.value)}
               className={crmFieldClass}
               placeholder={placeholder}
-              aria-label={`${label} ${index + 1}`}
+              aria-label={label ? `${label} ${index + 1}` : `Ligne ${index + 1}`}
             />
             <button
               type="button"

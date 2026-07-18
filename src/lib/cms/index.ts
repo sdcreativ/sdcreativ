@@ -19,6 +19,7 @@ import {
   fetchRealisationsFromSanity,
   isSanityConfigured,
 } from "@/lib/cms/sanity";
+import { allowStaticContentFallback } from "@/lib/static-content-fallback";
 
 export async function getBlogPosts(): Promise<BlogPost[]> {
   if (isDatabaseConfigured()) {
@@ -40,7 +41,7 @@ export async function getBlogPosts(): Promise<BlogPost[]> {
       console.error("[CMS] Sanity blog fallback:", error);
     }
   }
-  return blogPosts;
+  return allowStaticContentFallback() ? blogPosts : [];
 }
 
 export async function getBlogPost(
@@ -71,14 +72,14 @@ export async function getBlogPost(
       console.error("[CMS] Sanity blog post fallback:", error);
     }
   }
-  return getStaticBlogPost(slug);
+  return allowStaticContentFallback() ? getStaticBlogPost(slug) : undefined;
 }
 
-export async function getRealisations(): Promise<Realisation[]> {
+export async function getRealisations(locale = "fr"): Promise<Realisation[]> {
   if (isDatabaseConfigured()) {
     try {
       const { listPublicRealisations, toRealisation } = await import("@/lib/public-realisations");
-      const records = await listPublicRealisations({ locale: "fr", visibleOnly: true });
+      const records = await listPublicRealisations({ locale, visibleOnly: true });
       if (records.length > 0) return records.map(toRealisation);
     } catch (error) {
       console.error("[CMS] Database realisations fallback:", error);
@@ -93,7 +94,7 @@ export async function getRealisations(): Promise<Realisation[]> {
       console.error("[CMS] Sanity projects fallback:", error);
     }
   }
-  return realisations;
+  return allowStaticContentFallback() ? realisations : [];
 }
 
 export async function getRealisation(id: string): Promise<Realisation | undefined> {
@@ -115,7 +116,7 @@ export async function getRealisation(id: string): Promise<Realisation | undefine
       console.error("[CMS] Sanity project fallback:", error);
     }
   }
-  return getStaticRealisation(id);
+  return allowStaticContentFallback() ? getStaticRealisation(id) : undefined;
 }
 
 export async function getRelatedRealisations(

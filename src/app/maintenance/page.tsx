@@ -1,16 +1,14 @@
 import Link from "next/link";
-import { Wrench, Shield, Clock, RefreshCw } from "lucide-react";
 import { SitePageHero } from "@/components/ui/SitePageHero";
 import { Button } from "@/components/ui/Button";
 import { AccordionItem } from "@/components/ui/Accordion";
 import { MaintenancePlansSection } from "@/components/sections/MaintenancePlansSection";
 import { FaqJsonLd } from "@/components/seo/JsonLd";
-import {
-  maintenanceFaq,
-  maintenanceNote,
-  slaComparison,
-} from "@/content/maintenance-plans";
+import { getLucideIcon } from "@/lib/lucide-icon-map";
+import { getSiteMaintenanceSettings } from "@/lib/site-maintenance-settings";
 import { createMetadata } from "@/lib/metadata";
+
+export const dynamic = "force-dynamic";
 
 export const metadata = createMetadata({
   title: "Maintenance & SLA",
@@ -19,48 +17,30 @@ export const metadata = createMetadata({
   path: "/maintenance",
 });
 
-const highlights = [
-  {
-    icon: RefreshCw,
-    title: "Mises à jour",
-    description: "CMS, plugins, dépendances et correctifs de sécurité.",
-  },
-  {
-    icon: Shield,
-    title: "Sauvegardes",
-    description: "Restauration rapide en cas d'incident ou de piratage.",
-  },
-  {
-    icon: Clock,
-    title: "SLA garanti",
-    description: "Délais de réponse contractuels selon votre formule.",
-  },
-  {
-    icon: Wrench,
-    title: "Interventions",
-    description: "Corrections, ajustements et assistance technique incluse.",
-  },
-];
+export default async function MaintenancePage() {
+  const content = await getSiteMaintenanceSettings();
 
-export default function MaintenancePage() {
   return (
     <>
-      <FaqJsonLd items={[...maintenanceFaq]} />
+      <FaqJsonLd items={content.faq} />
       <SitePageHero pageKey="maintenance" />
 
       <section className="py-16 md:py-20">
         <div className="container mx-auto px-4 md:px-6 lg:px-8">
           <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
-            {highlights.map(({ icon: Icon, title, description }) => (
-              <div
-                key={title}
-                className="rounded-2xl border border-gray/60 bg-white p-6 shadow-sm"
-              >
-                <Icon className="mb-4 h-8 w-8 text-primary" aria-hidden />
-                <h2 className="font-bold text-foreground">{title}</h2>
-                <p className="mt-2 text-sm leading-relaxed text-gray-text">{description}</p>
-              </div>
-            ))}
+            {content.highlights.map((item) => {
+              const Icon = getLucideIcon(item.icon);
+              return (
+                <div
+                  key={item.title}
+                  className="rounded-2xl border border-gray/60 bg-white p-6 shadow-sm"
+                >
+                  <Icon className="mb-4 h-8 w-8 text-primary" aria-hidden />
+                  <h2 className="font-bold text-foreground">{item.title}</h2>
+                  <p className="mt-2 text-sm leading-relaxed text-gray-text">{item.description}</p>
+                </div>
+              );
+            })}
           </div>
         </div>
       </section>
@@ -70,7 +50,7 @@ export default function MaintenancePage() {
       <section className="border-t border-gray/40 bg-gray-light py-16 md:py-20">
         <div className="container mx-auto px-4 md:px-6 lg:px-8">
           <h2 className="mb-8 text-center text-2xl font-bold text-foreground">
-            Comparatif SLA
+            {content.slaHeading}
           </h2>
           <div className="overflow-x-auto rounded-2xl border border-gray/60 bg-white shadow-sm">
             <table className="w-full min-w-[640px] text-sm">
@@ -83,7 +63,7 @@ export default function MaintenancePage() {
                 </tr>
               </thead>
               <tbody>
-                {slaComparison.map((row, i) => (
+                {content.slaComparison.map((row, i) => (
                   <tr
                     key={row.label}
                     className={i % 2 === 0 ? "bg-white" : "bg-gray-light/30"}
@@ -97,14 +77,14 @@ export default function MaintenancePage() {
               </tbody>
             </table>
           </div>
-          <p className="mt-4 text-center text-xs text-gray-text">{maintenanceNote}</p>
+          <p className="mt-4 text-center text-xs text-gray-text">{content.note}</p>
         </div>
       </section>
 
       <section className="py-16 md:py-20">
         <div className="container mx-auto max-w-3xl px-4 md:px-6 lg:px-8">
-          <h2 className="mb-8 text-2xl font-bold text-foreground">Questions fréquentes</h2>
-          {maintenanceFaq.map((item) => (
+          <h2 className="mb-8 text-2xl font-bold text-foreground">{content.faqHeading}</h2>
+          {content.faq.map((item) => (
             <AccordionItem key={item.question} question={item.question} answer={item.answer} />
           ))}
         </div>

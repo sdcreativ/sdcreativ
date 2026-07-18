@@ -5,11 +5,8 @@ import { useState } from "react";
 import { Calculator, Inbox, Search, ArrowRight } from "lucide-react";
 import { RealisationCard } from "@/components/realisations/RealisationCard";
 import { PortfolioStats } from "@/components/realisations/PortfolioStats";
-import {
-  realisations as staticRealisations,
-  realisationCategories,
-  type Realisation,
-} from "@/content/realisations";
+import type { Realisation } from "@/content/realisations";
+import type { PortfolioPublicStat } from "@/lib/portfolio-public-stats";
 import { cn } from "@/lib/utils";
 
 const nextSteps = [
@@ -73,10 +70,18 @@ function CategoryFilterButton({ label, pressed, onSelect }: CategoryFilterButton
 
 type Props = {
   items?: Realisation[];
+  stats?: PortfolioPublicStat[];
 };
 
-export function RealisationsGrid({ items = staticRealisations }: Props) {
+export function RealisationsGrid({ items = [], stats = [] }: Props) {
   const [activeCategory, setActiveCategory] = useState<string>("Tous");
+
+  const categories = [
+    "Tous",
+    ...Array.from(
+      new Set(items.map((p) => p.category?.trim()).filter((c): c is string => Boolean(c))),
+    ),
+  ];
 
   const filtered =
     activeCategory === "Tous"
@@ -91,10 +96,11 @@ export function RealisationsGrid({ items = staticRealisations }: Props) {
 
   return (
     <>
-      <PortfolioStats />
+      <PortfolioStats stats={stats} />
 
+      {categories.length > 1 && (
       <div className="mb-12 flex flex-wrap justify-center gap-2" role="group" aria-label="Filtrer par catégorie">
-        {realisationCategories.map((cat) => (
+        {categories.map((cat) => (
           <CategoryFilterButton
             key={cat}
             label={cat}
@@ -103,6 +109,7 @@ export function RealisationsGrid({ items = staticRealisations }: Props) {
           />
         ))}
       </div>
+      )}
 
       {featured.length > 0 && (
         <div className="mb-8 grid gap-8 md:grid-cols-2">

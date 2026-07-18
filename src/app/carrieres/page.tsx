@@ -40,6 +40,12 @@ export default async function CarrieresPage() {
           </div>
 
           <h2 className="mb-8 text-2xl font-bold text-foreground">Offres ouvertes</h2>
+          {jobOffers.length === 0 && (
+            <p className="mb-8 text-sm text-gray-text">
+              Aucune offre ouverte pour le moment — vous pouvez tout de même envoyer une
+              candidature spontanée ci-dessous.
+            </p>
+          )}
           <div className="space-y-8">
             {jobOffers.map((job) => (
               <article

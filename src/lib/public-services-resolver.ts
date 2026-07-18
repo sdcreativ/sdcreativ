@@ -8,6 +8,7 @@ import { isDatabaseConfigured } from "@/lib/db";
 import { getLucideIcon } from "@/lib/lucide-icon-map";
 import { listPublicServices } from "@/lib/public-services";
 import type { ResolvedService, ResolvedServiceDetail } from "@/lib/public-services-types";
+import { allowStaticContentFallback } from "@/lib/static-content-fallback";
 
 function recordToService(record: Awaited<ReturnType<typeof listPublicServices>>[number]): ResolvedService {
   return {
@@ -25,7 +26,7 @@ function recordToService(record: Awaited<ReturnType<typeof listPublicServices>>[
 
 export async function getServices(): Promise<ResolvedService[]> {
   if (!isDatabaseConfigured()) {
-    return staticServices;
+    return allowStaticContentFallback() ? staticServices : [];
   }
 
   try {
@@ -35,12 +36,12 @@ export async function getServices(): Promise<ResolvedService[]> {
     console.error("[public-services] getServices fallback:", error);
   }
 
-  return staticServices;
+  return allowStaticContentFallback() ? staticServices : [];
 }
 
 export async function getService(id: string): Promise<ResolvedService | undefined> {
   if (!isDatabaseConfigured()) {
-    return staticServices.find((s) => s.id === id);
+    return allowStaticContentFallback() ? staticServices.find((s) => s.id === id) : undefined;
   }
 
   try {
@@ -51,12 +52,12 @@ export async function getService(id: string): Promise<ResolvedService | undefine
     console.error("[public-services] getService fallback:", error);
   }
 
-  return staticServices.find((s) => s.id === id);
+  return allowStaticContentFallback() ? staticServices.find((s) => s.id === id) : undefined;
 }
 
 export async function getServiceDetail(slug: string): Promise<ResolvedServiceDetail | undefined> {
   if (!isDatabaseConfigured()) {
-    return getStaticServiceDetail(slug);
+    return allowStaticContentFallback() ? getStaticServiceDetail(slug) : undefined;
   }
 
   try {
@@ -69,12 +70,12 @@ export async function getServiceDetail(slug: string): Promise<ResolvedServiceDet
     console.error("[public-services] getServiceDetail fallback:", error);
   }
 
-  return getStaticServiceDetail(slug);
+  return allowStaticContentFallback() ? getStaticServiceDetail(slug) : undefined;
 }
 
 export async function getServiceDetailSlugs(): Promise<string[]> {
   if (!isDatabaseConfigured()) {
-    return getStaticServiceDetailSlugs();
+    return allowStaticContentFallback() ? getStaticServiceDetailSlugs() : [];
   }
 
   try {
@@ -85,12 +86,12 @@ export async function getServiceDetailSlugs(): Promise<string[]> {
     console.error("[public-services] getServiceDetailSlugs fallback:", error);
   }
 
-  return getStaticServiceDetailSlugs();
+  return allowStaticContentFallback() ? getStaticServiceDetailSlugs() : [];
 }
 
 export async function hasServiceDetail(id: string): Promise<boolean> {
   if (!isDatabaseConfigured()) {
-    return staticHasServiceDetail(id);
+    return allowStaticContentFallback() ? staticHasServiceDetail(id) : false;
   }
 
   try {
@@ -101,5 +102,5 @@ export async function hasServiceDetail(id: string): Promise<boolean> {
     console.error("[public-services] hasServiceDetail fallback:", error);
   }
 
-  return staticHasServiceDetail(id);
+  return allowStaticContentFallback() ? staticHasServiceDetail(id) : false;
 }

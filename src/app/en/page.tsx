@@ -3,6 +3,8 @@ import { ArrowRight, CheckCircle2 } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { enHome } from "@/i18n/en-content";
 import { PricingSection } from "@/components/sections/PricingSection";
+import { TestimonialsSection } from "@/components/sections/TestimonialsSection";
+import { FaqSection } from "@/components/sections/FaqSection";
 import { createMetadata } from "@/lib/metadata";
 
 export const metadata = createMetadata({
@@ -33,7 +35,7 @@ export default function EnHomePage() {
             <Button href="/en/contact" size="lg">
               {enHome.hero.ctaPrimary}
             </Button>
-            <Button href="/realisations" variant="outline" size="lg">
+            <Button href="/en/portfolio" variant="outline" size="lg">
               {enHome.hero.ctaSecondary}
             </Button>
           </div>
@@ -61,18 +63,16 @@ export default function EnHomePage() {
         </div>
       </section>
 
-      <PricingSection />
+      <PricingSection locale="en" />
+      <TestimonialsSection locale="en" />
+      <FaqSection locale="en" />
 
       <section className="bg-dark py-16 text-center md:py-20">
         <div className="container mx-auto px-4 md:px-6 lg:px-8">
-          <h2 className="text-2xl font-bold text-white md:text-3xl">
-            Ready to start your project?
-          </h2>
-          <p className="mx-auto mt-3 max-w-xl text-white/70">
-            Based in Abidjan, we serve Ivorian SMEs and the diaspora worldwide.
-          </p>
+          <h2 className="text-2xl font-bold text-white md:text-3xl">{enHome.cta.title}</h2>
+          <p className="mx-auto mt-3 max-w-xl text-white/70">{enHome.cta.description}</p>
           <Button href="/en/contact" className="mt-8" size="lg">
-            Get in touch
+            {enHome.cta.button}
           </Button>
           <p className="mt-6">
             <Link

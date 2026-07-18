@@ -12,6 +12,14 @@ export async function ServiceHubGrid({ limit, className }: Props) {
   const allServices = await getServices();
   const items = limit ? allServices.slice(0, limit) : allServices;
 
+  if (items.length === 0) {
+    return (
+      <p className="py-12 text-center text-sm text-gray-text">
+        Aucun service publié pour le moment.
+      </p>
+    );
+  }
+
   const itemsWithLinks = await Promise.all(
     items.map(async (service) => ({
       service,

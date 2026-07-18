@@ -151,6 +151,12 @@ export default async function BlogPage() {
               </div>
             </>
           )}
+
+          {allPosts.length === 0 && (
+            <p className="py-16 text-center text-gray-text">
+              Aucun article publié pour le moment.
+            </p>
+          )}
         </div>
       </section>
     </>

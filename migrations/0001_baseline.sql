@@ -752,6 +752,9 @@ CREATE EXTENSION IF NOT EXISTS "pgcrypto";
     ALTER TABLE crm_settings ADD COLUMN IF NOT EXISTS site_method JSONB NOT NULL DEFAULT '{}';
     ALTER TABLE crm_settings ADD COLUMN IF NOT EXISTS site_page_heroes JSONB NOT NULL DEFAULT '{}';
     ALTER TABLE crm_settings ADD COLUMN IF NOT EXISTS site_solutions_ia JSONB NOT NULL DEFAULT '{}';
+    ALTER TABLE crm_settings ADD COLUMN IF NOT EXISTS site_maintenance JSONB NOT NULL DEFAULT '{}';
+    ALTER TABLE crm_settings ADD COLUMN IF NOT EXISTS site_audit JSONB NOT NULL DEFAULT '{}';
+    ALTER TABLE crm_settings ADD COLUMN IF NOT EXISTS site_legal JSONB NOT NULL DEFAULT '{}';
     ALTER TABLE crm_settings ADD COLUMN IF NOT EXISTS site_careers JSONB NOT NULL DEFAULT '{}';
     ALTER TABLE crm_settings ADD COLUMN IF NOT EXISTS payment_settings JSONB NOT NULL DEFAULT '{}';
 

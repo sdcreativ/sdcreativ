@@ -14,7 +14,7 @@ import { PageHero } from "@/components/ui/PageHero";
 import { RealisationCard } from "@/components/realisations/RealisationCard";
 import { FaqJsonLd } from "@/components/seo/JsonLd";
 import type { ServiceDetail } from "@/content/service-details";
-import { getRealisation } from "@/content/realisations";
+import { getRealisation } from "@/lib/cms";
 import type { ResolvedService } from "@/lib/public-services-types";
 import { buildWhatsappUrl } from "@/lib/site-public-resolver";
 import { getSitePublicSettings } from "@/lib/site-public-settings";
@@ -29,9 +29,9 @@ export async function ServiceDetailView({ service, detail }: Props) {
   const { contact } = await getSitePublicSettings();
   const waUrl = buildWhatsappUrl(contact);
   const Icon = service.icon;
-  const relatedProjects = detail.relatedRealisationIds
-    .map((id) => getRealisation(id))
-    .filter(Boolean);
+  const relatedProjects = (
+    await Promise.all(detail.relatedRealisationIds.map((id) => getRealisation(id)))
+  ).filter((project): project is NonNullable<typeof project> => Boolean(project));
   const serviceImageSrc = service.image
     ? resolveImageDisplayUrl(service.image)
     : undefined;

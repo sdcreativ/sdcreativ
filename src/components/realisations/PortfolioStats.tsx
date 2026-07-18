@@ -1,16 +1,16 @@
 import { AnimatedCard } from "@/components/ui/AnimatedSection";
+import type { PortfolioPublicStat } from "@/lib/portfolio-public-stats";
 
-export const portfolioStats = [
-  { value: "50+", label: "Projets livrés" },
-  { value: "15", label: "Secteurs d'activité" },
-  { value: "98%", label: "Clients satisfaits" },
-  { value: "25 j", label: "Délai moyen" },
-] as const;
+type Props = {
+  stats: PortfolioPublicStat[];
+};
 
-export function PortfolioStats() {
+export function PortfolioStats({ stats }: Props) {
+  if (stats.length === 0) return null;
+
   return (
     <div className="mb-14 grid grid-cols-2 gap-4 md:grid-cols-4">
-      {portfolioStats.map((stat, i) => (
+      {stats.map((stat, i) => (
         <AnimatedCard
           key={stat.label}
           delay={i * 0.05}

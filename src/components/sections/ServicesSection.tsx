@@ -6,6 +6,8 @@ import { getServiceHref, getServiceHubLinkLabel, getServices } from "@/lib/servi
 
 export async function ServicesSection() {
   const services = await getServices();
+  if (services.length === 0) return null;
+
   const itemsWithLinks = await Promise.all(
     services.map(async (service) => ({
       service,

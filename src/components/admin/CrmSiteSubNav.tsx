@@ -6,13 +6,16 @@ import {
   Bot,
   Briefcase,
   Calculator,
+  ClipboardCheck,
   Handshake,
+  HardDrive,
   Heart,
   HelpCircle,
   Layers,
   LayoutTemplate,
   MessageSquareQuote,
   Receipt,
+  Scale,
   Users,
   Wrench,
 } from "lucide-react";
@@ -32,6 +35,9 @@ const tabs = [
   { href: "/admin/crm/site/solutions-ia", label: "Solutions IA", icon: Bot },
   { href: "/admin/crm/site/carrieres", label: "Carrières", icon: Briefcase },
   { href: "/admin/crm/site/realisations", label: "Réalisations", icon: Layers },
+  { href: "/admin/crm/site/maintenance", label: "Maintenance", icon: HardDrive },
+  { href: "/admin/crm/site/audit", label: "Audit", icon: ClipboardCheck },
+  { href: "/admin/crm/site/legal", label: "Légal", icon: Scale },
 ] as const;
 
 export function CrmSiteSubNav() {

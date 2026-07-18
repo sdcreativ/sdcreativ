@@ -8,11 +8,17 @@ import { cn } from "@/lib/utils";
 
 const reassuranceIcons = [Clock, Monitor, Headphones, Target];
 
-export async function PricingSection() {
+type Props = {
+  locale?: "fr" | "en";
+};
+
+export async function PricingSection({ locale = "fr" }: Props) {
   const [pricingPlans, pricingReassurance] = await Promise.all([
-    getPricingPlans("fr"),
-    getPricingReassurance("fr"),
+    getPricingPlans(locale),
+    getPricingReassurance(locale),
   ]);
+
+  if (pricingPlans.length === 0) return null;
 
   return (
     <AnimatedSection className="bg-white py-20 md:py-28" id="tarifs">

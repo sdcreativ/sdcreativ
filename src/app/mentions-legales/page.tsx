@@ -1,16 +1,24 @@
+import Link from "next/link";
 import { SitePageHero } from "@/components/ui/SitePageHero";
 import { SITE } from "@/lib/constants";
+import { getSiteLegalSettings } from "@/lib/site-legal-settings";
 import { getSitePublicSettings } from "@/lib/site-public-settings";
 import { createMetadata } from "@/lib/metadata";
 
+export const dynamic = "force-dynamic";
+
 export const metadata = createMetadata({
   title: "Mentions légales",
-  description: "Mentions légales du site SD CREATIV — informations éditeur, hébergement et propriété intellectuelle.",
+  description:
+    "Mentions légales du site SD CREATIV — informations éditeur, hébergement et propriété intellectuelle.",
   path: "/mentions-legales",
 });
 
 export default async function MentionsLegalesPage() {
-  const { contact, legal } = await getSitePublicSettings();
+  const [{ contact, legal }, legalContent] = await Promise.all([
+    getSitePublicSettings(),
+    getSiteLegalSettings(),
+  ]);
 
   return (
     <>
@@ -23,65 +31,67 @@ export default async function MentionsLegalesPage() {
             Le site <strong>{SITE.url}</strong> est édité par :
           </p>
           <ul>
-            <li><strong>Raison sociale :</strong> {SITE.name}</li>
-            <li><strong>Forme juridique :</strong> Société à responsabilité limitée (SARL) ou équivalent</li>
+            <li>
+              <strong>Raison sociale :</strong> {SITE.name}
+            </li>
+            <li>
+              <strong>Forme juridique :</strong> {legalContent.legalForm}
+            </li>
             {legal.rccm ? (
-              <li><strong>RCCM :</strong> {legal.rccm}</li>
+              <li>
+                <strong>RCCM :</strong> {legal.rccm}
+              </li>
             ) : (
-              <li><strong>RCCM :</strong> [Numéro RCCM — renseigner dans Paramètres CRM → Site public]</li>
+              <li>
+                <strong>RCCM :</strong> [Numéro RCCM — renseigner dans Paramètres CRM → Site
+                public]
+              </li>
             )}
             {legal.ncc ? (
-              <li><strong>Compte contribuable (NCC) :</strong> {legal.ncc}</li>
+              <li>
+                <strong>Compte contribuable (NCC) :</strong> {legal.ncc}
+              </li>
             ) : null}
-            <li><strong>Siège social :</strong> {contact.address}</li>
-            <li><strong>Email :</strong> {contact.email}</li>
-            <li><strong>Téléphone :</strong> {contact.phone}</li>
+            <li>
+              <strong>Siège social :</strong> {contact.address}
+            </li>
+            <li>
+              <strong>Email :</strong> {contact.email}
+            </li>
+            <li>
+              <strong>Téléphone :</strong> {contact.phone}
+            </li>
           </ul>
 
           <h2>Directeur de la publication</h2>
-          <p>Le directeur de la publication est le représentant légal de {SITE.name}.</p>
+          <p>{legalContent.publicationDirector}</p>
 
           <h2>Hébergement</h2>
           <p>
             Le site est hébergé par <strong>{legal.hostName}</strong>
-            {legal.hostAddress ? (
-              <>
-                , {legal.hostAddress}.
-              </>
-            ) : (
-              "."
-            )}
+            {legal.hostAddress ? <>, {legal.hostAddress}.</> : "."}
           </p>
 
-          <h2>Propriété intellectuelle</h2>
-          <p>
-            L&apos;ensemble du contenu de ce site (textes, images, graphismes, logo, icônes, sons,
-            logiciels) est la propriété exclusive de {SITE.name} ou de ses partenaires, sauf
-            mention contraire. Toute reproduction, représentation, modification, publication ou
-            adaptation de tout ou partie des éléments du site, quel que soit le moyen ou le
-            procédé utilisé, est interdite sans autorisation écrite préalable.
-          </p>
-
-          <h2>Données personnelles</h2>
-          <p>
-            Pour toute information relative à la collecte et au traitement de vos données
-            personnelles, consultez notre{" "}
-            <a href="/politique-confidentialite">politique de confidentialité</a>.
-          </p>
-
-          <h2>Cookies</h2>
-          <p>
-            Ce site utilise des cookies pour améliorer l&apos;expérience utilisateur et mesurer
-            l&apos;audience. Vous pouvez gérer vos préférences via la bannière cookies ou notre
-            politique de confidentialité.
-          </p>
-
-          <h2>Limitation de responsabilité</h2>
-          <p>
-            {SITE.name} s&apos;efforce d&apos;assurer l&apos;exactitude des informations diffusées
-            sur ce site. Toutefois, elle ne saurait garantir l&apos;exactitude, la complétude ou
-            l&apos;actualité des informations mises à disposition.
-          </p>
+          {legalContent.mentionsSections.map((section) => (
+            <div key={section.id}>
+              <h2>{section.title}</h2>
+              {section.paragraphs?.map((p) => (
+                <p key={p.slice(0, 40)}>{p}</p>
+              ))}
+              {section.bullets && section.bullets.length > 0 && (
+                <ul>
+                  {section.bullets.map((b) => (
+                    <li key={b}>{b}</li>
+                  ))}
+                </ul>
+              )}
+              {section.id === "donnees" && (
+                <p>
+                  <Link href="/politique-confidentialite">Politique de confidentialité →</Link>
+                </p>
+              )}
+            </div>
+          ))}
 
           <h2>Droit applicable</h2>
           <p>

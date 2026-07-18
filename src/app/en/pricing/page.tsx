@@ -27,7 +27,7 @@ export default function EnPricingPage() {
           { label: "Pricing" },
         ]}
       />
-      <PricingSection />
+      <PricingSection locale="en" />
       <section className="py-16 text-center">
         <Button href="/devis" size="lg">
           Online quote calculator

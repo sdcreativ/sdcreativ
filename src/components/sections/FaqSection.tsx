@@ -12,6 +12,8 @@ type Props = {
 
 export async function FaqSection({ items, locale = "fr" }: Props) {
   const faqItems = items ?? (await getFaqItems(locale));
+  if (faqItems.length === 0) return null;
+
   const leftColumn = faqItems.filter((_, i) => i % 2 === 0);
   const rightColumn = faqItems.filter((_, i) => i % 2 === 1);
 

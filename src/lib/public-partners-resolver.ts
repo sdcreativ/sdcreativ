@@ -2,10 +2,15 @@ import { technologyPartners as staticPartners } from "@/content/partners";
 import { isDatabaseConfigured } from "@/lib/db";
 import { listPublicPartners, toTechnologyPartner } from "@/lib/public-partners";
 import type { TechnologyPartner } from "@/lib/public-partners";
+import { allowStaticContentFallback } from "@/lib/static-content-fallback";
+
+function staticAsPartners(): TechnologyPartner[] {
+  return staticPartners.map((p) => ({ name: p.name, category: p.category }));
+}
 
 export async function getTechnologyPartners(locale = "fr"): Promise<TechnologyPartner[]> {
   if (!isDatabaseConfigured()) {
-    return staticPartners.map((p) => ({ name: p.name, category: p.category }));
+    return allowStaticContentFallback() ? staticAsPartners() : [];
   }
 
   try {
@@ -15,5 +20,5 @@ export async function getTechnologyPartners(locale = "fr"): Promise<TechnologyPa
     console.error("[public-partners] fallback:", error);
   }
 
-  return staticPartners.map((p) => ({ name: p.name, category: p.category }));
+  return allowStaticContentFallback() ? staticAsPartners() : [];
 }

@@ -2,6 +2,7 @@ import { jobOffers as staticJobOffers } from "@/content/carrieres";
 import { isDatabaseConfigured } from "@/lib/db";
 import { listPublicJobOffers } from "@/lib/public-job-offers";
 import { getSiteCareersSettings } from "@/lib/site-careers-settings";
+import { allowStaticContentFallback } from "@/lib/static-content-fallback";
 
 export type ResolvedJobOffer = {
   id: string;
@@ -28,7 +29,9 @@ function recordToJob(record: Awaited<ReturnType<typeof listPublicJobOffers>>[num
 }
 
 export async function getJobOffers(): Promise<ResolvedJobOffer[]> {
-  if (!isDatabaseConfigured()) return staticJobOffers;
+  if (!isDatabaseConfigured()) {
+    return allowStaticContentFallback() ? staticJobOffers : [];
+  }
 
   try {
     const records = await listPublicJobOffers({ visibleOnly: true });
@@ -37,7 +40,7 @@ export async function getJobOffers(): Promise<ResolvedJobOffer[]> {
     console.error("[public-job-offers] getJobOffers fallback:", error);
   }
 
-  return staticJobOffers;
+  return allowStaticContentFallback() ? staticJobOffers : [];
 }
 
 export async function getJobOffer(id: string): Promise<ResolvedJobOffer | undefined> {

@@ -15,12 +15,9 @@ import {
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import { Button } from "@/components/ui/Button";
-import {
-  privacyPolicySections,
-  privacyPolicyToc,
-  type PrivacySection,
-} from "@/content/privacy-policy";
+import { type PrivacySection } from "@/content/privacy-policy";
 import { SITE } from "@/lib/constants";
+import { getSiteLegalSettings } from "@/lib/site-legal-settings";
 import { getSitePublicSettings } from "@/lib/site-public-settings";
 import { cn } from "@/lib/utils";
 
@@ -159,7 +156,12 @@ function SectionBody({
 }
 
 export async function PrivacyPolicyContent() {
-  const { contact } = await getSitePublicSettings();
+  const [{ contact }, legal] = await Promise.all([
+    getSitePublicSettings(),
+    getSiteLegalSettings(),
+  ]);
+  const privacyPolicySections: PrivacySection[] = legal.privacySections;
+  const privacyPolicyToc = privacyPolicySections.map(({ id, title }) => ({ id, title }));
 
   return (
     <>
@@ -179,7 +181,7 @@ export async function PrivacyPolicyContent() {
                 </p>
               </div>
               <div className="shrink-0 rounded-xl border border-gray/60 bg-gray-light/60 px-5 py-4 text-sm">
-                <p className="font-semibold text-foreground">Dernière mise à jour</p>
+                <p className="font-semibold text-foreground">{legal.privacyUpdatedLabel}</p>
                 <p className="mt-1 text-gray-text">Juillet 2026</p>
                 <Link
                   href={`mailto:${contact.email}`}

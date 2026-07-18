@@ -9,6 +9,8 @@ type Props = {
 
 export async function TeamSection({ locale = "fr" }: Props) {
   const teamMembers = await getTeamMembers(locale);
+  if (teamMembers.length === 0) return null;
+
   const isEn = locale === "en";
 
   return (

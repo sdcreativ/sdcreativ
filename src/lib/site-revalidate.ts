@@ -107,3 +107,22 @@ export function revalidateCareersPages() {
   revalidatePath("/carrieres");
   revalidatePath("/sitemap.xml");
 }
+
+export function revalidateMaintenancePages() {
+  revalidatePath("/maintenance");
+  revalidatePath("/en/maintenance");
+  revalidatePath("/sitemap.xml");
+}
+
+export function revalidateAuditPages() {
+  revalidatePath("/audit-gratuit");
+  revalidatePath("/en/free-audit");
+  revalidatePath("/sitemap.xml");
+}
+
+export function revalidateLegalPages() {
+  revalidatePath("/mentions-legales");
+  revalidatePath("/politique-confidentialite");
+  revalidatePath("/en/legal");
+  revalidatePath("/en/privacy");
+}

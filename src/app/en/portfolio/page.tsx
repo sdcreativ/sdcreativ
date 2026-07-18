@@ -1,7 +1,10 @@
 import { PageHero } from "@/components/ui/PageHero";
 import { RealisationsGrid } from "@/components/realisations/RealisationsGrid";
-import { listPublicRealisations, toRealisation } from "@/lib/public-realisations";
+import { getRealisations } from "@/lib/cms";
 import { createMetadata } from "@/lib/metadata";
+import { buildPortfolioPublicStats } from "@/lib/portfolio-public-stats";
+
+export const dynamic = "force-dynamic";
 
 export const metadata = createMetadata({
   title: "Portfolio",
@@ -11,8 +14,11 @@ export const metadata = createMetadata({
 });
 
 export default async function EnPortfolioPage() {
-  const records = await listPublicRealisations({ locale: "en", visibleOnly: true });
-  const items = records.length > 0 ? records.map(toRealisation) : undefined;
+  let items = await getRealisations("en");
+  if (items.length === 0) {
+    items = await getRealisations("fr");
+  }
+  const stats = buildPortfolioPublicStats(items);
 
   return (
     <>
@@ -24,7 +30,7 @@ export default async function EnPortfolioPage() {
       />
       <section className="py-20 md:py-28">
         <div className="container mx-auto px-4 md:px-6 lg:px-8">
-          <RealisationsGrid items={items} />
+          <RealisationsGrid items={items} stats={stats} />
         </div>
       </section>
     </>

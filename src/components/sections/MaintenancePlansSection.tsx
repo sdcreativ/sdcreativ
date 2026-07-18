@@ -2,24 +2,26 @@ import { Check } from "lucide-react";
 import { AnimatedSection, AnimatedCard } from "@/components/ui/AnimatedSection";
 import { SectionHeading } from "@/components/ui/SectionHeading";
 import { Button } from "@/components/ui/Button";
-import { maintenancePlans } from "@/content/maintenance-plans";
+import { getSiteMaintenanceSettings } from "@/lib/site-maintenance-settings";
 import { formatFcfa } from "@/lib/format";
 import { cn } from "@/lib/utils";
 
-export function MaintenancePlansSection() {
+export async function MaintenancePlansSection() {
+  const { plansHeading, plans } = await getSiteMaintenanceSettings();
+
   return (
     <AnimatedSection className="bg-white py-20 md:py-28">
       <div className="container mx-auto px-4 md:px-6 lg:px-8">
         <SectionHeading
-          eyebrow="Formules récurrentes"
-          title="Choisissez votre"
-          highlight="niveau de sérénité"
-          description="Paiement mensuel ou annuel en FCFA. L'abonnement annuel inclut 2 mois offerts."
+          eyebrow={plansHeading.eyebrow}
+          title={plansHeading.title}
+          highlight={plansHeading.highlight}
+          description={plansHeading.description}
           className="mb-14"
         />
 
         <div className="grid gap-8 lg:grid-cols-3">
-          {maintenancePlans.map((plan, i) => (
+          {plans.map((plan, i) => (
             <AnimatedCard
               key={plan.id}
               delay={i * 0.1}

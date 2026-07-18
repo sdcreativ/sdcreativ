@@ -4,7 +4,9 @@ import { AnimatedCard } from "@/components/ui/AnimatedSection";
 import { Button } from "@/components/ui/Button";
 import { MethodSection } from "@/components/sections/MethodSection";
 import { TeamSection } from "@/components/sections/TeamSection";
+import { getRealisations } from "@/lib/cms";
 import { createMetadata } from "@/lib/metadata";
+import { getSiteMethodSettings } from "@/lib/site-method-settings";
 
 export const dynamic = "force-dynamic";
 
@@ -42,7 +44,36 @@ const values = [
   },
 ];
 
-export default function AboutPage() {
+export default async function AboutPage() {
+  const [items, method] = await Promise.all([getRealisations(), getSiteMethodSettings()]);
+  const projectCount = items.length;
+  const methodSteps = method.steps.length;
+  const sectors = new Set(
+    items.map((item) => item.sector?.trim()).filter((s): s is string => Boolean(s)),
+  );
+
+  const stats = [
+    projectCount > 0
+      ? {
+          value: String(projectCount),
+          label: projectCount > 1 ? "Projets publiés" : "Projet publié",
+        }
+      : null,
+    methodSteps > 0
+      ? {
+          value: String(methodSteps),
+          label: methodSteps > 1 ? "Étapes méthode" : "Étape méthode",
+        }
+      : null,
+    sectors.size > 0
+      ? {
+          value: String(sectors.size),
+          label: sectors.size > 1 ? "Secteurs couverts" : "Secteur couvert",
+        }
+      : null,
+    { value: "100%", label: "Sites responsive" },
+  ].filter((stat): stat is { value: string; label: string } => Boolean(stat));
+
   return (
     <>
       <SitePageHero pageKey="a-propos" />
@@ -66,21 +97,18 @@ export default function AboutPage() {
               Travaillons ensemble
             </Button>
           </div>
-          <div className="rounded-2xl bg-gradient-to-br from-primary/10 to-gray-light p-10">
-            <div className="grid grid-cols-2 gap-6 text-center">
-              {[
-                { value: "50+", label: "Projets livrés" },
-                { value: "7", label: "Étapes méthode" },
-                { value: "100%", label: "Sites responsive" },
-                { value: "24h", label: "Réponse moyenne" },
-              ].map((stat) => (
-                <div key={stat.label} className="rounded-xl bg-white p-6 shadow-sm">
-                  <p className="text-3xl font-bold text-primary">{stat.value}</p>
-                  <p className="mt-1 text-sm text-gray-text">{stat.label}</p>
-                </div>
-              ))}
+          {stats.length > 0 && (
+            <div className="rounded-2xl bg-gradient-to-br from-primary/10 to-gray-light p-10">
+              <div className="grid grid-cols-2 gap-6 text-center">
+                {stats.map((stat) => (
+                  <div key={stat.label} className="rounded-xl bg-white p-6 shadow-sm">
+                    <p className="text-3xl font-bold text-primary">{stat.value}</p>
+                    <p className="mt-1 text-sm text-gray-text">{stat.label}</p>
+                  </div>
+                ))}
+              </div>
             </div>
-          </div>
+          )}
         </div>
       </section>
 

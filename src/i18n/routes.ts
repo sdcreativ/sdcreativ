@@ -8,7 +8,9 @@ export const LOCALE_ROUTE_PAIRS = [
   { fr: "/realisations", en: "/en/portfolio" },
   { fr: "/carrieres", en: "/en/careers" },
   { fr: "/maintenance", en: "/en/maintenance" },
+  { fr: "/audit-gratuit", en: "/en/free-audit" },
   { fr: "/mentions-legales", en: "/en/legal" },
+  { fr: "/politique-confidentialite", en: "/en/privacy" },
   { fr: "/blog", en: "/en/blog" },
 ] as const;
 

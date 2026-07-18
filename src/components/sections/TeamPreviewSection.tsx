@@ -7,6 +7,7 @@ import { getTeamMembers } from "@/lib/public-team";
 
 export async function TeamPreviewSection() {
   const teamMembers = await getTeamMembers("fr");
+  if (teamMembers.length === 0) return null;
 
   return (
     <AnimatedSection className="bg-gray-light py-20 md:py-28" id="equipe-apercu">

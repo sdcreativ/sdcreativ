@@ -4,6 +4,7 @@ import { getTechnologyPartners } from "@/lib/public-partners-resolver";
 
 export async function PartnersSection() {
   const technologyPartners = await getTechnologyPartners("fr");
+  if (technologyPartners.length === 0) return null;
 
   return (
     <AnimatedSection className="border-y border-gray/40 bg-white py-14 md:py-16">
