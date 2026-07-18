@@ -54,11 +54,19 @@ export const ANALYTICS = {
   gaId: process.env.NEXT_PUBLIC_GA_MEASUREMENT_ID ?? "",
 } as const;
 
+function normalizePublicUrl(raw: string | undefined): string {
+  const trimmed = raw?.trim() ?? "";
+  if (!trimmed) return "";
+  if (/^https?:\/\//i.test(trimmed)) return trimmed;
+  if (trimmed.startsWith("//")) return `https:${trimmed}`;
+  return `https://${trimmed.replace(/^\/+/, "")}`;
+}
+
 export const BOOKING = {
   /** Lien Cal.com ou Calendly — ex. https://cal.com/sdcreativ/30min */
-  url: process.env.NEXT_PUBLIC_BOOKING_URL ?? "",
+  url: normalizePublicUrl(process.env.NEXT_PUBLIC_BOOKING_URL),
   /** URL embed iframe (optionnel) — ex. https://cal.com/sdcreativ/30min?embed=true */
-  embedUrl: process.env.NEXT_PUBLIC_BOOKING_EMBED_URL ?? "",
+  embedUrl: normalizePublicUrl(process.env.NEXT_PUBLIC_BOOKING_EMBED_URL),
   label: "Réserver un appel de 30 min",
 } as const;
 

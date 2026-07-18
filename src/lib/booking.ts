@@ -23,3 +23,12 @@ export function buildBookingEmbedUrl(url: string, embedUrl?: string): string {
 export function isBookingConfigured(url?: string, embedUrl?: string): boolean {
   return Boolean(url?.trim() || embedUrl?.trim());
 }
+
+/** Normalise une URL de booking (ajoute https:// si absent). */
+export function normalizeBookingUrl(url: string): string {
+  const trimmed = url.trim();
+  if (!trimmed) return "";
+  if (/^https?:\/\//i.test(trimmed)) return trimmed;
+  if (trimmed.startsWith("//")) return `https:${trimmed}`;
+  return `https://${trimmed.replace(/^\/+/, "")}`;
+}

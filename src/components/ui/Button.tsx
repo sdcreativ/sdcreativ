@@ -53,13 +53,25 @@ export function Button({
   );
 
   if (href) {
-    if (external) {
+    // URL absolue → toujours <a> (évite /https://… via next/link)
+    const isExternal =
+      external ||
+      /^https?:\/\//i.test(href) ||
+      href.startsWith("//") ||
+      href.startsWith("mailto:") ||
+      href.startsWith("tel:");
+
+    if (isExternal) {
       return (
         <a
           href={href}
           className={classes}
-          target="_blank"
-          rel="noopener noreferrer"
+          target={href.startsWith("mailto:") || href.startsWith("tel:") ? undefined : "_blank"}
+          rel={
+            href.startsWith("mailto:") || href.startsWith("tel:")
+              ? undefined
+              : "noopener noreferrer"
+          }
           {...(props as React.AnchorHTMLAttributes<HTMLAnchorElement>)}
         >
           {children}
