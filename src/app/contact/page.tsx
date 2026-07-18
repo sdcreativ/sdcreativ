@@ -48,7 +48,8 @@ export default async function ContactPage() {
 
           <div className="lg:col-span-2">
             <div className="sticky top-28 space-y-6">
-              <BookAppointment variant="embed" />
+              {/* Carte + lien Cal.com : fiable. L’iframe embed était souvent bloquée / cassée. */}
+              <BookAppointment variant="card" />
               <div className="overflow-hidden rounded-3xl bg-dark shadow-xl">
                 <div className="h-1 bg-gradient-to-r from-primary to-primary-light" />
                 <div className="p-8">
