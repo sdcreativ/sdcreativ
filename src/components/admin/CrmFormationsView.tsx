@@ -17,6 +17,7 @@ import {
   CrmSectionTabs,
   crmFieldClass,
 } from "@/components/admin/crm-site-form-ui";
+import { SiteImageUploadField } from "@/components/admin/SiteImageUploadField";
 
 type FormationsTab = "copy" | "categories" | "highlights" | "faq" | "cta";
 
@@ -123,7 +124,7 @@ export function CrmFormationsView() {
       <CrmFormHeader
         icon={GraduationCap}
         title="Formations"
-        description="Catalogue de la page /formations : domaines, modules (durée & tarif), textes, FAQ et CTA."
+        description="Catalogue de la page /formations : domaines, modules (durée & tarif), images S3, textes, FAQ et CTA."
         actions={
           <CrmSecondaryButton onClick={() => void handleReset()} disabled={saving}>
             <RotateCcw className="h-4 w-4" aria-hidden />
@@ -307,6 +308,36 @@ export function CrmFormationsView() {
                         rows={2}
                       />
                     </CrmFormField>
+                    <CrmFormField label="Image du domaine" className="sm:col-span-2">
+                      <SiteImageUploadField
+                        value={category.image}
+                        onChange={(image) => {
+                          const categories = [...form.categories];
+                          categories[i] = { ...categories[i]!, image };
+                          setForm({ ...form, categories });
+                        }}
+                        required
+                        preview="wide"
+                        clearable={false}
+                        label="Uploader une image (S3)"
+                      />
+                      <p className="mt-1.5 text-xs text-gray-text">
+                        L’image est stockée sur S3 (ou en local si S3 n’est pas configuré) puis
+                        affichée sur /formations via le proxy média.
+                      </p>
+                    </CrmFormField>
+                    <CrmFormField label="Texte alternatif image" className="sm:col-span-2">
+                      <input
+                        value={category.imageAlt ?? ""}
+                        onChange={(e) => {
+                          const categories = [...form.categories];
+                          categories[i] = { ...categories[i]!, imageAlt: e.target.value };
+                          setForm({ ...form, categories });
+                        }}
+                        className={crmFieldClass}
+                        placeholder="Description accessible de l’image"
+                      />
+                    </CrmFormField>
                     <label className="flex items-center gap-2 rounded-xl border border-gray/40 bg-white px-3 py-2.5 text-sm sm:col-span-2">
                       <input
                         type="checkbox"
@@ -420,6 +451,8 @@ export function CrmFormationsView() {
                       icon: "GraduationCap",
                       title: "Nouveau domaine",
                       description: "Description du domaine…",
+                      image: "/images/formations/developpement-web-mobile.jpg",
+                      imageAlt: "Nouveau domaine de formation",
                       courses: [{ title: "Nouveau module", duration: "1 jour", price: null }],
                     },
                   ],
