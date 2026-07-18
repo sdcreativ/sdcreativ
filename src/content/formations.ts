@@ -13,6 +13,9 @@ export type FormationCategorySeed = {
   icon: LucideIconName;
   title: string;
   description: string;
+  /** Photo illustrative (chemin public). */
+  image: string;
+  imageAlt?: string;
   courses: FormationCourseSeed[];
   /** Si true, la liste est présentée comme des services (accompagnement). */
   isServices?: boolean;
@@ -67,6 +70,8 @@ export const formationCategories: FormationCategorySeed[] = [
     title: "Développement Web & Mobile",
     description:
       "Destinée aux personnes souhaitant devenir développeur ou renforcer leurs compétences.",
+    image: "/images/formations/developpement-web-mobile.jpg",
+    imageAlt: "Développeur travaillant sur du code web",
     courses: [
       { title: "Développement Web Full Stack", duration: "10 jours", price: 450_000 },
       { title: "PHP & Symfony", duration: "5 jours", price: 250_000 },
@@ -85,6 +90,8 @@ export const formationCategories: FormationCategorySeed[] = [
     icon: "Brain",
     title: "Intelligence Artificielle (IA)",
     description: "Accompagner les entreprises dans l'utilisation de l'IA.",
+    image: "/images/formations/intelligence-artificielle.jpg",
+    imageAlt: "Illustration d'intelligence artificielle et de réseaux neuronaux",
     courses: [
       { title: "Initiation à l'Intelligence Artificielle", duration: "1 jour", price: 80_000 },
       { title: "ChatGPT en entreprise", duration: "1 jour", price: 80_000 },
@@ -100,6 +107,8 @@ export const formationCategories: FormationCategorySeed[] = [
     icon: "Shield",
     title: "Cybersécurité & DevSecOps",
     description: "Former les équipes à sécuriser leurs applications.",
+    image: "/images/formations/cybersecurite-devsecops.jpg",
+    imageAlt: "Espace de travail cybersécurité avec écrans de monitoring",
     courses: [
       { title: "Sensibilisation à la cybersécurité", duration: "1 jour", price: 60_000 },
       { title: "Sécurité des applications Web", duration: "3 jours", price: 200_000 },
@@ -116,6 +125,8 @@ export const formationCategories: FormationCategorySeed[] = [
     icon: "Cloud",
     title: "Cloud, DevOps & Infrastructure",
     description: "Pour les administrateurs systèmes et développeurs.",
+    image: "/images/formations/cloud-devops.jpg",
+    imageAlt: "Infrastructure cloud et réseaux globaux",
     courses: [
       { title: "Docker", duration: "2 jours", price: 120_000 },
       { title: "Kubernetes", duration: "3 jours", price: 200_000 },
@@ -135,6 +146,8 @@ export const formationCategories: FormationCategorySeed[] = [
     title: "Bases de données",
     description:
       "Maîtriser la conception, l'interrogation et l'optimisation des données.",
+    image: "/images/formations/bases-de-donnees.jpg",
+    imageAlt: "Salle de serveurs pour bases de données",
     courses: [
       { title: "SQL", duration: "2 jours", price: 100_000 },
       { title: "MySQL", duration: "2 jours", price: 120_000 },
@@ -151,6 +164,8 @@ export const formationCategories: FormationCategorySeed[] = [
     icon: "Cpu",
     title: "Développement Rust",
     description: "Une spécialité qui peut vous différencier de la concurrence.",
+    image: "/images/formations/developpement-rust.jpg",
+    imageAlt: "Écran de code pour le développement système",
     courses: [
       { title: "Initiation à Rust", duration: "3 jours", price: 200_000 },
       { title: "Rust Avancé", duration: "4 jours", price: 280_000 },
@@ -166,6 +181,8 @@ export const formationCategories: FormationCategorySeed[] = [
     icon: "FileSpreadsheet",
     title: "Bureautique",
     description: "Très demandée par les entreprises.",
+    image: "/images/formations/bureautique.jpg",
+    imageAlt: "Poste de travail bureautique avec ordinateur portable",
     courses: [
       { title: "Microsoft Word", duration: "1 jour", price: 40_000 },
       { title: "Excel", duration: "2 jours", price: 60_000 },
@@ -181,6 +198,8 @@ export const formationCategories: FormationCategorySeed[] = [
     title: "Marketing Digital & Communication",
     description:
       "Développer votre visibilité et vos performances sur les canaux digitaux.",
+    image: "/images/formations/marketing-digital.jpg",
+    imageAlt: "Tableau de bord analytics et marketing digital",
     courses: [
       { title: "Community Management", duration: "2 jours", price: 100_000 },
       { title: "Création de contenu", duration: "2 jours", price: 100_000 },
@@ -197,6 +216,8 @@ export const formationCategories: FormationCategorySeed[] = [
     icon: "Palette",
     title: "Création Graphique & Multimédia",
     description: "Outils et méthodes pour produire des supports professionnels.",
+    image: "/images/formations/creation-graphique.jpg",
+    imageAlt: "Espace de création graphique et design",
     courses: [
       { title: "Photoshop", duration: "3 jours", price: 150_000 },
       { title: "Illustrator", duration: "3 jours", price: 150_000 },
@@ -212,6 +233,8 @@ export const formationCategories: FormationCategorySeed[] = [
     icon: "FolderKanban",
     title: "Gestion de Projet",
     description: "Méthodes agiles et outils pour piloter vos projets efficacement.",
+    image: "/images/formations/gestion-de-projet.jpg",
+    imageAlt: "Planification et gestion de projet sur un bureau",
     courses: [
       { title: "Agile Scrum", duration: "2 jours", price: 120_000 },
       { title: "Kanban", duration: "1 jour", price: 60_000 },
@@ -226,6 +249,8 @@ export const formationCategories: FormationCategorySeed[] = [
     icon: "Rocket",
     title: "Entrepreneuriat & Transformation Digitale",
     description: "Idéal pour les PME.",
+    image: "/images/formations/entrepreneuriat.jpg",
+    imageAlt: "Équipe entrepreneuriale en réunion de travail",
     courses: [
       { title: "Création d'entreprise", duration: "2 jours", price: 100_000 },
       { title: "Business Model Canvas", duration: "1 jour", price: 60_000 },
@@ -241,6 +266,8 @@ export const formationCategories: FormationCategorySeed[] = [
     title: "Management & Soft Skills",
     description:
       "Renforcer le leadership, la communication et la performance des équipes.",
+    image: "/images/formations/management-soft-skills.jpg",
+    imageAlt: "Équipe collaborant autour d'une table",
     courses: [
       { title: "Leadership", duration: "2 jours", price: 100_000 },
       { title: "Communication professionnelle", duration: "1 jour", price: 60_000 },
@@ -257,6 +284,8 @@ export const formationCategories: FormationCategorySeed[] = [
     title: "Formation des Administrations Publiques",
     description:
       "Programmes dédiés aux mairies, ministères et établissements publics.",
+    image: "/images/formations/administrations-publiques.jpg",
+    imageAlt: "Immeuble moderne symbolisant les administrations publiques",
     courses: [
       { title: "Transformation numérique", duration: "2 jours", price: 150_000 },
       { title: "E-administration", duration: "2 jours", price: 150_000 },
@@ -271,6 +300,8 @@ export const formationCategories: FormationCategorySeed[] = [
     icon: "Handshake",
     title: "Accompagnement & Conseil",
     description: "En complément des formations.",
+    image: "/images/formations/accompagnement-conseil.jpg",
+    imageAlt: "Séance de conseil et accompagnement professionnel",
     isServices: true,
     courses: courses(
       "Audit informatique",

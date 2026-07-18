@@ -55,6 +55,8 @@ export const updateSiteFormationsSchema = z.object({
         icon: z.enum(LUCIDE_ICON_NAME_ENUM),
         title: z.string().trim().min(1).max(120),
         description: z.string().trim().min(1).max(400),
+        image: z.string().trim().min(1).max(800),
+        imageAlt: z.string().trim().max(200).optional(),
         isServices: z.boolean().optional(),
         courses: z.array(courseSchema).min(1).max(40),
       }),
@@ -85,6 +87,25 @@ function normalizeCourse(
   };
 }
 
+function mergeCategories(
+  raw: SiteFormationsSettings["categories"] | undefined,
+): SiteFormationsSettings["categories"] {
+  if (!raw?.length) return defaultSiteFormationsSettings.categories;
+  const defaultsById = new Map(
+    defaultSiteFormationsSettings.categories.map((cat) => [cat.id, cat]),
+  );
+  return raw.map((cat) => {
+    const fallback = defaultsById.get(cat.id);
+    return {
+      ...fallback,
+      ...cat,
+      image: cat.image?.trim() || fallback?.image || "/images/formations/developpement-web-mobile.jpg",
+      imageAlt: cat.imageAlt?.trim() || fallback?.imageAlt || cat.title,
+      courses: cat.courses?.length ? cat.courses : fallback?.courses ?? [],
+    };
+  });
+}
+
 function merge(raw: Partial<SiteFormationsSettings> | null): SiteFormationsSettings {
   if (!raw) return defaultSiteFormationsSettings;
   return {
@@ -96,9 +117,7 @@ function merge(raw: Partial<SiteFormationsSettings> | null): SiteFormationsSetti
     highlights: raw.highlights?.length
       ? raw.highlights
       : defaultSiteFormationsSettings.highlights,
-    categories: raw.categories?.length
-      ? raw.categories
-      : defaultSiteFormationsSettings.categories,
+    categories: mergeCategories(raw.categories),
     faq: raw.faq?.length ? raw.faq : defaultSiteFormationsSettings.faq,
   };
 }

@@ -17,6 +17,8 @@ export type FormationCategoryStored = {
   icon: LucideIconName;
   title: string;
   description: string;
+  image: string;
+  imageAlt?: string;
   courses: FormationCourseStored[];
   isServices?: boolean;
 };

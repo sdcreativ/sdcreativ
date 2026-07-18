@@ -1,11 +1,12 @@
+import Image from "next/image";
 import Link from "next/link";
-import { CheckCircle2, Clock } from "lucide-react";
+import { ArrowRight } from "lucide-react";
 import { PageHero } from "@/components/ui/PageHero";
 import { Button } from "@/components/ui/Button";
 import { SectionHeading } from "@/components/ui/SectionHeading";
 import { formationsPageCopyEn } from "@/content/formations";
 import { getFormationsContent } from "@/lib/formations-resolver";
-import { formatFcfa } from "@/lib/format";
+import { isProxiedMediaUrl, resolveImageDisplayUrl } from "@/lib/image-url";
 import { enTraining } from "@/i18n/en-content";
 import { createMetadata } from "@/lib/metadata";
 
@@ -52,68 +53,60 @@ export default async function EnTrainingPage() {
             eyebrow="Catalog"
             title="Training"
             highlight="domains"
-            description="Overview of our domains with indicative durations and prices. Full details on the French page."
+            description="Browse our domains visually. Full module lists, durations and prices are on the French page."
             className="mb-12"
           />
-          <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-            {content.categories.map((category) => {
+          <div className="grid gap-5 sm:grid-cols-2 xl:grid-cols-3">
+            {content.categories.map((category, i) => {
               const Icon = category.icon;
+              const imageSrc = resolveImageDisplayUrl(category.image);
               return (
                 <article
                   key={category.id}
-                  className="rounded-2xl border border-gray/60 bg-white p-6 shadow-sm"
+                  className="group relative overflow-hidden rounded-2xl bg-dark shadow-sm ring-1 ring-black/5"
                 >
-                  <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-2xl bg-primary-light">
-                    <Icon className="h-6 w-6 text-primary" aria-hidden />
+                  <div className="relative aspect-[5/4] overflow-hidden">
+                    <Image
+                      src={imageSrc}
+                      alt={category.imageAlt || category.title}
+                      fill
+                      sizes="(max-width: 640px) 100vw, (max-width: 1280px) 50vw, 33vw"
+                      className="object-cover transition-transform duration-700 group-hover:scale-105"
+                      priority={i < 3}
+                      unoptimized={isProxiedMediaUrl(imageSrc)}
+                    />
+                    <div
+                      className="absolute inset-0 bg-gradient-to-t from-dark via-dark/55 to-transparent"
+                      aria-hidden
+                    />
+                    <div className="absolute left-4 top-4 flex h-11 w-11 items-center justify-center rounded-xl bg-white/15 text-white backdrop-blur-sm ring-1 ring-white/25">
+                      <Icon className="h-5 w-5" aria-hidden />
+                    </div>
+                    <div className="absolute inset-x-0 bottom-0 p-5 md:p-6">
+                      <p className="text-xs font-semibold uppercase tracking-wider text-primary-light">
+                        {category.courses.length}{" "}
+                        {category.isServices ? "services" : "modules"}
+                      </p>
+                      <h2 className="mt-1 text-lg font-bold leading-snug text-white md:text-xl">
+                        {category.title}
+                      </h2>
+                      <p className="mt-2 line-clamp-2 text-sm text-white/75">
+                        {category.description}
+                      </p>
+                    </div>
                   </div>
-                  <h2 className="text-lg font-bold text-foreground">{category.title}</h2>
-                  <p className="mt-2 text-sm leading-relaxed text-gray-text">
-                    {category.description}
-                  </p>
-                  <ul className="mt-4 space-y-2">
-                    {category.courses.slice(0, 4).map((course) => (
-                      <li key={course.title} className="text-sm text-foreground/80">
-                        <div className="flex items-start gap-2">
-                          <CheckCircle2
-                            className="mt-0.5 h-3.5 w-3.5 shrink-0 text-primary"
-                            aria-hidden
-                          />
-                          <div>
-                            <p>{course.title}</p>
-                            {(course.duration ||
-                              (course.price != null && course.price > 0)) && (
-                              <p className="mt-0.5 flex flex-wrap gap-x-2 text-xs text-gray-text">
-                                {course.duration ? (
-                                  <span className="inline-flex items-center gap-1">
-                                    <Clock className="h-3 w-3" aria-hidden />
-                                    {course.duration}
-                                  </span>
-                                ) : null}
-                                {course.price != null && course.price > 0 ? (
-                                  <span className="font-semibold text-primary">
-                                    {formatFcfa(course.price)} FCFA
-                                  </span>
-                                ) : null}
-                              </p>
-                            )}
-                          </div>
-                        </div>
-                      </li>
-                    ))}
-                    {category.courses.length > 4 && (
-                      <li className="text-xs font-semibold text-primary">
-                        +{category.courses.length - 4} more
-                      </li>
-                    )}
-                  </ul>
                 </article>
               );
             })}
           </div>
           <p className="mt-10 text-center text-sm text-gray-text">
             Full French catalog:{" "}
-            <Link href="/formations" className="font-semibold text-primary hover:underline">
-              /formations →
+            <Link
+              href="/formations"
+              className="inline-flex items-center gap-1 font-semibold text-primary hover:underline"
+            >
+              /formations
+              <ArrowRight className="h-3.5 w-3.5" aria-hidden />
             </Link>
           </p>
         </div>
