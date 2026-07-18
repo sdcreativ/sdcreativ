@@ -82,10 +82,9 @@ function BookingCard({ className }: { className?: string }) {
         </div>
         <h3 className="mt-4 text-lg font-bold text-foreground">{BOOKING.label}</h3>
         <p className="mt-2 text-sm leading-relaxed text-gray-text">
-          Choisissez un créneau — confirmation immédiate par email. Le calendrier s’ouvre
-          dans une nouvelle fenêtre.
+          Choisissez un créneau — confirmation immédiate par email.
         </p>
-        <Button href={href} external className="mt-6 w-full justify-center">
+        <Button href={href} external newTab={false} className="mt-6 w-full justify-center">
           Choisir un créneau
           <ExternalLink className="h-3.5 w-3.5 opacity-70" aria-hidden />
         </Button>
@@ -160,11 +159,9 @@ function CalInlineEmbed({ className }: { className?: string }) {
         <div className="border-t border-gray/40 px-6 py-3 text-center">
           <a
             href={BOOKING.url}
-            target="_blank"
-            rel="noopener noreferrer"
             className="inline-flex items-center gap-1.5 text-sm font-semibold text-primary hover:underline"
           >
-            Ouvrir dans un nouvel onglet
+            Ouvrir le calendrier Cal.com
             <ExternalLink className="h-3.5 w-3.5" aria-hidden />
           </a>
         </div>
@@ -184,7 +181,13 @@ export function BookAppointment({ className, variant = "card" }: BookAppointment
 
   if (variant === "inline") {
     return (
-      <Button href={BOOKING.url || BOOKING.embedUrl} external size="lg" className={className}>
+      <Button
+        href={BOOKING.url || BOOKING.embedUrl}
+        external
+        newTab={false}
+        size="lg"
+        className={className}
+      >
         <Calendar className="h-4 w-4" aria-hidden />
         {BOOKING.label}
         <ExternalLink className="h-3.5 w-3.5 opacity-70" aria-hidden />

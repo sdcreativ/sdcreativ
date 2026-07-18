@@ -29,6 +29,8 @@ type ButtonProps = {
   size?: ButtonSize;
   href?: string;
   external?: boolean;
+  /** Pour les liens externes http(s) : nouvel onglet (défaut true). false = même onglet. */
+  newTab?: boolean;
   className?: string;
   children: React.ReactNode;
 } & (
@@ -41,6 +43,7 @@ export function Button({
   size = "md",
   href,
   external,
+  newTab = true,
   className,
   children,
   ...props
@@ -54,25 +57,22 @@ export function Button({
 
   if (href) {
     // URL absolue → toujours <a> (évite /https://… via next/link)
+    const isMailOrTel = href.startsWith("mailto:") || href.startsWith("tel:");
     const isExternal =
       external ||
       /^https?:\/\//i.test(href) ||
       href.startsWith("//") ||
-      href.startsWith("mailto:") ||
-      href.startsWith("tel:");
+      isMailOrTel;
 
     if (isExternal) {
+      const openInNewTab = !isMailOrTel && newTab;
       return (
         <a
           href={href}
           className={classes}
-          target={href.startsWith("mailto:") || href.startsWith("tel:") ? undefined : "_blank"}
-          rel={
-            href.startsWith("mailto:") || href.startsWith("tel:")
-              ? undefined
-              : "noopener noreferrer"
-          }
           {...(props as React.AnchorHTMLAttributes<HTMLAnchorElement>)}
+          target={openInNewTab ? "_blank" : undefined}
+          rel={openInNewTab ? "noopener noreferrer" : undefined}
         >
           {children}
         </a>
