@@ -11,15 +11,6 @@ export function getCalLinkFromBookingUrl(url: string): string | null {
   }
 }
 
-/** Construit une URL d’iframe embed sans casser les query params existants. */
-export function buildBookingEmbedUrl(url: string, embedUrl?: string): string {
-  if (embedUrl?.trim()) return embedUrl.trim();
-  const parsed = new URL(url);
-  parsed.searchParams.set("embed", "true");
-  parsed.searchParams.set("theme", "light");
-  return parsed.toString();
-}
-
 export function isBookingConfigured(url?: string, embedUrl?: string): boolean {
   return Boolean(url?.trim() || embedUrl?.trim());
 }
@@ -33,7 +24,6 @@ export function normalizeBookingUrl(url: string | undefined): string {
   let s = url?.trim() ?? "";
   if (!s) return "";
 
-  // Décolle les préfixes protocole empilés jusqu’à obtenir host/chemin nu
   for (let i = 0; i < 10; i++) {
     const next = s
       .replace(/^https?:\/\//i, "")
@@ -47,4 +37,31 @@ export function normalizeBookingUrl(url: string | undefined): string {
 
   if (!s) return "";
   return `https://${s}`;
+}
+
+function withBookingParams(
+  url: string,
+  params: Record<string, string>,
+): string {
+  const parsed = new URL(normalizeBookingUrl(url));
+  for (const [key, value] of Object.entries(params)) {
+    parsed.searchParams.set(key, value);
+  }
+  // Évite le thème sombre hérité des préférences système
+  parsed.searchParams.set("theme", "light");
+  return parsed.toString();
+}
+
+/** URL Cal.com pour navigation pleine page (thème clair). */
+export function buildBookingPublicUrl(url: string): string {
+  return withBookingParams(url, {});
+}
+
+/** URL d’iframe embed Cal.com (thème clair, layout mensuel). */
+export function buildBookingEmbedUrl(url: string, embedUrl?: string): string {
+  const base = embedUrl?.trim() ? embedUrl : url;
+  return withBookingParams(base, {
+    embed: "true",
+    layout: "month_view",
+  });
 }

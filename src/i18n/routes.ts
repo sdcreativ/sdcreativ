@@ -5,6 +5,7 @@ export const LOCALE_ROUTE_PAIRS = [
   { fr: "/tarifs", en: "/en/pricing" },
   { fr: "/a-propos", en: "/en/about" },
   { fr: "/contact", en: "/en/contact" },
+  { fr: "/rendez-vous", en: "/en/book" },
   { fr: "/realisations", en: "/en/portfolio" },
   { fr: "/carrieres", en: "/en/careers" },
   { fr: "/maintenance", en: "/en/maintenance" },
