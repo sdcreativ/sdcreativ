@@ -114,6 +114,12 @@ export function revalidateMaintenancePages() {
   revalidatePath("/sitemap.xml");
 }
 
+export function revalidateFormationsPages() {
+  revalidatePath("/formations");
+  revalidatePath("/en/training");
+  revalidatePath("/sitemap.xml");
+}
+
 export function revalidateAuditPages() {
   revalidatePath("/audit-gratuit");
   revalidatePath("/en/free-audit");

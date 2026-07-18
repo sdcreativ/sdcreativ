@@ -158,8 +158,12 @@ export function getCrmBreadcrumbs(pathname: string): CrmBreadcrumb[] {
           tarifs: "Tarifs",
           devis: "Configurateur de devis",
           "solutions-ia": "Solutions IA",
+          formations: "Formations",
           carrieres: "Carrières",
           realisations: "Réalisations",
+          maintenance: "Maintenance",
+          audit: "Audit",
+          legal: "Légal",
         };
         crumbs.push({
           label: siteLabels[segment] ?? segment,

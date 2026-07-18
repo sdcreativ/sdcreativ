@@ -20,6 +20,7 @@ export const PAGE_HERO_KEYS = [
   "faq",
   "services",
   "solutions-ia",
+  "formations",
   "carrieres",
   "a-propos",
   "maintenance",
@@ -35,7 +36,7 @@ export type PageHeroKey = (typeof PAGE_HERO_KEYS)[number];
 export const PAGE_HERO_GROUPS: { label: string; keys: PageHeroKey[] }[] = [
   {
     label: "Commercial",
-    keys: ["contact", "tarifs", "devis", "services", "solutions-ia", "audit-gratuit"],
+    keys: ["contact", "tarifs", "devis", "services", "solutions-ia", "formations", "audit-gratuit"],
   },
   {
     label: "Contenu",
@@ -54,6 +55,7 @@ export const PAGE_HERO_LABELS: Record<PageHeroKey, string> = {
   faq: "FAQ",
   services: "Services (hub)",
   "solutions-ia": "Solutions IA",
+  formations: "Formations",
   carrieres: "Carrières",
   "a-propos": "À propos",
   maintenance: "Maintenance",
@@ -114,6 +116,14 @@ export const defaultSitePageHeroesSettings: SitePageHeroesSettings = {
     description:
       "Support client, qualification de leads, automatisation métier — nous concevons et déployons des agents intelligents adaptés au contexte ivoirien.",
     breadcrumb: [{ label: "Accueil", href: "/" }, { label: "Solutions IA" }],
+  },
+  formations: {
+    eyebrow: "Formation professionnelle",
+    title: "Montez en",
+    highlight: "compétences",
+    description:
+      "Développement, IA, cybersécurité, cloud, marketing digital et plus — des formations concrètes pour particuliers, entreprises et administrations.",
+    breadcrumb: [{ label: "Accueil", href: "/" }, { label: "Formations" }],
   },
   carrieres: {
     eyebrow: "Recrutement",

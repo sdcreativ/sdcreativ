@@ -1,6 +1,7 @@
 export const enNav = [
   { label: "Home", href: "/en" },
   { label: "Services", href: "/en/services" },
+  { label: "Training", href: "/en/training" },
   { label: "Portfolio", href: "/en/portfolio" },
   { label: "Pricing", href: "/en/pricing" },
   { label: "About", href: "/en/about" },
@@ -63,6 +64,15 @@ export const enMaintenance = {
   description:
     "Updates, monitoring, backups and priority support — maintenance plans tailored to your stack.",
   cta: "Request a maintenance quote",
+} as const;
+
+export const enTraining = {
+  title: "Professional training",
+  highlight: "that builds real skills",
+  description:
+    "Web & mobile, AI, cybersecurity, cloud, databases, digital marketing and more — for individuals, teams and public organizations.",
+  cta: "Request a quote",
+  viewFr: "View full catalog (French)",
 } as const;
 
 export const enAudit = {
