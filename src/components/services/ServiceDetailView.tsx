@@ -29,8 +29,15 @@ export async function ServiceDetailView({ service, detail }: Props) {
   const { contact } = await getSitePublicSettings();
   const waUrl = buildWhatsappUrl(contact);
   const Icon = service.icon;
+  const relatedIds = Array.isArray(detail.relatedRealisationIds)
+    ? detail.relatedRealisationIds
+    : [];
+  const deliverables = Array.isArray(detail.deliverables) ? detail.deliverables : [];
+  const process = Array.isArray(detail.process) ? detail.process : [];
+  const idealFor = Array.isArray(detail.idealFor) ? detail.idealFor : [];
+  const faq = Array.isArray(detail.faq) ? detail.faq : [];
   const relatedProjects = (
-    await Promise.all(detail.relatedRealisationIds.map((id) => getRealisation(id)))
+    await Promise.all(relatedIds.map((id) => getRealisation(id)))
   ).filter((project): project is NonNullable<typeof project> => Boolean(project));
   const serviceImageSrc = service.image
     ? resolveImageDisplayUrl(service.image)
@@ -38,7 +45,7 @@ export async function ServiceDetailView({ service, detail }: Props) {
 
   return (
     <>
-      <FaqJsonLd items={detail.faq} />
+      {faq.length > 0 && <FaqJsonLd items={faq} />}
       <PageHero
         eyebrow="Nos services"
         title={service.title}
@@ -56,11 +63,12 @@ export async function ServiceDetailView({ service, detail }: Props) {
         <div className="container mx-auto px-4 md:px-6 lg:px-8">
           <div className="flex flex-wrap gap-4">
             <div className="inline-flex items-center gap-2 rounded-full border border-primary/20 bg-primary-light/50 px-4 py-2 text-sm font-semibold text-primary">
-              <Wallet className="h-4 w-4" aria-hidden />À partir de {detail.startingFrom}
+              <Wallet className="h-4 w-4" aria-hidden />À partir de{" "}
+              {detail.startingFrom || "sur devis"}
             </div>
             <div className="inline-flex items-center gap-2 rounded-full border border-gray/60 bg-gray-light px-4 py-2 text-sm font-medium text-foreground/80">
               <Clock className="h-4 w-4 text-primary" aria-hidden />
-              Délai indicatif : {detail.delay}
+              Délai indicatif : {detail.delay || "selon projet"}
             </div>
           </div>
         </div>
@@ -70,16 +78,22 @@ export async function ServiceDetailView({ service, detail }: Props) {
         <div className="container mx-auto grid items-center gap-12 px-4 lg:grid-cols-2 lg:gap-16 md:px-6 lg:px-8">
           <div>
             <h2 className="text-2xl font-bold text-foreground md:text-3xl">
-              {detail.problem.title}
+              {detail.problem?.title || "Votre besoin"}
             </h2>
-            <p className="mt-4 leading-relaxed text-gray-text">{detail.problem.text}</p>
+            <p className="mt-4 leading-relaxed text-gray-text">
+              {detail.problem?.text || service.description}
+            </p>
           </div>
           <div className="rounded-2xl border border-primary/20 bg-primary-light/30 p-6 md:p-8">
             <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-xl bg-primary text-white">
               <Icon className="h-6 w-6" aria-hidden />
             </div>
-            <h2 className="text-xl font-bold text-foreground">{detail.solution.title}</h2>
-            <p className="mt-3 leading-relaxed text-gray-text">{detail.solution.text}</p>
+            <h2 className="text-xl font-bold text-foreground">
+              {detail.solution?.title || service.title}
+            </h2>
+            <p className="mt-3 leading-relaxed text-gray-text">
+              {detail.solution?.text || detail.heroDescription}
+            </p>
           </div>
         </div>
       </section>
@@ -104,13 +118,14 @@ export async function ServiceDetailView({ service, detail }: Props) {
         </section>
       )}
 
+      {deliverables.length > 0 && (
       <section className="py-16 md:py-20">
         <div className="container mx-auto px-4 md:px-6 lg:px-8">
           <h2 className="text-center text-2xl font-bold text-foreground md:text-3xl">
             Ce qui est inclus
           </h2>
           <ul className="mx-auto mt-10 grid max-w-4xl gap-3 sm:grid-cols-2">
-            {detail.deliverables.map((item) => (
+            {deliverables.map((item) => (
               <li
                 key={item}
                 className="flex items-start gap-3 rounded-xl border border-gray/60 bg-white p-4 shadow-sm"
@@ -122,14 +137,16 @@ export async function ServiceDetailView({ service, detail }: Props) {
           </ul>
         </div>
       </section>
+      )}
 
+      {process.length > 0 && (
       <section className="border-t border-gray/40 bg-gray-light py-16 md:py-20">
         <div className="container mx-auto px-4 md:px-6 lg:px-8">
           <h2 className="text-center text-2xl font-bold text-foreground md:text-3xl">
-            Notre processus en 4 étapes
+            Notre processus en {process.length} étapes
           </h2>
           <ol className="mx-auto mt-10 grid max-w-5xl gap-6 md:grid-cols-2 lg:grid-cols-4">
-            {detail.process.map(({ step, title, description }) => (
+            {process.map(({ step, title, description }) => (
               <li
                 key={step}
                 className="rounded-2xl border border-gray/60 bg-white p-6 shadow-sm"
@@ -142,14 +159,16 @@ export async function ServiceDetailView({ service, detail }: Props) {
           </ol>
         </div>
       </section>
+      )}
 
+      {idealFor.length > 0 && (
       <section className="py-16 md:py-20">
         <div className="container mx-auto px-4 md:px-6 lg:px-8">
           <h2 className="text-center text-2xl font-bold text-foreground md:text-3xl">
             Idéal pour
           </h2>
           <ul className="mx-auto mt-8 flex max-w-3xl flex-wrap justify-center gap-3">
-            {detail.idealFor.map((item) => (
+            {idealFor.map((item) => (
               <li
                 key={item}
                 className="rounded-full border border-gray/60 bg-gray-light px-4 py-2 text-sm font-medium text-foreground/80"
@@ -160,6 +179,7 @@ export async function ServiceDetailView({ service, detail }: Props) {
           </ul>
         </div>
       </section>
+      )}
 
       {relatedProjects.length > 0 && (
         <section className="border-t border-gray/40 bg-gray-light py-16 md:py-20">
@@ -178,13 +198,14 @@ export async function ServiceDetailView({ service, detail }: Props) {
         </section>
       )}
 
+      {faq.length > 0 && (
       <section className="border-t border-gray/40 py-16 md:py-20">
         <div className="container mx-auto max-w-3xl px-4 md:px-6 lg:px-8">
           <h2 className="text-center text-2xl font-bold text-foreground md:text-3xl">
             Questions fréquentes
           </h2>
           <div className="mt-8 space-y-3">
-            {detail.faq.map((item) => (
+            {faq.map((item) => (
               <AccordionItem
                 key={item.question}
                 question={item.question}
@@ -194,6 +215,7 @@ export async function ServiceDetailView({ service, detail }: Props) {
           </div>
         </div>
       </section>
+      )}
 
       <section className="bg-dark py-16 md:py-20">
         <div className="container mx-auto max-w-2xl px-4 text-center md:px-6 lg:px-8">

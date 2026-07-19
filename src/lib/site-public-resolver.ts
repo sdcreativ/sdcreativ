@@ -99,6 +99,7 @@ export function buildWhatsappUrl(
   contact: SiteContactInfo,
   message = contact.whatsappMessage,
 ): string {
-  const encoded = encodeURIComponent(message);
-  return `https://wa.me/${contact.whatsapp.replace(/\D/g, "")}?text=${encoded}`;
+  const digits = String(contact.whatsapp ?? "").replace(/\D/g, "");
+  const encoded = encodeURIComponent(message || "Bonjour");
+  return `https://wa.me/${digits || "22500000000"}?text=${encoded}`;
 }

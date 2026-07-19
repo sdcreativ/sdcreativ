@@ -101,7 +101,7 @@ export function RealisationCard({ project, index, large }: RealisationCardProps)
           </p>
 
           <div className="mt-4 flex flex-wrap gap-2">
-            {project.tags.slice(0, 3).map((tag) => (
+            {(project.tags ?? []).slice(0, 3).map((tag) => (
               <span
                 key={tag}
                 className="rounded-full border border-gray bg-gray-light/50 px-3 py-1 text-xs font-medium text-foreground/70"
