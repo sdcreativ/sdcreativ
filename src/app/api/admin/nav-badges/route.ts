@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { getAdminSession, requireAdminAuth } from "@/lib/admin-auth";
 import { isDatabaseConfigured } from "@/lib/db";
-import { getCrmNavBadges } from "@/lib/crm-nav-badges";
+import { getCrmNavBadges } from "@/lib/crm-nav-badges-server";
 import { getRolePermissions } from "@/lib/crm-permissions";
 
 export async function GET() {
