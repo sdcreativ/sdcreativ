@@ -5,6 +5,7 @@ export type ChatKnowledgeEntry = {
   links?: { label: string; href: string }[];
 };
 
+/** Accueil générique — le widget utilise `getAiGreeting` (Phase 7) selon les horaires. */
 export const chatGreeting =
   "Bonjour ! Je suis l'assistant SD CREATIV. Posez-moi vos questions sur nos services, tarifs ou délais — je suis là pour vous orienter.";
 
@@ -84,10 +85,24 @@ export const chatKnowledge: ChatKnowledgeEntry[] = [
       "rencontrer", "équipe", "equipe", "abidjan",
     ],
     answer:
-      "Contactez-nous via le formulaire, WhatsApp (bouton en bas à droite) ou réservez un appel de 30 minutes. Nous sommes basés à Abidjan et répondons du lundi au vendredi, 8h–18h.",
+      "En heures ouvrées (lun–ven 8h–18h Abidjan), un conseiller répond via le Live Chat / appel audio (bulle en bas à droite). Hors horaires : WhatsApp, formulaire de contact ou prise de rendez-vous en ligne. Nous sommes basés à Abidjan.",
     links: [
+      { label: "Prendre rendez-vous", href: "/rendez-vous" },
       { label: "Contact", href: "/contact" },
       { label: "Audit web gratuit", href: "/audit-gratuit" },
+    ],
+  },
+  {
+    id: "conseiller",
+    keywords: [
+      "conseiller", "humain", "personne", "appeler", "téléphone", "telephone",
+      "live chat", "3cx", "parler à", "parler a", "agent",
+    ],
+    answer:
+      "Oui — du lundi au vendredi, 8h–18h (Abidjan), ouvrez le chat conseiller (ou un appel audio) via la bulle en bas à droite. Hors horaires, prenez rendez-vous ou écrivez-nous sur WhatsApp ; un humain reprendra dès l’ouverture.",
+    links: [
+      { label: "Prendre rendez-vous", href: "/rendez-vous" },
+      { label: "Contact", href: "/contact" },
     ],
   },
   {
@@ -112,4 +127,4 @@ export const chatKnowledge: ChatKnowledgeEntry[] = [
 ];
 
 export const chatFallback =
-  "Je n'ai pas trouvé de réponse précise à votre question. Notre équipe peut vous aider directement — utilisez le formulaire de contact ou WhatsApp.";
+  "Je n'ai pas trouvé de réponse précise à votre question. En heures ouvrées, ouvrez le chat conseiller (bas à droite). Sinon : WhatsApp, formulaire de contact ou prise de rendez-vous.";

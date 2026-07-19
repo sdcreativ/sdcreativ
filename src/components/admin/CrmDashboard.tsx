@@ -27,6 +27,7 @@ import {
   CrmRevenueChart,
 } from "@/components/admin/CrmReportCharts";
 import { CrmInfraHealthWidget } from "@/components/admin/CrmInfraHealthWidget";
+import { CrmCommunicationsStatsPanel } from "@/components/admin/CrmCommunicationsStatsPanel";
 import { fetchCrmClients } from "@/lib/clients-api";
 import type { Client } from "@/lib/clients";
 import {
@@ -226,6 +227,17 @@ export function CrmDashboard() {
             ))}
           </div>
         );
+
+      case "communications":
+        return canShowDashboardWidget("communications", permissions) ? (
+          <CrmCommunicationsStatsPanel
+            key="communications"
+            compact
+            defaultPeriod={period}
+            showExport={canReports}
+            showListLink
+          />
+        ) : null;
 
       case "charts":
         return reports ? (

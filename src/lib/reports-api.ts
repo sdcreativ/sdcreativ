@@ -1,6 +1,7 @@
 import type { ReportPeriod } from "@/content/reports-labels";
 import type { DrilldownEntity, DrilldownItem } from "@/lib/reports-drilldown";
 import type { ReportsComparison, ReportsFilters, ReportsSummary } from "@/lib/reports";
+import type { CommunicationsStats } from "@/lib/communications-stats";
 import { parseFetchJson } from "@/lib/fetch-json";
 
 async function parseJson<T>(res: Response): Promise<T> {
@@ -46,6 +47,28 @@ export async function fetchReportDrilldown(input: {
 
 export function getReportsExportUrl(months = 12): string {
   return `/api/admin/reports/export?months=${months}`;
+}
+
+export type { CommunicationsStats };
+
+export async function fetchCommunicationsStats(
+  period: ReportPeriod = "month",
+  channel: "all" | "chat" | "call" | "meeting" = "all",
+): Promise<CommunicationsStats> {
+  const params = new URLSearchParams({ period, channel });
+  const res = await fetch(`/api/admin/reports/communications?${params}`, {
+    credentials: "include",
+  });
+  const data = await parseJson<{ stats: CommunicationsStats }>(res);
+  return data.stats;
+}
+
+export function getCommunicationsStatsExportUrl(
+  period: ReportPeriod = "month",
+  channel: "all" | "chat" | "call" | "meeting" = "all",
+): string {
+  const params = new URLSearchParams({ period, channel });
+  return `/api/admin/reports/communications/export?${params}`;
 }
 
 export function getReportsPdfUrl(period: ReportPeriod = "month", compare = false): string {

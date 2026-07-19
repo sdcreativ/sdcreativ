@@ -1,0 +1,276 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  SD CREATIV CRM ↔ 3CX (server-side template)
+  API: https://sdcreativ.com/api/integrations/3cx/*
+  Auth: Authorization: Bearer [ApiKey]  (= THREE_CX_CRM_TOKEN)
+  Pas d’activity-type ID CRM : journalisation via résumé texte + communication_events.
+  Upload: Admin 3CX → Intégrations / CRM → Upload template.
+  Guide: docs/CRM-3CX-PHASE4.md
+-->
+<Crm xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+     xsi:noNamespaceSchemaLocation="https://downloads-global.3cx.com/downloads/crm/CrmTemplateSchema.xsd"
+     Country="CI"
+     Name="SD CREATIV CRM"
+     Version="1.0"
+     SupportsEmojis="true">
+  <Number Prefix="AsIs" MaxLength="[MaxLength]" />
+  <Connection MaxConcurrentRequests="4" />
+  <Parameters>
+    <Parameter Name="ApiBase" Type="String" Parent="General Configuration" Editor="String"
+               Title="API Base URL" Default="https://sdcreativ.com/api/integrations/3cx" />
+    <Parameter Name="ApiKey" Type="Password" Parent="General Configuration" Editor="String"
+               Title="CRM Token (THREE_CX_CRM_TOKEN)" Default="" />
+    <Parameter Name="MaxLength" Type="String" Parent="General Configuration" Editor="String"
+               Title="Max Length" Default="16" />
+    <Parameter Name="ReportCallEnabled" Type="Boolean" Parent="General Configuration" Editor="String"
+               Title="Enable Call Journaling" Default="True" />
+    <Parameter Name="ReportChatEnabled" Type="Boolean" Parent="General Configuration" Editor="String"
+               Title="Enable Chat Journaling" Default="True" />
+    <Parameter Name="CreateContactEnabled" Type="Boolean" Parent="General Configuration" Editor="String"
+               Title="Enable Contact Creation" Default="True" />
+    <Parameter Name="Subject" Type="String" Parent="General Configuration" Editor="String"
+               Title="Call Subject" Default="Appel 3CX" />
+    <Parameter Name="InboundCallText" Type="String" Parent="General Configuration" Editor="String"
+               Title="Inbound Call Text"
+               Default="Appel entrant depuis [Number] — Agent [Agent] — Durée [Duration] — [DateTime]" />
+    <Parameter Name="MissedCallText" Type="String" Parent="General Configuration" Editor="String"
+               Title="Missed Call Text"
+               Default="Appel manqué de [Number] — [DateTime]" />
+    <Parameter Name="OutboundCallText" Type="String" Parent="General Configuration" Editor="String"
+               Title="Outbound Call Text"
+               Default="Appel sortant vers [Number] — Agent [Agent] — Durée [Duration] — [DateTime]" />
+    <Parameter Name="NotAnsweredOutboundCallText" Type="String" Parent="General Configuration" Editor="String"
+               Title="Not Answered Outbound Text"
+               Default="Appel sortant sans réponse vers [Number] — [DateTime]" />
+    <Parameter Name="ChatSubject" Type="String" Parent="General Configuration" Editor="String"
+               Title="Chat Subject" Default="Live Chat 3CX" />
+  </Parameters>
+
+  <Authentication Type="No" />
+
+  <Scenarios>
+    <!-- Lookup by phone (Id vide = scénario obligatoire) -->
+    <Scenario EntityId="Contacts" EntityOrder="Contacts">
+      <Request SkipIf="[IIf([Number]==&quot;&quot;,True,False)]"
+               Url="[ApiBase]/contacts/lookup?phone=[Number]"
+               Message=""
+               RequestContentType=""
+               RequestEncoding="UrlEncoded"
+               RequestType="Get"
+               ResponseType="Json">
+        <Headers>
+          <Value Key="Authorization" Passes="0">Bearer [ApiKey]</Value>
+        </Headers>
+      </Request>
+      <Rules>
+        <Rule Type="Any">contacts.id</Rule>
+      </Rules>
+      <Variables>
+        <Variable Name="EntityId" Path="contacts.entityId"><Filter /></Variable>
+        <Variable Name="EntityType" Path="contacts.entityType"><Filter /></Variable>
+        <Variable Name="FirstName" Path="contacts.firstName"><Filter /></Variable>
+        <Variable Name="LastName" Path="contacts.lastName"><Filter /></Variable>
+        <Variable Name="CompanyName" Path="contacts.companyName"><Filter /></Variable>
+        <Variable Name="Email" Path="contacts.email"><Filter /></Variable>
+        <Variable Name="PhoneBusiness" Path="contacts.phoneBusiness"><Filter /></Variable>
+        <Variable Name="PhoneMobile" Path="contacts.phoneMobile"><Filter /></Variable>
+        <Variable Name="ContactUrl" Path="contacts.contactUrl"><Filter /></Variable>
+      </Variables>
+      <Outputs AllowEmpty="false">
+        <Output Type="EntityId" Passes="0" Value="[EntityId]" />
+        <Output Type="EntityType" Passes="0" Value="[EntityType]" />
+        <Output Type="FirstName" Passes="0" Value="[FirstName]" />
+        <Output Type="LastName" Passes="0" Value="[LastName]" />
+        <Output Type="CompanyName" Passes="0" Value="[CompanyName]" />
+        <Output Type="Email" Passes="0" Value="[Email]" />
+        <Output Type="PhoneBusiness" Passes="0" Value="[PhoneBusiness]" />
+        <Output Type="PhoneMobile" Passes="0" Value="[PhoneMobile]" />
+        <Output Type="ContactUrl" Passes="0" Value="[ContactUrl]" />
+      </Outputs>
+    </Scenario>
+
+    <!-- Lookup by email (Live Chat) -->
+    <Scenario Id="LookupByEmail_Contacts" EntityId="Contacts" EntityOrder="Contacts">
+      <Request SkipIf="[IIf([Email]==&quot;&quot;,True,False)]"
+               Url="[ApiBase]/contacts/lookup?email=[Email]"
+               Message=""
+               RequestContentType=""
+               RequestEncoding="UrlEncoded"
+               RequestType="Get"
+               ResponseType="Json">
+        <Headers>
+          <Value Key="Authorization" Passes="0">Bearer [ApiKey]</Value>
+        </Headers>
+      </Request>
+      <Rules>
+        <Rule Type="Any">contacts.id</Rule>
+      </Rules>
+      <Variables>
+        <Variable Name="EntityId" Path="contacts.entityId"><Filter /></Variable>
+        <Variable Name="EntityType" Path="contacts.entityType"><Filter /></Variable>
+        <Variable Name="FirstName" Path="contacts.firstName"><Filter /></Variable>
+        <Variable Name="LastName" Path="contacts.lastName"><Filter /></Variable>
+        <Variable Name="CompanyName" Path="contacts.companyName"><Filter /></Variable>
+        <Variable Name="Email" Path="contacts.email"><Filter /></Variable>
+        <Variable Name="PhoneBusiness" Path="contacts.phoneBusiness"><Filter /></Variable>
+        <Variable Name="PhoneMobile" Path="contacts.phoneMobile"><Filter /></Variable>
+        <Variable Name="ContactUrl" Path="contacts.contactUrl"><Filter /></Variable>
+      </Variables>
+      <Outputs AllowEmpty="false">
+        <Output Type="EntityId" Passes="0" Value="[EntityId]" />
+        <Output Type="EntityType" Passes="0" Value="[EntityType]" />
+        <Output Type="FirstName" Passes="0" Value="[FirstName]" />
+        <Output Type="LastName" Passes="0" Value="[LastName]" />
+        <Output Type="CompanyName" Passes="0" Value="[CompanyName]" />
+        <Output Type="Email" Passes="0" Value="[Email]" />
+        <Output Type="PhoneBusiness" Passes="0" Value="[PhoneBusiness]" />
+        <Output Type="PhoneMobile" Passes="0" Value="[PhoneMobile]" />
+        <Output Type="ContactUrl" Passes="0" Value="[ContactUrl]" />
+      </Outputs>
+    </Scenario>
+
+    <!-- Recherche libre Web Client -->
+    <Scenario Id="SearchContacts">
+      <Request SkipIf="[IIf([SearchText]==&quot;&quot;,True,False)]"
+               Url="[ApiBase]/contacts/search?q=[SearchText]"
+               Message=""
+               RequestContentType=""
+               RequestEncoding="UrlEncoded"
+               RequestType="Get"
+               ResponseType="Json">
+        <Headers>
+          <Value Key="Authorization" Passes="0">Bearer [ApiKey]</Value>
+        </Headers>
+      </Request>
+      <Rules>
+        <Rule Type="Any">contacts.id</Rule>
+      </Rules>
+      <Variables>
+        <Variable Name="EntityId" Path="contacts.entityId"><Filter /></Variable>
+        <Variable Name="EntityType" Path="contacts.entityType"><Filter /></Variable>
+        <Variable Name="FirstName" Path="contacts.firstName"><Filter /></Variable>
+        <Variable Name="LastName" Path="contacts.lastName"><Filter /></Variable>
+        <Variable Name="CompanyName" Path="contacts.companyName"><Filter /></Variable>
+        <Variable Name="Email" Path="contacts.email"><Filter /></Variable>
+        <Variable Name="PhoneBusiness" Path="contacts.phoneBusiness"><Filter /></Variable>
+        <Variable Name="PhoneMobile" Path="contacts.phoneMobile"><Filter /></Variable>
+        <Variable Name="ContactUrl" Path="contacts.contactUrl"><Filter /></Variable>
+      </Variables>
+      <Outputs AllowEmpty="false">
+        <Output Type="EntityId" Passes="0" Value="[EntityId]" />
+        <Output Type="EntityType" Passes="0" Value="[EntityType]" />
+        <Output Type="FirstName" Passes="0" Value="[FirstName]" />
+        <Output Type="LastName" Passes="0" Value="[LastName]" />
+        <Output Type="CompanyName" Passes="0" Value="[CompanyName]" />
+        <Output Type="Email" Passes="0" Value="[Email]" />
+        <Output Type="PhoneBusiness" Passes="0" Value="[PhoneBusiness]" />
+        <Output Type="PhoneMobile" Passes="0" Value="[PhoneMobile]" />
+        <Output Type="ContactUrl" Passes="0" Value="[ContactUrl]" />
+      </Outputs>
+    </Scenario>
+
+    <!-- Création contact depuis le client 3CX -->
+    <Scenario Id="CreateContactRecordFromClient">
+      <Request SkipIf="[CreateContactEnabled]!=True"
+               Url="[ApiBase]/contacts"
+               Message=""
+               RequestContentType=""
+               RequestEncoding="Json"
+               RequestType="Post"
+               ResponseType="Json">
+        <Headers>
+          <Value Key="Authorization" Passes="0">Bearer [ApiKey]</Value>
+        </Headers>
+        <PostValues>
+          <Value Key="firstName" Passes="1">[FirstName]</Value>
+          <Value Key="lastName" Passes="1">[LastName]</Value>
+          <Value Key="email" Passes="1">[Email]</Value>
+          <Value Key="phone" Passes="1">[Number]</Value>
+          <Value Key="companyName" Passes="1">[Company]</Value>
+          <Value Key="source" Passes="0">call_3cx</Value>
+        </PostValues>
+      </Request>
+      <Rules>
+        <Rule Type="Any">contact.id</Rule>
+      </Rules>
+      <Variables>
+        <Variable Name="EntityId" Path="contact.entityId"><Filter /></Variable>
+        <Variable Name="EntityType" Path="contact.entityType"><Filter /></Variable>
+        <Variable Name="FirstName" Path="contact.firstName"><Filter /></Variable>
+        <Variable Name="LastName" Path="contact.lastName"><Filter /></Variable>
+        <Variable Name="CompanyName" Path="contact.companyName"><Filter /></Variable>
+        <Variable Name="Email" Path="contact.email"><Filter /></Variable>
+        <Variable Name="PhoneBusiness" Path="contact.phoneBusiness"><Filter /></Variable>
+        <Variable Name="PhoneMobile" Path="contact.phoneMobile"><Filter /></Variable>
+        <Variable Name="ContactUrl" Path="contact.contactUrl"><Filter /></Variable>
+      </Variables>
+      <Outputs AllowEmpty="false">
+        <Output Type="EntityId" Passes="0" Value="[EntityId]" />
+        <Output Type="EntityType" Passes="0" Value="[EntityType]" />
+        <Output Type="FirstName" Passes="0" Value="[FirstName]" />
+        <Output Type="LastName" Passes="0" Value="[LastName]" />
+        <Output Type="CompanyName" Passes="0" Value="[CompanyName]" />
+        <Output Type="Email" Passes="0" Value="[Email]" />
+        <Output Type="PhoneBusiness" Passes="0" Value="[PhoneBusiness]" />
+        <Output Type="PhoneMobile" Passes="0" Value="[PhoneMobile]" />
+        <Output Type="ContactUrl" Passes="0" Value="[ContactUrl]" />
+      </Outputs>
+    </Scenario>
+
+    <!-- Call journaling -->
+    <Scenario Id="ReportCall">
+      <!-- EntityId optionnel : l’API crée / rattache via phone+email si absent -->
+      <Request SkipIf="[ReportCallEnabled]!=True"
+               Url="[ApiBase]/journal/call"
+               Message=""
+               RequestContentType=""
+               RequestEncoding="Json"
+               RequestType="Post"
+               ResponseType="Json">
+        <Headers>
+          <Value Key="Authorization" Passes="0">Bearer [ApiKey]</Value>
+        </Headers>
+        <PostValues>
+          <Value Key="externalId" Passes="1">[CallStartTimeUTCMillis]-[Number]-[Agent]</Value>
+          <Value Key="entityId" Passes="1">[EntityId]</Value>
+          <Value Key="phone" Passes="1">[Number]</Value>
+          <Value Key="email" Passes="1">[Email]</Value>
+          <Value Key="direction" Passes="1">[CallDirection]</Value>
+          <Value Key="callType" Passes="1">[CallType]</Value>
+          <Value Key="agentExtension" Passes="1">[Agent]</Value>
+          <Value Key="duration" Passes="1">[Duration]</Value>
+          <Value Key="subject" Passes="2">[[Subject]]</Value>
+          <Value Key="summary" Passes="2" If="[CallType]==Inbound">[[InboundCallText]]</Value>
+          <Value Key="summary" Passes="2" If="[CallType]==Missed">[[MissedCallText]]</Value>
+          <Value Key="summary" Passes="2" If="[CallType]==Outbound">[[OutboundCallText]]</Value>
+          <Value Key="summary" Passes="2" If="[CallType]==Notanswered">[[NotAnsweredOutboundCallText]]</Value>
+        </PostValues>
+      </Request>
+    </Scenario>
+
+    <!-- Chat journaling -->
+    <Scenario Id="ReportChat">
+      <Request SkipIf="[ReportChatEnabled]!=True"
+               Url="[ApiBase]/journal/chat"
+               Message=""
+               RequestContentType=""
+               RequestEncoding="Json"
+               RequestType="Post"
+               ResponseType="Json">
+        <Headers>
+          <Value Key="Authorization" Passes="0">Bearer [ApiKey]</Value>
+        </Headers>
+        <PostValues>
+          <Value Key="externalId" Passes="1">[ChatStartTimeUTCMillis]-[Email]-[Agent]</Value>
+          <Value Key="entityId" Passes="1">[EntityId]</Value>
+          <Value Key="email" Passes="1">[Email]</Value>
+          <Value Key="phone" Passes="1">[Number]</Value>
+          <Value Key="agentExtension" Passes="1">[Agent]</Value>
+          <Value Key="duration" Passes="1">[Duration]</Value>
+          <Value Key="subject" Passes="2">[[ChatSubject]]</Value>
+          <Value Key="summary" Passes="2">[[ChatSubject]]&#10;[ChatMessages]</Value>
+        </PostValues>
+      </Request>
+    </Scenario>
+  </Scenarios>
+</Crm>

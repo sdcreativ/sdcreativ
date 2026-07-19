@@ -22,6 +22,7 @@ export const CRM_MOBILE_SECONDARY_IDS = [
   "invoices",
   "projects",
   "tickets",
+  "communications",
   "deals",
   "inbox",
   "settings",

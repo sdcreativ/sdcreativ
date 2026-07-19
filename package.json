@@ -17,7 +17,9 @@
     "db:init": "psql \"$DATABASE_URL\" -f scripts/db-init.sql",
     "db:seed-portal": "export DATABASE_URL=\"$(node -e \"const fs=require('fs');const m=fs.readFileSync('.env.local','utf8').match(/^DATABASE_URL=(.+)$/m);if(!m)process.exit(1);console.log(m[1].trim().replace(/^['\\\"]|['\\\"]$/g,''))\")\" && psql \"$DATABASE_URL\" -f scripts/seed-portal-demo.sql",
     "db:purge-portal-demo": "export DATABASE_URL=\"$(node -e \"const fs=require('fs');const m=fs.readFileSync('.env.local','utf8').match(/^DATABASE_URL=(.+)$/m);if(!m)process.exit(1);console.log(m[1].trim().replace(/^['\\\"]|['\\\"]$/g,''))\")\" && psql \"$DATABASE_URL\" -f scripts/purge-portal-demo.sql",
-    "db:migrate": "bash scripts/migrate-screativ-to-sdcreativ.sh"
+    "db:migrate": "bash scripts/migrate-screativ-to-sdcreativ.sh",
+    "threecx:check": "node scripts/check-threecx-socle.mjs",
+    "threecx:loadtest": "node scripts/loadtest-threecx-api.mjs"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.1077.0",

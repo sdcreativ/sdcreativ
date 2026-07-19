@@ -18,6 +18,7 @@ import {
 } from "@/content/reports-labels";
 import type { ReportsComparison, ReportsSummary } from "@/lib/reports";
 import { fetchReportsSummary, getReportsExportUrl, getReportsPdfUrl } from "@/lib/reports-api";
+import { CrmCommunicationsStatsPanel } from "@/components/admin/CrmCommunicationsStatsPanel";
 import {
   CrmConversionChart,
   CrmPeriodComparisonChart,
@@ -384,6 +385,8 @@ export function CrmReportsView() {
               )}
             </SectionCard>
           </div>
+
+          <CrmCommunicationsStatsPanel defaultPeriod={period} showListLink />
 
           <p className="text-xs text-gray-text">
             CA basé sur les devis acceptés (subtotal HT) et budgets des projets livrés.{" "}

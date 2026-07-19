@@ -84,6 +84,35 @@ export function clearRateLimit(namespace: string, key: string): void {
   getBucket(namespace).delete(key);
 }
 
+/**
+ * Rate-limit « consommation » (chaque requête compte), distinct des échecs login.
+ * Retourne limited=true si le quota de la fenêtre est déjà atteint.
+ */
+export function consumeRateLimit(
+  namespace: string,
+  key: string,
+  { limit, windowMs }: RateLimitConfig,
+): { limited: boolean; retryAfterSec: number } {
+  const now = Date.now();
+  const bucket = getBucket(namespace);
+  const entry = bucket.get(key);
+
+  if (!entry || now > entry.resetAt) {
+    bucket.set(key, { count: 1, resetAt: now + windowMs });
+    return { limited: false, retryAfterSec: 0 };
+  }
+
+  if (entry.count >= limit) {
+    return {
+      limited: true,
+      retryAfterSec: Math.max(1, Math.ceil((entry.resetAt - now) / 1000)),
+    };
+  }
+
+  entry.count += 1;
+  return { limited: false, retryAfterSec: 0 };
+}
+
 export function rateLimitExceededResponse(retryAfterSec: number): NextResponse {
   return NextResponse.json(
     {

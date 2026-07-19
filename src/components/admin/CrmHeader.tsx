@@ -16,8 +16,10 @@ import {
   Bell,
   CalendarClock,
   ChevronDown,
+  ExternalLink,
   FileText,
   FolderKanban,
+  Headphones,
   LifeBuoy,
   LogOut,
   Plus,
@@ -25,6 +27,7 @@ import {
   Users,
   CheckSquare,
 } from "lucide-react";
+import { fetchThreeCxWebClientUrl } from "@/lib/communications-api";
 
 const NEW_ITEMS = [
   { label: "Lead", href: "/admin/crm/leads?create=1", icon: Target },
@@ -59,6 +62,7 @@ export function CrmHeader({
   const [newOpen, setNewOpen] = useState(false);
   const [notifOpen, setNotifOpen] = useState(false);
   const [dismissedOperational, setDismissedOperational] = useState<Set<string>>(() => new Set());
+  const [webClientUrl, setWebClientUrl] = useState<string | null>(null);
   const { session, permissions } = useCrmPermissions();
   const canTasks = hasCrmPermission(permissions, "tasks.read");
   const canTickets = hasCrmPermission(permissions, "tickets.read");
@@ -68,6 +72,7 @@ export function CrmHeader({
     "projects.read",
     "quotes.read",
   ]);
+  const canCommunications = hasCrmPermission(permissions, "communications.read");
   const newItems = NEW_ITEMS.filter((item) =>
     hasCrmPermission(permissions, CRM_NEW_ITEM_PERMISSIONS[item.label]),
   );
@@ -144,6 +149,20 @@ export function CrmHeader({
   }, []);
 
   useEffect(() => {
+    if (!canCommunications) {
+      setWebClientUrl(null);
+      return;
+    }
+    let cancelled = false;
+    void fetchThreeCxWebClientUrl().then((url) => {
+      if (!cancelled) setWebClientUrl(url);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [canCommunications]);
+
+  useEffect(() => {
     notifBtnRef.current?.setAttribute("aria-expanded", notifOpen ? "true" : "false");
   }, [notifOpen]);
 
@@ -168,6 +187,20 @@ export function CrmHeader({
 
         <div className="flex flex-wrap items-center gap-3">
           {canSearch && <CrmGlobalSearch ref={searchRef} />}
+
+          {canCommunications && webClientUrl ? (
+            <a
+              href={webClientUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-2 rounded-xl border border-gray/60 px-3 py-2.5 text-sm font-medium text-gray-text transition-colors hover:border-primary/40 hover:text-foreground"
+              title="Ouvrir le Web Client 3CX"
+            >
+              <Headphones className="h-4 w-4 text-primary" aria-hidden />
+              <span className="hidden sm:inline">Web Client 3CX</span>
+              <ExternalLink className="hidden h-3.5 w-3.5 sm:inline" aria-hidden />
+            </a>
+          ) : null}
 
           <div className="relative" ref={notifRef}>
             <button

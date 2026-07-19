@@ -211,7 +211,12 @@ export const iaFaq = [
   {
     question: "Ce chatbot sur votre site est-il une démo ?",
     answer:
-      "Exactement ! L'assistant que vous voyez en bas à gauche est une démonstration concrète de notre savoir-faire en agents IA conversationnels.",
+      "Oui — l’assistant en bas à gauche est une démo de notre savoir-faire. En heures ouvrées (lun–ven 8h–18h), un conseiller humain est aussi joignable via le Live Chat / appel audio (bulle dédiée). Hors horaires, l’IA reste disponible avec WhatsApp et prise de rendez-vous.",
+  },
+  {
+    question: "Comment cohabitent l’assistant IA et le chat conseiller ?",
+    answer:
+      "L’IA répond aux questions fréquentes et oriente. Dès qu’un humain est utile (devis ferme, appel, négociation), elle propose d’ouvrir le chat conseiller 3CX en heures ouvrées, ou un RDV / WhatsApp hors horaires.",
   },
 ] as const;
 

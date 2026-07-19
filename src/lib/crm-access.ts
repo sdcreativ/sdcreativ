@@ -18,6 +18,7 @@ export const CRM_NAV_PERMISSIONS: Record<string, CrmPermission | CrmPermission[]
   invoices: "invoices.read",
   inbox: "tickets.read",
   messagerie: "mail.read",
+  communications: "communications.read",
   timesheets: "timesheets.read",
   vendors: "vendors.read",
   documents: "documents.read",
@@ -58,6 +59,7 @@ export const CRM_WIDGET_PERMISSIONS: Record<
 > = {
   infra: "infra.view",
   kpis: null,
+  communications: ["reports.view", "communications.read"],
   charts: "reports.view",
   pipeline: "leads.read",
   tasks: "tasks.read",

@@ -4,6 +4,8 @@ const SOURCE_SCORE: Record<LeadSource, number> = {
   devis: 28,
   presentation_tablet: 30,
   contact: 24,
+  call_3cx: 24,
+  live_chat_3cx: 22,
   whatsapp: 20,
   manual: 14,
   waitlist: 8,

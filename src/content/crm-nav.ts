@@ -15,6 +15,7 @@ import {
   Mail,
   Megaphone,
   Newspaper,
+  Phone,
   Receipt,
   Settings,
   Target,
@@ -69,6 +70,13 @@ export const crmNavGroups: CrmNavGroup[] = [
       { id: "projects", label: "Projets", href: "/admin/crm/projets", icon: FolderKanban, ready: true },
       { id: "tasks", label: "Tâches", href: "/admin/crm/taches", icon: CheckSquare, ready: true },
       { id: "tickets", label: "Tickets support", href: "/admin/crm/tickets", icon: LifeBuoy, ready: true },
+      {
+        id: "communications",
+        label: "Communications",
+        href: "/admin/crm/communications",
+        icon: Phone,
+        ready: true,
+      },
       { id: "timesheets", label: "Temps", href: "/admin/crm/temps", icon: Clock, ready: true },
       { id: "vendors", label: "Prestataires", href: "/admin/crm/prestataires", icon: UserCog, ready: true },
       { id: "calendar", label: "Calendrier", href: "/admin/crm/calendrier", icon: Calendar, ready: true },
@@ -111,6 +119,10 @@ export function getCrmPageTitle(pathname: string): string {
 
   if (pathname.startsWith("/admin/crm/compte")) {
     return "Mon profil";
+  }
+
+  if (pathname.startsWith("/admin/crm/3cx-pop")) {
+    return "Appel 3CX";
   }
 
   const item = findCrmNavItem(pathname);

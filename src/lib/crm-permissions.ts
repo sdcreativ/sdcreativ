@@ -40,6 +40,8 @@ export const CRM_PERMISSIONS = [
   "mail.read",
   "mail.write",
   "mail.manage",
+  "communications.read",
+  "communications.write",
 ] as const;
 
 export type CrmPermission = (typeof CRM_PERMISSIONS)[number];
@@ -108,6 +110,11 @@ export const CRM_PERMISSION_GROUPS: Array<{
     label: "Messagerie",
     permissions: ["mail.read", "mail.write", "mail.manage"],
   },
+  {
+    id: "communications",
+    label: "Communications 3CX",
+    permissions: ["communications.read", "communications.write"],
+  },
 ];
 
 export const CRM_PERMISSION_LABELS: Record<CrmPermission, string> = {
@@ -149,6 +156,8 @@ export const CRM_PERMISSION_LABELS: Record<CrmPermission, string> = {
   "mail.read": "Voir la messagerie (emails Hostinger)",
   "mail.write": "Répondre depuis la messagerie",
   "mail.manage": "Configurer les boîtes mail synchronisées",
+  "communications.read": "Voir les communications 3CX (chat / appels)",
+  "communications.write": "Gérer les communications 3CX",
 };
 
 const ALL: CrmPermission[] = [...CRM_PERMISSIONS];
@@ -177,6 +186,8 @@ export const ROLE_PERMISSIONS: Record<CrmRole, CrmPermission[]> = {
     "documents.read",
     "mail.read",
     "mail.write",
+    "communications.read",
+    "communications.write",
   ],
   commercial: [
     "leads.read",
@@ -197,6 +208,8 @@ export const ROLE_PERMISSIONS: Record<CrmRole, CrmPermission[]> = {
     "documents.read",
     "mail.read",
     "mail.write",
+    "communications.read",
+    "communications.write",
   ],
   project_manager: [
     "clients.read",
@@ -217,6 +230,7 @@ export const ROLE_PERMISSIONS: Record<CrmRole, CrmPermission[]> = {
     "documents.write",
     "mail.read",
     "mail.write",
+    "communications.read",
   ],
   readonly: [
     "leads.read",
@@ -235,11 +249,15 @@ export const ROLE_PERMISSIONS: Record<CrmRole, CrmPermission[]> = {
     "documents.read",
     "mail.read",
     "mail.write",
+    "communications.read",
   ],
 };
 
 /** Accès messagerie pour toute l’équipe (hors mail.manage, réservé admin). */
 export const TEAM_MAIL_PERMISSIONS: CrmPermission[] = ["mail.read", "mail.write"];
+
+/** Accès communications 3CX pour toute l’équipe (lecture minimale). */
+export const TEAM_COMMUNICATIONS_PERMISSIONS: CrmPermission[] = ["communications.read"];
 
 let dynamicRolePermissions: Map<string, CrmPermission[]> | null = null;
 

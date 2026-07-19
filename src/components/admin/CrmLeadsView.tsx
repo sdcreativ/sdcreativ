@@ -32,6 +32,7 @@ import { useCrmAssignees } from "@/hooks/useCrmTeamMembers";
 import { LeadActivityTimeline } from "@/components/admin/LeadActivityTimeline";
 import { LeadEmailComposer } from "@/components/admin/LeadEmailComposer";
 import { MailLinkedThreadsSection } from "@/components/admin/MailLinkedThreadsSection";
+import { ThreeCxLinkedEventsSection } from "@/components/admin/ThreeCxLinkedEventsSection";
 import { getLeadPresentationMeta } from "@/lib/presentation-lead-meta";
 import { PRESENTATION_LOCATION_LABELS } from "@/lib/presentation-slides";
 import { cn } from "@/lib/utils";
@@ -153,6 +154,18 @@ export function CrmLeadsView() {
       setSourceFilter(source as LeadSource);
     }
   }, [searchParams]);
+
+  const createDefaults = useMemo(
+    () => ({
+      name: searchParams.get("name")?.trim() ?? "",
+      phone: searchParams.get("phone")?.trim() ?? "",
+      source:
+        searchParams.get("source") && searchParams.get("source")! in LEAD_SOURCE_LABELS
+          ? (searchParams.get("source") as LeadSource)
+          : ("manual" as LeadSource),
+    }),
+    [searchParams],
+  );
 
   useEffect(() => {
     const id = searchParams.get("id")?.trim();
@@ -556,6 +569,7 @@ export function CrmLeadsView() {
 
       {showCreate && (
         <CreateLeadModal
+          defaults={createDefaults}
           onClose={() => setShowCreate(false)}
           onCreated={(lead) => {
             void loadLeads();
@@ -857,6 +871,7 @@ function LeadDetailPanel({
             <LeadActivityTimeline leadId={lead.id} refreshKey={activityRefreshKey} />
 
             <MailLinkedThreadsSection leadId={lead.id} />
+            <ThreeCxLinkedEventsSection leadId={lead.id} />
           </div>
           <div className="flex gap-2 border-t border-gray/40 px-5 py-4">
             <button
@@ -1038,14 +1053,17 @@ function LeadDuplicatesModal({
 }
 
 function CreateLeadModal({
+  defaults,
   onClose,
   onCreated,
 }: {
+  defaults?: { name?: string; phone?: string; source?: LeadSource };
   onClose: () => void;
   onCreated: (lead: Lead) => void;
 }) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const source = defaults?.source ?? "manual";
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -1059,7 +1077,7 @@ function CreateLeadModal({
         email: String(data.get("email")),
         phone: String(data.get("phone") || "") || null,
         company: String(data.get("company") || "") || null,
-        source: "manual",
+        source,
         service: String(data.get("service") || "") || null,
         message: String(data.get("message") || "") || null,
         estimatedValue: data.get("estimatedValue")
@@ -1086,10 +1104,26 @@ function CreateLeadModal({
             <X className="h-5 w-5 text-gray-text" aria-hidden />
           </button>
         </div>
+        {source === "call_3cx" ? (
+          <p className="mb-3 text-xs text-gray-text">
+            Prérempli depuis un appel 3CX — complète au minimum un email valide.
+          </p>
+        ) : null}
         <div className="grid gap-3 sm:grid-cols-2">
-          <input name="name" required placeholder="Nom *" className={fieldClass} />
+          <input
+            name="name"
+            required
+            defaultValue={defaults?.name || undefined}
+            placeholder="Nom *"
+            className={fieldClass}
+          />
           <input name="email" type="email" required placeholder="Email *" className={fieldClass} />
-          <input name="phone" placeholder="Téléphone" className={fieldClass} />
+          <input
+            name="phone"
+            defaultValue={defaults?.phone || undefined}
+            placeholder="Téléphone"
+            className={fieldClass}
+          />
           <input name="company" placeholder="Entreprise" className={fieldClass} />
           <input name="service" placeholder="Service / projet" className={`${fieldClass} sm:col-span-2`} />
           <input name="estimatedValue" type="number" min={0} placeholder="Valeur estimée (FCFA)" className={fieldClass} />

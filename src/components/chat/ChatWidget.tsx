@@ -2,10 +2,15 @@
 
 import { useEffect, useRef, useState, type FormEvent } from "react";
 import Link from "next/link";
-import { Bot, Loader2, Send, X } from "lucide-react";
+import { Bot, Headphones, Loader2, Send, X } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
-import { chatGreeting, chatSuggestions } from "@/content/chat-knowledge";
+import { chatSuggestions } from "@/content/chat-knowledge";
 import { HoneypotField } from "@/components/forms/HoneypotField";
+import {
+  getAiGreeting,
+  requestOpenThreeCxChat,
+  type AiCommsMode,
+} from "@/lib/threecx/ai-coexistence";
 import { cn } from "@/lib/utils";
 
 type Message = {
@@ -13,9 +18,15 @@ type Message = {
   role: "user" | "assistant";
   content: string;
   links?: { label: string; href: string }[];
+  openThreeCxLabel?: string;
 };
 
-export function ChatWidget() {
+type Props = {
+  /** Phase 7 — message d’accueil contextualisé (handoff / hors horaires). */
+  mode?: AiCommsMode;
+};
+
+export function ChatWidget({ mode = "default" }: Props) {
   const [open, setOpen] = useState(false);
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState("");
@@ -23,23 +34,43 @@ export function ChatWidget() {
   const [initialized, setInitialized] = useState(false);
   const listRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
+  const modeRef = useRef(mode);
+
+  useEffect(() => {
+    if (modeRef.current !== mode) {
+      modeRef.current = mode;
+      setInitialized(false);
+      if (open) {
+        const greeting = getAiGreeting(mode);
+        setMessages([
+          {
+            id: "welcome",
+            role: "assistant",
+            content: greeting.content,
+            links: greeting.links,
+            openThreeCxLabel: greeting.openThreeCxLabel,
+          },
+        ]);
+        setInitialized(true);
+      }
+    }
+  }, [mode, open]);
 
   useEffect(() => {
     if (open && !initialized) {
+      const greeting = getAiGreeting(mode);
       setMessages([
         {
           id: "welcome",
           role: "assistant",
-          content: chatGreeting,
-          links: [
-            { label: "Solutions IA", href: "/solutions-ia" },
-            { label: "Devis en ligne", href: "/devis" },
-          ],
+          content: greeting.content,
+          links: greeting.links,
+          openThreeCxLabel: greeting.openThreeCxLabel,
         },
       ]);
       setInitialized(true);
     }
-  }, [open, initialized]);
+  }, [open, initialized, mode]);
 
   useEffect(() => {
     if (open) {
@@ -135,7 +166,13 @@ export function ChatWidget() {
               </div>
               <div className="min-w-0 flex-1">
                 <p className="truncate text-sm font-bold text-white">Assistant SD CREATIV</p>
-                <p className="text-xs text-white/60">Propulsé par IA · Démo live</p>
+                <p className="text-xs text-white/60">
+                  {mode === "handoff"
+                    ? "Conseiller dispo · ou IA"
+                    : mode === "after_hours"
+                      ? "Hors horaires · RDV / WhatsApp"
+                      : "Propulsé par IA · Démo live"}
+                </p>
               </div>
               <button
                 type="button"
@@ -165,9 +202,22 @@ export function ChatWidget() {
                     )}
                   >
                     <p>{msg.content}</p>
-                    {msg.links && msg.links.length > 0 && (
+                    {(msg.openThreeCxLabel || (msg.links && msg.links.length > 0)) && (
                       <div className="mt-2 flex flex-wrap gap-2">
-                        {msg.links.map((link) => (
+                        {msg.openThreeCxLabel ? (
+                          <button
+                            type="button"
+                            onClick={() => {
+                              requestOpenThreeCxChat();
+                              setOpen(false);
+                            }}
+                            className="inline-flex items-center gap-1 rounded-md bg-primary px-2 py-1 text-xs font-semibold text-white shadow-sm hover:bg-primary-dark"
+                          >
+                            <Headphones className="h-3 w-3" aria-hidden />
+                            {msg.openThreeCxLabel}
+                          </button>
+                        ) : null}
+                        {msg.links?.map((link) => (
                           <Link
                             key={link.href}
                             href={link.href}

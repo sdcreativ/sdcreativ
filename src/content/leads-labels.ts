@@ -19,6 +19,8 @@ export const LEAD_SOURCE_LABELS: Record<
   waitlist: "Liste d'attente",
   manual: "Manuel",
   whatsapp: "WhatsApp",
+  live_chat_3cx: "Live Chat 3CX",
+  call_3cx: "Appel 3CX",
 };
 
 export const LEAD_PIPELINE_COLUMNS: Array<{

@@ -18,6 +18,8 @@ export const LEAD_SOURCES = [
   "waitlist",
   "manual",
   "whatsapp",
+  "live_chat_3cx",
+  "call_3cx",
 ] as const;
 
 export type LeadStatus = (typeof LEAD_STATUSES)[number];
@@ -259,11 +261,21 @@ export async function listLeadsPaginated(filters: LeadListFilters = {}): Promise
     }
     if (filters.q?.trim()) {
       const pattern = `%${filters.q.trim().replace(/[%_\\]/g, "\\$&")}%`;
-      conditions.push(
-        `(name ILIKE $${idx} OR email ILIKE $${idx} OR company ILIKE $${idx} OR service ILIKE $${idx})`,
-      );
-      params.push(pattern);
-      idx += 1;
+      const phoneDigits = filters.q.replace(/\D/g, "");
+      if (phoneDigits.length >= 6) {
+        conditions.push(
+          `(name ILIKE $${idx} OR email ILIKE $${idx} OR company ILIKE $${idx} OR service ILIKE $${idx}
+            OR regexp_replace(COALESCE(phone, ''), '\\D', '', 'g') LIKE '%' || $${idx + 1} || '%')`,
+        );
+        params.push(pattern, phoneDigits);
+        idx += 2;
+      } else {
+        conditions.push(
+          `(name ILIKE $${idx} OR email ILIKE $${idx} OR company ILIKE $${idx} OR service ILIKE $${idx})`,
+        );
+        params.push(pattern);
+        idx += 1;
+      }
     }
 
     const where = conditions.length > 0 ? `WHERE ${conditions.join(" AND ")}` : "";
