@@ -2,6 +2,7 @@ import { createHash } from "node:crypto";
 import { withDb } from "@/lib/db";
 import { getQuoteById, type Quote } from "@/lib/quotes";
 import { getClientById } from "@/lib/clients";
+import { updateLead } from "@/lib/leads";
 import { saveBillingDocument } from "@/lib/billing/documents";
 import { logBillingEvent } from "@/lib/billing/events";
 import { createAdminBillingNotification } from "@/lib/billing/notifications";
@@ -183,6 +184,12 @@ export async function signPortalQuote(input: SignPortalQuoteInput): Promise<Quot
 
   const updated = await getQuoteById(quote.id);
   if (!updated) throw new BillingWorkflowError("Devis introuvable.");
+
+  if (updated.leadId) {
+    void updateLead(updated.leadId, { status: "signed" }).catch((error) => {
+      console.error("[sign-quote] updateLead signed", updated.leadId, error);
+    });
+  }
 
   void notifyAdminQuoteSigned(updated, signerName);
   void createAdminBillingNotification({

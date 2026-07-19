@@ -500,11 +500,13 @@ export async function updateQuote(
 
     const quote = mapQuote(rows[0]);
 
-    if (nextStatus === "accepted" && quote.leadId) {
-      void updateLead(quote.leadId, { status: "signed" });
-    }
-    if (nextStatus === "validated" && quote.leadId) {
-      void updateLead(quote.leadId, { status: "signed" });
+    if (
+      (nextStatus === "signed" || nextStatus === "accepted" || nextStatus === "validated") &&
+      quote.leadId
+    ) {
+      void updateLead(quote.leadId, { status: "signed" }).catch((error) => {
+        console.error("[quotes] updateLead signed", quote.leadId, error);
+      });
     }
 
     return quote;

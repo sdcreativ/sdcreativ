@@ -5,6 +5,7 @@ import { logBillingEvent } from "@/lib/billing/events";
 import type { BillingActor } from "@/lib/billing/types";
 import { assertQuoteTransition, BillingWorkflowError } from "@/lib/billing/workflow";
 import { logCrmAudit } from "@/lib/crm-audit";
+import { updateLead } from "@/lib/leads";
 
 export type ValidateQuoteResult = {
   quote: Quote;
@@ -64,6 +65,12 @@ export async function validateQuote(input: {
 
   const updated = await getQuoteById(quote.id);
   if (!updated) throw new BillingWorkflowError("Devis introuvable.");
+
+  if (updated.leadId) {
+    void updateLead(updated.leadId, { status: "signed" }).catch((error) => {
+      console.error("[validate-quote] updateLead signed", updated.leadId, error);
+    });
+  }
 
   if (input.autoGenerateInvoice === false) {
     return { quote: updated, invoiceGenerated: false };

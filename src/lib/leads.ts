@@ -223,6 +223,12 @@ export async function listLeadsPaginated(filters: LeadListFilters = {}): Promise
   const pageSize = Math.min(100, Math.max(10, filters.pageSize ?? 50));
   const offset = (page - 1) * pageSize;
 
+  try {
+    await syncLeadsFromSignedQuotes();
+  } catch (error) {
+    console.error("[leads] syncLeadsFromSignedQuotes", error);
+  }
+
   return withDb(async (query) => {
     const conditions: string[] = [];
     const params: unknown[] = [];
@@ -313,6 +319,21 @@ export async function getLeadById(id: string): Promise<Lead | null> {
   return withDb(async (query) => {
     const { rows } = await query<LeadRow>(`SELECT * FROM leads WHERE id = $1`, [id]);
     return rows[0] ? mapLead(rows[0]) : null;
+  });
+}
+
+/** Aligne les leads liés à un devis signé/validé/facturé vers le statut « signed ». */
+export async function syncLeadsFromSignedQuotes(): Promise<number> {
+  return withDb(async (query) => {
+    const { rowCount } = await query(
+      `UPDATE leads l
+       SET status = 'signed', updated_at = NOW()
+       FROM quotes q
+       WHERE q.lead_id = l.id
+         AND q.status IN ('signed', 'accepted', 'validated', 'invoiced')
+         AND l.status NOT IN ('signed', 'lost')`,
+    );
+    return rowCount ?? 0;
   });
 }
 
