@@ -270,6 +270,7 @@ export async function updateDealStage(
         seedMilestones: true,
         description: lead?.message ?? null,
         assignee: lead?.assignee ?? null,
+        sourceQuoteId: deal.quoteId ?? null,
       });
       deal = (await getDealByLeadId(leadId))!;
     }

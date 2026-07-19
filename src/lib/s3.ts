@@ -16,6 +16,7 @@ export const DOCUMENT_CATEGORIES = [
   "deliverables",
   "uploads",
   "misc",
+  "archive",
 ] as const;
 
 export type DocumentCategory = (typeof DOCUMENT_CATEGORIES)[number];

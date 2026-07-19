@@ -113,15 +113,17 @@ export function ProjectDetailPage({ projectId }: Props) {
             <Copy className="h-4 w-4" aria-hidden />
             {copied ? "Copié !" : "Copier l'URL"}
           </button>
-          <button
-            type="button"
-            disabled={saving}
-            onClick={() => void handleDelete()}
-            className="inline-flex items-center gap-2 rounded-xl border border-accent/30 px-3 py-2 text-sm text-accent hover:bg-accent/5"
-          >
-          <Trash2 className="h-4 w-4" aria-hidden />
-          Supprimer
-        </button>
+          {!project.archivedAt && (
+            <button
+              type="button"
+              disabled={saving}
+              onClick={() => void handleDelete()}
+              className="inline-flex items-center gap-2 rounded-xl border border-accent/30 px-3 py-2 text-sm text-accent hover:bg-accent/5"
+            >
+              <Trash2 className="h-4 w-4" aria-hidden />
+              Supprimer
+            </button>
+          )}
         </div>
       </div>
 

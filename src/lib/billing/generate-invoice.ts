@@ -106,12 +106,33 @@ export async function generateInvoiceFromQuote(input: {
   const { clientId, portalClientId } = await resolveClientForQuote(quote);
   const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? "https://sdcreativ.com";
 
+  let projectId = quote.projectId;
+  if (!projectId && clientId) {
+    const { withDb } = await import("@/lib/db");
+    projectId = await withDb(async (query) => {
+      const { rows } = await query<{ id: string }>(
+        `SELECT id FROM projects
+         WHERE client_id = $1
+           AND archived_at IS NULL
+           AND status NOT IN ('cancelled')
+           AND (source_quote_id = $2 OR $2::uuid IS NULL)
+         ORDER BY
+           CASE WHEN source_quote_id = $2 THEN 0 ELSE 1 END,
+           updated_at DESC
+         LIMIT 1`,
+        [clientId, quote.id],
+      );
+      return rows[0]?.id ?? null;
+    });
+  }
+
   const lines = quote.lines.length
     ? quote.lines
     : [{ label: "Prestation", amount: quote.subtotal }];
 
   const invoice = await createInvoice({
     clientId,
+    projectId,
     quoteId: quote.id,
     name: quote.name,
     email: quote.email,
@@ -123,6 +144,21 @@ export async function generateInvoiceFromQuote(input: {
     currency: normalizeCurrency(quote.currency),
     exchangeRateToXof: quote.exchangeRateToXof,
   });
+
+  if (projectId && !quote.projectId) {
+    const { withDb } = await import("@/lib/db");
+    await withDb(async (query) => {
+      await query(
+        `UPDATE quotes SET project_id = $1, updated_at = NOW() WHERE id = $2 AND project_id IS NULL`,
+        [projectId, quote.id],
+      );
+      await query(
+        `UPDATE projects SET source_quote_id = COALESCE(source_quote_id, $2), updated_at = NOW()
+         WHERE id = $1`,
+        [projectId, quote.id],
+      );
+    });
+  }
 
   const html = buildInvoicePdfHtml(invoice, siteUrl, {
     forArchive: true,

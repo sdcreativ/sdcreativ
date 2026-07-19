@@ -40,6 +40,7 @@ export type Invoice = {
   currency: string;
   exchangeRateToXof: number | null;
   exchangeRateAt: string | null;
+  archivedAt: string | null;
   createdAt: string;
   updatedAt: string;
 };
@@ -69,6 +70,7 @@ type InvoiceRow = {
   currency?: string | null;
   exchange_rate_to_xof?: string | number | null;
   exchange_rate_at?: Date | null;
+  archived_at?: Date | null;
   created_at: Date;
   updated_at: Date;
 };
@@ -100,6 +102,7 @@ function mapInvoice(row: InvoiceRow): Invoice {
     exchangeRateToXof:
       row.exchange_rate_to_xof != null ? Number(row.exchange_rate_to_xof) : null,
     exchangeRateAt: row.exchange_rate_at?.toISOString() ?? null,
+    archivedAt: row.archived_at?.toISOString() ?? null,
     createdAt: row.created_at.toISOString(),
     updatedAt: row.updated_at.toISOString(),
   };
@@ -159,10 +162,18 @@ const listSelect = `
   LEFT JOIN clients c ON c.id = i.client_id
 `;
 
-export async function listInvoices(): Promise<Invoice[]> {
+export async function listInvoices(options?: {
+  archived?: boolean | "all";
+}): Promise<Invoice[]> {
   return withDb(async (query) => {
     await syncOverdueInvoices(query);
-    const { rows } = await query<InvoiceRow>(`${listSelect} ORDER BY i.created_at DESC`);
+    const archived = options?.archived;
+    let where = "";
+    if (archived === true) where = "WHERE i.archived_at IS NOT NULL";
+    else if (archived !== "all") where = "WHERE i.archived_at IS NULL";
+    const { rows } = await query<InvoiceRow>(
+      `${listSelect} ${where} ORDER BY i.created_at DESC`,
+    );
     return rows.map(mapInvoice);
   });
 }
@@ -414,12 +425,34 @@ export async function updateInvoice(
     }
 
     const { rows: fullRows } = await query<InvoiceRow>(`${listSelect} WHERE i.id = $1`, [id]);
-    return fullRows[0] ? mapInvoice(fullRows[0]) : null;
+    const updated = fullRows[0] ? mapInvoice(fullRows[0]) : null;
+
+    if (updated && existing.status !== "paid" && updated.status === "paid") {
+      void import("@/lib/crm-audit").then(({ logCrmAudit }) =>
+        logCrmAudit({
+          actor: { userId: null, name: "Système", email: null },
+          action: "invoice.paid",
+          entityType: "invoice",
+          entityId: id,
+          summary: `Facture ${updated.reference} soldée.`,
+          metadata: { total: updated.total, currency: updated.currency },
+        }),
+      );
+    }
+
+    return updated;
   });
 }
 
 export async function deleteInvoice(id: string): Promise<boolean> {
   return withDb(async (query) => {
+    const { rows } = await query<{ archived_at: Date | null }>(
+      `SELECT archived_at FROM invoices WHERE id = $1`,
+      [id],
+    );
+    if (rows[0]?.archived_at) {
+      throw new Error("Cette facture est archivée et ne peut pas être supprimée.");
+    }
     const { rowCount } = await query(`DELETE FROM invoices WHERE id = $1`, [id]);
     return (rowCount ?? 0) > 0;
   });
@@ -435,6 +468,7 @@ export async function createInvoiceFromQuote(quoteId: string): Promise<Invoice |
 
   return createInvoice({
     clientId: quote.clientId,
+    projectId: quote.projectId,
     quoteId: quote.id,
     name: quote.name,
     email: quote.email,

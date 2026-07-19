@@ -9,6 +9,7 @@ import {
   type ProjectStatus,
 } from "@/content/projects-labels";
 import { useCrmAssignees } from "@/hooks/useCrmTeamMembers";
+import { ProjectArchivePanel } from "@/components/admin/ProjectArchivePanel";
 import { ProjectDocumentsPanel } from "@/components/admin/ProjectDocumentsPanel";
 import { ProjectCalendarLink, ProjectGanttTimeline } from "@/components/admin/ProjectGanttTimeline";
 import { ProjectMilestonesEditor } from "@/components/admin/ProjectMilestonesEditor";
@@ -170,6 +171,8 @@ export function ProjectDetailContent({
         projectId={project.id}
         clientPortalHref={`/admin/crm/clients`}
       />
+
+      <ProjectArchivePanel project={project} onArchived={onUpdated} />
 
       <Link
         href="/admin/crm/clients"

@@ -28,6 +28,7 @@ const emptyStats = (): DocumentStats => ({
     deliverables: 0,
     uploads: 0,
     misc: 0,
+    archive: 0,
   },
 });
 

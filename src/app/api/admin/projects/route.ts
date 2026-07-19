@@ -25,12 +25,20 @@ export async function GET(request: Request) {
     const q = searchParams.get("q")?.trim() || undefined;
     const page = searchParams.get("page") ? Number(searchParams.get("page")) : undefined;
     const pageSize = searchParams.get("pageSize") ? Number(searchParams.get("pageSize")) : undefined;
+    const archivedParam = searchParams.get("archived");
+    const archived: ProjectListFilters["archived"] =
+      archivedParam === "1" || archivedParam === "true"
+        ? true
+        : archivedParam === "all"
+          ? "all"
+          : false;
 
     const filters: ProjectListFilters = {
       status: status ?? undefined,
       assignee,
       clientId,
       q,
+      archived,
       page,
       pageSize,
     };

@@ -48,6 +48,8 @@ export type Quote = {
   exchangeRateToXof: number | null;
   exchangeRateAt: string | null;
   legalEntityId: string | null;
+  projectId: string | null;
+  archivedAt: string | null;
   createdAt: string;
   updatedAt: string;
 };
@@ -88,6 +90,8 @@ type QuoteRow = {
   exchange_rate_to_xof?: string | number | null;
   exchange_rate_at?: Date | null;
   legal_entity_id?: string | null;
+  project_id?: string | null;
+  archived_at?: Date | null;
   created_at: Date;
   updated_at: Date;
 };
@@ -145,6 +149,8 @@ function mapQuote(row: QuoteRow): Quote {
       row.exchange_rate_to_xof != null ? Number(row.exchange_rate_to_xof) : null,
     exchangeRateAt: row.exchange_rate_at?.toISOString() ?? null,
     legalEntityId: row.legal_entity_id ?? null,
+    projectId: row.project_id ?? null,
+    archivedAt: row.archived_at?.toISOString() ?? null,
     createdAt: row.created_at.toISOString(),
     updatedAt: row.updated_at.toISOString(),
   };
@@ -305,6 +311,7 @@ export type QuoteListFilters = {
   dateFrom?: string;
   dateTo?: string;
   q?: string;
+  archived?: boolean | "all";
 };
 
 export async function listQuotesFiltered(filters: QuoteListFilters = {}): Promise<Quote[]> {
@@ -350,6 +357,11 @@ export async function listQuotesFiltered(filters: QuoteListFilters = {}): Promis
       );
       params.push(pattern);
       idx += 1;
+    }
+    if (filters.archived === true) {
+      conditions.push(`archived_at IS NOT NULL`);
+    } else if (filters.archived !== "all") {
+      conditions.push(`archived_at IS NULL`);
     }
 
     const where = conditions.length > 0 ? `WHERE ${conditions.join(" AND ")}` : "";
@@ -515,6 +527,13 @@ export async function updateQuote(
 
 export async function deleteQuote(id: string): Promise<boolean> {
   return withDb(async (query) => {
+    const { rows } = await query<{ archived_at: Date | null }>(
+      `SELECT archived_at FROM quotes WHERE id = $1`,
+      [id],
+    );
+    if (rows[0]?.archived_at) {
+      throw new Error("Ce devis est archivé et ne peut pas être supprimé.");
+    }
     const { rowCount } = await query(`DELETE FROM quotes WHERE id = $1`, [id]);
     return (rowCount ?? 0) > 0;
   });

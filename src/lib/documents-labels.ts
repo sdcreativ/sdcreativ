@@ -6,6 +6,7 @@ export const DOCUMENT_CATEGORY_LABELS: Record<DocumentCategory, string> = {
   deliverables: "Livrables",
   uploads: "Vos dépôts",
   misc: "Autres",
+  archive: "Archives",
 };
 
 export const CLIENT_VISIBLE_CATEGORIES: DocumentCategory[] = [
@@ -32,6 +33,7 @@ export const CATEGORY_STYLES: Record<
   deliverables: { bg: "bg-emerald-100", text: "text-emerald-700", icon: "deliverable" },
   uploads: { bg: "bg-amber-100", text: "text-amber-700", icon: "upload" },
   misc: { bg: "bg-gray-light", text: "text-gray-text", icon: "misc" },
+  archive: { bg: "bg-slate-100", text: "text-slate-700", icon: "misc" },
 };
 
 export function formatFileSize(bytes: number): string {

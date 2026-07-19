@@ -2,6 +2,7 @@ import type { LucideIcon } from "lucide-react";
 import {
   BarChart3,
   CheckSquare,
+  Archive,
   Calendar,
   Clock,
   FileText,
@@ -81,6 +82,7 @@ export const crmNavGroups: CrmNavGroup[] = [
       { id: "vendors", label: "Prestataires", href: "/admin/crm/prestataires", icon: UserCog, ready: true },
       { id: "calendar", label: "Calendrier", href: "/admin/crm/calendrier", icon: Calendar, ready: true },
       { id: "documents", label: "Documents", href: "/admin/crm/documents", icon: FileText, ready: true },
+      { id: "archives", label: "Archives", href: "/admin/crm/archives", icon: Archive, ready: true },
       { id: "invoices", label: "Factures", href: "/admin/crm/factures", icon: Receipt, ready: true },
       /** ready: false — UI désactivée tant que CRM_MESSAGERIE_ENABLED ≠ 1. */
       { id: "messagerie", label: "Messagerie", href: "/admin/crm/messagerie", icon: Mail, ready: false },

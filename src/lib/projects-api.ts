@@ -19,6 +19,7 @@ export type ProjectListFilters = {
   assignee?: string;
   clientId?: string;
   q?: string;
+  archived?: boolean | "all";
   page?: number;
   pageSize?: number;
 };
@@ -29,11 +30,65 @@ export async function fetchProjectsPaginated(filters: ProjectListFilters = {}) {
   if (filters.assignee) params.set("assignee", filters.assignee);
   if (filters.clientId) params.set("clientId", filters.clientId);
   if (filters.q) params.set("q", filters.q);
+  if (filters.archived === true) params.set("archived", "1");
+  else if (filters.archived === "all") params.set("archived", "all");
   if (filters.page) params.set("page", String(filters.page));
   if (filters.pageSize) params.set("pageSize", String(filters.pageSize));
   const qs = params.toString();
   const res = await fetch(`/api/admin/projects${qs ? `?${qs}` : ""}`, { credentials: "include" });
   return parseJson<import("@/lib/projects").ProjectListResult>(res);
+}
+
+export async function fetchProjectArchive(projectId: string) {
+  const res = await fetch(`/api/admin/projects/${projectId}/archive`, {
+    credentials: "include",
+  });
+  return parseJson<{
+    dossier: {
+      project: Project;
+      quote: { id: string; reference: string; status: string } | null;
+      invoices: Array<{ id: string; reference: string; status: string; total: number; paidAmount: number }>;
+      readiness: {
+        canArchive: boolean;
+        alreadyArchived: boolean;
+        checklist: Array<{ id: string; label: string; ok: boolean; detail?: string }>;
+        blockers: string[];
+      };
+    };
+    bundle: {
+      id: string;
+      manifestUrl?: string | null;
+      pdfUrl?: string | null;
+      sha256: string;
+      createdAt: string;
+    } | null;
+  }>(res);
+}
+
+export async function archiveProjectApi(projectId: string) {
+  const res = await fetch(`/api/admin/projects/${projectId}/archive`, {
+    method: "POST",
+    credentials: "include",
+  });
+  return parseJson<{ project: Project }>(res);
+}
+
+export async function fetchCrmArchives() {
+  const res = await fetch("/api/admin/archives", { credentials: "include" });
+  return parseJson<{
+    bundles: Array<{
+      id: string;
+      projectId: string;
+      projectName: string;
+      clientLabel: string;
+      sha256: string;
+      createdAt: string;
+      s3KeyPdf: string | null;
+    }>;
+    projects: Project[];
+    quotes: Array<{ id: string; reference: string; projectLabel: string; status: string; archivedAt: string | null }>;
+    invoices: Array<{ id: string; reference: string; name: string; status: string; total: number; archivedAt: string | null }>;
+  }>(res);
 }
 
 export async function fetchProjectById(id: string): Promise<Project> {

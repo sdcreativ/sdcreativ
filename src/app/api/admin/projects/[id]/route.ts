@@ -1,4 +1,6 @@
+import { getAdminSession } from "@/lib/admin-auth";
 import { crmApiAuth } from "@/lib/crm-api-auth";
+import { logCrmAudit } from "@/lib/crm-audit";
 import { NextResponse } from "next/server";
 import { isDatabaseConfigured } from "@/lib/db";
 import {
@@ -51,9 +53,30 @@ export async function PATCH(request: Request, { params }: Props) {
       return NextResponse.json({ error: firstError }, { status: 400 });
     }
 
+    const before = await getProjectById(id);
     const project = await updateProject(id, parsed.data);
     if (!project) {
       return NextResponse.json({ error: "Projet introuvable." }, { status: 404 });
+    }
+
+    if (
+      before &&
+      before.status !== "delivered" &&
+      project.status === "delivered"
+    ) {
+      const session = await getAdminSession();
+      void logCrmAudit({
+        actor: {
+          userId: session?.userId === "legacy" ? null : session?.userId ?? null,
+          name: session?.name ?? "Admin",
+          email: session?.email ?? null,
+        },
+        action: "project.delivered",
+        entityType: "project",
+        entityId: id,
+        summary: `Projet « ${project.name} » marqué livré.`,
+        metadata: { fromStatus: before.status, toStatus: "delivered" },
+      });
     }
 
     return NextResponse.json({ project });
@@ -79,6 +102,9 @@ export async function DELETE(_request: Request, { params }: Props) {
     }
     return NextResponse.json({ success: true });
   } catch (error) {
+    if (error instanceof Error && error.message.includes("archivé")) {
+      return NextResponse.json({ error: error.message }, { status: 409 });
+    }
     console.error("[api/admin/projects/id] DELETE", error);
     return NextResponse.json({ error: "Erreur serveur." }, { status: 500 });
   }

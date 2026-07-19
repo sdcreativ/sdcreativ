@@ -26,6 +26,8 @@ export type Project = {
   description: string | null;
   assignee: string | null;
   assigneeId: string | null;
+  sourceQuoteId: string | null;
+  archivedAt: string | null;
   metadata: Record<string, unknown>;
   milestoneCount: number;
   createdAt: string;
@@ -58,6 +60,8 @@ type ProjectRow = {
   description: string | null;
   assignee: string | null;
   assignee_id: string | null;
+  source_quote_id?: string | null;
+  archived_at?: Date | null;
   metadata: Record<string, unknown> | null;
   milestone_count?: string;
   created_at: Date;
@@ -101,6 +105,8 @@ function mapProject(row: ProjectRow): Project {
     description: row.description,
     assignee: row.assignee ?? null,
     assigneeId: row.assignee_id ?? null,
+    sourceQuoteId: row.source_quote_id ?? null,
+    archivedAt: row.archived_at?.toISOString() ?? null,
     metadata: row.metadata ?? {},
     milestoneCount: Number(row.milestone_count ?? 0),
     createdAt: row.created_at.toISOString(),
@@ -133,6 +139,7 @@ export const createProjectSchema = z.object({
   description: z.string().trim().max(5000).optional().nullable(),
   assignee: z.string().trim().max(100).optional().nullable(),
   assigneeId: z.string().uuid().optional().nullable(),
+  sourceQuoteId: z.string().uuid().optional().nullable(),
   seedMilestones: z.boolean().optional(),
   metadata: z.record(z.string(), z.unknown()).optional(),
 });
@@ -240,6 +247,8 @@ export type ProjectListFilters = {
   assignee?: string;
   clientId?: string;
   q?: string;
+  /** false = actifs (défaut), true = archivés uniquement, "all" = les deux */
+  archived?: boolean | "all";
   page?: number;
   pageSize?: number;
 };
@@ -283,6 +292,11 @@ export async function listProjectsPaginated(filters: ProjectListFilters = {}): P
       conditions.push(`(p.name ILIKE $${idx} OR c.name ILIKE $${idx} OR c.company ILIKE $${idx})`);
       params.push(pattern);
       idx += 1;
+    }
+    if (filters.archived === true) {
+      conditions.push(`p.archived_at IS NOT NULL`);
+    } else if (filters.archived !== "all") {
+      conditions.push(`p.archived_at IS NULL`);
     }
 
     const where = conditions.length > 0 ? `WHERE ${conditions.join(" AND ")}` : "";
@@ -377,8 +391,9 @@ export async function createProject(
     const { rows } = await query<ProjectRow>(
       `INSERT INTO projects (
         client_id, name, type, status, progress,
-        start_date, due_date, budget, description, assignee, assignee_id, metadata
-      ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12)
+        start_date, due_date, budget, description, assignee, assignee_id,
+        source_quote_id, metadata
+      ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13)
       RETURNING *`,
       [
         input.clientId,
@@ -392,11 +407,20 @@ export async function createProject(
         input.description ?? null,
         assigneeFields.assignee,
         assigneeFields.assigneeId,
+        input.sourceQuoteId ?? null,
         JSON.stringify(input.metadata ?? {}),
       ],
     );
 
     const projectId = rows[0].id;
+
+    if (input.sourceQuoteId) {
+      await query(
+        `UPDATE quotes SET project_id = $1, updated_at = NOW()
+         WHERE id = $2 AND (project_id IS NULL OR project_id = $1)`,
+        [projectId, input.sourceQuoteId],
+      );
+    }
 
     if (input.seedMilestones !== false) {
       await seedDefaultMilestones(query, projectId, status);
@@ -439,6 +463,11 @@ export async function updateProject(
       nextAssigneeId = resolved.assigneeId;
     }
 
+    const nextSourceQuoteId =
+      input.sourceQuoteId !== undefined
+        ? input.sourceQuoteId
+        : (existing.source_quote_id ?? null);
+
     await query(
       `UPDATE projects SET
         client_id = $2,
@@ -452,7 +481,8 @@ export async function updateProject(
         description = $10,
         assignee = $11,
         assignee_id = $12,
-        metadata = $13::jsonb,
+        source_quote_id = $13,
+        metadata = $14::jsonb,
         updated_at = NOW()
       WHERE id = $1`,
       [
@@ -468,6 +498,7 @@ export async function updateProject(
         input.description !== undefined ? input.description : existing.description,
         nextAssignee,
         nextAssigneeId,
+        nextSourceQuoteId,
         JSON.stringify(
           input.metadata
             ? { ...(existing.metadata ?? {}), ...input.metadata }
@@ -475,6 +506,14 @@ export async function updateProject(
         ),
       ],
     );
+
+    if (nextSourceQuoteId) {
+      await query(
+        `UPDATE quotes SET project_id = $1, updated_at = NOW()
+         WHERE id = $2 AND (project_id IS NULL OR project_id = $1)`,
+        [id, nextSourceQuoteId],
+      );
+    }
 
     await syncMilestonesToProgressQuery(query, id, nextProgress);
 
@@ -484,6 +523,13 @@ export async function updateProject(
 
 export async function deleteProject(id: string): Promise<boolean> {
   return withDb(async (query) => {
+    const { rows } = await query<{ archived_at: Date | null }>(
+      `SELECT archived_at FROM projects WHERE id = $1`,
+      [id],
+    );
+    if (rows[0]?.archived_at) {
+      throw new Error("Ce projet est archivé et ne peut pas être supprimé.");
+    }
     const { rowCount } = await query(`DELETE FROM projects WHERE id = $1`, [id]);
     return (rowCount ?? 0) > 0;
   });
