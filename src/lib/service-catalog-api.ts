@@ -57,11 +57,13 @@ export async function reorderServiceCatalogItemApi(
   return json.item;
 }
 
-export async function importServiceCatalogFromConfigApi(): Promise<number> {
+export async function importServiceCatalogFromConfigApi(): Promise<{
+  imported: number;
+  updated: number;
+}> {
   const res = await fetch("/api/admin/service-catalog/import-config", {
     method: "POST",
     credentials: "include",
   });
-  const json = await parseFetchJson<{ imported: number }>(res);
-  return json.imported;
+  return parseFetchJson<{ imported: number; updated: number }>(res);
 }

@@ -4,6 +4,11 @@ import { withDb } from "@/lib/db";
 import { getQuoteById } from "@/lib/quotes";
 import type { InvoiceStatus } from "@/content/invoices-labels";
 import { INVOICE_STATUSES } from "@/content/invoices-labels";
+import {
+  normalizeCurrency,
+  resolveExchangeRateToXof,
+  SUPPORTED_CURRENCIES,
+} from "@/lib/currencies";
 
 export type InvoiceLine = {
   label: string;
@@ -33,6 +38,8 @@ export type Invoice = {
   notes: string | null;
   metadata: Record<string, unknown>;
   currency: string;
+  exchangeRateToXof: number | null;
+  exchangeRateAt: string | null;
   createdAt: string;
   updatedAt: string;
 };
@@ -60,6 +67,8 @@ type InvoiceRow = {
   notes: string | null;
   metadata: Record<string, unknown> | null;
   currency?: string | null;
+  exchange_rate_to_xof?: string | number | null;
+  exchange_rate_at?: Date | null;
   created_at: Date;
   updated_at: Date;
 };
@@ -88,6 +97,9 @@ function mapInvoice(row: InvoiceRow): Invoice {
     notes: row.notes,
     metadata: row.metadata ?? {},
     currency: row.currency ?? "XOF",
+    exchangeRateToXof:
+      row.exchange_rate_to_xof != null ? Number(row.exchange_rate_to_xof) : null,
+    exchangeRateAt: row.exchange_rate_at?.toISOString() ?? null,
     createdAt: row.created_at.toISOString(),
     updatedAt: row.updated_at.toISOString(),
   };
@@ -127,7 +139,8 @@ export const createInvoiceSchema = z.object({
   status: z.enum(INVOICE_STATUSES).default("draft"),
   dueDate: z.string().trim().optional().nullable(),
   notes: z.string().trim().max(5000).optional().nullable(),
-  currency: z.string().length(3).optional(),
+  currency: z.enum(SUPPORTED_CURRENCIES).optional(),
+  exchangeRateToXof: z.number().positive().optional().nullable(),
 });
 
 export const updateInvoiceSchema = z.object({
@@ -277,12 +290,16 @@ export async function createInvoice(input: z.infer<typeof createInvoiceSchema>):
     const { tvaAmount, total } = computeTotals(subtotal, input.tvaRate);
     const status = input.status ?? "draft";
     const sentAt = status === "sent" ? new Date() : null;
+    const currency = normalizeCurrency(input.currency);
+    const exchangeRateToXof = resolveExchangeRateToXof(currency, input.exchangeRateToXof);
+    const exchangeRateAt = exchangeRateToXof != null ? new Date() : null;
 
     const { rows } = await query<{ id: string }>(
       `INSERT INTO invoices (
         reference, client_id, project_id, quote_id, name, email, company,
-        lines, subtotal, tva_rate, tva_amount, total, status, due_date, sent_at, notes, currency
-      ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17)
+        lines, subtotal, tva_rate, tva_amount, total, status, due_date, sent_at, notes,
+        currency, exchange_rate_to_xof, exchange_rate_at
+      ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19)
       RETURNING id`,
       [
         reference,
@@ -301,7 +318,9 @@ export async function createInvoice(input: z.infer<typeof createInvoiceSchema>):
         input.dueDate ?? null,
         sentAt,
         input.notes ?? null,
-        input.currency ?? "XOF",
+        currency,
+        exchangeRateToXof,
+        exchangeRateAt,
       ],
     );
     const id = rows[0]!.id;
@@ -424,7 +443,8 @@ export async function createInvoiceFromQuote(quoteId: string): Promise<Invoice |
     tvaRate: 18,
     status: "draft",
     dueDate: new Date(Date.now() + 30 * 86_400_000).toISOString().slice(0, 10),
-    currency: quote.currency,
+    currency: normalizeCurrency(quote.currency),
+    exchangeRateToXof: quote.exchangeRateToXof,
   });
 }
 

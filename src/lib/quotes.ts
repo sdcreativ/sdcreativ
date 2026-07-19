@@ -5,6 +5,11 @@ import type { QuoteStatus } from "@/content/quotes-labels";
 import { QUOTE_STATUSES } from "@/content/quotes-labels";
 import { updateLead } from "@/lib/leads";
 import type { QuoteLine } from "@/lib/quote-calculator";
+import {
+  normalizeCurrency,
+  resolveExchangeRateToXof,
+  SUPPORTED_CURRENCIES,
+} from "@/lib/currencies";
 
 export type Quote = {
   id: string;
@@ -39,6 +44,9 @@ export type Quote = {
   notes: string | null;
   metadata: Record<string, unknown>;
   currency: string;
+  /** 1 unité de `currency` = N XOF (null si XOF). */
+  exchangeRateToXof: number | null;
+  exchangeRateAt: string | null;
   legalEntityId: string | null;
   createdAt: string;
   updatedAt: string;
@@ -77,6 +85,8 @@ type QuoteRow = {
   notes: string | null;
   metadata: Record<string, unknown> | null;
   currency?: string | null;
+  exchange_rate_to_xof?: string | number | null;
+  exchange_rate_at?: Date | null;
   legal_entity_id?: string | null;
   created_at: Date;
   updated_at: Date;
@@ -131,6 +141,9 @@ function mapQuote(row: QuoteRow): Quote {
     notes: row.notes,
     metadata: row.metadata ?? {},
     currency: row.currency ?? "XOF",
+    exchangeRateToXof:
+      row.exchange_rate_to_xof != null ? Number(row.exchange_rate_to_xof) : null,
+    exchangeRateAt: row.exchange_rate_at?.toISOString() ?? null,
     legalEntityId: row.legal_entity_id ?? null,
     createdAt: row.created_at.toISOString(),
     updatedAt: row.updated_at.toISOString(),
@@ -169,7 +182,8 @@ export const createQuoteSchema = z.object({
   clientId: z.string().uuid().optional().nullable(),
   notes: z.string().trim().max(5000).optional().nullable(),
   metadata: z.record(z.string(), z.unknown()).optional(),
-  currency: z.string().length(3).optional(),
+  currency: z.enum(SUPPORTED_CURRENCIES).optional(),
+  exchangeRateToXof: z.number().positive().optional().nullable(),
   legalEntityId: z.string().uuid().optional().nullable(),
 });
 
@@ -179,7 +193,8 @@ export const updateQuoteSchema = z.object({
   notes: z.string().trim().max(5000).optional().nullable(),
   clientId: z.string().uuid().optional().nullable(),
   metadata: z.record(z.string(), z.unknown()).optional(),
-  currency: z.string().length(3).optional(),
+  currency: z.enum(SUPPORTED_CURRENCIES).optional(),
+  exchangeRateToXof: z.number().positive().optional().nullable(),
   legalEntityId: z.string().uuid().optional().nullable(),
 });
 
@@ -361,14 +376,18 @@ export async function createQuote(
     const reference = await nextReference(query);
     const status = input.status ?? "sent";
     const sentAt = status === "sent" || status === "follow_up" ? new Date() : null;
+    const currency = normalizeCurrency(input.currency);
+    const exchangeRateToXof = resolveExchangeRateToXof(currency, input.exchangeRateToXof);
+    const exchangeRateAt = exchangeRateToXof != null ? new Date() : null;
 
     const { rows } = await query<QuoteRow>(
       `INSERT INTO quotes (
         reference, lead_id, client_id, name, email, phone, company,
         project_type_id, project_label, page_tier_id, addon_ids, lines,
         subtotal, estimate_min, estimate_max, budget, timeline, message,
-        status, sent_at, notes, metadata, currency, legal_entity_id
-      ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21,$22,$23,$24)
+        status, sent_at, notes, metadata, currency, exchange_rate_to_xof,
+        exchange_rate_at, legal_entity_id
+      ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21,$22,$23,$24,$25,$26)
       RETURNING *`,
       [
         reference,
@@ -393,7 +412,9 @@ export async function createQuote(
         sentAt,
         input.notes ?? null,
         JSON.stringify(input.metadata ?? {}),
-        input.currency ?? "XOF",
+        currency,
+        exchangeRateToXof,
+        exchangeRateAt,
         input.legalEntityId ?? null,
       ],
     );
@@ -430,6 +451,23 @@ export async function updateQuote(
       ? { ...(existing.metadata ?? {}), ...input.metadata }
       : existing.metadata ?? {};
 
+    const nextCurrency = normalizeCurrency(input.currency ?? existing.currency ?? "XOF");
+    const rateInput =
+      input.exchangeRateToXof !== undefined
+        ? input.exchangeRateToXof
+        : existing.exchange_rate_to_xof != null
+          ? Number(existing.exchange_rate_to_xof)
+          : null;
+    const nextRate = resolveExchangeRateToXof(nextCurrency, rateInput);
+    const currencyChanged =
+      input.currency !== undefined || input.exchangeRateToXof !== undefined;
+    const nextRateAt =
+      nextRate == null
+        ? null
+        : currencyChanged
+          ? new Date()
+          : existing.exchange_rate_at ?? new Date();
+
     const { rows } = await query<QuoteRow>(
       `UPDATE quotes SET
         status = $2,
@@ -439,7 +477,9 @@ export async function updateQuote(
         sent_at = $6,
         metadata = $7::jsonb,
         currency = $8,
-        legal_entity_id = $9,
+        exchange_rate_to_xof = $9,
+        exchange_rate_at = $10,
+        legal_entity_id = $11,
         updated_at = NOW()
       WHERE id = $1
       RETURNING *`,
@@ -451,7 +491,9 @@ export async function updateQuote(
         input.clientId !== undefined ? input.clientId : existing.client_id,
         sentAt,
         JSON.stringify(mergedMetadata),
-        input.currency ?? existing.currency ?? "XOF",
+        nextCurrency,
+        nextRate,
+        nextRateAt,
         input.legalEntityId !== undefined ? input.legalEntityId : existing.legal_entity_id,
       ],
     );

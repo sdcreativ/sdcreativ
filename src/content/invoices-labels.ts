@@ -1,3 +1,5 @@
+import { formatMoney, normalizeCurrency, type SupportedCurrency } from "@/lib/currencies";
+
 export const INVOICE_STATUSES = ["draft", "sent", "paid", "overdue", "cancelled"] as const;
 
 export type InvoiceStatus = (typeof INVOICE_STATUSES)[number];
@@ -25,14 +27,11 @@ export const statusStyles: Record<InvoiceStatus, string> = {
   cancelled: "bg-red-100 text-red-700",
 };
 
-export function formatInvoiceAmount(amount: number): string {
-  return new Intl.NumberFormat("fr-FR", {
-    style: "currency",
-    currency: "XOF",
-    maximumFractionDigits: 0,
-  })
-    .format(amount)
-    .replace("XOF", "FCFA");
+export function formatInvoiceAmount(
+  amount: number,
+  currency: string | SupportedCurrency = "XOF",
+): string {
+  return formatMoney(amount, normalizeCurrency(currency));
 }
 
 export function formatInvoiceDate(value: string | null | undefined): string {

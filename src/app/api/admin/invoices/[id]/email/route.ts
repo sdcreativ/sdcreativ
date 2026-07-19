@@ -44,6 +44,7 @@ export async function POST(request: Request, context: RouteContext) {
             settings: await getPaymentSettings(),
             invoiceReference: invoice.reference,
             amountDue: remaining,
+            currency: invoice.currency,
           })
         : null;
     const html = buildInvoiceEmailHtml(

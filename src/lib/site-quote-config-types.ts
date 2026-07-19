@@ -16,9 +16,10 @@ export type SiteQuoteConfigSettings = {
 
 export const defaultSiteQuoteConfigSettings: SiteQuoteConfigSettings = {
   formTitle: "Configurez votre projet",
-  formSubtitle: "Sélectionnez vos options — l'estimation se met à jour en temps réel.",
+  formSubtitle:
+    "Sélectionnez le type de projet et les options souhaitées — nous vous enverrons un devis personnalisé.",
   estimateNote:
-    "Estimation indicative HT. Un devis définitif vous sera transmis après étude de votre projet.",
+    "Les montants ne sont pas affichés ici : un devis détaillé HT vous sera transmis après étude de votre projet.",
   projectTypes: quoteProjectTypes,
   pageTiers: quotePageTiers,
   addons: quoteAddons,

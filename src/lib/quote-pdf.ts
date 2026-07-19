@@ -13,10 +13,15 @@ export function buildQuotePdfHtml(
     ? quote.lines
         .map(
           (line) =>
-            `<tr><td style="padding:8px 12px;border-bottom:1px solid #e5e7eb">${escapeHtml(line.label)}</td><td style="padding:8px 12px;border-bottom:1px solid #e5e7eb;text-align:right;font-weight:600">${formatQuoteAmount(line.amount)}</td></tr>`,
+            `<tr><td style="padding:8px 12px;border-bottom:1px solid #e5e7eb">${escapeHtml(line.label)}</td><td style="padding:8px 12px;border-bottom:1px solid #e5e7eb;text-align:right;font-weight:600">${formatQuoteAmount(line.amount, quote.currency)}</td></tr>`,
         )
         .join("")
     : `<tr><td colspan="2" style="padding:12px;color:#6b7280">Montant forfaitaire</td></tr>`;
+
+  const fxNote =
+    quote.currency !== "XOF" && quote.exchangeRateToXof
+      ? `<p style="text-align:right;color:#6b7280;font-size:0.75rem;margin-top:0.5rem">Taux figé : 1 ${escapeHtml(quote.currency)} = ${quote.exchangeRateToXof.toLocaleString("fr-FR")} XOF${quote.exchangeRateAt ? ` (${formatQuoteDate(quote.exchangeRateAt)})` : ""}</p>`
+      : "";
 
   const html = `<!DOCTYPE html>
 <html lang="fr">
@@ -53,8 +58,9 @@ export function buildQuotePdfHtml(
     <tbody>${lines}</tbody>
   </table>
 
-  <p class="total">Total HT : ${formatQuoteAmount(quote.subtotal)}</p>
-  ${quote.estimateMin && quote.estimateMax ? `<p style="text-align:right;color:#6b7280;font-size:0.875rem">Fourchette estimée : ${formatQuoteAmount(quote.estimateMin)} – ${formatQuoteAmount(quote.estimateMax)}</p>` : ""}
+  <p class="total">Total HT : ${formatQuoteAmount(quote.subtotal, quote.currency)}</p>
+  ${fxNote}
+  ${quote.estimateMin && quote.estimateMax ? `<p style="text-align:right;color:#6b7280;font-size:0.875rem">Fourchette estimée : ${formatQuoteAmount(quote.estimateMin, quote.currency)} – ${formatQuoteAmount(quote.estimateMax, quote.currency)}</p>` : ""}
 
   ${quote.message ? `<div style="margin-top:2rem;padding:1rem;background:#f9fafb;border-radius:8px"><strong>Notes :</strong><br/>${escapeHtml(quote.message)}</div>` : ""}
 

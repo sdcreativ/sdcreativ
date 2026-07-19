@@ -23,6 +23,7 @@ async function generateInvoicePdfAttachment(invoice: Invoice): Promise<InvoiceEm
           settings: await getPaymentSettings(),
           invoiceReference: invoice.reference,
           amountDue: remaining,
+          currency: invoice.currency,
         })
       : null;
 

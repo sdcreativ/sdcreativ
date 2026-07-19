@@ -41,7 +41,16 @@ import {
 } from "@/components/admin/QuoteComposerFields";
 import { createComposerLine } from "@/lib/quote-composer";
 import type { QuoteComposerLine } from "@/lib/quote-composer";
-import { CURRENCY_LABELS, SUPPORTED_CURRENCIES } from "@/lib/currencies";
+import {
+  amountToXof,
+  CURRENCY_LABELS,
+  exchangeRateHint,
+  formatMoney,
+  normalizeCurrency,
+  suggestedRateToXof,
+  SUPPORTED_CURRENCIES,
+  type SupportedCurrency,
+} from "@/lib/currencies";
 import type { LegalEntity } from "@/lib/legal-entities";
 import { fetchLegalEntities } from "@/lib/legal-entities-api";
 import { KanbanDropColumn, KANBAN_DRAG_MIME } from "@/lib/kanban-dnd";
@@ -505,7 +514,9 @@ function QuoteCard({
           </div>
         </div>
         <p className="mt-1 truncate text-xs text-gray-text">{quote.projectLabel}</p>
-        <p className="mt-2 text-sm font-bold text-primary">{formatQuoteAmount(quote.subtotal)}</p>
+        <p className="mt-2 text-sm font-bold text-primary">
+          {formatQuoteAmount(quote.subtotal, quote.currency)}
+        </p>
         <p className="mt-1 text-[10px] text-gray-text">{formatQuoteDate(quote.createdAt)}</p>
         </button>
       </div>
@@ -680,8 +691,13 @@ function QuoteDetailPanel({
 
   const rangeLabel =
     quote.estimateMin != null && quote.estimateMax != null
-      ? `${formatQuoteAmount(quote.estimateMin).replace(" HT", "")} – ${formatQuoteAmount(quote.estimateMax)}`
+      ? `${formatQuoteAmount(quote.estimateMin, quote.currency).replace(" HT", "")} – ${formatQuoteAmount(quote.estimateMax, quote.currency)}`
       : null;
+  const xofEquivalent = amountToXof(
+    quote.subtotal,
+    normalizeCurrency(quote.currency),
+    quote.exchangeRateToXof,
+  );
 
   return (
     <>
@@ -722,9 +738,49 @@ function QuoteDetailPanel({
           </div>
 
           <div className="rounded-xl border border-primary/20 bg-primary-light/30 p-4">
-            <p className="text-2xl font-bold text-primary">{formatQuoteAmount(quote.subtotal)}</p>
+            <p className="text-2xl font-bold text-primary">
+              {formatQuoteAmount(quote.subtotal, quote.currency)}
+            </p>
+            <p className="mt-1 text-xs text-gray-text">
+              Devise : {CURRENCY_LABELS[normalizeCurrency(quote.currency)]}
+              {quote.exchangeRateToXof
+                ? ` · 1 ${quote.currency} = ${quote.exchangeRateToXof.toLocaleString("fr-FR")} XOF`
+                : ""}
+            </p>
+            {xofEquivalent != null && quote.currency !== "XOF" ? (
+              <p className="mt-1 text-xs text-gray-text">
+                Équivalent : {formatMoney(xofEquivalent, "XOF")}
+              </p>
+            ) : null}
             {rangeLabel && <p className="mt-1 text-xs text-gray-text">Fourchette : {rangeLabel}</p>}
           </div>
+
+          <label className="block">
+            <span className="text-xs font-semibold uppercase tracking-wide text-gray-text">
+              Devise du devis
+            </span>
+            <select
+              value={normalizeCurrency(quote.currency)}
+              disabled={saving}
+              onChange={(e) => {
+                const currency = e.target.value as SupportedCurrency;
+                const rate = suggestedRateToXof(currency);
+                void updateQuoteApi(quote.id, {
+                  currency,
+                  exchangeRateToXof: rate,
+                }).then((updated) => {
+                  onUpdated(updated);
+                });
+              }}
+              className="mt-1 w-full rounded-xl border border-gray/60 px-3 py-2.5"
+            >
+              {SUPPORTED_CURRENCIES.map((code) => (
+                <option key={code} value={code}>
+                  {CURRENCY_LABELS[code]}
+                </option>
+              ))}
+            </select>
+          </label>
 
           {quote.lines.length > 0 && (
             <div>
@@ -733,7 +789,9 @@ function QuoteDetailPanel({
                 {quote.lines.map((line, i) => (
                   <li key={i} className="flex justify-between gap-2 text-sm">
                     <span className="text-gray-text">{line.label}</span>
-                    <span className="font-medium">{formatQuoteAmount(line.amount)}</span>
+                    <span className="font-medium">
+                      {formatQuoteAmount(line.amount, quote.currency)}
+                    </span>
                   </li>
                 ))}
               </ul>
@@ -1026,6 +1084,7 @@ function QuoteDetailPanel({
           quoteEmail={quote.email}
           quoteName={quote.name}
           quoteAmount={quote.subtotal}
+          quoteCurrency={quote.currency}
           onClose={() => setShowEmail(false)}
           onSent={() => {
             if (quote.status === "draft") void handleStatusChange("sent");
@@ -1050,12 +1109,19 @@ function CreateQuoteModal({
   const [selectedClientId, setSelectedClientId] = useState("");
   const [composerLines, setComposerLines] = useState<QuoteComposerLine[]>([createComposerLine()]);
   const [legalEntities, setLegalEntities] = useState<LegalEntity[]>([]);
+  const [currency, setCurrency] = useState<SupportedCurrency>("XOF");
+  const [exchangeRate, setExchangeRate] = useState("");
 
   useEffect(() => {
     void fetchLegalEntities()
       .then(setLegalEntities)
       .catch(() => setLegalEntities([]));
   }, []);
+
+  useEffect(() => {
+    const suggested = suggestedRateToXof(currency);
+    setExchangeRate(suggested != null ? String(suggested) : "");
+  }, [currency]);
 
   const selectedClient = clients.find((c) => c.id === selectedClientId);
   const subtotal = getComposerSubtotal(composerLines);
@@ -1085,7 +1151,11 @@ function CreateQuoteModal({
         subtotal,
         status: String(data.get("status") || "sent"),
         notes: String(data.get("notes") || "") || null,
-        currency: String(data.get("currency") || "XOF"),
+        currency,
+        exchangeRateToXof:
+          currency === "XOF"
+            ? null
+            : Number(exchangeRate) || suggestedRateToXof(currency),
         legalEntityId: String(data.get("legalEntityId") || "") || null,
       });
       onCreated(quote);
@@ -1171,7 +1241,13 @@ function CreateQuoteModal({
               <option value="draft">Brouillon</option>
               <option value="sent">Envoyé</option>
             </select>
-            <select name="currency" defaultValue="XOF" className={fieldClass} aria-label="Devise">
+            <select
+              name="currency"
+              value={currency}
+              onChange={(e) => setCurrency(normalizeCurrency(e.target.value))}
+              className={fieldClass}
+              aria-label="Devise"
+            >
               {SUPPORTED_CURRENCIES.map((code) => (
                 <option key={code} value={code}>
                   {CURRENCY_LABELS[code]}
@@ -1179,7 +1255,15 @@ function CreateQuoteModal({
               ))}
             </select>
             {legalEntities.length > 0 && (
-              <select name="legalEntityId" className={`${fieldClass} sm:col-span-2`} aria-label="Entité juridique">
+              <select
+                name="legalEntityId"
+                className={`${fieldClass} sm:col-span-2`}
+                aria-label="Entité juridique"
+                onChange={(e) => {
+                  const entity = legalEntities.find((item) => item.id === e.target.value);
+                  if (entity) setCurrency(normalizeCurrency(entity.currency));
+                }}
+              >
                 <option value="">Entité par défaut</option>
                 {legalEntities.map((entity) => (
                   <option key={entity.id} value={entity.id}>
@@ -1188,10 +1272,36 @@ function CreateQuoteModal({
                 ))}
               </select>
             )}
+            {currency !== "XOF" ? (
+              <label className="sm:col-span-2 block text-xs font-semibold uppercase tracking-wide text-gray-text">
+                Taux figé (1 {currency} = ? XOF)
+                <input
+                  type="number"
+                  min={0.000001}
+                  step="any"
+                  required
+                  value={exchangeRate}
+                  onChange={(e) => setExchangeRate(e.target.value)}
+                  className={`${fieldClass} mt-1 font-normal normal-case`}
+                />
+                <span className="mt-1 block text-[11px] font-normal normal-case text-gray-text">
+                  {exchangeRateHint(currency)}
+                </span>
+              </label>
+            ) : null}
           </div>
 
+          <p className="mt-4 text-xs text-gray-text">
+            Les montants des lignes sont saisis dans la devise du devis ({CURRENCY_LABELS[currency]}).
+            Le catalogue reste référencé en FCFA — adaptez les montants à la conversion.
+          </p>
+
           <div className="mt-5">
-            <QuoteComposerFields lines={composerLines} onChange={setComposerLines} />
+            <QuoteComposerFields
+              lines={composerLines}
+              onChange={setComposerLines}
+              currency={currency}
+            />
           </div>
 
           <textarea
@@ -1210,7 +1320,7 @@ function CreateQuoteModal({
             className="flex w-full items-center justify-center gap-2 rounded-xl bg-primary py-3 text-sm font-semibold text-white hover:bg-primary-dark disabled:opacity-50"
           >
             {loading && <Loader2 className="h-4 w-4 animate-spin" aria-hidden />}
-            Créer le devis — {formatQuoteAmount(subtotal)} HT
+            Créer le devis — {formatQuoteAmount(subtotal, currency)}
           </button>
         </div>
       </form>

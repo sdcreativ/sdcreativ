@@ -78,6 +78,18 @@ function projectCategory(projectId: string): ServiceCatalogCategory {
   return "autre";
 }
 
+function addonCategory(addonId: string): ServiceCatalogCategory {
+  if (addonId.includes("seo") || addonId.includes("analytics")) return "seo";
+  if (addonId.includes("maintenance") || addonId.includes("securite") || addonId.includes("hebergement")) {
+    return "maintenance";
+  }
+  if (addonId.includes("ia") || addonId.includes("live-chat") || addonId.includes("agents")) return "ia";
+  if (addonId.includes("photo") || addonId.includes("redaction") || addonId.includes("ui-ux")) {
+    return "identite";
+  }
+  return "site-web";
+}
+
 export async function listServiceCatalogItems(options?: {
   activeOnly?: boolean;
 }): Promise<ServiceCatalogItem[]> {
@@ -203,12 +215,15 @@ export async function reorderServiceCatalogItem(
   });
 }
 
-export async function importServiceCatalogFromQuoteConfig(): Promise<number> {
-  if (!isDatabaseConfigured()) return 0;
+export async function importServiceCatalogFromQuoteConfig(): Promise<{
+  imported: number;
+  updated: number;
+}> {
+  if (!isDatabaseConfigured()) return { imported: 0, updated: 0 };
 
   const config = await getSiteQuoteConfigSettings();
   const existing = await listServiceCatalogItems();
-  const existingNames = new Set(existing.map((item) => item.name.trim().toLowerCase()));
+  const byName = new Map(existing.map((item) => [item.name.trim().toLowerCase(), item]));
 
   const candidates: Array<{
     name: string;
@@ -243,27 +258,45 @@ export async function importServiceCatalogFromQuoteConfig(): Promise<number> {
     candidates.push({
       name: addon.label,
       description: "Option — configurateur public",
-      category: "site-web",
+      category: addonCategory(addon.id),
       unit: "forfait",
       unitPrice: addon.price,
     });
   }
 
   let imported = 0;
+  let updated = 0;
   for (const candidate of candidates) {
     const key = candidate.name.trim().toLowerCase();
-    if (existingNames.has(key)) continue;
-    await createServiceCatalogItem({
-      name: candidate.name,
-      description: candidate.description,
-      category: candidate.category,
-      unit: candidate.unit,
-      unitPrice: candidate.unitPrice,
-      isActive: true,
-    });
-    existingNames.add(key);
-    imported += 1;
+    const current = byName.get(key);
+    if (!current) {
+      const created = await createServiceCatalogItem({
+        name: candidate.name,
+        description: candidate.description,
+        category: candidate.category,
+        unit: candidate.unit,
+        unitPrice: candidate.unitPrice,
+        isActive: true,
+      });
+      byName.set(key, created);
+      imported += 1;
+      continue;
+    }
+
+    if (
+      current.unitPrice !== candidate.unitPrice ||
+      current.category !== candidate.category ||
+      current.description !== candidate.description
+    ) {
+      await updateServiceCatalogItem(current.id, {
+        unitPrice: candidate.unitPrice,
+        category: candidate.category,
+        description: candidate.description,
+        isActive: true,
+      });
+      updated += 1;
+    }
   }
 
-  return imported;
+  return { imported, updated };
 }

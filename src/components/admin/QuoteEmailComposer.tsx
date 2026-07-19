@@ -14,6 +14,7 @@ type Props = {
   quoteEmail: string;
   quoteName: string;
   quoteAmount: number;
+  quoteCurrency?: string;
   onClose: () => void;
   onSent: () => void;
 };
@@ -24,12 +25,13 @@ export function QuoteEmailComposer({
   quoteEmail,
   quoteName,
   quoteAmount,
+  quoteCurrency = "XOF",
   onClose,
   onSent,
 }: Props) {
   const [subject, setSubject] = useState(`Devis ${quoteReference} — SD CREATIV`);
   const [body, setBody] = useState(
-    `Bonjour ${quoteName.split(" ")[0] ?? quoteName},\n\nVeuillez trouver ci-joint notre devis ${quoteReference} d'un montant de ${formatQuoteAmount(quoteAmount)}.\n\nNous restons à votre disposition pour en discuter.\n\nCordialement,`,
+    `Bonjour ${quoteName.split(" ")[0] ?? quoteName},\n\nVeuillez trouver ci-joint notre devis ${quoteReference} d'un montant de ${formatQuoteAmount(quoteAmount, quoteCurrency)}.\n\nNous restons à votre disposition pour en discuter.\n\nCordialement,`,
   );
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");

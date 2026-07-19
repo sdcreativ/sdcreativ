@@ -47,6 +47,7 @@ export async function GET() {
           reference: quote.reference,
           projectLabel: quote.projectLabel,
           subtotal: quote.subtotal,
+          currency: quote.currency,
           status: quote.status,
           statusLabel: QUOTE_STATUS_LABELS[quote.status],
           validUntil: quote.validUntil,

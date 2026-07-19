@@ -34,6 +34,7 @@ export async function GET(request: Request, context: RouteContext) {
             settings: await getPaymentSettings(),
             invoiceReference: invoice.reference,
             amountDue: remaining,
+            currency: invoice.currency,
           })
         : null;
     const html = buildInvoicePdfHtml(invoice, siteUrl, {

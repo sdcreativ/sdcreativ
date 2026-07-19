@@ -46,6 +46,7 @@ export async function GET() {
           reference: invoice.reference,
           quoteId: invoice.quoteId,
           total: invoice.total,
+          currency: invoice.currency,
           paidAmount: invoice.paidAmount,
           remaining: getInvoiceRemaining(invoice),
           status: invoice.status,

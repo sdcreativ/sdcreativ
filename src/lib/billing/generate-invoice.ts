@@ -28,6 +28,7 @@ import {
 import { logCrmAudit } from "@/lib/crm-audit";
 import { formatInvoiceAmount, formatInvoiceDate } from "@/content/invoices-labels";
 import type { QuoteStatus } from "@/content/quotes-labels";
+import { normalizeCurrency } from "@/lib/currencies";
 
 const INVOICEABLE_STATUSES: QuoteStatus[] = ["validated", "accepted"];
 
@@ -56,9 +57,9 @@ function buildInvoiceEmailBody(invoice: Invoice, siteUrl: string): string {
 
 Votre facture ${invoice.reference} est disponible dans votre espace client SD CREATIV.
 
-Total TTC : ${formatInvoiceAmount(invoice.total)}
+Total TTC : ${formatInvoiceAmount(invoice.total, invoice.currency)}
 ${invoice.dueDate ? `Échéance : ${formatInvoiceDate(invoice.dueDate)}` : ""}
-${remaining > 0 ? `Reste dû : ${formatInvoiceAmount(remaining)}` : ""}
+${remaining > 0 ? `Reste dû : ${formatInvoiceAmount(remaining, invoice.currency)}` : ""}
 
 Consultez votre facture et réglez-la en ligne :
 ${buildPortalInvoiceUrl(siteUrl, invoice.id)}
@@ -119,7 +120,8 @@ export async function generateInvoiceFromQuote(input: {
     tvaRate: 18,
     status: "sent",
     dueDate: new Date(Date.now() + 30 * 86_400_000).toISOString().slice(0, 10),
-    currency: quote.currency,
+    currency: normalizeCurrency(quote.currency),
+    exchangeRateToXof: quote.exchangeRateToXof,
   });
 
   const html = buildInvoicePdfHtml(invoice, siteUrl, {
@@ -131,6 +133,7 @@ export async function generateInvoiceFromQuote(input: {
         settings: await getPaymentSettings(),
         invoiceReference: invoice.reference,
         amountDue: getInvoiceRemaining(invoice),
+        currency: invoice.currency,
       }),
       buildPortalInvoiceUrl(siteUrl, invoice.id),
     ),
@@ -169,6 +172,7 @@ export async function generateInvoiceFromQuote(input: {
       settings: await getPaymentSettings(),
       invoiceReference: invoice.reference,
       amountDue: remaining,
+      currency: invoice.currency,
     });
     const body = buildInvoiceEmailBody(invoice, siteUrl);
     emailSent = await sendEmail({

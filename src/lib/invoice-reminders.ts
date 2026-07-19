@@ -80,6 +80,7 @@ export async function sendInvoicePaymentReminder(
     settings: await getPaymentSettings(),
     invoiceReference: invoice.reference,
     amountDue: remaining,
+    currency: invoice.currency,
   });
   const html = buildInvoicePaymentReminderHtml(
     invoice,

@@ -84,7 +84,7 @@ export function buildInvoicePdfHtml(
           (line, index) =>
             `<tr style="background:${index % 2 === 0 ? "#ffffff" : "#f8fafc"}">
               <td style="padding:14px 16px;border-bottom:1px solid #e2e8f0;font-size:14px;color:#1e293b">${escapeHtml(line.label)}</td>
-              <td style="padding:14px 16px;border-bottom:1px solid #e2e8f0;text-align:right;font-size:14px;font-weight:600;color:#0f172a;white-space:nowrap">${formatInvoiceAmount(line.amount)}</td>
+              <td style="padding:14px 16px;border-bottom:1px solid #e2e8f0;text-align:right;font-size:14px;font-weight:600;color:#0f172a;white-space:nowrap">${formatInvoiceAmount(line.amount, invoice.currency)}</td>
             </tr>`,
         )
         .join("")
@@ -158,27 +158,27 @@ export function buildInvoicePdfHtml(
     <div style="min-width:280px;padding:20px 22px;border-radius:14px;border:1px solid #e2e8f0;background:linear-gradient(180deg,#ffffff 0%,#f8fafc 100%)">
       <div style="display:flex;justify-content:space-between;gap:24px;padding:6px 0;font-size:13px;color:#64748b">
         <span>Sous-total HT</span>
-        <span style="font-weight:600;color:#334155">${formatInvoiceAmount(invoice.subtotal)}</span>
+        <span style="font-weight:600;color:#334155">${formatInvoiceAmount(invoice.subtotal, invoice.currency)}</span>
       </div>
       <div style="display:flex;justify-content:space-between;gap:24px;padding:6px 0;font-size:13px;color:#64748b">
         <span>TVA (${invoice.tvaRate} %)</span>
-        <span style="font-weight:600;color:#334155">${formatInvoiceAmount(invoice.tvaAmount)}</span>
+        <span style="font-weight:600;color:#334155">${formatInvoiceAmount(invoice.tvaAmount, invoice.currency)}</span>
       </div>
       <div style="height:1px;background:#e2e8f0;margin:10px 0"></div>
       <div style="display:flex;justify-content:space-between;gap:24px;padding:4px 0;font-size:18px;font-weight:800;color:${company.primaryColor}">
         <span>Total TTC</span>
-        <span>${formatInvoiceAmount(invoice.total)}</span>
+        <span>${formatInvoiceAmount(invoice.total, invoice.currency)}</span>
       </div>
       ${
         invoice.paidAmount > 0
           ? `
       <div style="display:flex;justify-content:space-between;gap:24px;padding:8px 0 0;font-size:13px;color:#059669">
         <span>Payé</span>
-        <span style="font-weight:700">${formatInvoiceAmount(invoice.paidAmount)}</span>
+        <span style="font-weight:700">${formatInvoiceAmount(invoice.paidAmount, invoice.currency)}</span>
       </div>
       <div style="display:flex;justify-content:space-between;gap:24px;padding:4px 0;font-size:14px;font-weight:700;color:${remaining > 0 ? company.accentColor : "#059669"}">
         <span>Reste dû</span>
-        <span>${formatInvoiceAmount(remaining)}</span>
+        <span>${formatInvoiceAmount(remaining, invoice.currency)}</span>
       </div>`
           : ""
       }

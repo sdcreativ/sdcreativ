@@ -15,6 +15,7 @@ type InvoiceSummary = {
   reference: string;
   quoteId: string | null;
   total: number;
+  currency?: string;
   paidAmount: number;
   remaining: number;
   status: string;
@@ -253,7 +254,7 @@ export function ClientPortalInvoicesView() {
                   <div>
                     <p className="font-semibold text-foreground">{invoice.reference}</p>
                     <p className="mt-1 text-sm text-gray-text">
-                      {formatInvoiceAmount(invoice.total)}
+                      {formatInvoiceAmount(invoice.total, invoice.currency)}
                       {invoice.dueDate ? ` · Échéance ${formatInvoiceDate(invoice.dueDate)}` : ""}
                     </p>
                   </div>
@@ -268,7 +269,7 @@ export function ClientPortalInvoicesView() {
                 </div>
                 {invoice.remaining > 0 && invoice.status !== "paid" && (
                   <p className="mt-2 text-xs font-medium text-amber-700">
-                    Reste dû : {formatInvoiceAmount(invoice.remaining)}
+                    Reste dû : {formatInvoiceAmount(invoice.remaining, invoice.currency)}
                   </p>
                 )}
               </button>
@@ -319,7 +320,7 @@ export function ClientPortalInvoicesView() {
                       <tr key={line.label} className="border-t border-gray/30">
                         <td className="px-4 py-3">{line.label}</td>
                         <td className="px-4 py-3 text-right font-medium">
-                          {formatInvoiceAmount(line.amount)}
+                          {formatInvoiceAmount(line.amount, detail.currency)}
                         </td>
                       </tr>
                     ))}
@@ -328,8 +329,11 @@ export function ClientPortalInvoicesView() {
               </div>
 
               <div className="mt-4 space-y-1 text-right text-sm">
-                <p>Sous-total HT : {formatInvoiceAmount(detail.subtotal)}</p>
-                <p>TVA ({detail.tvaRate} %) : {formatInvoiceAmount(detail.tvaAmount)}</p>
+                <p>Sous-total HT : {formatInvoiceAmount(detail.subtotal, detail.currency)}</p>
+                <p>
+                  TVA ({detail.tvaRate} %) :{" "}
+                  {formatInvoiceAmount(detail.tvaAmount, detail.currency)}
+                </p>
                 <p className="text-base font-bold text-primary">Total TTC : {detail.formattedTotal}</p>
                 {detail.remaining > 0 && (
                   <p className="font-semibold text-amber-700">

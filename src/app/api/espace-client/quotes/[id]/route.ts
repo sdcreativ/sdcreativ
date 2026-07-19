@@ -61,6 +61,7 @@ export async function GET(_request: Request, context: RouteContext) {
         reference: quote.reference,
         projectLabel: quote.projectLabel,
         subtotal: quote.subtotal,
+        currency: quote.currency,
         lines: quote.lines,
         status: quote.status,
         statusLabel: QUOTE_STATUS_LABELS[quote.status],

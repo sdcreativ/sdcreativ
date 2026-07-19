@@ -1,6 +1,7 @@
 import { sendEmail } from "@/lib/email";
 import type { Quote } from "@/lib/quotes";
 import { escapeHtml } from "@/lib/email";
+import { formatQuoteAmount } from "@/content/quotes-labels";
 
 function adminRecipients(): string[] {
   const raw = process.env.CONTACT_TO_EMAIL ?? process.env.CRM_BOOTSTRAP_EMAIL ?? "";
@@ -21,7 +22,7 @@ export async function notifyAdminQuoteSigned(quote: Quote, signerName: string): 
     <p><strong>Devis signé par le client</strong></p>
     <p>Le devis <strong>${escapeHtml(quote.reference)}</strong> a été signé électroniquement par ${escapeHtml(signerName)}.</p>
     <p>Projet : ${escapeHtml(quote.projectLabel)}<br/>
-    Montant HT : ${new Intl.NumberFormat("fr-FR").format(quote.subtotal)} FCFA</p>
+    Montant HT : ${escapeHtml(formatQuoteAmount(quote.subtotal, quote.currency))}</p>
     <p>Statut CRM : <strong>Signé — en attente de validation</strong></p>
     <p><a href="${escapeHtml(adminUrl)}">Ouvrir dans le CRM</a></p>
   </div>`;
@@ -68,7 +69,7 @@ export async function notifyAdminQuoteViewed(quote: Quote, viewerName: string): 
     <p><strong>Devis consulté par le client</strong></p>
     <p>${escapeHtml(viewerName)} a ouvert le devis <strong>${escapeHtml(quote.reference)}</strong>.</p>
     <p>Projet : ${escapeHtml(quote.projectLabel)}<br/>
-    Montant HT : ${new Intl.NumberFormat("fr-FR").format(quote.subtotal)} FCFA</p>
+    Montant HT : ${escapeHtml(formatQuoteAmount(quote.subtotal, quote.currency))}</p>
     <p><a href="${escapeHtml(adminUrl)}">Ouvrir dans le CRM</a></p>
   </div>`;
 

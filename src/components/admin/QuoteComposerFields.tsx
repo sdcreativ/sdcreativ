@@ -8,6 +8,7 @@ import {
   SERVICE_CATALOG_UNIT_LABELS,
 } from "@/content/service-catalog-labels";
 import { formatQuoteAmount } from "@/content/quotes-labels";
+import type { SupportedCurrency } from "@/lib/currencies";
 import type { ServiceCatalogItem } from "@/lib/service-catalog";
 import { fetchServiceCatalogItems } from "@/lib/service-catalog-api";
 import {
@@ -30,9 +31,11 @@ const fieldClass =
 type Props = {
   lines: QuoteComposerLine[];
   onChange: (lines: QuoteComposerLine[]) => void;
+  /** Devise d’affichage des montants saisis (catalogue reste en XOF). */
+  currency?: SupportedCurrency;
 };
 
-export function QuoteComposerFields({ lines, onChange }: Props) {
+export function QuoteComposerFields({ lines, onChange, currency = "XOF" }: Props) {
   const [catalog, setCatalog] = useState<ServiceCatalogItem[]>([]);
   const [catalogLoading, setCatalogLoading] = useState(true);
   const [catalogError, setCatalogError] = useState("");
@@ -164,7 +167,7 @@ export function QuoteComposerFields({ lines, onChange }: Props) {
                     <span>
                       <span className="font-medium text-foreground">{item.name}</span>
                       <span className="mt-0.5 block text-xs text-gray-text">
-                        {formatQuoteAmount(item.unitPrice)} / {SERVICE_CATALOG_UNIT_LABELS[item.unit]}
+                        {formatQuoteAmount(item.unitPrice, "XOF")} / {SERVICE_CATALOG_UNIT_LABELS[item.unit]}
                       </span>
                     </span>
                     <Plus className="h-4 w-4 shrink-0 text-primary" aria-hidden />
@@ -229,7 +232,7 @@ export function QuoteComposerFields({ lines, onChange }: Props) {
                     />
                   </label>
                   <p className="text-sm font-semibold text-foreground sm:pb-2.5">
-                    {formatQuoteAmount(composerLineAmount(line))}
+                    {formatQuoteAmount(composerLineAmount(line), currency)}
                   </p>
                   <button
                     type="button"
@@ -248,7 +251,7 @@ export function QuoteComposerFields({ lines, onChange }: Props) {
 
       <div className="rounded-xl border border-primary/20 bg-primary-light/30 px-4 py-3">
         <p className="text-xs font-semibold uppercase tracking-wide text-gray-text">Total HT</p>
-        <p className="text-2xl font-bold text-primary">{formatQuoteAmount(subtotal)}</p>
+        <p className="text-2xl font-bold text-primary">{formatQuoteAmount(subtotal, currency)}</p>
       </div>
     </div>
   );

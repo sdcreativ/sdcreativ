@@ -19,6 +19,7 @@ type QuoteSummary = {
   reference: string;
   projectLabel: string;
   subtotal: number;
+  currency?: string;
   status: string;
   statusLabel: string;
   validUntil: string | null;
@@ -234,7 +235,9 @@ export function ClientPortalQuotesView() {
                       <div>
                         <p className="font-mono text-xs font-semibold text-primary">{q.reference}</p>
                         <p className="mt-0.5 text-sm font-medium text-foreground">{q.projectLabel}</p>
-                        <p className="text-xs text-gray-text">{formatQuoteAmount(q.subtotal)}</p>
+                        <p className="text-xs text-gray-text">
+                          {formatQuoteAmount(q.subtotal, q.currency)}
+                        </p>
                       </div>
                       <span className={cn("shrink-0 rounded-full px-2 py-0.5 text-[10px] font-bold", statusTone(q.status))}>
                         {q.statusLabel}
@@ -280,14 +283,18 @@ export function ClientPortalQuotesView() {
               )}
             </div>
 
-            <p className="mt-4 text-2xl font-bold text-primary">{formatQuoteAmount(detail.subtotal)}</p>
+            <p className="mt-4 text-2xl font-bold text-primary">
+              {formatQuoteAmount(detail.subtotal, detail.currency)}
+            </p>
 
             {detail.lines.length > 0 && (
               <ul className="mt-4 space-y-1 rounded-xl bg-gray-light/50 p-3 text-sm">
                 {detail.lines.map((line, i) => (
                   <li key={i} className="flex justify-between gap-2">
                     <span className="text-gray-text">{line.label}</span>
-                    <span className="font-medium">{formatQuoteAmount(line.amount)}</span>
+                    <span className="font-medium">
+                      {formatQuoteAmount(line.amount, detail.currency)}
+                    </span>
                   </li>
                 ))}
               </ul>

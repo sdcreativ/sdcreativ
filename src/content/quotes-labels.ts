@@ -1,3 +1,5 @@
+import { formatMoneyHt, normalizeCurrency, type SupportedCurrency } from "@/lib/currencies";
+
 export const QUOTE_STATUSES = [
   "draft",
   "sent",
@@ -44,9 +46,12 @@ export function formatQuoteDate(iso: string | null): string {
   }).format(new Date(iso));
 }
 
-export function formatQuoteAmount(amount: number | null): string {
+export function formatQuoteAmount(
+  amount: number | null,
+  currency: string | SupportedCurrency = "XOF",
+): string {
   if (amount == null) return "—";
-  return `${new Intl.NumberFormat("fr-FR", { maximumFractionDigits: 0 }).format(amount)} FCFA HT`;
+  return formatMoneyHt(amount, normalizeCurrency(currency));
 }
 
 export const statusStyles: Record<QuoteStatus, string> = {

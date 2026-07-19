@@ -121,7 +121,7 @@ async function createQuoteFollowUpTask(quote: Quote, reminderIndex: number): Pro
     status: "todo",
     description: buildQuoteFollowUpDescription({
       quoteReference: quote.reference,
-      amountLabel: formatQuoteAmount(quote.subtotal),
+      amountLabel: formatQuoteAmount(quote.subtotal, quote.currency),
       statusLabel: QUOTE_STATUS_LABELS[quote.status],
       sentDaysAgo,
     }),

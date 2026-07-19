@@ -279,9 +279,6 @@ export function QuoteConfigurator({
                 {config.pageTiers.map((tier) => (
                   <option key={tier.id} value={tier.id}>
                     {tier.label}
-                    {tier.extraPrice > 0
-                      ? ` (+${tier.extraPrice.toLocaleString("fr-FR")} FCFA)`
-                      : ""}
                   </option>
                 ))}
               </select>
@@ -312,12 +309,7 @@ export function QuoteConfigurator({
                     onChange={() => toggleAddon(addon.id)}
                     className="mt-0.5 accent-primary"
                   />
-                  <span>
-                    <span className="font-medium text-foreground">{addon.label}</span>
-                    <span className="mt-0.5 block text-xs text-gray-text">
-                      +{addon.price.toLocaleString("fr-FR")} FCFA
-                    </span>
-                  </span>
+                  <span className="font-medium text-foreground">{addon.label}</span>
                 </label>
               ))}
             </div>
@@ -442,7 +434,7 @@ export function QuoteConfigurator({
             </>
           ) : (
             <>
-              Recevoir mon estimation par email
+              Recevoir mon devis personnalisé
               <Send className="h-4 w-4" aria-hidden />
             </>
           )}
@@ -455,24 +447,24 @@ export function QuoteConfigurator({
           <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-primary text-white">
             <Calculator className="h-5 w-5" aria-hidden />
           </div>
-          <h3 className="font-bold text-foreground">Votre estimation</h3>
+          <h3 className="font-bold text-foreground">Votre configuration</h3>
         </div>
 
         {quote && (
           <div className="mt-6">
-            <p className="text-sm text-gray-text">{quote.projectLabel}</p>
+            <p className="text-sm font-semibold text-foreground">{quote.projectLabel}</p>
             <ul className="mt-4 space-y-2 border-b border-gray/40 pb-4 text-sm">
               {quote.lines.map((line) => (
-                <li key={line.label} className="flex justify-between gap-2">
-                  <span className="text-gray-text">{line.label}</span>
-                  <span className="shrink-0 font-medium text-foreground">
-                    {line.amount.toLocaleString("fr-FR")} F
-                  </span>
+                <li key={line.label} className="flex items-start gap-2 text-gray-text">
+                  <span className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-primary" aria-hidden />
+                  <span>{line.label}</span>
                 </li>
               ))}
             </ul>
-            <p className="mt-4 text-2xl font-bold text-primary">{quote.formattedSubtotal} HT</p>
-            <p className="mt-1 text-sm text-gray-text">Fourchette : {quote.formattedRange} HT</p>
+            <p className="mt-4 text-base font-bold text-primary">Devis sur mesure</p>
+            <p className="mt-1 text-sm text-gray-text">
+              Nous calculons un montant adapté à votre contexte (périmètre, délais, contraintes).
+            </p>
             <p className="mt-4 text-xs leading-relaxed text-gray-text">{quote.note}</p>
           </div>
         )}

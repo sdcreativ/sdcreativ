@@ -49,6 +49,7 @@ export async function GET(_request: Request, context: RouteContext) {
             settings: paymentSettings,
             invoiceReference: invoice.reference,
             amountDue: remaining,
+            currency: invoice.currency,
           })
         : null;
 
@@ -72,8 +73,9 @@ export async function GET(_request: Request, context: RouteContext) {
         sentAt: invoice.sentAt,
         paidAt: invoice.paidAt,
         downloadUrl,
-        formattedTotal: formatInvoiceAmount(invoice.total),
-        formattedRemaining: formatInvoiceAmount(remaining),
+        currency: invoice.currency,
+        formattedTotal: formatInvoiceAmount(invoice.total, invoice.currency),
+        formattedRemaining: formatInvoiceAmount(remaining, invoice.currency),
         payment,
       },
       documents: documents.map((d) => ({

@@ -12,8 +12,8 @@ export async function POST() {
   }
 
   try {
-    const imported = await importServiceCatalogFromQuoteConfig();
-    return NextResponse.json({ imported });
+    const result = await importServiceCatalogFromQuoteConfig();
+    return NextResponse.json(result);
   } catch (error) {
     console.error("[api/admin/service-catalog/import-config] POST", error);
     return NextResponse.json({ error: "Erreur serveur." }, { status: 500 });

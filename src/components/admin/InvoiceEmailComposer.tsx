@@ -14,6 +14,7 @@ type Props = {
   invoiceEmail: string;
   invoiceName: string;
   invoiceTotal: number;
+  invoiceCurrency?: string;
   onClose: () => void;
   onSent: () => void;
 };
@@ -24,12 +25,13 @@ export function InvoiceEmailComposer({
   invoiceEmail,
   invoiceName,
   invoiceTotal,
+  invoiceCurrency = "XOF",
   onClose,
   onSent,
 }: Props) {
   const [subject, setSubject] = useState(`Facture ${invoiceReference} — SD CREATIV`);
   const [body, setBody] = useState(
-    `Bonjour ${invoiceName.split(" ")[0] ?? invoiceName},\n\nVeuillez trouver ci-dessous notre facture ${invoiceReference} d'un montant de ${formatInvoiceAmount(invoiceTotal)}.\n\nMerci de procéder au règlement dans les délais indiqués.\n\nCordialement,`,
+    `Bonjour ${invoiceName.split(" ")[0] ?? invoiceName},\n\nVeuillez trouver ci-dessous notre facture ${invoiceReference} d'un montant de ${formatInvoiceAmount(invoiceTotal, invoiceCurrency)}.\n\nMerci de procéder au règlement dans les délais indiqués.\n\nCordialement,`,
   );
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");

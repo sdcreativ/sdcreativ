@@ -200,13 +200,16 @@ export function CrmServiceCatalogView() {
     setError("");
     setMessage("");
     try {
-      const imported = await importServiceCatalogFromConfigApi();
+      const { imported, updated } = await importServiceCatalogFromConfigApi();
       await load();
-      setMessage(
-        imported > 0
-          ? `${imported} prestation(s) importée(s) depuis le configurateur public.`
-          : "Aucune nouvelle prestation à importer (doublons ignorés).",
-      );
+      if (imported === 0 && updated === 0) {
+        setMessage("Catalogue déjà à jour avec le configurateur public.");
+      } else {
+        const parts: string[] = [];
+        if (imported > 0) parts.push(`${imported} ajoutée(s)`);
+        if (updated > 0) parts.push(`${updated} mise(s) à jour`);
+        setMessage(`Import configurateur : ${parts.join(", ")}.`);
+      }
     } catch (err) {
       setError(err instanceof Error ? err.message : "Import impossible.");
     } finally {

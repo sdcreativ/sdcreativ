@@ -46,18 +46,48 @@ export const updateSiteQuoteConfigSchema = z.object({
   estimateNote: z.string().trim().min(1).max(500),
   projectTypes: z.array(projectTypeSchema).min(1).max(30),
   pageTiers: z.array(pageTierSchema).min(1).max(10),
-  addons: z.array(addonSchema).max(30),
+  addons: z.array(addonSchema).max(40),
 });
+
+/** Fusionne les options seed manquantes (par id) sans écraser la config CRM. */
+function mergeAddonsWithDefaults(
+  stored: SiteQuoteConfigSettings["addons"] | undefined,
+): SiteQuoteConfigSettings["addons"] {
+  const defaults = defaultSiteQuoteConfigSettings.addons;
+  if (!stored?.length) return defaults;
+  const byId = new Map(stored.map((a) => [a.id, a]));
+  const merged = [...stored];
+  for (const addon of defaults) {
+    if (!byId.has(addon.id)) merged.push(addon);
+  }
+  return merged;
+}
+
+const LEGACY_PUBLIC_COPY = {
+  formSubtitle: "Sélectionnez vos options — l'estimation se met à jour en temps réel.",
+  estimateNote:
+    "Estimation indicative HT. Un devis définitif vous sera transmis après étude de votre projet.",
+} as const;
 
 function mergeQuoteConfig(raw: Partial<SiteQuoteConfigSettings> | null): SiteQuoteConfigSettings {
   if (!raw) return defaultSiteQuoteConfigSettings;
+
+  const storedSubtitle = raw.formSubtitle?.trim() ?? "";
+  const storedNote = raw.estimateNote?.trim() ?? "";
+
   return {
     formTitle: raw.formTitle?.trim() || defaultSiteQuoteConfigSettings.formTitle,
-    formSubtitle: raw.formSubtitle?.trim() || defaultSiteQuoteConfigSettings.formSubtitle,
-    estimateNote: raw.estimateNote?.trim() || defaultSiteQuoteConfigSettings.estimateNote,
+    formSubtitle:
+      !storedSubtitle || storedSubtitle === LEGACY_PUBLIC_COPY.formSubtitle
+        ? defaultSiteQuoteConfigSettings.formSubtitle
+        : storedSubtitle,
+    estimateNote:
+      !storedNote || storedNote === LEGACY_PUBLIC_COPY.estimateNote
+        ? defaultSiteQuoteConfigSettings.estimateNote
+        : storedNote,
     projectTypes: raw.projectTypes?.length ? raw.projectTypes : defaultSiteQuoteConfigSettings.projectTypes,
     pageTiers: raw.pageTiers?.length ? raw.pageTiers : defaultSiteQuoteConfigSettings.pageTiers,
-    addons: raw.addons?.length ? raw.addons : defaultSiteQuoteConfigSettings.addons,
+    addons: mergeAddonsWithDefaults(raw.addons),
   };
 }
 

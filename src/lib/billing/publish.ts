@@ -5,6 +5,7 @@ import { getClientById } from "@/lib/clients";
 import { portalNotificationPrefAllows } from "@/lib/client-portal-settings";
 import { updateLead } from "@/lib/leads";
 import { getQuoteById, type Quote } from "@/lib/quotes";
+import { formatQuoteAmount } from "@/content/quotes-labels";
 import { withDb } from "@/lib/db";
 import { saveBillingDocument } from "@/lib/billing/documents";
 import { logBillingEvent } from "@/lib/billing/events";
@@ -55,7 +56,7 @@ function buildPublishEmailBody(quote: Quote, siteUrl: string, portalUrl: string)
 
 Votre devis ${quote.reference} est disponible dans votre espace client SD CREATIV.
 
-Montant HT : ${new Intl.NumberFormat("fr-FR").format(quote.subtotal)} FCFA
+Montant HT : ${formatQuoteAmount(quote.subtotal, quote.currency)}
 Projet : ${quote.projectLabel}
 
 Consultez et signez votre devis ici :

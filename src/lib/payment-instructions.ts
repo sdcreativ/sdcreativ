@@ -11,12 +11,13 @@ export function buildPaymentInstructionsPayload(input: {
   settings: PaymentSettings;
   invoiceReference: string;
   amountDue: number;
+  currency?: string;
 }): PaymentInstructionsPayload {
   return {
     ...input.settings,
     referenceLabel: input.invoiceReference,
     amountDue: input.amountDue,
-    formattedAmountDue: formatInvoiceAmount(input.amountDue),
+    formattedAmountDue: formatInvoiceAmount(input.amountDue, input.currency),
     onlineAvailable: input.settings.onlineEnabled && isCinetPayConfigured() && input.amountDue > 0,
   };
 }

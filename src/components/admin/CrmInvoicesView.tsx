@@ -23,7 +23,13 @@ import {
 } from "@/lib/invoices-api";
 import { fetchProjects } from "@/lib/projects-api";
 import type { Project } from "@/lib/projects";
-import { CURRENCY_LABELS, SUPPORTED_CURRENCIES } from "@/lib/currencies";
+import {
+  CURRENCY_LABELS,
+  normalizeCurrency,
+  suggestedRateToXof,
+  SUPPORTED_CURRENCIES,
+  type SupportedCurrency,
+} from "@/lib/currencies";
 import { fetchQuotes } from "@/lib/quotes-api";
 import type { Quote } from "@/lib/quotes";
 import { InvoiceEmailComposer } from "@/components/admin/InvoiceEmailComposer";
@@ -261,9 +267,13 @@ function InvoiceCard({
       <button type="button" onClick={onOpen} className="w-full text-left">
         <p className="font-mono text-[10px] font-semibold text-primary">{invoice.reference}</p>
         <h3 className="truncate text-sm font-bold text-foreground">{invoice.name}</h3>
-        <p className="mt-1 text-sm font-bold text-primary">{formatInvoiceAmount(invoice.total)}</p>
+        <p className="mt-1 text-sm font-bold text-primary">
+          {formatInvoiceAmount(invoice.total, invoice.currency)}
+        </p>
         {remaining > 0 && invoice.status !== "paid" && (
-          <p className="mt-0.5 text-[10px] text-accent">Reste {formatInvoiceAmount(remaining)}</p>
+          <p className="mt-0.5 text-[10px] text-accent">
+            Reste {formatInvoiceAmount(remaining, invoice.currency)}
+          </p>
         )}
         {invoice.dueDate && (
           <p className="mt-1 text-[10px] text-gray-text">Échéance {formatInvoiceDate(invoice.dueDate)}</p>
@@ -380,9 +390,18 @@ function InvoiceDetailPanel({
             )}
 
             <div className="rounded-xl border border-primary/20 bg-primary-light/30 p-4">
-              <p className="text-2xl font-bold text-primary">{formatInvoiceAmount(invoice.total)}</p>
+              <p className="text-2xl font-bold text-primary">
+                {formatInvoiceAmount(invoice.total, invoice.currency)}
+              </p>
               <p className="mt-1 text-xs text-gray-text">
-                HT {formatInvoiceAmount(invoice.subtotal)} + TVA {invoice.tvaRate} % ({formatInvoiceAmount(invoice.tvaAmount)})
+                HT {formatInvoiceAmount(invoice.subtotal, invoice.currency)} + TVA {invoice.tvaRate} % (
+                {formatInvoiceAmount(invoice.tvaAmount, invoice.currency)})
+              </p>
+              <p className="mt-1 text-xs text-gray-text">
+                Devise : {CURRENCY_LABELS[normalizeCurrency(invoice.currency)]}
+                {invoice.exchangeRateToXof
+                  ? ` · 1 ${invoice.currency} = ${invoice.exchangeRateToXof.toLocaleString("fr-FR")} XOF`
+                  : ""}
               </p>
               {invoice.dueDate && (
                 <p className="mt-2 text-xs text-gray-text">Échéance : {formatInvoiceDate(invoice.dueDate)}</p>
@@ -397,12 +416,14 @@ function InvoiceDetailPanel({
               <div className="mt-2 flex items-baseline justify-between gap-2">
                 <div>
                   <p className="text-sm text-gray-text">Payé</p>
-                  <p className="text-lg font-bold text-foreground">{formatInvoiceAmount(invoice.paidAmount)}</p>
+                  <p className="text-lg font-bold text-foreground">
+                    {formatInvoiceAmount(invoice.paidAmount, invoice.currency)}
+                  </p>
                 </div>
                 <div className="text-right">
                   <p className="text-sm text-gray-text">Reste dû</p>
                   <p className={cn("text-lg font-bold", remaining > 0 ? "text-accent" : "text-green-700")}>
-                    {formatInvoiceAmount(remaining)}
+                    {formatInvoiceAmount(remaining, invoice.currency)}
                   </p>
                 </div>
               </div>
@@ -413,14 +434,18 @@ function InvoiceDetailPanel({
                 {invoice.lines.map((line, i) => (
                   <li key={i} className="flex justify-between gap-2">
                     <span className="text-gray-text">{line.label}</span>
-                    <span className="font-medium">{formatInvoiceAmount(line.amount)}</span>
+                    <span className="font-medium">
+                      {formatInvoiceAmount(line.amount, invoice.currency)}
+                    </span>
                   </li>
                 ))}
               </ul>
             )}
 
             <label className="block" htmlFor={`invoice-paid-${invoice.id}`}>
-              <span className="text-xs font-semibold uppercase tracking-wide text-gray-text">Montant payé (FCFA)</span>
+              <span className="text-xs font-semibold uppercase tracking-wide text-gray-text">
+                Montant payé ({invoice.currency})
+              </span>
               <div className="mt-1 flex gap-2">
                 <input
                   id={`invoice-paid-${invoice.id}`}
@@ -483,6 +508,7 @@ function InvoiceDetailPanel({
           invoiceEmail={invoice.email}
           invoiceName={invoice.name}
           invoiceTotal={invoice.total}
+          invoiceCurrency={invoice.currency}
           onClose={() => setShowEmail(false)}
           onSent={() => void onEmailSent()}
         />
@@ -505,6 +531,8 @@ function CreateInvoiceModal({
   const [clients, setClients] = useState<Client[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const [currency, setCurrency] = useState<SupportedCurrency>("XOF");
+  const [exchangeRate, setExchangeRate] = useState("");
 
   useEffect(() => {
     void fetchCrmClients().then(setClients).catch(() => setClients([]));
@@ -524,6 +552,15 @@ function CreateInvoiceModal({
     if (quote.lines[0]) {
       (form.elements.namedItem("lineLabel") as HTMLInputElement).value = quote.lines[0].label;
     }
+    const quoteCurrency = normalizeCurrency(quote.currency);
+    setCurrency(quoteCurrency);
+    setExchangeRate(
+      quote.exchangeRateToXof != null
+        ? String(quote.exchangeRateToXof)
+        : suggestedRateToXof(quoteCurrency) != null
+          ? String(suggestedRateToXof(quoteCurrency))
+          : "",
+    );
   }
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
@@ -549,7 +586,11 @@ function CreateInvoiceModal({
         tvaRate,
         status: String(data.get("status") || "draft"),
         dueDate: String(data.get("dueDate") || "") || null,
-        currency: String(data.get("currency") || "XOF"),
+        currency,
+        exchangeRateToXof:
+          currency === "XOF"
+            ? null
+            : Number(exchangeRate) || suggestedRateToXof(currency),
       });
       onCreated(invoice);
     } catch (err) {
@@ -637,7 +678,18 @@ function CreateInvoiceModal({
           </label>
           <label className="block">
             <span className="mb-1 block text-xs font-medium text-gray-text">Devise</span>
-            <select name="currency" defaultValue="XOF" className={fieldClass} aria-label="Devise">
+            <select
+              name="currency"
+              value={currency}
+              onChange={(e) => {
+                const next = normalizeCurrency(e.target.value);
+                setCurrency(next);
+                const suggested = suggestedRateToXof(next);
+                setExchangeRate(suggested != null ? String(suggested) : "");
+              }}
+              className={fieldClass}
+              aria-label="Devise"
+            >
               {SUPPORTED_CURRENCIES.map((code) => (
                 <option key={code} value={code}>
                   {CURRENCY_LABELS[code]}
@@ -645,6 +697,23 @@ function CreateInvoiceModal({
               ))}
             </select>
           </label>
+          {currency !== "XOF" ? (
+            <label className="block">
+              <span className="mb-1 block text-xs font-medium text-gray-text">
+                Taux figé (1 {currency} = ? XOF)
+              </span>
+              <input
+                type="number"
+                min={0.000001}
+                step="any"
+                required
+                value={exchangeRate}
+                onChange={(e) => setExchangeRate(e.target.value)}
+                className={fieldClass}
+                aria-label="Taux de change figé vers XOF"
+              />
+            </label>
+          ) : null}
           <label className="block">
             <span className="mb-1 block text-xs font-medium text-gray-text">TVA (%)</span>
             <input name="tvaRate" type="number" min={0} max={100} defaultValue={18} placeholder="TVA" className={fieldClass} aria-label="Taux de TVA en pourcentage" />
