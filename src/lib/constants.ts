@@ -75,7 +75,7 @@ export const LEGAL = {
     "61 Lordou Vironos Street, 6023 Larnaca, Chypre",
 } as const;
 
-export function whatsappUrl(message = CONTACT.whatsappMessage) {
+export function whatsappUrl(message: string = CONTACT.whatsappMessage) {
   const encoded = encodeURIComponent(message);
   return `https://wa.me/${CONTACT.whatsapp.replace(/\D/g, "")}?text=${encoded}`;
 }
