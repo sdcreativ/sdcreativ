@@ -355,7 +355,7 @@ export const formationsPageCopy = {
     title: "Explorez nos",
     highlight: "14 domaines",
     description:
-      "Sélectionnez un domaine pour découvrir les modules proposés. Durées et tarifs indicatifs — devis sur mesure selon vos besoins.",
+      "Ouvrez la fiche détaillée d’un domaine pour découvrir le programme, les objectifs, les tarifs indicatifs et les modalités.",
   },
   cta: {
     title: "Besoin d'un programme sur mesure ?",

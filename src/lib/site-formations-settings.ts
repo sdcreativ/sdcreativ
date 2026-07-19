@@ -4,6 +4,7 @@ import { isDatabaseConfigured, withDb } from "@/lib/db";
 import { LUCIDE_ICON_NAME_ENUM } from "@/lib/lucide-icon-map";
 import {
   defaultSiteFormationsSettings,
+  type FormationDetailStored,
   type SiteFormationsSettings,
 } from "@/lib/site-formations-types";
 
@@ -26,6 +27,39 @@ const courseSchema = z.object({
     (value) => (value === "" || Number.isNaN(value) ? null : value),
     z.number().int().min(0).nullable().optional(),
   ),
+});
+
+const stringList = (maxItems: number, maxLen: number) =>
+  z.array(z.string().trim().min(1).max(maxLen)).max(maxItems);
+
+const detailSchema = z.object({
+  heroDescription: z.string().trim().min(1).max(500),
+  metaDescription: z.string().trim().min(1).max(320),
+  format: z.string().trim().min(1).max(160),
+  durationSummary: z.string().trim().min(1).max(120),
+  level: z.string().trim().min(1).max(80),
+  audience: stringList(20, 200),
+  objectives: stringList(20, 240),
+  prerequisites: stringList(20, 240),
+  outcomes: stringList(20, 240),
+  methodology: stringList(20, 240),
+  process: z
+    .array(
+      z.object({
+        step: z.number().int().min(1).max(20),
+        title: z.string().trim().min(1).max(120),
+        description: z.string().trim().min(1).max(400),
+      }),
+    )
+    .max(12),
+  faq: z
+    .array(
+      z.object({
+        question: z.string().trim().min(5).max(300),
+        answer: z.string().trim().min(10).max(2000),
+      }),
+    )
+    .max(20),
 });
 
 export const updateSiteFormationsSchema = z.object({
@@ -59,6 +93,7 @@ export const updateSiteFormationsSchema = z.object({
         imageAlt: z.string().trim().max(200).optional(),
         isServices: z.boolean().optional(),
         courses: z.array(courseSchema).min(1).max(40),
+        detail: detailSchema,
       }),
     )
     .min(1)
@@ -87,6 +122,24 @@ function normalizeCourse(
   };
 }
 
+function mergeDetail(
+  raw: Partial<FormationDetailStored> | undefined,
+  fallback: FormationDetailStored,
+): FormationDetailStored {
+  if (!raw) return fallback;
+  return {
+    ...fallback,
+    ...raw,
+    audience: raw.audience?.length ? raw.audience : fallback.audience,
+    objectives: raw.objectives?.length ? raw.objectives : fallback.objectives,
+    prerequisites: raw.prerequisites?.length ? raw.prerequisites : fallback.prerequisites,
+    outcomes: raw.outcomes?.length ? raw.outcomes : fallback.outcomes,
+    methodology: raw.methodology?.length ? raw.methodology : fallback.methodology,
+    process: raw.process?.length ? raw.process : fallback.process,
+    faq: raw.faq?.length ? raw.faq : fallback.faq,
+  };
+}
+
 function mergeCategories(
   raw: SiteFormationsSettings["categories"] | undefined,
 ): SiteFormationsSettings["categories"] {
@@ -96,12 +149,19 @@ function mergeCategories(
   );
   return raw.map((cat) => {
     const fallback = defaultsById.get(cat.id);
+    const fallbackDetail =
+      fallback?.detail ??
+      defaultSiteFormationsSettings.categories[0]!.detail;
     return {
       ...fallback,
       ...cat,
-      image: cat.image?.trim() || fallback?.image || "/images/formations/developpement-web-mobile.jpg",
+      image:
+        cat.image?.trim() ||
+        fallback?.image ||
+        "/images/formations/developpement-web-mobile.jpg",
       imageAlt: cat.imageAlt?.trim() || fallback?.imageAlt || cat.title,
       courses: cat.courses?.length ? cat.courses : fallback?.courses ?? [],
+      detail: mergeDetail(cat.detail, fallbackDetail),
     };
   });
 }

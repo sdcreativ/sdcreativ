@@ -116,6 +116,7 @@ export function revalidateMaintenancePages() {
 
 export function revalidateFormationsPages() {
   revalidatePath("/formations");
+  revalidatePath("/formations/[slug]", "page");
   revalidatePath("/en/training");
   revalidatePath("/sitemap.xml");
 }

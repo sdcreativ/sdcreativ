@@ -1,5 +1,9 @@
 import type { LucideIconName } from "@/lib/lucide-icon-map";
 import {
+  getFormationDetailSeed,
+  type FormationDetailSeed,
+} from "@/content/formation-details";
+import {
   formationCategories,
   formationsFaq,
   formationsHighlights,
@@ -12,6 +16,14 @@ export type FormationCourseStored = {
   price?: number | null;
 };
 
+export type FormationProcessStepStored = {
+  step: number;
+  title: string;
+  description: string;
+};
+
+export type FormationDetailStored = FormationDetailSeed;
+
 export type FormationCategoryStored = {
   id: string;
   icon: LucideIconName;
@@ -21,6 +33,7 @@ export type FormationCategoryStored = {
   imageAlt?: string;
   courses: FormationCourseStored[];
   isServices?: boolean;
+  detail: FormationDetailStored;
 };
 
 export type FormationHighlightStored = {
@@ -56,6 +69,23 @@ export type SiteFormationsSettings = {
   faq: FormationFaqStored[];
 };
 
+function emptyDetail(title: string): FormationDetailStored {
+  return {
+    heroDescription: title,
+    metaDescription: title,
+    format: "Présentiel, distanciel ou intra-entreprise",
+    durationSummary: "Sur mesure",
+    level: "Tous niveaux",
+    audience: [],
+    objectives: [],
+    prerequisites: [],
+    outcomes: [],
+    methodology: [],
+    process: [],
+    faq: [],
+  };
+}
+
 export const defaultSiteFormationsSettings: SiteFormationsSettings = {
   intro: { ...formationsPageCopy.intro },
   catalog: { ...formationsPageCopy.catalog },
@@ -65,6 +95,7 @@ export const defaultSiteFormationsSettings: SiteFormationsSettings = {
   categories: formationCategories.map((cat) => ({
     ...cat,
     courses: cat.courses.map((c) => ({ ...c })),
+    detail: getFormationDetailSeed(cat.id) ?? emptyDetail(cat.title),
   })),
   faq: formationsFaq.map((f) => ({ ...f })),
 };

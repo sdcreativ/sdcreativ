@@ -2,7 +2,10 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { GraduationCap, Loader2, RotateCcw } from "lucide-react";
-import type { SiteFormationsSettings } from "@/lib/site-formations-types";
+import type {
+  FormationDetailStored,
+  SiteFormationsSettings,
+} from "@/lib/site-formations-types";
 import { parseFetchJson } from "@/lib/fetch-json";
 import { useDialog } from "@/components/ui/DialogProvider";
 import {
@@ -12,12 +15,55 @@ import {
   CrmFormSection,
   CrmFormStatus,
   CrmIconSelect,
+  CrmLineListEditor,
   CrmRepeaterCard,
   CrmSecondaryButton,
   CrmSectionTabs,
   crmFieldClass,
 } from "@/components/admin/crm-site-form-ui";
 import { SiteImageUploadField } from "@/components/admin/SiteImageUploadField";
+
+function emptyDetail(title = "Nouveau domaine"): FormationDetailStored {
+  return {
+    heroDescription: `Découvrez notre programme ${title}.`,
+    metaDescription: `Formation ${title} — SD CREATIV.`,
+    format: "Présentiel, distanciel ou intra-entreprise",
+    durationSummary: "Sur mesure",
+    level: "Tous niveaux",
+    audience: ["Professionnels et équipes"],
+    objectives: ["Monter en compétences sur le sujet"],
+    prerequisites: ["Aucun"],
+    outcomes: ["Attestation de participation"],
+    methodology: [
+      "Apports théoriques ciblés",
+      "Ateliers pratiques",
+      "Supports numériques",
+    ],
+    process: [
+      {
+        step: 1,
+        title: "Diagnostic & cadrage",
+        description: "Analyse du contexte et des objectifs.",
+      },
+      {
+        step: 2,
+        title: "Programme sur mesure",
+        description: "Modules et cas pratiques adaptés.",
+      },
+      {
+        step: 3,
+        title: "Animation pratique",
+        description: "Sessions interactives et mises en situation.",
+      },
+      {
+        step: 4,
+        title: "Évaluation & suivi",
+        description: "Bilan et recommandations.",
+      },
+    ],
+    faq: [],
+  };
+}
 
 type FormationsTab = "copy" | "categories" | "highlights" | "faq" | "cta";
 
@@ -437,6 +483,160 @@ export function CrmFormationsView() {
                       Ajouter un module
                     </CrmSecondaryButton>
                   </div>
+
+                  <div className="mt-4 space-y-3 border-t border-gray/30 pt-4">
+                    <p className="text-xs font-semibold uppercase tracking-wide text-gray-text">
+                      Page détail (/formations/{category.id})
+                    </p>
+                    <div className="grid gap-3 sm:grid-cols-2">
+                      <CrmFormField label="Accroche hero" className="sm:col-span-2">
+                        <textarea
+                          value={category.detail.heroDescription}
+                          onChange={(e) => {
+                            const categories = [...form.categories];
+                            categories[i] = {
+                              ...categories[i]!,
+                              detail: {
+                                ...categories[i]!.detail,
+                                heroDescription: e.target.value,
+                              },
+                            };
+                            setForm({ ...form, categories });
+                          }}
+                          className={crmFieldClass}
+                          rows={2}
+                        />
+                      </CrmFormField>
+                      <CrmFormField label="Meta description SEO" className="sm:col-span-2">
+                        <textarea
+                          value={category.detail.metaDescription}
+                          onChange={(e) => {
+                            const categories = [...form.categories];
+                            categories[i] = {
+                              ...categories[i]!,
+                              detail: {
+                                ...categories[i]!.detail,
+                                metaDescription: e.target.value,
+                              },
+                            };
+                            setForm({ ...form, categories });
+                          }}
+                          className={crmFieldClass}
+                          rows={2}
+                        />
+                      </CrmFormField>
+                      <CrmFormField label="Format">
+                        <input
+                          value={category.detail.format}
+                          onChange={(e) => {
+                            const categories = [...form.categories];
+                            categories[i] = {
+                              ...categories[i]!,
+                              detail: { ...categories[i]!.detail, format: e.target.value },
+                            };
+                            setForm({ ...form, categories });
+                          }}
+                          className={crmFieldClass}
+                        />
+                      </CrmFormField>
+                      <CrmFormField label="Durée globale">
+                        <input
+                          value={category.detail.durationSummary}
+                          onChange={(e) => {
+                            const categories = [...form.categories];
+                            categories[i] = {
+                              ...categories[i]!,
+                              detail: {
+                                ...categories[i]!.detail,
+                                durationSummary: e.target.value,
+                              },
+                            };
+                            setForm({ ...form, categories });
+                          }}
+                          className={crmFieldClass}
+                        />
+                      </CrmFormField>
+                      <CrmFormField label="Niveau" className="sm:col-span-2">
+                        <input
+                          value={category.detail.level}
+                          onChange={(e) => {
+                            const categories = [...form.categories];
+                            categories[i] = {
+                              ...categories[i]!,
+                              detail: { ...categories[i]!.detail, level: e.target.value },
+                            };
+                            setForm({ ...form, categories });
+                          }}
+                          className={crmFieldClass}
+                        />
+                      </CrmFormField>
+                    </div>
+                    <CrmLineListEditor
+                      label="Public cible"
+                      values={category.detail.audience}
+                      onChange={(audience) => {
+                        const categories = [...form.categories];
+                        categories[i] = {
+                          ...categories[i]!,
+                          detail: { ...categories[i]!.detail, audience },
+                        };
+                        setForm({ ...form, categories });
+                      }}
+                      minItems={1}
+                    />
+                    <CrmLineListEditor
+                      label="Objectifs"
+                      values={category.detail.objectives}
+                      onChange={(objectives) => {
+                        const categories = [...form.categories];
+                        categories[i] = {
+                          ...categories[i]!,
+                          detail: { ...categories[i]!.detail, objectives },
+                        };
+                        setForm({ ...form, categories });
+                      }}
+                      minItems={1}
+                    />
+                    <CrmLineListEditor
+                      label="Prérequis"
+                      values={category.detail.prerequisites}
+                      onChange={(prerequisites) => {
+                        const categories = [...form.categories];
+                        categories[i] = {
+                          ...categories[i]!,
+                          detail: { ...categories[i]!.detail, prerequisites },
+                        };
+                        setForm({ ...form, categories });
+                      }}
+                      minItems={1}
+                    />
+                    <CrmLineListEditor
+                      label="Résultats / livrables"
+                      values={category.detail.outcomes}
+                      onChange={(outcomes) => {
+                        const categories = [...form.categories];
+                        categories[i] = {
+                          ...categories[i]!,
+                          detail: { ...categories[i]!.detail, outcomes },
+                        };
+                        setForm({ ...form, categories });
+                      }}
+                      minItems={1}
+                    />
+                    <CrmLineListEditor
+                      label="Méthodologie"
+                      values={category.detail.methodology}
+                      onChange={(methodology) => {
+                        const categories = [...form.categories];
+                        categories[i] = {
+                          ...categories[i]!,
+                          detail: { ...categories[i]!.detail, methodology },
+                        };
+                        setForm({ ...form, categories });
+                      }}
+                      minItems={1}
+                    />
+                  </div>
                 </CrmRepeaterCard>
               ))}
             </div>
@@ -454,6 +654,7 @@ export function CrmFormationsView() {
                       image: "/images/formations/developpement-web-mobile.jpg",
                       imageAlt: "Nouveau domaine de formation",
                       courses: [{ title: "Nouveau module", duration: "1 jour", price: null }],
+                      detail: emptyDetail("Nouveau domaine"),
                     },
                   ],
                 })

@@ -53,7 +53,7 @@ export default async function EnTrainingPage() {
             eyebrow="Catalog"
             title="Training"
             highlight="domains"
-            description="Browse our domains visually. Full module lists, durations and prices are on the French page."
+            description="Each card opens the full French detail page with modules, pricing and pedagogy."
             className="mb-12"
           />
           <div className="grid gap-5 sm:grid-cols-2 xl:grid-cols-3">
@@ -61,9 +61,10 @@ export default async function EnTrainingPage() {
               const Icon = category.icon;
               const imageSrc = resolveImageDisplayUrl(category.image);
               return (
-                <article
+                <Link
                   key={category.id}
-                  className="group relative overflow-hidden rounded-2xl bg-dark shadow-sm ring-1 ring-black/5"
+                  href={`/formations/${category.id}`}
+                  className="group relative overflow-hidden rounded-2xl bg-dark shadow-sm ring-1 ring-black/5 transition-shadow hover:shadow-xl"
                 >
                   <div className="relative aspect-[5/4] overflow-hidden">
                     <Image
@@ -84,8 +85,7 @@ export default async function EnTrainingPage() {
                     </div>
                     <div className="absolute inset-x-0 bottom-0 p-5 md:p-6">
                       <p className="text-xs font-semibold uppercase tracking-wider text-primary-light">
-                        {category.courses.length}{" "}
-                        {category.isServices ? "services" : "modules"}
+                        {category.courses.length} modules
                       </p>
                       <h2 className="mt-1 text-lg font-bold leading-snug text-white md:text-xl">
                         {category.title}
@@ -93,22 +93,16 @@ export default async function EnTrainingPage() {
                       <p className="mt-2 line-clamp-2 text-sm text-white/75">
                         {category.description}
                       </p>
+                      <span className="mt-4 inline-flex items-center gap-1.5 text-sm font-semibold text-white">
+                        View details
+                        <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-0.5" />
+                      </span>
                     </div>
                   </div>
-                </article>
+                </Link>
               );
             })}
           </div>
-          <p className="mt-10 text-center text-sm text-gray-text">
-            Full French catalog:{" "}
-            <Link
-              href="/formations"
-              className="inline-flex items-center gap-1 font-semibold text-primary hover:underline"
-            >
-              /formations
-              <ArrowRight className="h-3.5 w-3.5" aria-hidden />
-            </Link>
-          </p>
         </div>
       </section>
 

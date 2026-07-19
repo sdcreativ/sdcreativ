@@ -1,13 +1,15 @@
 import type { MetadataRoute } from "next";
 import { SITE } from "@/lib/constants";
 import { localSeoPages } from "@/content/local-seo";
+import { getFormationCategorySlugs } from "@/lib/formations-resolver";
 import { getServiceDetailSlugs } from "@/lib/public-services-resolver";
 import { getBlogPosts, getRealisations } from "@/lib/cms";
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
-  const [blogPosts, realisations] = await Promise.all([
+  const [blogPosts, realisations, formationSlugs] = await Promise.all([
     getBlogPosts(),
     getRealisations(),
+    getFormationCategorySlugs(),
   ]);
 
   const staticPages = [
@@ -56,6 +58,13 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     priority: 0.85,
   }));
 
+  const formationDetailEntries = formationSlugs.map((slug) => ({
+    url: `${SITE.url}/formations/${slug}`,
+    lastModified: new Date(),
+    changeFrequency: "monthly" as const,
+    priority: 0.8,
+  }));
+
   const localSeoEntries = localSeoPages.map((page) => ({
     url: `${SITE.url}${page.path}`,
     lastModified: new Date(),
@@ -72,6 +81,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     })),
     ...realisationEntries,
     ...serviceDetailEntries,
+    ...formationDetailEntries,
     ...localSeoEntries,
     ...blogEntries,
   ];
