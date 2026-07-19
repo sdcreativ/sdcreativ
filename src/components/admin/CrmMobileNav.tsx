@@ -13,9 +13,20 @@ import {
   resolveMobileNav,
 } from "@/lib/crm-mobile-nav";
 import { CRM_SESSION_CHANGED_EVENT } from "@/lib/crm-session-events";
+import { formatNavBadge, type CrmNavBadges } from "@/lib/crm-nav-badges";
+import { fetchCrmNavBadges } from "@/lib/crm-nav-badges-api";
+import { useCrmFetch } from "@/hooks/useCrmFetch";
 import { useCrmPermissions } from "@/hooks/useCrmPermissions";
 import { cn } from "@/lib/utils";
 import { LayoutGrid, X } from "lucide-react";
+
+const NAV_BADGE_KEYS: Partial<Record<string, keyof CrmNavBadges>> = {
+  leads: "leads",
+  quotes: "quotes",
+  tasks: "tasks",
+  tickets: "tickets",
+  inbox: "inbox",
+};
 
 export function CrmMobileNav() {
   const pathname = usePathname() ?? "";
@@ -51,6 +62,8 @@ export function CrmMobileNav() {
     };
   }, [plusOpen]);
 
+  const { data: badges } = useCrmFetch("crm-nav-badges", fetchCrmNavBadges, 60_000);
+
   if (!session) return null;
 
   const { primary, secondary } = resolveMobileNav(permissions, session.role);
@@ -73,17 +86,27 @@ export function CrmMobileNav() {
           {primary.map((item) => {
             const active = isMobileNavActive(pathname, item.href);
             const Icon = item.icon;
+            const badgeKey = NAV_BADGE_KEYS[item.id];
+            const badgeCount = badgeKey && badges ? badges[badgeKey] : 0;
+            const badgeLabel = formatNavBadge(badgeCount);
             return (
               <li key={item.id} className="min-w-0 flex-1">
                 <Link
                   href={item.href}
                   className={cn(
-                    "flex flex-col items-center gap-0.5 rounded-lg px-1 py-2 text-[10px] font-semibold transition-colors",
+                    "relative flex flex-col items-center gap-0.5 rounded-lg px-1 py-2 text-[10px] font-semibold transition-colors",
                     active ? "text-primary" : "text-gray-text hover:text-foreground",
                   )}
                   aria-current={active ? "page" : undefined}
                 >
-                  <Icon className={cn("h-5 w-5 shrink-0", active && "text-primary")} aria-hidden />
+                  <span className="relative">
+                    <Icon className={cn("h-5 w-5 shrink-0", active && "text-primary")} aria-hidden />
+                    {badgeLabel ? (
+                      <span className="absolute -right-2.5 -top-1.5 min-w-[1rem] rounded-full bg-accent px-1 text-center text-[9px] font-bold leading-4 text-white">
+                        {badgeLabel}
+                      </span>
+                    ) : null}
+                  </span>
                   <span className="max-w-full truncate">{getMobileNavLabel(item)}</span>
                 </Link>
               </li>
@@ -157,13 +180,16 @@ export function CrmMobileNav() {
               {secondary.map((item) => {
                 const active = isMobileNavActive(pathname, item.href);
                 const Icon = item.icon;
+                const badgeKey = NAV_BADGE_KEYS[item.id];
+                const badgeCount = badgeKey && badges ? badges[badgeKey] : 0;
+                const badgeLabel = formatNavBadge(badgeCount);
                 return (
                   <li key={item.id}>
                     <Link
                       href={item.href}
                       onClick={() => setPlusOpen(false)}
                       className={cn(
-                        "flex flex-col items-center gap-2 rounded-xl px-3 py-4 text-center text-xs font-medium transition-colors",
+                        "relative flex flex-col items-center gap-2 rounded-xl px-3 py-4 text-center text-xs font-medium transition-colors",
                         active
                           ? "bg-primary text-white shadow-sm"
                           : "bg-gray-light/60 text-foreground hover:bg-gray-light",
@@ -172,6 +198,16 @@ export function CrmMobileNav() {
                     >
                       <Icon className="h-5 w-5 shrink-0" aria-hidden />
                       <span className="leading-tight">{item.label}</span>
+                      {badgeLabel ? (
+                        <span
+                          className={cn(
+                            "absolute right-2 top-2 min-w-[1.1rem] rounded-full px-1 text-center text-[9px] font-bold leading-4",
+                            active ? "bg-white/25 text-white" : "bg-accent text-white",
+                          )}
+                        >
+                          {badgeLabel}
+                        </span>
+                      ) : null}
                     </Link>
                   </li>
                 );

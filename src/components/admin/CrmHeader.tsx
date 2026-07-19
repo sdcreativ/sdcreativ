@@ -131,7 +131,13 @@ export function CrmHeader({
   ].filter((key): key is string => key !== null && !dismissedOperational.has(key));
 
   const operationalCount = operationalAlerts.length;
-  const alertCount = operationalCount + billingUnreadCount;
+  /** Total d’éléments (pas seulement le nombre de catégories d’alerte). */
+  const alertCount =
+    (dismissedOperational.has("calendar") ? 0 : calendarReminders.length) +
+    (dismissedOperational.has("overdue-tasks") ? 0 : overdueTasks) +
+    (dismissedOperational.has("sla-breached") ? 0 : slaBreached) +
+    (dismissedOperational.has("open-tickets") ? 0 : openTickets) +
+    billingUnreadCount;
   const hasOperationalAlerts = operationalCount > 0;
   const hasAnyAlerts = alertCount > 0;
   const [hydrated, setHydrated] = useState(false);

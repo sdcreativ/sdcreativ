@@ -9,8 +9,19 @@ import { CRM_ROLE_LABELS } from "@/content/crm-roles";
 import { crmNavGroups, crmNavItems } from "@/content/crm-nav";
 import { fetchCrmSession, type CrmSessionInfo } from "@/lib/crm-settings-api";
 import { filterCrmNavGroups } from "@/lib/crm-access";
+import { formatNavBadge, type CrmNavBadges } from "@/lib/crm-nav-badges";
+import { fetchCrmNavBadges } from "@/lib/crm-nav-badges-api";
 import { CRM_SESSION_CHANGED_EVENT } from "@/lib/crm-session-events";
+import { useCrmFetch } from "@/hooks/useCrmFetch";
 import { cn } from "@/lib/utils";
+
+const NAV_BADGE_KEYS: Partial<Record<string, keyof CrmNavBadges>> = {
+  leads: "leads",
+  quotes: "quotes",
+  tasks: "tasks",
+  tickets: "tickets",
+  inbox: "inbox",
+};
 
 type Props = {
   onNavigate?: () => void;
@@ -43,6 +54,8 @@ export function CrmSidebar({ onNavigate }: Props) {
     window.addEventListener(CRM_SESSION_CHANGED_EVENT, loadSession);
     return () => window.removeEventListener(CRM_SESSION_CHANGED_EVENT, loadSession);
   }, [loadSession]);
+
+  const { data: badges } = useCrmFetch("crm-nav-badges", fetchCrmNavBadges, 60_000);
 
   const roleLabel =
     session?.roleLabel ??
@@ -78,8 +91,11 @@ export function CrmSidebar({ onNavigate }: Props) {
               {group.label}
             </p>
             <div className="space-y-0.5">
-              {group.items.map(({ label, href, icon: Icon }) => {
+              {group.items.map(({ id, label, href, icon: Icon }) => {
                 const active = activeHref === href;
+                const badgeKey = NAV_BADGE_KEYS[id];
+                const badgeCount = badgeKey && badges ? badges[badgeKey] : 0;
+                const badgeLabel = formatNavBadge(badgeCount);
                 return (
                   <Link
                     key={href}
@@ -93,7 +109,18 @@ export function CrmSidebar({ onNavigate }: Props) {
                     )}
                   >
                     <Icon className="h-4 w-4 shrink-0 opacity-90" aria-hidden />
-                    <span className="truncate">{label}</span>
+                    <span className="min-w-0 flex-1 truncate">{label}</span>
+                    {badgeLabel ? (
+                      <span
+                        className={cn(
+                          "shrink-0 rounded-md px-1.5 py-0.5 text-[10px] font-bold tabular-nums",
+                          active ? "bg-white/20 text-white" : "bg-accent text-white",
+                        )}
+                        aria-label={`${badgeCount} élément${badgeCount > 1 ? "s" : ""}`}
+                      >
+                        {badgeLabel}
+                      </span>
+                    ) : null}
                   </Link>
                 );
               })}
