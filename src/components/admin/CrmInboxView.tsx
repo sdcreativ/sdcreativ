@@ -16,13 +16,15 @@ const TYPE_LABELS: Record<InboxItem["type"], string> = {
   lead_activity: "Lead",
   portal_message: "Portail",
   task_comment: "Tâche",
+  mail_thread: "Email",
 };
 
 const TYPE_ICONS: Record<InboxItem["type"], typeof Inbox> = {
   ticket: Inbox,
   lead_activity: Target,
-  portal_message: Mail,
+  portal_message: MessageSquare,
   task_comment: CheckSquare,
+  mail_thread: Mail,
 };
 
 export function CrmInboxView() {
@@ -87,7 +89,7 @@ export function CrmInboxView() {
   const emptyMessage =
     filter === "unread" || typeFilter
       ? "Aucun élément ne correspond à ces filtres."
-      : "Votre inbox est vide — les tickets, leads et messages portail apparaîtront ici.";
+      : "Votre inbox est vide — tickets, emails, leads et messages portail apparaîtront ici.";
 
   return (
     <div className="space-y-6">
@@ -98,7 +100,7 @@ export function CrmInboxView() {
             Inbox unifiée
           </h2>
           <p className="text-sm text-gray-text">
-            Tickets, leads, messages portail et commentaires — {unreadCount} non lu(s).
+            Tickets, emails messagerie, leads, portail et tâches — {unreadCount} non lu(s).
           </p>
         </div>
         <button

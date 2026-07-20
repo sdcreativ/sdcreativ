@@ -76,7 +76,7 @@ export function MailLinkedThreadsSection({
           {threads.map((thread) => (
             <li key={thread.id}>
               <Link
-                href="/admin/crm/messagerie"
+                href={`/admin/crm/messagerie?thread=${thread.id}`}
                 className={cn(
                   "block rounded-xl border border-gray/30 bg-gray-light/50 px-3 py-2 transition hover:border-primary/40 hover:bg-primary-light/30",
                 )}

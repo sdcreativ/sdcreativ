@@ -4,7 +4,8 @@ export type InboxItemType =
   | "ticket"
   | "lead_activity"
   | "portal_message"
-  | "task_comment";
+  | "task_comment"
+  | "mail_thread";
 
 export type InboxItem = {
   key: string;
@@ -175,6 +176,51 @@ export async function listInboxItems(
         createdAt: m.created_at.toISOString(),
         read: readKeys.has(`portal_message:${m.id}`),
       });
+    }
+
+    // Threads messagerie Hostinger (crm_mail_threads) — table absente = ignore
+    try {
+      const { rows: mailThreads } = await query<{
+        id: string;
+        subject: string;
+        snippet: string;
+        unread_count: number;
+        last_message_at: Date | null;
+        updated_at: Date;
+        client_name: string | null;
+        lead_name: string | null;
+      }>(`
+        SELECT t.id, t.subject, t.snippet, t.unread_count,
+               t.last_message_at, t.updated_at,
+               c.name AS client_name, l.name AS lead_name
+        FROM crm_mail_threads t
+        LEFT JOIN clients c ON c.id = t.client_id
+        LEFT JOIN leads l ON l.id = t.lead_id
+        WHERE t.deleted_at IS NULL
+          AND (t.unread_count > 0 OR t.status = 'open')
+        ORDER BY COALESCE(t.last_message_at, t.updated_at) DESC
+        LIMIT 30
+      `);
+
+      for (const t of mailThreads) {
+        const key = `mail_thread:${t.id}`;
+        const unread = Number(t.unread_count) > 0;
+        items.push({
+          key,
+          type: "mail_thread",
+          title: t.subject?.trim() || "(sans objet)",
+          preview: t.snippet?.slice(0, 120) || (unread ? `${t.unread_count} non lu(s)` : "Conversation"),
+          href: `/admin/crm/messagerie?thread=${t.id}`,
+          assigneeId: null,
+          assigneeName: null,
+          clientName: t.client_name ?? t.lead_name,
+          createdAt: (t.last_message_at ?? t.updated_at).toISOString(),
+          // Non lu inbox = non lus mail OU pas encore marqué dans crm_inbox_reads
+          read: !unread || readKeys.has(key),
+        });
+      }
+    } catch {
+      // Tables messagerie non migrées
     }
 
     let filtered = items;

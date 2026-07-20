@@ -12,6 +12,7 @@ import { ClientPortalPaymentsView } from "@/components/espace-client/ClientPorta
 import { ClientPortalProjectView } from "@/components/espace-client/ClientPortalProjectView";
 import { ClientPortalQuotesView } from "@/components/espace-client/ClientPortalQuotesView";
 import { ClientPortalInvoicesView } from "@/components/espace-client/ClientPortalInvoicesView";
+import { ClientPortalOffersView } from "@/components/espace-client/ClientPortalOffersView";
 import { ClientPortalNotificationEngine } from "@/components/espace-client/ClientPortalNotificationEngine";
 import { ClientPortalShell } from "@/components/espace-client/ClientPortalShell";
 import { ClientPortalSupportView } from "@/components/espace-client/ClientPortalSupportView";
@@ -212,6 +213,7 @@ export function EspaceClientPortal() {
       "payments",
       "quotes",
       "invoices",
+      "offers",
       "support",
       "settings",
     ];
@@ -337,6 +339,8 @@ export function EspaceClientPortal() {
       {section === "payments" && <ClientPortalPaymentsView />}
 
       {section === "quotes" && <ClientPortalQuotesView />}
+
+      {section === "offers" && <ClientPortalOffersView />}
 
       {section === "messages" && (
         <ClientPortalMessagesView profile={profile} onTicketsChange={loadTickets} />

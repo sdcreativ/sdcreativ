@@ -18,9 +18,10 @@ export async function GET(request: Request) {
     const period = (REPORT_PERIODS.includes(raw as ReportPeriod) ? raw : "month") as ReportPeriod;
     const assignee = searchParams.get("assignee")?.trim() || undefined;
     const clientId = searchParams.get("clientId")?.trim() || undefined;
+    const legalEntityId = searchParams.get("legalEntityId")?.trim() || undefined;
     const compare = searchParams.get("compare") === "1";
 
-    const filters = { assignee, clientId };
+    const filters = { assignee, clientId, legalEntityId };
     const summary = await getReportsSummary(period, filters);
 
     let comparison = null;

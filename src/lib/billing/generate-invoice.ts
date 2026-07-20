@@ -143,6 +143,7 @@ export async function generateInvoiceFromQuote(input: {
     dueDate: new Date(Date.now() + 30 * 86_400_000).toISOString().slice(0, 10),
     currency: normalizeCurrency(quote.currency),
     exchangeRateToXof: quote.exchangeRateToXof,
+    legalEntityId: quote.legalEntityId,
   });
 
   if (projectId && !quote.projectId) {

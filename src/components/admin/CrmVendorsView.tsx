@@ -17,7 +17,7 @@ import { fetchProjects } from "@/lib/projects-api";
 import type { Project } from "@/lib/projects";
 import { PO_STATUSES, PO_STATUS_LABELS, type PurchaseOrderStatus } from "@/content/priority3-labels";
 import { useDialog } from "@/components/ui/DialogProvider";
-import { Loader2, Pencil, Plus, Trash2, UserCog } from "lucide-react";
+import { Link2, Loader2, Pencil, Plus, Trash2, UserCog } from "lucide-react";
 
 const fieldClass =
   "w-full rounded-xl border border-gray/60 bg-white px-3 py-2.5 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20";
@@ -435,19 +435,44 @@ export function CrmVendorsView() {
                     {formatMoney(o.amount, o.currency)}
                     {o.projectName && ` · ${o.projectName}`}
                   </p>
-                  <select
-                    className="mt-2 rounded-lg border border-gray/40 bg-white px-2 py-1 text-xs"
-                    value={o.status}
-                    onChange={(e) =>
-                      void handleStatusChange(o.id, e.target.value as PurchaseOrderStatus)
-                    }
-                  >
-                    {PO_STATUSES.map((s) => (
-                      <option key={s} value={s}>
-                        {PO_STATUS_LABELS[s]}
-                      </option>
-                    ))}
-                  </select>
+                  <div className="mt-2 flex flex-wrap items-center gap-2">
+                    <select
+                      className="rounded-lg border border-gray/40 bg-white px-2 py-1 text-xs"
+                      value={o.status}
+                      onChange={(e) =>
+                        void handleStatusChange(o.id, e.target.value as PurchaseOrderStatus)
+                      }
+                    >
+                      {PO_STATUSES.map((s) => (
+                        <option key={s} value={s}>
+                          {PO_STATUS_LABELS[s]}
+                        </option>
+                      ))}
+                    </select>
+                    <button
+                      type="button"
+                      className="inline-flex items-center gap-1 rounded-lg border border-primary/30 px-2 py-1 text-xs font-medium text-primary hover:bg-primary-light/30"
+                      onClick={() => {
+                        void fetch(`/api/admin/vendors/purchase-orders/${o.id}/portal-link`, {
+                          method: "POST",
+                          credentials: "include",
+                        })
+                          .then((r) => r.json())
+                          .then((json: { signUrl?: string; error?: string }) => {
+                            if (json.signUrl) {
+                              void navigator.clipboard.writeText(json.signUrl);
+                              window.alert(`Lien prestataire copié :\n${json.signUrl}`);
+                            } else {
+                              window.alert(json.error ?? "Lien impossible (migration 0015 ?).");
+                            }
+                          })
+                          .catch(() => window.alert("Lien impossible."));
+                      }}
+                    >
+                      <Link2 className="h-3 w-3" aria-hidden />
+                      Portail
+                    </button>
+                  </div>
                 </li>
               ))}
             </ul>

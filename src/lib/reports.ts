@@ -38,6 +38,7 @@ export type ReportsKpis = {
 export type ReportsFilters = {
   assignee?: string;
   clientId?: string;
+  legalEntityId?: string;
 };
 
 export type PipelineRow = {
@@ -195,11 +196,24 @@ function leadQueryFilters(from: Date | null, to: Date, filters: ReportsFilters) 
   return { clause, params };
 }
 
+function appendLegalEntityFilter(
+  clause: string,
+  params: unknown[],
+  legalEntityId?: string,
+): { clause: string; params: unknown[] } {
+  if (!legalEntityId) return { clause, params };
+  return {
+    clause: `${clause} AND legal_entity_id = $${params.length + 1}`,
+    params: [...params, legalEntityId],
+  };
+}
+
 function quoteQueryFilters(from: Date | null, to: Date, filters: ReportsFilters) {
   const date = dateFilter("created_at", from, to);
   let params: unknown[] = [...date.params];
   let clause = date.clause;
   ({ clause, params } = appendClientFilter(clause, params, filters.clientId));
+  ({ clause, params } = appendLegalEntityFilter(clause, params, filters.legalEntityId));
   return { clause, params };
 }
 
@@ -223,6 +237,7 @@ function quoteOnlyFilters(filters: ReportsFilters) {
   let params: unknown[] = [];
   let clause = "";
   ({ clause, params } = appendClientFilter(clause, params, filters.clientId));
+  ({ clause, params } = appendLegalEntityFilter(clause, params, filters.legalEntityId));
   return { clause, params };
 }
 
@@ -377,23 +392,43 @@ export async function getReportsSummary(
       invoiceParams,
       filters.clientId,
     ));
-    const { rows: paidRows } = await query<{ paid: string; subtotal: string }>(
+    ({ clause: invoiceClause, params: invoiceParams } = appendLegalEntityFilter(
+      invoiceClause,
+      invoiceParams,
+      filters.legalEntityId,
+    ));
+    const { rows: paidRows } = await query<{ paid: string; subtotal: string; paid_xof: string }>(
       `SELECT COALESCE(SUM(paid_amount), 0)::text AS paid,
-              COALESCE(SUM(subtotal), 0)::text AS subtotal
+              COALESCE(SUM(subtotal), 0)::text AS subtotal,
+              COALESCE(SUM(
+                CASE
+                  WHEN currency = 'XOF' OR currency IS NULL THEN paid_amount
+                  WHEN exchange_rate_to_xof IS NOT NULL AND exchange_rate_to_xof > 0
+                    THEN ROUND(paid_amount * exchange_rate_to_xof)
+                  ELSE paid_amount
+                END
+              ), 0)::text AS paid_xof
        FROM invoices
        WHERE paid_amount > 0${invoiceClause}`,
       invoiceParams,
     );
-    const paidRevenue = Number(paidRows[0]?.paid ?? 0);
+    const paidRevenue = Number(paidRows[0]?.paid_xof ?? paidRows[0]?.paid ?? 0);
     const invoicedSubtotal = Number(paidRows[0]?.subtotal ?? 0);
     const totalRevenue = revenueQuotes + revenueProjects;
-    const marginEstimate = Math.round(totalRevenue > 0 ? totalRevenue * 0.35 : paidRevenue * 0.35);
+
+    const { rows: vendorCostRows } = await query<{ costs: string }>(
+      `SELECT COALESCE(SUM(po.amount), 0)::text AS costs
+       FROM vendor_purchase_orders po
+       WHERE po.status NOT IN ('cancelled')
+         AND po.created_at <= $1
+         ${filters.clientId ? "AND po.project_id IN (SELECT id FROM projects WHERE client_id = $2)" : ""}`,
+      filters.clientId ? [to, filters.clientId] : [to],
+    );
+    const vendorCosts = Number(vendorCostRows[0]?.costs ?? 0);
+    const marginBase = paidRevenue > 0 ? paidRevenue : totalRevenue;
+    const marginEstimate = Math.max(0, Math.round(marginBase - vendorCosts));
     const profitabilityRate =
-      invoicedSubtotal > 0
-        ? Math.round((marginEstimate / invoicedSubtotal) * 100)
-        : totalRevenue > 0
-          ? 35
-          : 0;
+      marginBase > 0 ? Math.round((marginEstimate / marginBase) * 100) : 0;
 
     const { rows: activeProjectRows } = await query<{ count: string }>(
       `SELECT COUNT(*)::text AS count FROM projects

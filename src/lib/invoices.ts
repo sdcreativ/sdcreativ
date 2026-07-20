@@ -144,6 +144,7 @@ export const createInvoiceSchema = z.object({
   notes: z.string().trim().max(5000).optional().nullable(),
   currency: z.enum(SUPPORTED_CURRENCIES).optional(),
   exchangeRateToXof: z.number().positive().optional().nullable(),
+  legalEntityId: z.string().uuid().optional().nullable(),
 });
 
 export const updateInvoiceSchema = z.object({
@@ -309,8 +310,8 @@ export async function createInvoice(input: z.infer<typeof createInvoiceSchema>):
       `INSERT INTO invoices (
         reference, client_id, project_id, quote_id, name, email, company,
         lines, subtotal, tva_rate, tva_amount, total, status, due_date, sent_at, notes,
-        currency, exchange_rate_to_xof, exchange_rate_at
-      ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19)
+        currency, exchange_rate_to_xof, exchange_rate_at, legal_entity_id
+      ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20)
       RETURNING id`,
       [
         reference,
@@ -332,6 +333,7 @@ export async function createInvoice(input: z.infer<typeof createInvoiceSchema>):
         currency,
         exchangeRateToXof,
         exchangeRateAt,
+        input.legalEntityId ?? null,
       ],
     );
     const id = rows[0]!.id;

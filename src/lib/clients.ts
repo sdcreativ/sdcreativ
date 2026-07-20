@@ -675,9 +675,13 @@ export type ClientOverview = {
   quotes: ClientOverviewQuote[];
   tickets: ClientOverviewTicket[];
   tasks: ClientOverviewTask[];
+  health: import("@/lib/client-health").ClientHealthScore | null;
 };
 
 export async function getClientOverview(clientId: string): Promise<ClientOverview> {
+  const { getClientHealthScore } = await import("@/lib/client-health");
+  const health = await getClientHealthScore(clientId).catch(() => null);
+
   return withDb(async (query) => {
     const { rows: projects } = await query<{
       id: string;
@@ -755,6 +759,7 @@ export async function getClientOverview(clientId: string): Promise<ClientOvervie
         status: t.status,
         dueDate: t.due_date ? t.due_date.toISOString().slice(0, 10) : null,
       })),
+      health,
     };
   });
 }

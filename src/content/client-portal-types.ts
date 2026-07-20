@@ -6,6 +6,7 @@ export type ClientPortalSection =
   | "payments"
   | "quotes"
   | "invoices"
+  | "offers"
   | "support"
   | "settings";
 

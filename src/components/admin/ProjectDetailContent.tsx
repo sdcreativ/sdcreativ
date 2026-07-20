@@ -14,6 +14,7 @@ import { ProjectDocumentsPanel } from "@/components/admin/ProjectDocumentsPanel"
 import { ProjectCalendarLink, ProjectGanttTimeline } from "@/components/admin/ProjectGanttTimeline";
 import { ProjectMilestonesEditor } from "@/components/admin/ProjectMilestonesEditor";
 import { ProjectPaymentScheduleEditor } from "@/components/admin/ProjectPaymentScheduleEditor";
+import { ProjectProfitabilityPanel } from "@/components/admin/ProjectProfitabilityPanel";
 import { ProjectTeamEditor } from "@/components/admin/ProjectTeamEditor";
 import type { Project } from "@/lib/projects";
 import { updateProjectApi } from "@/lib/projects-api";
@@ -159,6 +160,7 @@ export function ProjectDetailContent({
         </div>
       )}
 
+      <ProjectProfitabilityPanel projectId={project.id} />
       <ProjectPaymentScheduleEditor project={project} />
       <ProjectMilestonesEditor projectId={project.id} saving={saving} />
 

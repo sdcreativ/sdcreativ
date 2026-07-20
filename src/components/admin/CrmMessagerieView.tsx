@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState, type FormEvent } from "react";
+import { useSearchParams } from "next/navigation";
 import {
   Forward,
   Reply,
@@ -77,6 +78,8 @@ function participantsLabel(participants: string[]): string {
 
 export function CrmMessagerieView() {
   const { confirm } = useDialog();
+  const searchParams = useSearchParams();
+  const threadFromUrl = searchParams.get("thread")?.trim() || null;
   const [mailboxes, setMailboxes] = useState<CrmMailbox[]>([]);
   const [threads, setThreads] = useState<CrmMailThread[]>([]);
   const [unreadCount, setUnreadCount] = useState(0);
@@ -91,7 +94,7 @@ export function CrmMessagerieView() {
   const [accountEmail, setAccountEmail] = useState<string | null>(null);
   const [search, setSearch] = useState("");
   const [searchDraft, setSearchDraft] = useState("");
-  const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [selectedId, setSelectedId] = useState<string | null>(threadFromUrl);
   const [detail, setDetail] = useState<MailThreadDetail | null>(null);
   const [detailLoading, setDetailLoading] = useState(false);
   const [composeOpen, setComposeOpen] = useState(false);
@@ -193,6 +196,10 @@ export function CrmMessagerieView() {
   useEffect(() => {
     void loadList();
   }, [loadList]);
+
+  useEffect(() => {
+    if (threadFromUrl) setSelectedId(threadFromUrl);
+  }, [threadFromUrl]);
 
   useEffect(() => {
     if (!selectedId) {

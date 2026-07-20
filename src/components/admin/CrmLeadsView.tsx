@@ -29,6 +29,7 @@ import {
 } from "@/lib/lead-scoring";
 import { KanbanDropColumn, KANBAN_DRAG_MIME } from "@/lib/kanban-dnd";
 import { useCrmAssignees } from "@/hooks/useCrmTeamMembers";
+import { CrmClickToCallButton } from "@/components/admin/CrmClickToCallButton";
 import { LeadActivityTimeline } from "@/components/admin/LeadActivityTimeline";
 import { LeadEmailComposer } from "@/components/admin/LeadEmailComposer";
 import { MailLinkedThreadsSection } from "@/components/admin/MailLinkedThreadsSection";
@@ -45,6 +46,7 @@ import {
   GripVertical,
   Loader2,
   Mail,
+  MessageCircle,
   Phone,
   Plus,
   RefreshCw,
@@ -706,6 +708,11 @@ function LeadDetailPanel({
   const [converting, setConverting] = useState(false);
   const [converted, setConverted] = useState(false);
   const [showEmail, setShowEmail] = useState(false);
+  const [waTemplates, setWaTemplates] = useState<
+    Array<{ id: string; name: string; description: string }>
+  >([]);
+  const [waSending, setWaSending] = useState<string | null>(null);
+  const [waMessage, setWaMessage] = useState("");
 
   const score = computeLeadScore(lead);
   const tier = getLeadScoreTier(score);
@@ -720,6 +727,39 @@ function LeadDetailPanel({
       /* ignore — auto-conversion may have already run */
     } finally {
       setConverting(false);
+    }
+  }
+
+  useEffect(() => {
+    if (!lead.phone) {
+      setWaTemplates([]);
+      return;
+    }
+    void fetch(`/api/admin/leads/${lead.id}/whatsapp`, { credentials: "include" })
+      .then((r) => r.json())
+      .then((json: { templates?: Array<{ id: string; name: string; description: string }> }) => {
+        setWaTemplates(json.templates ?? []);
+      })
+      .catch(() => setWaTemplates([]));
+  }, [lead.id, lead.phone, lead.status]);
+
+  async function sendWhatsAppTemplate(templateId: string) {
+    setWaSending(templateId);
+    setWaMessage("");
+    try {
+      const res = await fetch(`/api/admin/leads/${lead.id}/whatsapp`, {
+        method: "POST",
+        credentials: "include",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ templateId }),
+      });
+      const json = (await res.json()) as { error?: string; preview?: string; provider?: string };
+      if (!res.ok) throw new Error(json.error ?? "Envoi impossible.");
+      setWaMessage(`WhatsApp envoyé (${json.provider}).`);
+    } catch (err) {
+      setWaMessage(err instanceof Error ? err.message : "Envoi impossible.");
+    } finally {
+      setWaSending(null);
     }
   }
 
@@ -751,7 +791,14 @@ function LeadDetailPanel({
           <div className="flex-1 space-y-4 overflow-y-auto px-5 py-4 text-sm">
             <DetailRow label="Email" value={lead.email} />
             {lead.phone && (
-              <DetailRow label="Téléphone" value={lead.phone} icon={<Phone className="h-3.5 w-3.5" />} />
+              <div>
+                <p className="text-xs font-semibold uppercase tracking-wide text-gray-text">
+                  Téléphone
+                </p>
+                <div className="mt-1.5">
+                  <CrmClickToCallButton phone={lead.phone} />
+                </div>
+              </div>
             )}
             {lead.company && <DetailRow label="Entreprise" value={lead.company} />}
             <DetailRow label="Source" value={LEAD_SOURCE_LABELS[lead.source]} />
@@ -865,6 +912,34 @@ function LeadDetailPanel({
                     {converting ? "Conversion…" : "Convertir en client"}
                   </button>
                 )}
+              </div>
+            )}
+
+            {lead.phone && waTemplates.length > 0 && (
+              <div className="rounded-xl border border-emerald-200/70 bg-emerald-50/50 p-3">
+                <p className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wide text-emerald-800">
+                  <MessageCircle className="h-3.5 w-3.5" aria-hidden />
+                  WhatsApp Business
+                </p>
+                <ul className="mt-2 space-y-2">
+                  {waTemplates.map((tpl) => (
+                    <li key={tpl.id} className="flex items-start justify-between gap-2">
+                      <div>
+                        <p className="text-sm font-medium text-foreground">{tpl.name}</p>
+                        <p className="text-[11px] text-gray-text">{tpl.description}</p>
+                      </div>
+                      <button
+                        type="button"
+                        disabled={Boolean(waSending) || saving}
+                        onClick={() => void sendWhatsAppTemplate(tpl.id)}
+                        className="shrink-0 rounded-lg bg-emerald-700 px-2.5 py-1.5 text-[11px] font-semibold text-white hover:bg-emerald-800 disabled:opacity-50"
+                      >
+                        {waSending === tpl.id ? "…" : "Envoyer"}
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+                {waMessage && <p className="mt-2 text-[11px] text-emerald-900">{waMessage}</p>}
               </div>
             )}
 

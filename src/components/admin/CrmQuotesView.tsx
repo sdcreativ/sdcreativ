@@ -29,6 +29,7 @@ import {
   updateQuoteApi,
   validateQuoteApi,
   generateInvoiceFromQuoteApi,
+  launchQuoteGoLiveApi,
   type QuoteListFilters,
 } from "@/lib/quotes-api";
 import { fetchCrmClients } from "@/lib/clients-api";
@@ -66,6 +67,7 @@ import {
   Receipt,
   RefreshCw,
   Send,
+  Rocket,
   ShieldCheck,
   Trash2,
   TrendingUp,
@@ -559,6 +561,7 @@ function QuoteDetailPanel({
   const [showEmail, setShowEmail] = useState(false);
   const [creatingInvoice, setCreatingInvoice] = useState(false);
   const [validating, setValidating] = useState(false);
+  const [goLiveLoading, setGoLiveLoading] = useState(false);
   const [invoiceError, setInvoiceError] = useState("");
   const [publishing, setPublishing] = useState(false);
   const [publishMessage, setPublishMessage] = useState("");
@@ -978,6 +981,55 @@ function QuoteDetailPanel({
             </button>
           </div>
         </div>
+
+        {(quote.status === "signed" ||
+          quote.status === "accepted" ||
+          quote.status === "validated" ||
+          quote.status === "invoiced") && (
+          <div className="border-t border-gray/40 px-5 py-3">
+            {invoiceError && (
+              <p className="mb-2 text-xs text-accent">{invoiceError}</p>
+            )}
+            <p className="mb-2 text-xs text-gray-text">
+              Go-live : projet + facture + checklist livraison (archives).
+            </p>
+            <button
+              type="button"
+              disabled={saving || goLiveLoading}
+              onClick={() => {
+                setGoLiveLoading(true);
+                setInvoiceError("");
+                void launchQuoteGoLiveApi(quote.id, {
+                  createInvoice: true,
+                  markDelivered: false,
+                  sendInvoiceEmail: true,
+                })
+                  .then((result) => {
+                    onUpdated(result.quote);
+                    setPublishMessage(
+                      `Go-live OK — projet « ${result.project.name} »${
+                        result.invoice ? ` · facture ${result.invoice.reference}` : ""
+                      }.`,
+                    );
+                  })
+                  .catch((err: unknown) => {
+                    setInvoiceError(
+                      err instanceof Error ? err.message : "Go-live impossible.",
+                    );
+                  })
+                  .finally(() => setGoLiveLoading(false));
+              }}
+              className="inline-flex w-full items-center justify-center gap-2 rounded-xl bg-slate-900 py-2.5 text-sm font-semibold text-white hover:bg-slate-800 disabled:opacity-50"
+            >
+              {goLiveLoading ? (
+                <Loader2 className="h-4 w-4 animate-spin" aria-hidden />
+              ) : (
+                <Rocket className="h-4 w-4" aria-hidden />
+              )}
+              Lancer devis → projet → facture
+            </button>
+          </div>
+        )}
 
         {(quote.status === "signed" || quote.status === "accepted") && (
           <div className="border-t border-gray/40 px-5 py-3">

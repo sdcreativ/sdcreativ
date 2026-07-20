@@ -27,6 +27,7 @@ import {
 } from "@/lib/clients-api";
 import type { Client, ClientInteraction, ClientOverview, DuplicateClientGroup } from "@/lib/clients";
 import { ClientPortalAccessPanel } from "@/components/admin/ClientPortalAccessPanel";
+import { CrmClickToCallButton } from "@/components/admin/CrmClickToCallButton";
 import { MailLinkedThreadsSection } from "@/components/admin/MailLinkedThreadsSection";
 import { ThreeCxLinkedEventsSection } from "@/components/admin/ThreeCxLinkedEventsSection";
 import { useCrmAssignees } from "@/hooks/useCrmTeamMembers";
@@ -659,7 +660,19 @@ function ClientDetailPanel({
           <DetailRow label="CA encaissé" value={formatClientRevenue(client.revenueTotal)} />
 
           <DetailRow icon={<Mail className="h-4 w-4" />} label="Email" value={client.email} href={`mailto:${client.email}`} />
-          {client.phone && <DetailRow icon={<Phone className="h-4 w-4" />} label="Téléphone" value={client.phone} href={`tel:${client.phone}`} />}
+          {client.phone && (
+            <div className="flex items-start gap-3">
+              <Phone className="mt-0.5 h-4 w-4 shrink-0 text-gray-text" aria-hidden />
+              <div>
+                <p className="text-xs font-semibold uppercase tracking-wide text-gray-text">
+                  Téléphone
+                </p>
+                <div className="mt-1">
+                  <CrmClickToCallButton phone={client.phone} compact />
+                </div>
+              </div>
+            </div>
+          )}
           {client.address && <DetailRow label="Adresse" value={client.address} />}
           <ClientPortalAccessPanel client={client} onUpdated={onUpdated} />
           {client.notes && (
@@ -788,7 +801,42 @@ function ClientOverviewSection({ client }: { client: Client }) {
 
   return (
     <div className="space-y-4 rounded-2xl border border-primary/15 bg-primary-light/10 p-4">
-      <h3 className="font-bold text-foreground">Vue 360° client</h3>
+      <div className="flex items-start justify-between gap-3">
+        <h3 className="font-bold text-foreground">Vue 360° client</h3>
+        {overview.health && (
+          <div className="rounded-xl border border-primary/20 bg-white px-3 py-2 text-right">
+            <p className="text-[10px] font-semibold uppercase tracking-wide text-gray-text">
+              Santé client
+            </p>
+            <p className="text-lg font-bold text-foreground">
+              {overview.health.grade}
+              <span className="ml-1 text-sm font-semibold text-primary">
+                {overview.health.score}
+              </span>
+            </p>
+            <p className="text-[11px] text-gray-text">{overview.health.label}</p>
+          </div>
+        )}
+      </div>
+
+      {overview.health && (
+        <ul className="grid gap-2 sm:grid-cols-2">
+          {overview.health.factors.map((f) => (
+            <li
+              key={f.id}
+              className="rounded-lg border border-gray/30 bg-white/70 px-3 py-2 text-xs"
+            >
+              <div className="flex justify-between gap-2 font-medium text-foreground">
+                <span>{f.label}</span>
+                <span>
+                  {f.score}/{f.max}
+                </span>
+              </div>
+              <p className="mt-0.5 text-gray-text">{f.detail}</p>
+            </li>
+          ))}
+        </ul>
+      )}
 
       <OverviewBlock
         icon={FolderKanban}

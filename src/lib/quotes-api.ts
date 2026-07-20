@@ -131,6 +131,27 @@ export async function publishQuoteApi(
   return parseJson(res);
 }
 
+export async function launchQuoteGoLiveApi(
+  id: string,
+  input: { createInvoice?: boolean; markDelivered?: boolean; sendInvoiceEmail?: boolean } = {},
+): Promise<{
+  quote: Quote;
+  project: { id: string; name: string };
+  invoice: { id: string; reference: string } | null;
+  projectCreated: boolean;
+  invoiceCreated: boolean;
+  goLiveMarked: boolean;
+  checklist: Array<{ id: string; label: string; ok: boolean; detail?: string }>;
+}> {
+  const res = await fetch(`/api/admin/quotes/${id}/go-live`, {
+    method: "POST",
+    credentials: "include",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(input),
+  });
+  return parseJson(res);
+}
+
 export async function fetchQuoteDocuments(id: string) {
   const res = await fetch(`/api/admin/quotes/${id}/documents`, { credentials: "include" });
   return parseJson<{

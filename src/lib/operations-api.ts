@@ -98,11 +98,14 @@ export function getAccountingExportUrl(filters?: {
   from?: string;
   to?: string;
   clientId?: string;
+  legalEntityId?: string;
+  format?: "csv" | "fec" | "ci-csv";
 }): string {
-  const params = new URLSearchParams({ format: "csv" });
+  const params = new URLSearchParams({ format: filters?.format ?? "csv" });
   if (filters?.from) params.set("from", filters.from);
   if (filters?.to) params.set("to", filters.to);
   if (filters?.clientId) params.set("clientId", filters.clientId);
+  if (filters?.legalEntityId) params.set("legalEntityId", filters.legalEntityId);
   return `/api/admin/accounting/export?${params}`;
 }
 

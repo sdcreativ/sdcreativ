@@ -7,6 +7,7 @@ import {
   LayoutDashboard,
   LifeBuoy,
   MessageSquare,
+  Package,
   Receipt,
   Settings,
 } from "lucide-react";
@@ -28,6 +29,7 @@ export const clientNavItems: ClientNavItem[] = [
   { id: "payments", label: "Paiements", icon: CreditCard, ready: true },
   { id: "quotes", label: "Mes devis", icon: FileSignature, ready: true },
   { id: "invoices", label: "Factures", icon: Receipt, ready: true },
+  { id: "offers", label: "Packs & maintenance", icon: Package, ready: true },
   { id: "support", label: "Support", icon: LifeBuoy, ready: true },
   { id: "settings", label: "Paramètres", icon: Settings, ready: true },
 ];
@@ -52,6 +54,10 @@ export const clientSectionTitles: Record<
   payments: { title: "Paiements", subtitle: "Historique et échéancier." },
   quotes: { title: "Mes devis", subtitle: "Consultez, téléchargez et signez vos propositions." },
   invoices: { title: "Factures", subtitle: "Consultez et téléchargez vos factures émises." },
+  offers: {
+    title: "Packs & maintenance",
+    subtitle: "Étendez votre projet avec nos packs catalogue et abonnements.",
+  },
   support: { title: "Support" },
   settings: {
     title: "Paramètres",
