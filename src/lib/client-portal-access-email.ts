@@ -35,7 +35,5 @@ export function buildPortalAccessEmailHtml(input: {
       <a href="mailto:contact@sdcreativ.com">contact@sdcreativ.com</a>
       en indiquant votre entreprise et votre email professionnel.
     </p>
-    <hr style="margin:24px 0;border:none;border-top:1px solid #e5e7eb"/>
-    <p style="font-size:12px;color:#9ca3af">SD CREATIV — ${escapeHtml(input.siteUrl)}</p>
   </div>`;
 }

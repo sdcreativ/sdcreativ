@@ -138,7 +138,6 @@ export function buildLoginOtpEmailHtml(params: {
       <p style="font-size:13px;color:#64748b;margin-top:24px">
         Si vous n'avez pas tenté de vous connecter, ignorez cet email et prévenez un administrateur.
       </p>
-      <p style="margin-top:32px;font-size:13px;color:#94a3b8">— ${escapeHtml(agencyName)}</p>
     </div>
   `;
 }

@@ -3,7 +3,10 @@ import { EMAIL_TEMPLATES } from "@/content/settings-labels";
 import { withDb } from "@/lib/db";
 import {
   DEFAULT_CRM_BRANDING,
+  DEFAULT_CRM_EMAIL_CHROME,
+  mergeEmailChrome,
   type CrmBranding,
+  type CrmEmailChrome,
   type CrmEmailTemplate,
   type CrmSettingsPayload,
 } from "@/lib/crm-settings-types";
@@ -11,6 +14,7 @@ import {
 type SettingsRow = {
   branding: CrmBranding | null;
   email_templates: Record<string, CrmEmailTemplate> | null;
+  email_chrome: CrmEmailChrome | null;
   updated_at: Date | null;
 };
 
@@ -69,17 +73,60 @@ export const testEmailTemplateSchema = z.object({
   to: z.string().trim().email().max(255),
 });
 
+export const updateEmailChromeSchema = z.object({
+  enabled: z.boolean(),
+  showLogo: z.boolean(),
+  showTagline: z.boolean(),
+  showAddress: z.boolean(),
+  showPhone: z.boolean(),
+  showEmail: z.boolean(),
+  showWebsite: z.boolean(),
+  showLegal: z.boolean(),
+  footerNote: z.string().trim().max(500),
+});
+
 export async function getCrmSettings(): Promise<CrmSettingsPayload> {
   return withDb(async (query) => {
-    const { rows } = await query<SettingsRow>(
-      `SELECT branding, email_templates, updated_at FROM crm_settings WHERE id = 1`,
+    try {
+      const { rows } = await query<SettingsRow>(
+        `SELECT branding, email_templates, email_chrome, updated_at FROM crm_settings WHERE id = 1`,
+      );
+      const row = rows[0];
+      return {
+        branding: { ...DEFAULT_CRM_BRANDING, ...(row?.branding ?? {}) },
+        emailTemplates: mergeTemplates(row?.email_templates ?? null),
+        emailChrome: mergeEmailChrome(row?.email_chrome ?? DEFAULT_CRM_EMAIL_CHROME),
+        updatedAt: row?.updated_at?.toISOString() ?? null,
+      };
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      if (!message.includes("email_chrome")) throw error;
+      const { rows } = await query<Omit<SettingsRow, "email_chrome">>(
+        `SELECT branding, email_templates, updated_at FROM crm_settings WHERE id = 1`,
+      );
+      const row = rows[0];
+      return {
+        branding: { ...DEFAULT_CRM_BRANDING, ...(row?.branding ?? {}) },
+        emailTemplates: mergeTemplates(row?.email_templates ?? null),
+        emailChrome: { ...DEFAULT_CRM_EMAIL_CHROME },
+        updatedAt: row?.updated_at?.toISOString() ?? null,
+      };
+    }
+  });
+}
+
+export async function updateCrmEmailChrome(
+  input: z.infer<typeof updateEmailChromeSchema>,
+): Promise<CrmEmailChrome> {
+  return withDb(async (query) => {
+    const emailChrome = mergeEmailChrome(input);
+    await query(
+      `INSERT INTO crm_settings (id, email_chrome, updated_at)
+       VALUES (1, $1, NOW())
+       ON CONFLICT (id) DO UPDATE SET email_chrome = $1, updated_at = NOW()`,
+      [JSON.stringify(emailChrome)],
     );
-    const row = rows[0];
-    return {
-      branding: { ...DEFAULT_CRM_BRANDING, ...(row?.branding ?? {}) },
-      emailTemplates: mergeTemplates(row?.email_templates ?? null),
-      updatedAt: row?.updated_at?.toISOString() ?? null,
-    };
+    return emailChrome;
   });
 }
 
@@ -107,7 +154,7 @@ export async function updateCrmEmailTemplate(
 ): Promise<CrmEmailTemplate> {
   return withDb(async (query) => {
     const { rows } = await query<SettingsRow>(
-      `SELECT branding, email_templates, updated_at FROM crm_settings WHERE id = 1`,
+      `SELECT branding, email_templates, email_chrome, updated_at FROM crm_settings WHERE id = 1`,
     );
     const templates = mergeTemplates(rows[0]?.email_templates ?? null);
     const existing = templates[input.id];

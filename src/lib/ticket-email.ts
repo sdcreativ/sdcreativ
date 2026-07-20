@@ -70,7 +70,5 @@ export function buildTicketReplyEmailHtml(
     </div>
     <p>Vous pouvez consulter la conversation complète et répondre depuis votre espace client :</p>
     <p><a href="${escapeHtml(portalUrl)}" style="color:#1e40af">Accéder à l'espace client</a></p>
-    <hr style="margin:24px 0;border:none;border-top:1px solid #e5e7eb"/>
-    <p style="font-size:12px;color:#9ca3af">SD CREATIV — ${escapeHtml(siteUrl)}</p>
   </div>`;
 }

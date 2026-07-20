@@ -38,7 +38,5 @@ export function buildTaskAssigneeEmailHtml(
       ${descriptionLine}
     </div>
     <p><a href="${escapeHtml(href)}" style="display:inline-block;padding:12px 20px;background:#1e40af;color:#ffffff;text-decoration:none;border-radius:10px;font-weight:700">Ouvrir la tâche</a></p>
-    <hr style="margin:24px 0;border:none;border-top:1px solid #e5e7eb"/>
-    <p style="font-size:12px;color:#9ca3af">SD CREATIV — ${escapeHtml(siteUrl)}</p>
   </div>`;
 }

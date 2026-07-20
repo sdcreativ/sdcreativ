@@ -1,3 +1,4 @@
+import { resolveCalendarNotifyEmail } from "@/lib/calendar-notify-email";
 import { withDb } from "@/lib/db";
 import type { CalendarInvitee } from "@/lib/calendar-invitees-types";
 
@@ -11,9 +12,10 @@ export async function listCalendarInvitees(): Promise<CalendarInvitee[]> {
       id: string;
       name: string;
       email: string;
+      personal_email: string | null;
       role: string;
     }>(
-      `SELECT id, name, email, role FROM crm_users WHERE active = true ORDER BY name ASC`,
+      `SELECT id, name, email, personal_email, role FROM crm_users WHERE active = true ORDER BY name ASC`,
     );
 
     for (const row of teamRows) {
@@ -21,7 +23,10 @@ export async function listCalendarInvitees(): Promise<CalendarInvitee[]> {
         id: row.id,
         source: "team",
         name: row.name,
-        email: row.email.toLowerCase(),
+        email: resolveCalendarNotifyEmail({
+          professionalEmail: row.email,
+          personalEmail: row.personal_email,
+        }),
         phone: null,
         subtitle: row.role,
       });

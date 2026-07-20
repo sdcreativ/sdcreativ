@@ -1,4 +1,9 @@
-import type { CrmSettingsPayload, CrmBranding, CrmEmailTemplate } from "@/lib/crm-settings-types";
+import type {
+  CrmSettingsPayload,
+  CrmBranding,
+  CrmEmailChrome,
+  CrmEmailTemplate,
+} from "@/lib/crm-settings-types";
 import type { SitePublicSettings } from "@/lib/site-public-types";
 import type { CrmAuditLog } from "@/lib/crm-audit";
 import type { CrmRole } from "@/content/crm-roles";
@@ -70,6 +75,19 @@ export async function updateCrmEmailTemplateApi(input: {
   });
   const json = await parseJson<{ template: CrmEmailTemplate }>(res);
   return json.template;
+}
+
+export async function updateCrmEmailChromeApi(
+  emailChrome: CrmEmailChrome,
+): Promise<CrmEmailChrome> {
+  const res = await fetch("/api/admin/settings", {
+    method: "PATCH",
+    credentials: "include",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ emailChrome }),
+  });
+  const json = await parseJson<{ emailChrome: CrmEmailChrome }>(res);
+  return json.emailChrome;
 }
 
 export async function uploadSiteLogoApi(file: File): Promise<{ url: string }> {

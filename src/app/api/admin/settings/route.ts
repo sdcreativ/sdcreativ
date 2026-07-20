@@ -8,7 +8,9 @@ import {
   getCrmSettings,
   updateBrandingSchema,
   updateCrmBranding,
+  updateCrmEmailChrome,
   updateCrmEmailTemplate,
+  updateEmailChromeSchema,
   updateEmailTemplateSchema,
 } from "@/lib/crm-settings";
 import {
@@ -21,6 +23,7 @@ import { revalidateSitePublicPages } from "@/lib/site-revalidate";
 const patchSchema = z.object({
   branding: updateBrandingSchema.optional(),
   emailTemplate: updateEmailTemplateSchema.optional(),
+  emailChrome: updateEmailChromeSchema.optional(),
   sitePublic: updateSitePublicSchema.optional(),
 });
 
@@ -83,6 +86,12 @@ export async function PATCH(request: Request) {
       const template = await updateCrmEmailTemplate(parsed.data.emailTemplate);
       await auditFromSession("update", "email_template", `Modèle email « ${template.label} » modifié`, template.id);
       return NextResponse.json({ template });
+    }
+
+    if (parsed.data.emailChrome) {
+      const emailChrome = await updateCrmEmailChrome(parsed.data.emailChrome);
+      await auditFromSession("update", "email_chrome", "Identité visuelle des emails mise à jour");
+      return NextResponse.json({ emailChrome });
     }
 
     if (parsed.data.sitePublic) {

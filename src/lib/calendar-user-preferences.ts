@@ -1,5 +1,6 @@
 import { z } from "zod";
 import type { CalendarItemType } from "@/content/calendar-labels";
+import { resolveCalendarNotifyEmail } from "@/lib/calendar-notify-email";
 import { withDb } from "@/lib/db";
 
 export type CalendarTypeReminderPrefs = {
@@ -96,14 +97,20 @@ export async function listUsersWithCalendarEmailEnabled(): Promise<
       id: string;
       name: string;
       email: string;
+      personal_email: string | null;
       preferences: Record<string, unknown> | null;
-    }>(`SELECT id, name, email, preferences FROM crm_users WHERE active = true`);
+    }>(
+      `SELECT id, name, email, personal_email, preferences FROM crm_users WHERE active = true`,
+    );
 
     return rows
       .map((row) => ({
         id: row.id,
         name: row.name,
-        email: row.email,
+        email: resolveCalendarNotifyEmail({
+          professionalEmail: row.email,
+          personalEmail: row.personal_email,
+        }),
         preferences: parsePreferences(row.preferences),
       }))
       .filter((u) => u.preferences.emailEnabled);

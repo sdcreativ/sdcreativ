@@ -1,13 +1,66 @@
 import type { CalendarEvent } from "@/lib/calendar";
 import { buildSingleEventIcs } from "@/lib/calendar-ical";
+import { resolveCalendarNotifyEmail } from "@/lib/calendar-notify-email";
 import type { ParticipantInput } from "@/lib/calendar-participants";
 import { MEETING_PLATFORM_LABELS } from "@/content/calendar-labels";
 import { formatCalendarDateTime } from "@/content/calendar-labels";
 import { EVENT_TYPE_LABELS } from "@/content/calendar-labels";
+import { withDb } from "@/lib/db";
 import { escapeHtml } from "@/lib/email";
 import { sendEmail } from "@/lib/email";
 import { isWhatsAppConfigured, sendWhatsApp } from "@/lib/whatsapp";
 import { CONTACT } from "@/lib/constants";
+
+/** Remappe les participants équipe vers leur email personnel si disponible. */
+async function resolveParticipantsForNotify(
+  participants: ParticipantInput[],
+): Promise<ParticipantInput[]> {
+  if (participants.length === 0) return participants;
+
+  const emails = participants.map((p) => p.email.toLowerCase());
+  const teamMap = await withDb(async (query) => {
+    const { rows } = await query<{
+      email: string;
+      personal_email: string | null;
+      name: string;
+    }>(
+      `SELECT email, personal_email, name FROM crm_users
+       WHERE active = true
+         AND (
+           LOWER(email) = ANY($1::text[])
+           OR LOWER(COALESCE(personal_email, '')) = ANY($1::text[])
+         )`,
+      [emails],
+    );
+    const map = new Map<string, { email: string; personalEmail: string | null; name: string }>();
+    for (const row of rows) {
+      const notify = resolveCalendarNotifyEmail({
+        professionalEmail: row.email,
+        personalEmail: row.personal_email,
+      });
+      const entry = {
+        email: notify,
+        personalEmail: row.personal_email,
+        name: row.name,
+      };
+      map.set(row.email.toLowerCase(), entry);
+      if (row.personal_email) {
+        map.set(row.personal_email.toLowerCase(), entry);
+      }
+    }
+    return map;
+  });
+
+  return participants.map((p) => {
+    const hit = teamMap.get(p.email.toLowerCase());
+    if (!hit) return p;
+    return {
+      ...p,
+      email: hit.email,
+      name: p.name ?? hit.name,
+    };
+  });
+}
 
 function resolveMeetingUrl(event: CalendarEvent): string | null {
   if (event.meetingUrl) return event.meetingUrl;
@@ -23,7 +76,6 @@ function buildInvitationHtml(
   participantName: string,
   meetingUrl: string | null,
 ): string {
-  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? "https://sdcreativ.com";
   const platformLabel = event.meetingPlatform
     ? MEETING_PLATFORM_LABELS[event.meetingPlatform]
     : null;
@@ -40,7 +92,6 @@ function buildInvitationHtml(
       ${event.description ? `<p style="margin:8px 0 0">${escapeHtml(event.description)}</p>` : ""}
     </div>
     <p>Un fichier calendrier (.ics) est joint pour ajouter l'événement à votre agenda.</p>
-    <p style="font-size:12px;color:#9ca3af">SD CREATIV — ${escapeHtml(siteUrl)}</p>
   </div>`;
 }
 
@@ -99,10 +150,11 @@ export async function sendCalendarInvitations(
   participants: ParticipantInput[],
 ): Promise<{ emails: number; whatsapp: number }> {
   const meetingUrl = resolveMeetingUrl(event);
+  const resolved = await resolveParticipantsForNotify(participants);
   let emails = 0;
   let whatsapp = 0;
 
-  for (const participant of participants) {
+  for (const participant of resolved) {
     const ok = await sendCalendarInvitationEmail(event, participant);
     if (ok) emails += 1;
 

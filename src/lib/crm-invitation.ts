@@ -77,7 +77,6 @@ export function buildUserInvitationEmailHtml(params: {
       <p style="font-size:13px;color:#64748b;margin-top:16px">
         Si vous n'attendiez pas cette invitation, ignorez cet email.
       </p>
-      <p style="margin-top:32px;font-size:13px;color:#94a3b8">— ${escapeHtml(agencyName)}</p>
     </div>
   `;
 }

@@ -38,8 +38,6 @@ export async function POST(request: Request, context: RouteContext) {
     const html = `
       <div style="font-family:system-ui,sans-serif;line-height:1.6;color:#111827">
         ${parsed.data.body.split("\n").map((line) => `<p>${escapeHtml(line)}</p>`).join("")}
-        <hr style="margin:24px 0;border:none;border-top:1px solid #e5e7eb"/>
-        <p style="font-size:12px;color:#6b7280">SD CREATIV — ${escapeHtml(fromEmail)}</p>
       </div>`;
 
     const sent = await sendEmail({

@@ -18,6 +18,7 @@ import {
   BrandingSection,
   EmailTemplatesSection,
 } from "@/components/admin/CrmSettingsExtras";
+import { EmailChromeSection } from "@/components/admin/EmailChromeSection";
 import { CrmRolesSection, PermissionsMatrix } from "@/components/admin/CrmRolesSection";
 import { CrmSecuritySection } from "@/components/admin/CrmSecuritySection";
 import { SitePublicSection } from "@/components/admin/CrmSitePublicSection";
@@ -333,23 +334,32 @@ export function CrmSettingsView() {
           )}
 
           {tab === "emails" && (
-            <Section
-              title="Modèles d'emails"
-              description="Notifications transactionnelles Resend."
-              icon={<Mail className="h-5 w-5 text-sky-600" aria-hidden />}
-            >
-              <div className="mb-5 flex flex-wrap items-center gap-2">
-                <StatusPill ok={health.emailConfigured}>
-                  {health.emailConfigured ? "Resend actif" : "Mode console"}
-                </StatusPill>
-                {health.emailFrom && (
-                  <span className="text-xs text-gray-text">
-                    {health.emailFrom} → {health.emailTo}
-                  </span>
-                )}
-              </div>
-              <EmailTemplatesSection />
-            </Section>
+            <div className="space-y-6">
+              <Section
+                title="Identité des emails"
+                description="Logo et coordonnées société sur tous les envois (équipe et clients)."
+                icon={<Mail className="h-5 w-5 text-sky-600" aria-hidden />}
+              >
+                <EmailChromeSection />
+              </Section>
+              <Section
+                title="Modèles d'emails"
+                description="Notifications transactionnelles Resend."
+                icon={<Mail className="h-5 w-5 text-sky-600" aria-hidden />}
+              >
+                <div className="mb-5 flex flex-wrap items-center gap-2">
+                  <StatusPill ok={health.emailConfigured}>
+                    {health.emailConfigured ? "Resend actif" : "Mode console"}
+                  </StatusPill>
+                  {health.emailFrom && (
+                    <span className="text-xs text-gray-text">
+                      {health.emailFrom} → {health.emailTo}
+                    </span>
+                  )}
+                </div>
+                <EmailTemplatesSection />
+              </Section>
+            </div>
           )}
 
           {tab === "security" && (

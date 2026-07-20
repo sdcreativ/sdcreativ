@@ -35,8 +35,6 @@ export function buildInvoiceEmailHtml(
     </div>
     ${paymentInstructionsHtml ? `<div style="margin:16px 0"><p style="margin:0 0 8px;font-size:12px;font-weight:700;color:#1e40af;text-transform:uppercase">Modalités de règlement</p>${paymentInstructionsHtml}</div>` : ""}
     <p style="font-size:13px;color:#6b7280">Merci de votre confiance.</p>
-    <hr style="margin:24px 0;border:none;border-top:1px solid #e5e7eb"/>
-    <p style="font-size:12px;color:#9ca3af">SD CREATIV — ${escapeHtml(siteUrl)}</p>
   </div>`;
 }
 

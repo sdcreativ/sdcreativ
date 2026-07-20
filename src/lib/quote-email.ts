@@ -31,8 +31,6 @@ export function buildQuoteEmailHtml(
       ${quote.estimateMin && quote.estimateMax ? `<p style="margin:12px 0 0;font-size:13px;color:#6b7280">Fourchette : ${formatQuoteAmount(quote.estimateMin, quote.currency)} – ${formatQuoteAmount(quote.estimateMax, quote.currency)}</p>` : ""}
     </div>
     <p style="font-size:13px;color:#6b7280">Devis valable 30 jours. N'hésitez pas à nous contacter pour toute question.</p>
-    <hr style="margin:24px 0;border:none;border-top:1px solid #e5e7eb"/>
-    <p style="font-size:12px;color:#9ca3af">SD CREATIV — ${escapeHtml(siteUrl)}</p>
   </div>`;
 }
 

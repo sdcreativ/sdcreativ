@@ -4,6 +4,8 @@ type SendEmailParams = {
   replyTo?: string;
   to?: string | string[];
   attachments?: Array<{ filename: string; content: Buffer }>;
+  /** false = ne pas envelopper avec logo / pied société (défaut: true). */
+  chrome?: boolean;
 };
 
 export type SendEmailResult =
@@ -56,12 +58,19 @@ export async function sendEmailDetailed({
   replyTo,
   to,
   attachments,
+  chrome = true,
 }: SendEmailParams): Promise<SendEmailResult> {
   const apiKey = process.env.RESEND_API_KEY;
   const from = getFromAddress();
   const recipients = to
     ? (Array.isArray(to) ? to : to.split(",").map((e) => e.trim()).filter(Boolean))
     : [process.env.CONTACT_TO_EMAIL ?? "contact@sdcreativ.com"];
+
+  let finalHtml = html;
+  if (chrome) {
+    const { applyEmailChrome } = await import("@/lib/email-chrome-apply");
+    finalHtml = await applyEmailChrome(html);
+  }
 
   if (!apiKey) {
     if (process.env.NODE_ENV === "production") {
@@ -74,7 +83,7 @@ export async function sendEmailDetailed({
       replyTo,
       to: recipients,
       attachments: attachments?.map((a) => ({ filename: a.filename, bytes: a.content.byteLength })),
-      html,
+      html: finalHtml,
     });
     return { ok: true };
   }
@@ -88,8 +97,8 @@ export async function sendEmailDetailed({
       to: recipients,
       reply_to: replyTo,
       subject,
-      html,
-      text: htmlToPlainText(html),
+      html: finalHtml,
+      text: htmlToPlainText(finalHtml),
     };
 
   if (attachments && attachments.length > 0) {
