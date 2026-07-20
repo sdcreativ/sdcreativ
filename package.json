@@ -11,6 +11,7 @@
     "test:unit": "vitest run",
     "test:watch": "vitest",
     "test:e2e": "playwright test",
+    "test:e2e:crm": "playwright test e2e/crm-quotes.spec.ts",
     "test:e2e:ui": "playwright test --ui",
     "test:a11y": "playwright test e2e/a11y.spec.ts",
     "playwright:install": "playwright install --with-deps chromium",

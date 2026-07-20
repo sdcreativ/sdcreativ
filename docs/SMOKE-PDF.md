@@ -4,8 +4,9 @@ Vérifie que **Chromium** génère un vrai PDF (pas un fallback HTML).
 
 ## Prérequis
 
-- Image Docker runner avec Chromium (`Dockerfile` : `CHROMIUM_EXECUTABLE_PATH=/usr/bin/chromium-browser`)
-- Ou Chromium local + `CHROMIUM_EXECUTABLE_PATH`
+- **Mac local** : Google Chrome installé, **ou** `npx playwright install chromium` (cache ms-playwright)
+- **Docker / prod** : Chromium dans l’image (`CHROMIUM_EXECUTABLE_PATH=/usr/bin/chromium-browser`)
+- Optionnel : forcer le binaire via `CHROMIUM_EXECUTABLE_PATH`
 
 ## Commandes
 

@@ -1,19 +1,12 @@
 import { NextResponse } from "next/server";
-import {
-  ADMIN_SESSION_COOKIE,
-  LEGACY_ADMIN_COOKIE,
-  buildCrmSessionCookie,
-} from "@/lib/crm-session";
-import { getSessionMaxAgeSeconds } from "@/lib/crm-security-settings";
-import { logAdminLogin } from "@/lib/crm-login-logs";
+import { completeCrmLoginSession } from "@/lib/crm-login-session";
 import { verifyTotpChallenge } from "@/lib/crm-totp-challenge";
 import { getTotpAuthState, verifyTotpCode } from "@/lib/crm-totp";
 import { normalizeLoginEmailOtp, verifyLoginEmailOtp } from "@/lib/crm-email-otp";
 import { getCrmUserById } from "@/lib/crm-users";
-import type { CrmRole } from "@/content/crm-roles";
+import { logAdminLogin } from "@/lib/crm-login-logs";
 import {
   ADMIN_2FA_RATE_LIMIT,
-  clearRateLimit,
   getClientIp,
   getRateLimitStatus,
   rateLimitExceededResponse,
@@ -22,56 +15,6 @@ import {
 
 function twoFaRateLimitKey(request: Request, userId: string): string {
   return `${getClientIp(request)}:${userId}`;
-}
-
-async function completeLoginSession(payload: {
-  userId: string;
-  email: string;
-  name: string;
-  role: CrmRole;
-  mustChangePassword: boolean;
-  request: Request;
-  rateKey: string;
-}) {
-  const secret = process.env.ADMIN_SECRET!;
-  const maxAge = await getSessionMaxAgeSeconds();
-  const session = await buildCrmSessionCookie(
-    {
-      userId: payload.userId,
-      email: payload.email,
-      name: payload.name,
-      role: payload.role,
-      mustChangePassword: payload.mustChangePassword,
-    },
-    secret,
-    maxAge,
-  );
-
-  void logAdminLogin({
-    userId: payload.userId,
-    email: payload.email,
-    name: payload.name,
-    ipAddress: getClientIp(payload.request),
-    userAgent: payload.request.headers.get("user-agent"),
-    success: true,
-  });
-
-  clearRateLimit("admin-login-2fa", payload.rateKey);
-
-  const response = NextResponse.json({
-    success: true,
-    mustChangePassword: payload.mustChangePassword,
-    user: { name: payload.name, email: payload.email, role: payload.role },
-  });
-  response.cookies.set(ADMIN_SESSION_COOKIE, session.value, {
-    httpOnly: true,
-    secure: process.env.NODE_ENV === "production",
-    sameSite: "strict",
-    path: "/",
-    maxAge: session.maxAge,
-  });
-  response.cookies.delete(LEGACY_ADMIN_COOKIE);
-  return response;
 }
 
 export async function POST(request: Request) {
@@ -106,7 +49,8 @@ export async function POST(request: Request) {
       const totp = await getTotpAuthState(payload.userId);
       verified = Boolean(totp?.enabled && totp.secret && verifyTotpCode(totp.secret, code));
     } else if (method === "email" || method === "sms") {
-      verified = normalizeLoginEmailOtp(code) !== null && (await verifyLoginEmailOtp(payload.userId, code));
+      verified =
+        normalizeLoginEmailOtp(code) !== null && (await verifyLoginEmailOtp(payload.userId, code));
     }
 
     if (!verified) {
@@ -135,14 +79,14 @@ export async function POST(request: Request) {
     const user = await getCrmUserById(payload.userId);
     const mustChangePassword = user?.mustChangePassword ?? payload.mustChangePassword ?? false;
 
-    return completeLoginSession({
+    return completeCrmLoginSession({
       userId: payload.userId,
       email: payload.email,
       name: payload.name,
       role: payload.role,
       mustChangePassword,
       request,
-      rateKey,
+      twoFaRateKey: rateKey,
     });
   } catch (error) {
     console.error("[api/admin/login/2fa] POST", error);

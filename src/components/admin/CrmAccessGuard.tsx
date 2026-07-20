@@ -30,10 +30,10 @@ export function CrmAccessGuard({ children }: { children: React.ReactNode }) {
     return (
       <div className="mx-auto max-w-lg rounded-2xl border border-gray/40 bg-white p-8 text-center shadow-sm">
         <ShieldOff className="mx-auto h-10 w-10 text-accent" aria-hidden />
-        <h2 className="mt-4 text-lg font-bold text-foreground">Messagerie en pause</h2>
+        <h2 className="mt-4 text-lg font-bold text-foreground">Messagerie désactivée</h2>
         <p className="mt-2 text-sm text-gray-text">
-          La messagerie CRM est temporairement désactivée. Elle sera réactivée lorsque les
-          boîtes professionnelles individuelles seront disponibles.
+          Définissez <code className="text-xs">NEXT_PUBLIC_CRM_MESSAGERIE_ENABLED=1</code> puis
+          redémarrez l&apos;app pour activer la messagerie CRM.
         </p>
         <Link
           href="/admin/crm"

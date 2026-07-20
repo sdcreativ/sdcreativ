@@ -114,7 +114,6 @@ export function filterCrmNavItems(
 ): CrmNavItem[] {
   return items.filter((item) => {
     if (item.id === "messagerie" && !isCrmMessagerieUiEnabled()) return false;
-    if (!item.ready && item.id === "messagerie") return false;
     return hasCrmPermission(permissions, CRM_NAV_PERMISSIONS[item.id]);
   });
 }

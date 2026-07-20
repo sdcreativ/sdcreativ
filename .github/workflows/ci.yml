@@ -110,3 +110,87 @@ jobs:
         env:
           CI: true
           NEXT_PUBLIC_SITE_URL: https://sdcreativ.com
+
+  # secrets n'est pas autorisé dans jobs.*.if — gate via env + output
+  e2e-crm-gate:
+    name: E2E CRM gate
+    runs-on: ubuntu-latest
+    needs: quality
+    outputs:
+      enabled: ${{ steps.check.outputs.enabled }}
+    steps:
+      - id: check
+        env:
+          TOKEN: ${{ secrets.CRM_E2E_LOGIN_TOKEN }}
+        run: |
+          if [ -n "$TOKEN" ]; then
+            echo "enabled=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "enabled=false" >> "$GITHUB_OUTPUT"
+          fi
+
+  e2e-crm:
+    name: E2E CRM (optionnel)
+    runs-on: ubuntu-latest
+    needs: e2e-crm-gate
+    if: ${{ needs.e2e-crm-gate.outputs.enabled == 'true' }}
+
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: sdcreativ
+          POSTGRES_PASSWORD: sdcreativ
+          POSTGRES_DB: sdcreativ
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U sdcreativ -d sdcreativ"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Install Playwright browsers
+        run: npx playwright install --with-deps chromium
+
+      - name: Init database
+        run: npm run db:init
+        env:
+          DATABASE_URL: postgresql://sdcreativ:sdcreativ@localhost:5432/sdcreativ
+
+      - name: Build
+        run: npm run build
+        env:
+          NEXT_PUBLIC_SITE_URL: https://sdcreativ.com
+          ADMIN_SECRET: ${{ secrets.CRM_E2E_ADMIN_SECRET }}
+          DATABASE_URL: postgresql://sdcreativ:sdcreativ@localhost:5432/sdcreativ
+
+      - name: Run CRM e2e
+        run: npm run test:e2e:crm
+        env:
+          CI: true
+          NEXT_PUBLIC_SITE_URL: http://127.0.0.1:3000
+          PLAYWRIGHT_BASE_URL: http://127.0.0.1:3000
+          ADMIN_SECRET: ${{ secrets.CRM_E2E_ADMIN_SECRET }}
+          DATABASE_URL: postgresql://sdcreativ:sdcreativ@localhost:5432/sdcreativ
+          # Bootstrap admin = ADMIN_SECRET ; email défaut admin@sdcreativ.com
+          CRM_E2E_EMAIL: ${{ secrets.CRM_E2E_EMAIL }}
+          CRM_E2E_PASSWORD: ${{ secrets.CRM_E2E_ADMIN_SECRET }}
+          CRM_E2E_LOGIN_TOKEN: ${{ secrets.CRM_E2E_LOGIN_TOKEN }}
+          AWS_REGION: ${{ secrets.AWS_REGION }}
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          AWS_S3_BUCKET: ${{ secrets.AWS_S3_BUCKET }}

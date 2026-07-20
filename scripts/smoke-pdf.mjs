@@ -3,32 +3,106 @@
  * Smoke PDF : vérifie que Playwright/Chromium produit un vrai PDF.
  * Usage : npm run smoke:pdf
  * Exit 0 = OK · Exit 1 = échec
+ *
+ * Mac local : utilise Chrome / Chromium Playwright (`npx playwright install chromium`).
+ * Docker prod : CHROMIUM_EXECUTABLE_PATH=/usr/bin/chromium-browser
  */
 
-import { access } from "node:fs/promises";
-import { resolve } from "node:path";
+import { access, readdir } from "node:fs/promises";
+import { homedir } from "node:os";
+import { join, resolve } from "node:path";
 
-const CANDIDATES = [
+const SYSTEM_CANDIDATES = [
   process.env.CHROMIUM_EXECUTABLE_PATH,
   process.env.PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH,
+  // Linux / Docker
   "/usr/bin/chromium-browser",
   "/usr/bin/chromium",
   "/usr/lib/chromium/chrome",
   "/usr/lib/chromium/chromium",
   "/usr/bin/google-chrome-stable",
   "/usr/bin/google-chrome",
+  // macOS
+  "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome",
+  "/Applications/Chromium.app/Contents/MacOS/Chromium",
+  "/Applications/Google Chrome for Testing.app/Contents/MacOS/Google Chrome for Testing",
 ].filter((p) => Boolean(p?.trim()));
 
-async function resolveChromium() {
-  for (const candidate of CANDIDATES) {
+async function pathExists(candidate) {
+  try {
+    await access(candidate);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+async function findPlaywrightCacheChromium() {
+  const roots = [
+    process.env.PLAYWRIGHT_BROWSERS_PATH,
+    join(homedir(), "Library/Caches/ms-playwright"),
+    join(homedir(), ".cache/ms-playwright"),
+  ].filter(Boolean);
+
+  for (const root of roots) {
+    let entries;
     try {
-      await access(candidate);
-      return candidate;
+      entries = await readdir(root);
     } catch {
-      // next
+      continue;
+    }
+    const chromiumDirs = entries
+      .filter((name) => /^chromium-\d+$/.test(name))
+      .sort()
+      .reverse();
+    for (const dir of chromiumDirs) {
+      const macCandidates = [
+        join(
+          root,
+          dir,
+          "chrome-mac-x64/Google Chrome for Testing.app/Contents/MacOS/Google Chrome for Testing",
+        ),
+        join(
+          root,
+          dir,
+          "chrome-mac-arm64/Google Chrome for Testing.app/Contents/MacOS/Google Chrome for Testing",
+        ),
+        join(
+          root,
+          dir,
+          "chrome-mac/Chromium.app/Contents/MacOS/Chromium",
+        ),
+      ];
+      const linuxCandidates = [
+        join(root, dir, "chrome-linux64/chrome"),
+        join(root, dir, "chrome-linux/chrome"),
+      ];
+      for (const candidate of [...macCandidates, ...linuxCandidates]) {
+        if (await pathExists(candidate)) return candidate;
+      }
     }
   }
   return undefined;
+}
+
+async function resolveChromiumFromPlaywrightPackage() {
+  try {
+    const playwright = await import("playwright");
+    const path = playwright.chromium.executablePath();
+    if (path && (await pathExists(path))) return path;
+  } catch {
+    // package playwright absent ou navigateurs non installés
+  }
+  return undefined;
+}
+
+async function resolveChromium() {
+  for (const candidate of SYSTEM_CANDIDATES) {
+    if (await pathExists(candidate)) return candidate;
+  }
+  const fromPkg = await resolveChromiumFromPlaywrightPackage();
+  if (fromPkg) return fromPkg;
+  return findPlaywrightCacheChromium();
 }
 
 const html = `<!DOCTYPE html>
@@ -41,11 +115,16 @@ const html = `<!DOCTYPE html>
 
 async function main() {
   const executablePath = await resolveChromium();
-  if (!executablePath && !process.env.ALLOW_PLAYWRIGHT_BUNDLED) {
+  if (!executablePath) {
     console.error(
-      "[smoke-pdf] FAIL — aucun Chromium trouvé. Définissez CHROMIUM_EXECUTABLE_PATH ou installez chromium.",
+      "[smoke-pdf] FAIL — aucun Chromium trouvé.",
     );
-    console.error("[smoke-pdf] Candidats :", CANDIDATES.join(", ") || "(vide)");
+    console.error(
+      "[smoke-pdf] Mac : npx playwright install chromium   OU installez Google Chrome",
+    );
+    console.error(
+      "[smoke-pdf] Docker : CHROMIUM_EXECUTABLE_PATH=/usr/bin/chromium-browser",
+    );
     process.exit(1);
   }
 
@@ -59,7 +138,7 @@ async function main() {
 
   const browser = await chromium.launch({
     headless: true,
-    ...(executablePath ? { executablePath } : {}),
+    executablePath,
     args: [
       "--no-sandbox",
       "--disable-setuid-sandbox",
@@ -80,10 +159,7 @@ async function main() {
       process.exit(1);
     }
 
-    console.log(
-      `[smoke-pdf] OK — PDF ${buffer.length} octets` +
-        (executablePath ? ` · ${executablePath}` : " · Chromium Playwright"),
-    );
+    console.log(`[smoke-pdf] OK — PDF ${buffer.length} octets · ${executablePath}`);
     console.log(`[smoke-pdf] cwd=${resolve(process.cwd())}`);
   } finally {
     await browser.close();

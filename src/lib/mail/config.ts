@@ -76,8 +76,7 @@ export function isMailSyncEnabled(): boolean {
 
 /**
  * UI Messagerie CRM (nav + page).
- * Désactivée par défaut (boîtes Hostinger individuelles en pause).
- * Réactiver : NEXT_PUBLIC_CRM_MESSAGERIE_ENABLED=1 (ou CRM_MESSAGERIE_ENABLED=1 côté serveur).
+ * Activer : NEXT_PUBLIC_CRM_MESSAGERIE_ENABLED=1 (ou CRM_MESSAGERIE_ENABLED=1 côté serveur).
  */
 export function isCrmMessagerieUiEnabled(): boolean {
   const flag = (

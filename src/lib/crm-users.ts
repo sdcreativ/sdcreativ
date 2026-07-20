@@ -1,5 +1,6 @@
 import { z } from "zod";
 import type { CrmRole } from "@/content/crm-roles";
+import { isCrmE2eEnabled } from "@/lib/crm-e2e";
 import {
   generateInviteToken,
   getInvitationUrl,
@@ -602,12 +603,14 @@ export async function ensureBootstrapAdmin(): Promise<void> {
     const passwordHash = await hashPassword(secret);
     const email = process.env.CRM_BOOTSTRAP_EMAIL ?? "admin@sdcreativ.com";
     const name = process.env.CRM_BOOTSTRAP_NAME ?? "Administrateur SD CREATIV";
+    // En mode e2e (CRM_E2E_LOGIN_TOKEN), ne pas forcer le changement de MDP (parcours Playwright).
+    const mustChangePassword = !isCrmE2eEnabled();
 
     await query(
       `INSERT INTO crm_users (email, password_hash, name, role, active, must_change_password)
-       VALUES ($1, $2, $3, 'admin', true, true)
+       VALUES ($1, $2, $3, 'admin', true, $4)
        ON CONFLICT (email) DO NOTHING`,
-      [email.toLowerCase(), passwordHash, name],
+      [email.toLowerCase(), passwordHash, name, mustChangePassword],
     );
   });
 }

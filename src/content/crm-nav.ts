@@ -86,8 +86,7 @@ export const crmNavGroups: CrmNavGroup[] = [
       { id: "documents", label: "Documents", href: "/admin/crm/documents", icon: FileText, ready: true },
       { id: "archives", label: "Archives", href: "/admin/crm/archives", icon: Archive, ready: true },
       { id: "invoices", label: "Factures", href: "/admin/crm/factures", icon: Receipt, ready: true },
-      /** ready: false — UI désactivée tant que CRM_MESSAGERIE_ENABLED ≠ 1. */
-      { id: "messagerie", label: "Messagerie", href: "/admin/crm/messagerie", icon: Mail, ready: false },
+      { id: "messagerie", label: "Messagerie", href: "/admin/crm/messagerie", icon: Mail, ready: true },
     ],
   },
   {

@@ -2,7 +2,7 @@
 
 > Dernière mise à jour : 19 juillet 2026  
 > Cocher `[x]` chaque item dès sa réalisation.  
-> Messagerie : **reportée** — voir aussi `docs/CRM-MESSAGERIE-PLAN.md`.  
+> Messagerie : **UI activée** (`NEXT_PUBLIC_CRM_MESSAGERIE_ENABLED=1`) — voir `docs/CRM-MESSAGERIE-PLAN.md`.  
 > **3CX** (Live Chat + appels + CRM) : plan dédié dans [`docs/CRM-3CX-PLAN.md`](./CRM-3CX-PLAN.md).
 
 ---
@@ -123,12 +123,10 @@ Les items ci-dessous ciblent les **écarts de polish**, la **robustesse data/per
 
 ---
 
-## Plus tard — Messagerie
+## Messagerie
 
-> Volontairement **hors sprint** pour l’instant. Le code existe ; l’UI reste derrière le flag.
-
-- [ ] **Réactiver l’UI messagerie**  
-  Flag `CRM_MESSAGERIE_ENABLED` / `NEXT_PUBLIC_CRM_MESSAGERIE_ENABLED=1`, nav `ready: true`.  
+- [x] **Réactiver l’UI messagerie**  
+  Flag `NEXT_PUBLIC_CRM_MESSAGERIE_ENABLED=1`, nav `ready: true`.  
   *Fichiers :* `src/content/crm-nav.ts`, `src/lib/mail/config.ts`, `src/components/admin/CrmMessagerieView.tsx`
 
 - [ ] **Stabiliser sync & onboarding mailbox**  
@@ -136,7 +134,7 @@ Les items ci-dessous ciblent les **écarts de polish**, la **robustesse data/per
   *Réf. :* `docs/CRM-MESSAGERIE-PLAN.md`
 
 - [ ] **Raccorder Inbox ↔ fils mail**  
-  Quand la messagerie est active, enrichir l’inbox unifiée avec les threads email.
+  Enrichir l’inbox unifiée avec les threads email.
 
 ---
 

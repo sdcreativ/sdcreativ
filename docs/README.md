@@ -36,7 +36,17 @@ docker compose exec app node scripts/smoke-pdf.mjs
 
 Voir aussi [SMOKE-PDF.md](./SMOKE-PDF.md).
 
-## Messagerie (pause UI)
+## E2E CRM
+
+```bash
+npm run test:e2e:crm
+```
+
+Voir [E2E-CRM.md](./E2E-CRM.md) (`CRM_E2E_*` dans `.env.local`, jamais en prod).
+
+## Messagerie
+
+UI activée via `NEXT_PUBLIC_CRM_MESSAGERIE_ENABLED=1` (+ `MAIL_CREDENTIALS_SECRET`, optionnel `MAIL_SYNC_ENABLED=1`).
 
 | Doc | Rôle |
 |-----|------|

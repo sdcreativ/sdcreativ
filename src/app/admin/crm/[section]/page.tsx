@@ -9,14 +9,7 @@ import { crmNavItems } from "@/content/crm-nav";
 const UNREADY_SECTION_COPY: Record<
   string,
   { title: string; description: string; badge?: string }
-> = {
-  messagerie: {
-    title: "Messagerie",
-    description:
-      "Boîtes professionnelles et sync IMAP sont en place côté code. L’UI CRM reste désactivée tant que le flag messagerie n’est pas activé — voir docs/CRM-MESSAGERIE-PLAN.md.",
-    badge: "En pause",
-  },
-};
+> = {};
 
 type Props = {
   params: Promise<{ section: string }>;

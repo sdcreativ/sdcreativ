@@ -1,5 +1,6 @@
 import { createHash, randomInt, timingSafeEqual } from "node:crypto";
 import { escapeHtml, sendEmail } from "@/lib/email";
+import { isCrmE2eEnabled, storeCrmE2eSignatureOtp } from "@/lib/crm-e2e";
 import { withDb } from "@/lib/db";
 import {
   SIGNATURE_OTP_EXPIRY_MINUTES,
@@ -69,6 +70,8 @@ export async function createSignatureOtpChallenge(input: {
       [input.entityType, input.entityId, email, codeHash, expiresAt],
     );
 
+    storeCrmE2eSignatureOtp(input.entityType, input.entityId, code);
+
     const sent = await sendEmail({
       to: email,
       subject: `Code de signature — ${input.documentLabel}`,
@@ -80,7 +83,7 @@ export async function createSignatureOtpChallenge(input: {
         <p style="color:#666;font-size:12px">Signature électronique simple renforcée (preuve métier SD CREATIV) — pas une signature eIDAS qualifiée.</p>
       `,
     });
-    if (!sent) {
+    if (!sent && !isCrmE2eEnabled()) {
       throw new Error("Impossible d'envoyer le code par email. Réessayez plus tard.");
     }
 

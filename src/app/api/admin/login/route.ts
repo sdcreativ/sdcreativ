@@ -1,5 +1,7 @@
 import { NextResponse } from "next/server";
 import { ADMIN_SESSION_COOKIE, LEGACY_ADMIN_COOKIE } from "@/lib/crm-session";
+import { verifyCrmE2eLoginToken } from "@/lib/crm-e2e";
+import { completeCrmLoginSession } from "@/lib/crm-login-session";
 import { authenticateCrmUser, ensureBootstrapAdmin } from "@/lib/crm-users";
 import { logAdminLogin } from "@/lib/crm-login-logs";
 import { getTotpAuthState } from "@/lib/crm-totp";
@@ -29,8 +31,12 @@ export async function POST(request: Request) {
   }
 
   try {
-    const body = (await request.json()) as { email?: string; password?: string };
-    const { email, password } = body;
+    const body = (await request.json()) as {
+      email?: string;
+      password?: string;
+      e2eLoginToken?: string;
+    };
+    const { email, password, e2eLoginToken } = body;
 
     if (!email?.trim()) {
       return NextResponse.json({ error: "Email requis" }, { status: 400 });
@@ -74,6 +80,19 @@ export async function POST(request: Request) {
         success: false,
       });
       return NextResponse.json({ error: "Identifiants incorrects" }, { status: 401 });
+    }
+
+    // Bypass 2FA réservé aux tests e2e (CRM_E2E_LOGIN_TOKEN ≥ 32 car.).
+    if (verifyCrmE2eLoginToken(e2eLoginToken)) {
+      clearRateLimit("admin-login", rateKey);
+      return completeCrmLoginSession({
+        userId: user.id,
+        email: user.email,
+        name: user.name,
+        role: user.role,
+        mustChangePassword: user.mustChangePassword,
+        request,
+      });
     }
 
     const totp = await getTotpAuthState(user.id);
