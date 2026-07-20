@@ -24,6 +24,7 @@ import {
   UserCog,
   Users,
   UsersRound,
+  FileSignature,
 } from "lucide-react";
 
 export type CrmNavItem = {
@@ -80,6 +81,7 @@ export const crmNavGroups: CrmNavGroup[] = [
       },
       { id: "timesheets", label: "Temps", href: "/admin/crm/temps", icon: Clock, ready: true },
       { id: "vendors", label: "Prestataires", href: "/admin/crm/prestataires", icon: UserCog, ready: true },
+      { id: "hr", label: "Contrats RH", href: "/admin/crm/rh", icon: FileSignature, ready: true },
       { id: "calendar", label: "Calendrier", href: "/admin/crm/calendrier", icon: Calendar, ready: true },
       { id: "documents", label: "Documents", href: "/admin/crm/documents", icon: FileText, ready: true },
       { id: "archives", label: "Archives", href: "/admin/crm/archives", icon: Archive, ready: true },

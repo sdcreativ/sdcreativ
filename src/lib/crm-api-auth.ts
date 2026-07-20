@@ -35,4 +35,5 @@ export const crmApiAuth = {
   users: { read: read("users.manage"), write: write("users.manage") },
   settings: { read: read("settings.manage"), write: write("settings.manage") },
   infra: { read: read("infra.view") },
+  hr: { read: read("hr.read"), write: write("hr.write") },
 };

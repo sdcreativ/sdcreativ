@@ -42,6 +42,8 @@ export const CRM_PERMISSIONS = [
   "mail.manage",
   "communications.read",
   "communications.write",
+  "hr.read",
+  "hr.write",
 ] as const;
 
 export type CrmPermission = (typeof CRM_PERMISSIONS)[number];
@@ -115,6 +117,11 @@ export const CRM_PERMISSION_GROUPS: Array<{
     label: "Communications 3CX",
     permissions: ["communications.read", "communications.write"],
   },
+  {
+    id: "hr",
+    label: "RH & contrats employés",
+    permissions: ["hr.read", "hr.write"],
+  },
 ];
 
 export const CRM_PERMISSION_LABELS: Record<CrmPermission, string> = {
@@ -158,6 +165,8 @@ export const CRM_PERMISSION_LABELS: Record<CrmPermission, string> = {
   "mail.manage": "Configurer les boîtes mail synchronisées",
   "communications.read": "Voir les communications 3CX (chat / appels)",
   "communications.write": "Gérer les communications 3CX",
+  "hr.read": "Voir les contrats employés",
+  "hr.write": "Gérer les contrats employés (Stage, CDD, CDI…)",
 };
 
 const ALL: CrmPermission[] = [...CRM_PERMISSIONS];
@@ -188,6 +197,7 @@ export const ROLE_PERMISSIONS: Record<CrmRole, CrmPermission[]> = {
     "mail.write",
     "communications.read",
     "communications.write",
+    "hr.read",
   ],
   commercial: [
     "leads.read",
@@ -231,6 +241,8 @@ export const ROLE_PERMISSIONS: Record<CrmRole, CrmPermission[]> = {
     "mail.read",
     "mail.write",
     "communications.read",
+    "hr.read",
+    "hr.write",
   ],
   readonly: [
     "leads.read",
@@ -250,6 +262,7 @@ export const ROLE_PERMISSIONS: Record<CrmRole, CrmPermission[]> = {
     "mail.read",
     "mail.write",
     "communications.read",
+    "hr.read",
   ],
 };
 

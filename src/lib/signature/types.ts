@@ -1,4 +1,4 @@
-export type SignatureEntityType = "quote" | "contract";
+export type SignatureEntityType = "quote" | "contract" | "employee_contract";
 
 export type SignatureProvider = "native" | "yousign";
 

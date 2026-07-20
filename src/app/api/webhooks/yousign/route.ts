@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { isDatabaseConfigured } from "@/lib/db";
 import { markContractSignedFromWebhook } from "@/lib/esign/send-contract";
+import { markEmployeeContractSignedFromWebhook } from "@/lib/esign/send-employee-contract";
 import { verifyYousignWebhookSecret } from "@/lib/esign/yousign";
 
 /**
@@ -56,9 +57,24 @@ export async function POST(request: Request) {
       payload,
     });
 
+    if (contract) {
+      return NextResponse.json({
+        ok: true,
+        contractId: contract.id,
+        kind: "client_contract",
+      });
+    }
+
+    const employeeContract = await markEmployeeContractSignedFromWebhook({
+      externalId,
+      eventType,
+      payload,
+    });
+
     return NextResponse.json({
       ok: true,
-      contractId: contract?.id ?? null,
+      contractId: employeeContract?.id ?? null,
+      kind: employeeContract ? "employee_contract" : null,
     });
   } catch (error) {
     console.error("[webhooks/yousign] POST", error);
