@@ -18,6 +18,9 @@ type Props = {
   searchParams: Promise<{ preview?: string }>;
 };
 
+/** Contenu CMS / preview dynamique → éviter DYNAMIC_SERVER_USAGE en prod. */
+export const dynamic = "force-dynamic";
+
 export async function generateStaticParams() {
   const posts = await getBlogPosts();
   return posts.map((post) => ({ slug: post.slug }));

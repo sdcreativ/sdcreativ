@@ -5,6 +5,7 @@ import {
   ArrowUpRight,
   CheckCircle2,
   Clock,
+  HelpCircle,
   MessageCircle,
   Wallet,
 } from "lucide-react";
@@ -26,9 +27,14 @@ type Props = {
 };
 
 export async function ServiceDetailView({ service, detail }: Props) {
-  const { contact } = await getSitePublicSettings();
-  const waUrl = buildWhatsappUrl(contact);
-  const Icon = service.icon;
+  let waUrl = "https://wa.me/22500000000?text=Bonjour";
+  try {
+    const { contact } = await getSitePublicSettings();
+    waUrl = buildWhatsappUrl(contact);
+  } catch (error) {
+    console.error("[ServiceDetailView] site public settings:", error);
+  }
+  const Icon = service.icon ?? HelpCircle;
   const relatedIds = Array.isArray(detail.relatedRealisationIds)
     ? detail.relatedRealisationIds
     : [];

@@ -149,7 +149,10 @@ export async function getServiceDetailSlugs(): Promise<string[]> {
 
   try {
     const records = await listPublicServices({ visibleOnly: true });
-    const slugs = records.filter((r) => r.detail).map((r) => r.slug);
+    // Inclure les services publiés même sans JSON détail (seed / normalize en secours).
+    const slugs = records
+      .filter((r) => Boolean(r.detail) || staticHasServiceDetail(r.slug))
+      .map((r) => r.slug);
     if (slugs.length > 0) return slugs;
   } catch (error) {
     console.error("[public-services] getServiceDetailSlugs fallback:", error);
@@ -166,7 +169,7 @@ export async function hasServiceDetail(id: string): Promise<boolean> {
   try {
     const records = await listPublicServices({ visibleOnly: true });
     const record = records.find((r) => r.slug === id);
-    if (record) return Boolean(record.detail);
+    if (record) return Boolean(record.detail) || staticHasServiceDetail(id);
   } catch (error) {
     console.error("[public-services] hasServiceDetail fallback:", error);
   }

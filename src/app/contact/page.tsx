@@ -16,6 +16,8 @@ import { getSitePublicSettings } from "@/lib/site-public-settings";
 import { buildWhatsappUrl } from "@/lib/site-public-resolver";
 import { createMetadata } from "@/lib/metadata";
 
+export const dynamic = "force-dynamic";
+
 export const metadata = createMetadata({
   title: "Contact",
   description:
