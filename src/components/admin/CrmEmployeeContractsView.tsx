@@ -313,6 +313,8 @@ export function CrmEmployeeContractsView() {
     const email = await prompt({
       title: "Signature SD CREATIV",
       message: "Email du collaborateur (lien magique + OTP). Préférez l'email personnel.",
+      label: "Email",
+      inputType: "email",
       defaultValue: contract.esignSignerEmail ?? contract.userEmail ?? "",
       placeholder: "prenom@exemple.com",
       confirmLabel: "Envoyer",

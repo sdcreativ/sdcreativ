@@ -109,6 +109,8 @@ export function CrmContractsPanel() {
     const email = await prompt({
       title: "Signature SD CREATIV",
       message: "Email du signataire (lien magique + OTP)",
+      label: "Email",
+      inputType: "email",
       defaultValue: contract.esignSignerEmail ?? "",
       placeholder: "client@exemple.com",
       confirmLabel: "Envoyer",
@@ -139,6 +141,8 @@ export function CrmContractsPanel() {
     const email = await prompt({
       title: "Signature Yousign (forte valeur)",
       message: "Email du signataire — prestataire tiers eIDAS",
+      label: "Email",
+      inputType: "email",
       defaultValue: contract.esignSignerEmail ?? "",
       placeholder: "client@exemple.com",
       confirmLabel: "Envoyer",

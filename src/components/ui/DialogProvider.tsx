@@ -31,6 +31,9 @@ type PromptOptions = {
   message?: string;
   defaultValue?: string;
   placeholder?: string;
+  /** Attribut HTML `type` du champ (défaut : text). */
+  inputType?: "text" | "email" | "url" | "tel" | "number" | "password";
+  label?: string;
   confirmLabel?: string;
   cancelLabel?: string;
 };
@@ -99,11 +102,19 @@ export function DialogProvider({ children }: { children: React.ReactNode }) {
     });
   }, []);
 
+  const promptOpenKey =
+    dialog?.kind === "prompt"
+      ? `${dialog.options.title ?? ""}|${dialog.options.message ?? ""}`
+      : null;
+
+  // Focus une seule fois à l’ouverture (pas à chaque frappe — sinon select() bloque la saisie).
   useEffect(() => {
-    if (dialog?.kind !== "prompt") return;
-    promptInputRef.current?.focus();
-    promptInputRef.current?.select();
-  }, [dialog]);
+    if (!promptOpenKey) return;
+    const input = promptInputRef.current;
+    if (!input) return;
+    input.focus();
+    if (input.value) input.select();
+  }, [promptOpenKey]);
 
   useEffect(() => {
     if (!dialog) return;
@@ -207,11 +218,15 @@ export function DialogProvider({ children }: { children: React.ReactNode }) {
 
             {dialog.kind === "prompt" && (
               <label className="mb-5 block text-sm font-medium text-foreground">
-                {dialog.options.placeholder ?? "Valeur"}
+                {dialog.options.label ?? "Valeur"}
                 <input
                   ref={promptInputRef}
-                  type="text"
+                  type={dialog.options.inputType ?? "text"}
                   value={dialog.value}
+                  placeholder={dialog.options.placeholder}
+                  autoComplete={
+                    dialog.options.inputType === "email" ? "email" : undefined
+                  }
                   onChange={(event) =>
                     setDialog((current) =>
                       current?.kind === "prompt"
