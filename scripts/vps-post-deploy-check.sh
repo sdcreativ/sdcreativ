@@ -185,6 +185,26 @@ if command -v ufw >/dev/null 2>&1; then
   fi
 fi
 
+# --- Smoke PDF (Chromium dans le conteneur app) ---
+if $COMPOSE exec -T app node scripts/smoke-pdf.mjs >/tmp/sdcreativ-smoke-pdf.log 2>&1; then
+  ok "Smoke PDF : Chromium OK ($(head -1 /tmp/sdcreativ-smoke-pdf.log 2>/dev/null | tr -d '\n'))"
+else
+  fail "Smoke PDF échoué — voir docs/SMOKE-PDF.md et logs conteneur app"
+  cat /tmp/sdcreativ-smoke-pdf.log 2>/dev/null | tail -5 || true
+fi
+
+# --- 3CX readiness (si FQDN renseigné) ---
+if [ -f .env.docker ] && grep -qE '^THREE_CX_PBX_FQDN=.+' .env.docker 2>/dev/null; then
+  if node scripts/check-threecx-socle.mjs >/tmp/sdcreativ-threecx-check.log 2>&1; then
+    ok "3CX : threecx:check OK — docs/CRM-3CX-PILOTE.md"
+  else
+    warn_msg "3CX : threecx:check incomplet — finaliser le pilote (docs/CRM-3CX-PILOTE.md)"
+    cat /tmp/sdcreativ-threecx-check.log 2>/dev/null | tail -8 || true
+  fi
+else
+  warn_msg "3CX : FQDN non renseigné — pilote non démarré (docs/CRM-3CX-PILOTE.md)"
+fi
+
 echo
 echo "=== Résumé ==="
 echo "Erreurs   : ${errors}"

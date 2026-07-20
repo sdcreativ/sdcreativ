@@ -30,6 +30,7 @@ function loadEnvFile(path) {
 const root = resolve(import.meta.dirname, "..");
 loadEnvFile(resolve(root, ".env.local"));
 loadEnvFile(resolve(root, ".env"));
+loadEnvFile(resolve(root, ".env.docker"));
 
 function normalize(value) {
   return (value ?? "").trim();
