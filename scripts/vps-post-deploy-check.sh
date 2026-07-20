@@ -193,9 +193,9 @@ else
   cat /tmp/sdcreativ-smoke-pdf.log 2>/dev/null | tail -5 || true
 fi
 
-# --- 3CX readiness (si FQDN renseigné) ---
+# --- 3CX readiness (si FQDN renseigné) — via conteneur app (pas de Node sur l'hôte) ---
 if [ -f .env.docker ] && grep -qE '^THREE_CX_PBX_FQDN=.+' .env.docker 2>/dev/null; then
-  if node scripts/check-threecx-socle.mjs >/tmp/sdcreativ-threecx-check.log 2>&1; then
+  if $COMPOSE exec -T app node scripts/check-threecx-socle.mjs >/tmp/sdcreativ-threecx-check.log 2>&1; then
     ok "3CX : threecx:check OK — docs/CRM-3CX-PILOTE.md"
   else
     warn_msg "3CX : threecx:check incomplet — finaliser le pilote (docs/CRM-3CX-PILOTE.md)"

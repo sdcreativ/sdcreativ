@@ -61,6 +61,10 @@ COPY --from=builder /app/public ./public
 COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
 COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
 COPY --from=builder --chown=nextjs:nodejs /app/migrations ./migrations
+# Package complet (le standalone Next peut omettre browsers.json) + smokes ops
+COPY --from=builder /app/node_modules/playwright-core ./node_modules/playwright-core
+COPY --from=builder --chown=nextjs:nodejs /app/scripts/smoke-pdf.mjs ./scripts/smoke-pdf.mjs
+COPY --from=builder --chown=nextjs:nodejs /app/scripts/check-threecx-socle.mjs ./scripts/check-threecx-socle.mjs
 
 RUN mkdir -p public/uploads/blog && chown -R nextjs:nodejs public/uploads
 

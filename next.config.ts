@@ -14,9 +14,11 @@ const securityHeaders = [
 
 const nextConfig: NextConfig = {
   output: "standalone",
-  // Migrations SQL lues au runtime (ensureSchema) — copiées aussi par le Dockerfile.
+  // Évite le tracing partiel (ex. browsers.json manquant) qui casse le PDF en prod.
+  serverExternalPackages: ["playwright-core"],
+  // Migrations SQL + Playwright (PDF) — aussi copiés explicitement dans le Dockerfile.
   outputFileTracingIncludes: {
-    "/*": ["./migrations/**/*"],
+    "/*": ["./migrations/**/*", "./node_modules/playwright-core/**/*"],
   },
   async headers() {
     return [
