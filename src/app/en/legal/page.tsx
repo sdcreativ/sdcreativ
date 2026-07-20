@@ -6,7 +6,8 @@ import { getSiteLegalSettings } from "@/lib/site-legal-settings";
 import { getSitePublicSettings } from "@/lib/site-public-settings";
 import { createMetadata } from "@/lib/metadata";
 
-export const dynamic = "force-dynamic";
+export const revalidate = 300;
+
 
 export const metadata = createMetadata({
   title: "Legal notice",

@@ -10,7 +10,8 @@ import { isProxiedMediaUrl, resolveImageDisplayUrl } from "@/lib/image-url";
 import { enTraining } from "@/i18n/en-content";
 import { createMetadata } from "@/lib/metadata";
 
-export const dynamic = "force-dynamic";
+export const revalidate = 300;
+
 
 export const metadata = createMetadata({
   title: "Professional training",

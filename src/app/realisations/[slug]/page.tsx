@@ -23,8 +23,9 @@ import { createMetadata } from "@/lib/metadata";
 
 type Props = { params: Promise<{ slug: string }> };
 
-/** CMS + site public (`connection()`) → éviter DYNAMIC_SERVER_USAGE en prod. */
-export const dynamic = "force-dynamic";
+/** CMS + settings publics (cache taggé) — ISR 5 min. */
+export const revalidate = 300;
+
 
 export async function generateStaticParams() {
   const items = await getRealisations();

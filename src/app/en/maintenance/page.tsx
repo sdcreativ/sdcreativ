@@ -7,7 +7,8 @@ import { formatFcfa } from "@/lib/format";
 import { getSiteMaintenanceSettings } from "@/lib/site-maintenance-settings";
 import { createMetadata } from "@/lib/metadata";
 
-export const dynamic = "force-dynamic";
+export const revalidate = 300;
+
 
 export const metadata = createMetadata({
   title: "Maintenance & support",

@@ -6,11 +6,9 @@ import { createMetadata } from "@/lib/metadata";
 
 type Props = { params: Promise<{ slug: string }> };
 
-/**
- * Les fiches lisent le CMS + site public (`connection()`), donc le rendu doit être
- * dynamique — sinon Next lève DYNAMIC_SERVER_USAGE (500 en production).
- */
-export const dynamic = "force-dynamic";
+/** CMS + settings publics (cache taggé) — ISR 5 min. */
+export const revalidate = 300;
+
 
 export async function generateStaticParams() {
   const slugs = await getServiceDetailSlugs();

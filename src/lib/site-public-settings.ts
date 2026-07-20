@@ -1,9 +1,11 @@
 import { cache } from "react";
-import { connection } from "next/server";
+import { unstable_cache } from "next/cache";
 import { z } from "zod";
 import { isDatabaseConfigured, withDb } from "@/lib/db";
 import { resolveSitePublic } from "@/lib/site-public-resolver";
 import type { ResolvedSitePublic, SitePublicSettings } from "@/lib/site-public-types";
+
+export const SITE_PUBLIC_SETTINGS_TAG = "site-public-settings";
 
 type SitePublicRow = {
   site_public: Partial<SitePublicSettings> | null;
@@ -48,9 +50,7 @@ export const updateSitePublicSchema = z.object({
   hostAddress: z.string().trim().max(300),
 });
 
-export const getSitePublicSettings = cache(async (): Promise<ResolvedSitePublic> => {
-  await connection();
-
+async function loadSitePublicSettings(): Promise<ResolvedSitePublic> {
   if (!isDatabaseConfigured()) {
     return resolveSitePublic(null);
   }
@@ -65,10 +65,18 @@ export const getSitePublicSettings = cache(async (): Promise<ResolvedSitePublic>
   } catch {
     return resolveSitePublic(null);
   }
+}
+
+/** Settings publics — cache taggé (évite force-dynamic via connection()). */
+export const getSitePublicSettings = cache(async (): Promise<ResolvedSitePublic> => {
+  return unstable_cache(loadSitePublicSettings, ["site-public-settings"], {
+    tags: [SITE_PUBLIC_SETTINGS_TAG],
+    revalidate: 300,
+  })();
 });
 
 export async function getSitePublicSettingsForAdmin(): Promise<SitePublicSettings> {
-  const resolved = await getSitePublicSettings();
+  const resolved = await loadSitePublicSettings();
   return {
     companyName: resolved.companyName,
     tagline: resolved.tagline,

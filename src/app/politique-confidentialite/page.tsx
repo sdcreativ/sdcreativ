@@ -3,6 +3,8 @@ import { SitePageHero } from "@/components/ui/SitePageHero";
 import { Button } from "@/components/ui/Button";
 import { createMetadata } from "@/lib/metadata";
 
+export const revalidate = 300;
+
 export const metadata = createMetadata({
   title: "Politique de confidentialité",
   description:

@@ -11,7 +11,8 @@ import { getFormationsContent } from "@/lib/formations-resolver";
 import { isProxiedMediaUrl, resolveImageDisplayUrl } from "@/lib/image-url";
 import { createMetadata } from "@/lib/metadata";
 
-export const dynamic = "force-dynamic";
+export const revalidate = 300;
+
 
 export const metadata = createMetadata({
   title: "Formations professionnelles",

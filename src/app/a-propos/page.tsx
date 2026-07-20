@@ -8,7 +8,8 @@ import { getRealisations } from "@/lib/cms";
 import { createMetadata } from "@/lib/metadata";
 import { getSiteMethodSettings } from "@/lib/site-method-settings";
 
-export const dynamic = "force-dynamic";
+export const revalidate = 300;
+
 
 export const metadata = createMetadata({
   title: "À propos",

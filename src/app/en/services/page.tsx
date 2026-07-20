@@ -5,7 +5,8 @@ import { enServices } from "@/i18n/en-content";
 import { createMetadata } from "@/lib/metadata";
 import { getServiceHref, getServices } from "@/lib/services";
 
-export const dynamic = "force-dynamic";
+export const revalidate = 300;
+
 
 export const metadata = createMetadata({
   title: "Services",

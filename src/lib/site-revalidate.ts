@@ -3,13 +3,19 @@ import {
   PUBLIC_PRICING_PLANS_TAG,
   PUBLIC_PRICING_REASSURANCE_TAG,
 } from "@/lib/public-pricing-resolver";
+import { SITE_PUBLIC_SETTINGS_TAG } from "@/lib/site-public-settings";
 
 /** Invalide les pages publiques après modification des coordonnées / réseaux sociaux. */
 export function revalidateSitePublicPages() {
+  revalidateTag(SITE_PUBLIC_SETTINGS_TAG, "max");
   revalidatePath("/", "layout");
   revalidatePath("/contact");
   revalidatePath("/mentions-legales");
   revalidatePath("/politique-confidentialite");
+  revalidatePath("/a-propos");
+  revalidatePath("/en/about");
+  revalidatePath("/en/legal");
+  revalidatePath("/en/privacy");
   revalidatePath("/blog/feed.xml");
   revalidatePath("/sitemap.xml");
 }

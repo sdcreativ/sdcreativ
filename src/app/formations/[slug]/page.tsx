@@ -7,7 +7,8 @@ import {
 } from "@/lib/formations-resolver";
 import { createMetadata } from "@/lib/metadata";
 
-export const dynamic = "force-dynamic";
+export const revalidate = 300;
+
 
 type Props = { params: Promise<{ slug: string }> };
 

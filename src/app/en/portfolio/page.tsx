@@ -4,7 +4,8 @@ import { getRealisations } from "@/lib/cms";
 import { createMetadata } from "@/lib/metadata";
 import { buildPortfolioPublicStats } from "@/lib/portfolio-public-stats";
 
-export const dynamic = "force-dynamic";
+export const revalidate = 300;
+
 
 export const metadata = createMetadata({
   title: "Portfolio",

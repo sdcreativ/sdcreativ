@@ -1,3 +1,4 @@
+import { unstable_cache } from "next/cache";
 import {
   pricingPlans as staticPlans,
   pricingReassurance as staticReassurance,
@@ -10,13 +11,11 @@ import {
 } from "@/lib/public-pricing";
 import type { PricingPlan } from "@/content/pricing";
 import { allowStaticContentFallback } from "@/lib/static-content-fallback";
-import { connection } from "next/server";
 
 export const PUBLIC_PRICING_PLANS_TAG = "public-pricing-plans";
 export const PUBLIC_PRICING_REASSURANCE_TAG = "public-pricing-reassurance";
 
-export async function getPricingPlans(locale = "fr"): Promise<PricingPlan[]> {
-  await connection();
+async function loadPricingPlans(locale: string): Promise<PricingPlan[]> {
   if (!isDatabaseConfigured()) {
     return allowStaticContentFallback() ? staticPlans : [];
   }
@@ -31,8 +30,7 @@ export async function getPricingPlans(locale = "fr"): Promise<PricingPlan[]> {
   return allowStaticContentFallback() ? staticPlans : [];
 }
 
-export async function getPricingReassurance(locale = "fr") {
-  await connection();
+async function loadPricingReassurance(locale: string) {
   if (!isDatabaseConfigured()) {
     return allowStaticContentFallback() ? staticReassurance : [];
   }
@@ -47,4 +45,21 @@ export async function getPricingReassurance(locale = "fr") {
   }
 
   return allowStaticContentFallback() ? staticReassurance : [];
+}
+
+/** Tarifs publics — cache taggé (ISR) plutôt que force-dynamic + connection(). */
+export async function getPricingPlans(locale = "fr"): Promise<PricingPlan[]> {
+  return unstable_cache(
+    () => loadPricingPlans(locale),
+    ["public-pricing-plans", locale],
+    { tags: [PUBLIC_PRICING_PLANS_TAG], revalidate: 300 },
+  )();
+}
+
+export async function getPricingReassurance(locale = "fr") {
+  return unstable_cache(
+    () => loadPricingReassurance(locale),
+    ["public-pricing-reassurance", locale],
+    { tags: [PUBLIC_PRICING_REASSURANCE_TAG], revalidate: 300 },
+  )();
 }
