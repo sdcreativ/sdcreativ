@@ -1,5 +1,5 @@
 import { createHash, randomBytes } from "node:crypto";
-import { getInvoiceDocumentCompany } from "@/lib/billing/document-company";
+import { getPdfDocumentCompany } from "@/lib/billing/document-company";
 import {
   archiveEmployeeContractToS3,
   rearchiveEditableEmployeeContract,
@@ -155,7 +155,7 @@ export async function signEmployeeContractNative(input: {
   const signedAt = new Date();
   const signerEmail = otp.email;
   const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? "https://sdcreativ.com";
-  const company = await getInvoiceDocumentCompany(siteUrl);
+  const company = await getPdfDocumentCompany(siteUrl);
 
   const draftHtml = buildEmployeeContractPdfHtml(
     contract,

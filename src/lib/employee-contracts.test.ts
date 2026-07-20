@@ -129,7 +129,7 @@ describe("employee contract clause templates", () => {
       tagline: "Agence Web & Solutions Digitales",
       primaryColor: "#1e40af",
       accentColor: "#e85d04",
-      logoUrl: "https://sdcreativ.com/images/logo_sd.svg",
+      logoUrl: "https://sdcreativ.com/images/logo.png",
       siteUrl: "https://sdcreativ.com",
       phone: "+225 00 00 00 00",
       email: "contact@sdcreativ.com",
@@ -138,7 +138,7 @@ describe("employee contract clause templates", () => {
       rccm: "CI-ABJ-2020-B-12345",
       ncc: "1234567A",
     });
-    expect(html).toContain('src="https://sdcreativ.com/images/logo_sd.svg"');
+    expect(html).toContain('src="https://sdcreativ.com/images/logo.png"');
     expect(html).toContain("Article 1");
     expect(html).toContain("Côte d'Ivoire");
     expect(html).toContain("RH-ADA-001");

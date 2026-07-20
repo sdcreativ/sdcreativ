@@ -32,7 +32,7 @@ function buildCompanyHeader(company: InvoiceDocumentCompany): string {
     <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:24px;padding:28px 32px;border-radius:16px;background:linear-gradient(135deg, ${company.primaryColor} 0%, #071525 100%);color:#ffffff">
       <div style="display:flex;align-items:center;gap:20px;min-width:0">
         <div style="flex-shrink:0;display:flex;align-items:center;justify-content:center;width:88px;height:88px;border-radius:14px;background:rgba(255,255,255,0.98);padding:10px;box-shadow:0 8px 24px rgba(0,0,0,0.12)">
-          <img src="${escapeHtml(company.logoUrl)}" alt="${escapeHtml(company.agencyName)}" style="max-width:100%;max-height:100%;object-fit:contain" />
+          <img src="${company.logoUrl.startsWith("data:") ? company.logoUrl : escapeHtml(company.logoUrl)}" alt="${escapeHtml(company.agencyName)}" style="max-width:100%;max-height:100%;object-fit:contain" />
         </div>
         <div style="min-width:0">
           <p style="margin:0;font-size:22px;font-weight:800;letter-spacing:-0.02em;line-height:1.2">${escapeHtml(company.agencyName)}</p>
@@ -57,7 +57,7 @@ function buildDefaultCompany(siteUrl: string): InvoiceDocumentCompany {
     tagline: "Agence Web & Solutions Digitales",
     primaryColor: "#1e40af",
     accentColor: "#e85d04",
-    logoUrl: `${siteUrl.replace(/\/$/, "")}/images/logo_sd.svg`,
+    logoUrl: `${siteUrl.replace(/\/$/, "")}/images/logo.png`,
     siteUrl,
     phone: "",
     email: "",

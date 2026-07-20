@@ -2,7 +2,7 @@ import { buildInvoiceEmailHtml } from "@/lib/invoice-email";
 import { buildInvoicePdfHtml } from "@/lib/invoice-pdf";
 import { buildPaymentInstructionsHtml, buildPaymentInstructionsPayload, buildPortalInvoiceUrl } from "@/lib/payment-instructions";
 import { getPaymentSettings } from "@/lib/payment-settings";
-import { getInvoiceDocumentCompany } from "@/lib/billing/document-company";
+import { getPdfDocumentCompany } from "@/lib/billing/document-company";
 import { getClientById } from "@/lib/clients";
 import { portalNotificationPrefAllows } from "@/lib/client-portal-settings";
 import { sendEmail } from "@/lib/email";
@@ -163,7 +163,7 @@ export async function generateInvoiceFromQuote(input: {
   const html = buildInvoicePdfHtml(invoice, siteUrl, {
     forArchive: true,
     verification: await buildDocumentVerificationAssets("facture", invoice.reference),
-    company: await getInvoiceDocumentCompany(siteUrl),
+    company: await getPdfDocumentCompany(siteUrl),
     paymentInstructionsHtml: buildPaymentInstructionsHtml(
       buildPaymentInstructionsPayload({
         settings: await getPaymentSettings(),

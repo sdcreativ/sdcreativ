@@ -22,12 +22,14 @@ export async function htmlToPdfResponse(
   const safeName = filename.replace(/[^\w.\-]+/g, "_");
 
   if (doc.mimeType !== "application/pdf") {
-    // Fallback HTML si Chromium absent — avec en-tête explicite
+    // Fallback HTML si Chromium absent — mise en page type A4 déjà dans le HTML
     return new Response(new Uint8Array(doc.buffer), {
       headers: {
         "Content-Type": "text/html; charset=utf-8",
         "Cache-Control": "private, no-cache",
         "X-Pdf-Fallback": "html",
+        "X-Pdf-Hint":
+          "Chromium indisponible : document servi en HTML. Définissez CHROMIUM_EXECUTABLE_PATH.",
       },
     });
   }

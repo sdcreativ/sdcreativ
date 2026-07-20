@@ -1,4 +1,4 @@
-import { getInvoiceDocumentCompany } from "@/lib/billing/document-company";
+import { getPdfDocumentCompany } from "@/lib/billing/document-company";
 import { archiveEmployeeContractToS3 } from "@/lib/employee-contract-archive";
 import {
   getEmployeeContractById,
@@ -52,7 +52,7 @@ export async function sendEmployeeContractForEsign(input: {
   }
 
   const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? "https://sdcreativ.com";
-  const company = await getInvoiceDocumentCompany(siteUrl);
+  const company = await getPdfDocumentCompany(siteUrl);
   const html = buildEmployeeContractPdfHtml(contract, siteUrl, undefined, company);
   const doc = await renderHtmlToDocument(html);
   if (doc.mimeType !== "application/pdf") {

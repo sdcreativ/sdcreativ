@@ -1,4 +1,4 @@
-import { getInvoiceDocumentCompany } from "@/lib/billing/document-company";
+import { getPdfDocumentCompany } from "@/lib/billing/document-company";
 import { renderHtmlToDocument } from "@/lib/billing/pdf";
 import { withDb } from "@/lib/db";
 import {
@@ -89,7 +89,7 @@ export async function archiveEmployeeContractToS3(input: {
 
   if (!buffer) {
     const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? "https://sdcreativ.com";
-    const company = await getInvoiceDocumentCompany(siteUrl);
+    const company = await getPdfDocumentCompany(siteUrl);
     let signature = input.signature;
     if (!signature && variant === "signed") {
       const proof = await getEmployeeContractSignatureProof(input.contract.id);
@@ -123,6 +123,12 @@ export async function archiveEmployeeContractToS3(input: {
   const documentName = s3Key.split("/").pop() ?? `${input.contract.reference}.${ext}`;
 
   await uploadObjectBuffer(s3Key, buffer, mimeType ?? "application/pdf");
+
+  if ((mimeType ?? "").includes("html") || extension === "html") {
+    console.warn(
+      `[employee-contract-archive] ${input.contract.reference} archivé en HTML (Chromium indisponible). Configurez CHROMIUM_EXECUTABLE_PATH pour un vrai PDF.`,
+    );
+  }
 
   return persistDocumentPointers({
     contractId: input.contract.id,

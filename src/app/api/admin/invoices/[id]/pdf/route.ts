@@ -5,7 +5,7 @@ import { getInvoiceById, getInvoiceRemaining } from "@/lib/invoices";
 import { buildInvoicePdfHtml } from "@/lib/invoice-pdf";
 import { buildPaymentInstructionsHtml, buildPaymentInstructionsPayload, buildPortalInvoiceUrl } from "@/lib/payment-instructions";
 import { getPaymentSettings } from "@/lib/payment-settings";
-import { getInvoiceDocumentCompany } from "@/lib/billing/document-company";
+import { getPdfDocumentCompany } from "@/lib/billing/document-company";
 import { htmlToPdfResponse } from "@/lib/server-pdf";
 
 type RouteContext = { params: Promise<{ id: string }> };
@@ -38,7 +38,7 @@ export async function GET(request: Request, context: RouteContext) {
           })
         : null;
     const html = buildInvoicePdfHtml(invoice, siteUrl, {
-      company: await getInvoiceDocumentCompany(siteUrl),
+      company: await getPdfDocumentCompany(siteUrl),
       paymentInstructionsHtml: paymentPayload
         ? buildPaymentInstructionsHtml(
             paymentPayload,

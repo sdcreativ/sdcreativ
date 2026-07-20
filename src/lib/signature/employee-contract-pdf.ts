@@ -94,7 +94,7 @@ function buildCompanyLetterhead(company: InvoiceDocumentCompany): string {
     <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:20px">
       <div style="display:flex;align-items:center;gap:16px;min-width:0">
         <div style="flex-shrink:0;width:72px;height:72px;border-radius:12px;border:1px solid #e2e8f0;background:#ffffff;padding:8px;display:flex;align-items:center;justify-content:center">
-          <img src="${escapeHtml(company.logoUrl)}" alt="${escapeHtml(company.agencyName)}" style="max-width:100%;max-height:100%;object-fit:contain" />
+          <img src="${company.logoUrl.startsWith("data:") ? company.logoUrl : escapeHtml(company.logoUrl)}" alt="${escapeHtml(company.agencyName)}" style="max-width:100%;max-height:100%;object-fit:contain" />
         </div>
         <div style="min-width:0">
           <p style="margin:0;font-family:system-ui,-apple-system,sans-serif;font-size:18px;font-weight:800;letter-spacing:-0.02em;color:${escapeHtml(company.primaryColor)};line-height:1.2">${escapeHtml(company.agencyName)}</p>
@@ -135,7 +135,7 @@ export function buildEmployeeContractPdfHtml(
     tagline: "Agence Web & Solutions Digitales",
     primaryColor: "#1e40af",
     accentColor: "#e85d04",
-    logoUrl: `${siteUrl.replace(/\/$/, "")}/images/logo_sd.svg`,
+    logoUrl: `${siteUrl.replace(/\/$/, "")}/images/logo.png`,
     siteUrl,
     phone: "",
     email: "contact@sdcreativ.com",
@@ -203,20 +203,87 @@ export function buildEmployeeContractPdfHtml(
 <html lang="fr">
 <head><meta charset="utf-8"/><title>${escapeHtml(contract.reference)} — Contrat ${escapeHtml(typeLabel)}</title>
 <style>
-  @page { margin: 16mm 14mm; }
-  body{font-family:Georgia,"Times New Roman",serif;color:#0f172a;margin:0;line-height:1.5;font-size:12.5px}
-  h1{font-size:20px;margin:0 0 6px;letter-spacing:-0.01em}
-  h2{font-family:system-ui,-apple-system,sans-serif}
-  .eyebrow{font-family:system-ui,sans-serif;font-size:11px;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;color:${escapeHtml(resolvedCompany.primaryColor)};margin:0 0 8px}
-  .meta{color:#64748b;font-size:12px;margin:0 0 18px}
-  .card{border:1px solid #e2e8f0;border-radius:10px;padding:14px 16px;background:#f8fafc;margin:16px 0}
-  .card table{width:100%;border-collapse:collapse}
-  .card td{padding:5px 0;font-size:12px;vertical-align:top}
-  .card td:first-child{color:#64748b;width:38%;font-family:system-ui,sans-serif}
-  .legal-note{margin-top:28px;padding:12px 14px;background:#fffbeb;border:1px solid #fde68a;border-radius:8px;font-size:11px;color:#78350f;line-height:1.45}
-  .footer{margin-top:28px;padding-top:12px;border-top:1px solid #e2e8f0;font-size:10px;color:#94a3b8;font-family:system-ui,sans-serif;line-height:1.55}
+  @page { size: A4; margin: 14mm 12mm; }
+  * { box-sizing: border-box; }
+  html { background: #cbd5e1; }
+  body {
+    font-family: Georgia, "Times New Roman", serif;
+    color: #0f172a;
+    margin: 0;
+    line-height: 1.5;
+    font-size: 12.5px;
+  }
+  .sheet {
+    width: 210mm;
+    max-width: 100%;
+    min-height: 297mm;
+    margin: 24px auto;
+    padding: 18mm 16mm;
+    background: #ffffff;
+    box-shadow: 0 8px 32px rgba(15, 23, 42, 0.18);
+  }
+  h1 { font-size: 20px; margin: 0 0 6px; letter-spacing: -0.01em; }
+  h2 { font-family: system-ui, -apple-system, sans-serif; }
+  .eyebrow {
+    font-family: system-ui, sans-serif;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: ${escapeHtml(resolvedCompany.primaryColor)};
+    margin: 0 0 8px;
+  }
+  .meta { color: #64748b; font-size: 12px; margin: 0 0 18px; }
+  .card {
+    border: 1px solid #e2e8f0;
+    border-radius: 10px;
+    padding: 14px 16px;
+    background: #f8fafc;
+    margin: 16px 0;
+  }
+  .card table { width: 100%; border-collapse: collapse; }
+  .card td { padding: 5px 0; font-size: 12px; vertical-align: top; }
+  .card td:first-child {
+    color: #64748b;
+    width: 38%;
+    font-family: system-ui, sans-serif;
+  }
+  .legal-note {
+    margin-top: 28px;
+    padding: 12px 14px;
+    background: #fffbeb;
+    border: 1px solid #fde68a;
+    border-radius: 8px;
+    font-size: 11px;
+    color: #78350f;
+    line-height: 1.45;
+  }
+  .footer {
+    margin-top: 28px;
+    padding-top: 12px;
+    border-top: 1px solid #e2e8f0;
+    font-size: 10px;
+    color: #94a3b8;
+    font-family: system-ui, sans-serif;
+    line-height: 1.55;
+  }
+  @media print {
+    html { background: #ffffff; }
+    .sheet {
+      width: auto;
+      min-height: 0;
+      margin: 0;
+      padding: 0;
+      box-shadow: none;
+    }
+  }
+  @media (max-width: 860px) {
+    .sheet { margin: 0; min-height: 0; padding: 20px 16px; box-shadow: none; }
+    html { background: #ffffff; }
+  }
 </style></head>
 <body>
+  <div class="sheet">
   ${letterhead}
 
   <p class="eyebrow">Contrat de travail / engagement — ${escapeHtml(typeLabel)}</p>
@@ -258,5 +325,6 @@ export function buildEmployeeContractPdfHtml(
     ${resolvedCompany.email ? ` · ${escapeHtml(resolvedCompany.email)}` : ""}
     <br/>${escapeHtml(contract.reference)} · ${escapeHtml(typeLabel)} · Exemplaire électronique
   </p>
+  </div>
 </body></html>`;
 }

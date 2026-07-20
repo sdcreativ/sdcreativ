@@ -1,5 +1,5 @@
 import { buildDocumentVerificationAssets } from "@/lib/billing/qr";
-import { getInvoiceDocumentCompany } from "@/lib/billing/document-company";
+import { getPdfDocumentCompany } from "@/lib/billing/document-company";
 import { getLatestInvoiceBillingDocument } from "@/lib/billing/documents";
 import { renderHtmlToDocument } from "@/lib/billing/pdf";
 import { buildInvoicePdfHtml } from "@/lib/invoice-pdf";
@@ -30,7 +30,7 @@ async function generateInvoicePdfAttachment(invoice: Invoice): Promise<InvoiceEm
   const html = buildInvoicePdfHtml(invoice, siteUrl, {
     forArchive: true,
     verification: await buildDocumentVerificationAssets("facture", invoice.reference),
-    company: await getInvoiceDocumentCompany(siteUrl),
+    company: await getPdfDocumentCompany(siteUrl),
     paymentInstructionsHtml: paymentPayload
       ? buildPaymentInstructionsHtml(
           paymentPayload,

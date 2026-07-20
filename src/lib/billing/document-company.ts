@@ -1,4 +1,5 @@
-import { LOGO } from "@/lib/constants";
+import { LOGO, LOGO_FOOTER } from "@/lib/constants";
+import { embedDocumentLogoDataUrl } from "@/lib/billing/document-logo";
 import { getCrmSettings } from "@/lib/crm-settings";
 import type { CrmBranding } from "@/lib/crm-settings-types";
 import { getSitePublicSettings } from "@/lib/site-public-settings";
@@ -24,8 +25,9 @@ export function resolveDocumentLogoUrl(
   siteUrl: string,
 ): string {
   const base = siteUrl.replace(/\/$/, "");
-  if (!logoUrl?.trim()) {
-    return `${base}${LOGO.src}`;
+  // Documents : PNG par défaut (le SVG marketing est trop lourd pour PDF / emails)
+  if (!logoUrl?.trim() || logoUrl.trim() === LOGO.src) {
+    return `${base}${LOGO_FOOTER.src}`;
   }
   const trimmed = logoUrl.trim();
   if (
@@ -65,7 +67,23 @@ export function mergeInvoiceDocumentCompany(
 
 export async function getInvoiceDocumentCompany(
   siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? "https://sdcreativ.com",
+  options?: { embedLogo?: boolean },
 ): Promise<InvoiceDocumentCompany> {
   const [settings, site] = await Promise.all([getCrmSettings(), getSitePublicSettings()]);
-  return mergeInvoiceDocumentCompany(settings.branding, site, siteUrl);
+  const company = mergeInvoiceDocumentCompany(settings.branding, site, siteUrl);
+  if (!options?.embedLogo) {
+    return company;
+  }
+  const embedded = await embedDocumentLogoDataUrl(company.logoUrl, siteUrl);
+  return {
+    ...company,
+    logoUrl: embedded || company.logoUrl,
+  };
+}
+
+/** Société + logo embarqué (data-URI) pour PDF / contrats autonomes. */
+export async function getPdfDocumentCompany(
+  siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? "https://sdcreativ.com",
+): Promise<InvoiceDocumentCompany> {
+  return getInvoiceDocumentCompany(siteUrl, { embedLogo: true });
 }
