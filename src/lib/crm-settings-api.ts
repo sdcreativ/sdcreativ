@@ -27,6 +27,8 @@ export type CrmSessionInfo = {
   permissions: CrmPermission[];
   avatarUrl?: string | null;
   dashboardLayout?: DashboardLayout | null;
+  /** Flag runtime (`.env.docker` → `CRM_MESSAGERIE_ENABLED`). */
+  messagerieEnabled?: boolean;
 };
 
 export async function saveDashboardLayoutApi(layout: DashboardLayout): Promise<void> {

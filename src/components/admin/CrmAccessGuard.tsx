@@ -4,13 +4,12 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { crmNavItems } from "@/content/crm-nav";
 import { getCrmRoutePermission } from "@/lib/crm-access";
-import { isCrmMessagerieUiEnabled } from "@/lib/mail/config";
 import { useCrmPermissions } from "@/hooks/useCrmPermissions";
 import { Loader2, ShieldOff } from "lucide-react";
 
 export function CrmAccessGuard({ children }: { children: React.ReactNode }) {
   const pathname = usePathname() ?? "/admin/crm";
-  const { loading, can } = useCrmPermissions();
+  const { loading, can, session } = useCrmPermissions();
 
   if (loading) {
     return (
@@ -25,15 +24,16 @@ export function CrmAccessGuard({ children }: { children: React.ReactNode }) {
     pathname.endsWith("/") && pathname.length > 1 ? pathname.slice(0, -1) : pathname;
   if (
     normalized.startsWith("/admin/crm/messagerie") &&
-    !isCrmMessagerieUiEnabled()
+    !session?.messagerieEnabled
   ) {
     return (
       <div className="mx-auto max-w-lg rounded-2xl border border-gray/40 bg-white p-8 text-center shadow-sm">
         <ShieldOff className="mx-auto h-10 w-10 text-accent" aria-hidden />
         <h2 className="mt-4 text-lg font-bold text-foreground">Messagerie désactivée</h2>
         <p className="mt-2 text-sm text-gray-text">
-          Définissez <code className="text-xs">NEXT_PUBLIC_CRM_MESSAGERIE_ENABLED=1</code> puis
-          redémarrez l&apos;app pour activer la messagerie CRM.
+          Définissez <code className="text-xs">CRM_MESSAGERIE_ENABLED=1</code> dans{" "}
+          <code className="text-xs">.env.docker</code> puis redémarrez le conteneur{" "}
+          <code className="text-xs">app</code>.
         </p>
         <Link
           href="/admin/crm"
@@ -64,5 +64,5 @@ export function CrmAccessGuard({ children }: { children: React.ReactNode }) {
     );
   }
 
-  return children;
+  return <>{children}</>;
 }

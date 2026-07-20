@@ -66,7 +66,9 @@ export function CrmMobileNav() {
 
   if (!session) return null;
 
-  const { primary, secondary } = resolveMobileNav(permissions, session.role);
+  const { primary, secondary } = resolveMobileNav(permissions, session.role, {
+    messagerieEnabled: Boolean(session.messagerieEnabled),
+  });
   if (primary.length === 0) return null;
 
   const plusActive =

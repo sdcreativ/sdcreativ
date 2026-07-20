@@ -108,12 +108,19 @@ export function hasCrmPermission(
   return permissions.includes(required);
 }
 
+export type CrmNavFilterOptions = {
+  /** Si omis (appel serveur), lit `.env` / `.env.docker` via `isCrmMessagerieUiEnabled`. */
+  messagerieEnabled?: boolean;
+};
+
 export function filterCrmNavItems(
   items: CrmNavItem[],
   permissions: CrmPermission[],
+  options?: CrmNavFilterOptions,
 ): CrmNavItem[] {
+  const messagerieEnabled = options?.messagerieEnabled ?? isCrmMessagerieUiEnabled();
   return items.filter((item) => {
-    if (item.id === "messagerie" && !isCrmMessagerieUiEnabled()) return false;
+    if (item.id === "messagerie" && !messagerieEnabled) return false;
     return hasCrmPermission(permissions, CRM_NAV_PERMISSIONS[item.id]);
   });
 }
@@ -121,11 +128,12 @@ export function filterCrmNavItems(
 export function filterCrmNavGroups(
   groups: Array<{ id: string; label: string; items: CrmNavItem[] }>,
   permissions: CrmPermission[],
+  options?: CrmNavFilterOptions,
 ): Array<{ id: string; label: string; items: CrmNavItem[] }> {
   return groups
     .map((group) => ({
       ...group,
-      items: filterCrmNavItems(group.items, permissions),
+      items: filterCrmNavItems(group.items, permissions, options),
     }))
     .filter((group) => group.items.length > 0);
 }

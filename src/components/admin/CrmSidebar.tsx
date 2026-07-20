@@ -62,7 +62,9 @@ export function CrmSidebar({ onNavigate }: Props) {
     (session ? CRM_ROLE_LABELS[session.role as keyof typeof CRM_ROLE_LABELS] : null);
 
   const visibleGroups = session
-    ? filterCrmNavGroups(crmNavGroups, session.permissions)
+    ? filterCrmNavGroups(crmNavGroups, session.permissions, {
+        messagerieEnabled: Boolean(session.messagerieEnabled),
+      })
     : crmNavGroups;
 
   const profileActive = pathname.startsWith("/admin/crm/compte");

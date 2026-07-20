@@ -6,6 +6,7 @@ import {
 } from "@/lib/crm-roles-db";
 import { getRolePermissions } from "@/lib/crm-permissions";
 import { getCrmUserProfile } from "@/lib/crm-user-profile";
+import { isCrmMessagerieUiEnabled } from "@/lib/mail/config";
 
 export async function GET() {
   const authError = await requireAdminAuth();
@@ -32,6 +33,7 @@ export async function GET() {
       permissions: getRolePermissions(session.role),
       avatarUrl: profile.avatarUrl,
       dashboardLayout: profile.dashboardLayout,
+      messagerieEnabled: isCrmMessagerieUiEnabled(),
     },
   });
 }

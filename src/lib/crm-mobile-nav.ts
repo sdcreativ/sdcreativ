@@ -72,10 +72,15 @@ export type MobileNavSplit = {
   secondary: CrmNavItem[];
 };
 
-export function resolveMobileNav(permissions: CrmPermission[], role: string): MobileNavSplit {
+export function resolveMobileNav(
+  permissions: CrmPermission[],
+  role: string,
+  options?: { messagerieEnabled?: boolean },
+): MobileNavSplit {
   const visible = filterCrmNavItems(
     crmNavItems.filter((item) => !CRM_MOBILE_DESKTOP_ONLY_IDS.has(item.id)),
     permissions,
+    options,
   );
   const byId = new Map(visible.map((item) => [item.id, item]));
 

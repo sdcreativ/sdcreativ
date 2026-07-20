@@ -75,13 +75,14 @@ export function isMailSyncEnabled(): boolean {
 }
 
 /**
- * UI Messagerie CRM (nav + page).
- * Activer : NEXT_PUBLIC_CRM_MESSAGERIE_ENABLED=1 (ou CRM_MESSAGERIE_ENABLED=1 côté serveur).
+ * UI Messagerie CRM (nav + page) — lecture **runtime** (ex. `.env.docker`).
+ * Préférer `CRM_MESSAGERIE_ENABLED=1` ; `NEXT_PUBLIC_CRM_MESSAGERIE_ENABLED` reste un alias.
+ * Ne pas appeler depuis un Client Component (utiliser le flag `messagerieEnabled` de la session).
  */
 export function isCrmMessagerieUiEnabled(): boolean {
   const flag = (
-    process.env.NEXT_PUBLIC_CRM_MESSAGERIE_ENABLED ??
     process.env.CRM_MESSAGERIE_ENABLED ??
+    process.env.NEXT_PUBLIC_CRM_MESSAGERIE_ENABLED ??
     ""
   )
     .trim()
