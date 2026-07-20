@@ -11,6 +11,7 @@ import { buildDocumentVerificationAssets } from "@/lib/billing/qr";
 import { assertPortalQuoteAccess, PORTAL_SIGNABLE_STATUSES } from "@/lib/billing/portal-access";
 import { renderHtmlToDocument } from "@/lib/billing/pdf";
 import { assertQuoteTransition, BillingWorkflowError } from "@/lib/billing/workflow";
+import { getPdfDocumentCompany } from "@/lib/billing/document-company";
 import { buildSignedQuotePdfHtml } from "@/lib/quote-pdf";
 import { verifySignatureOtp } from "@/lib/signature/otp";
 import { logSignatureEvent } from "@/lib/signature/events";
@@ -64,7 +65,10 @@ export async function signPortalQuote(input: SignPortalQuoteInput): Promise<Quot
   const portalClientId = client?.portalClientId ?? input.portalClientId;
 
   const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? "https://sdcreativ.com";
-  const verification = await buildDocumentVerificationAssets("devis", quote.reference);
+  const [verification, company] = await Promise.all([
+    buildDocumentVerificationAssets("devis", quote.reference),
+    getPdfDocumentCompany(siteUrl),
+  ]);
 
   const draftHtml = buildSignedQuotePdfHtml(
     quote,
@@ -75,7 +79,7 @@ export async function signPortalQuote(input: SignPortalQuoteInput): Promise<Quot
       signatureHash: "pending",
       signatureDataUrl: input.signatureData,
     },
-    { verification },
+    { verification, company },
   );
   const draftDoc = await renderHtmlToDocument(draftHtml);
   const documentSha256 = createHash("sha256").update(draftDoc.buffer).digest("hex");
@@ -94,7 +98,7 @@ export async function signPortalQuote(input: SignPortalQuoteInput): Promise<Quot
       signatureHash,
       signatureDataUrl: input.signatureData,
     },
-    { verification },
+    { verification, company },
   );
   const rendered = await renderHtmlToDocument(finalHtml);
   const finalDocumentSha256 = createHash("sha256").update(rendered.buffer).digest("hex");

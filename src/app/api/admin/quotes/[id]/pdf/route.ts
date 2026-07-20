@@ -1,5 +1,6 @@
 import { crmApiAuth } from "@/lib/crm-api-auth";
 import { NextResponse } from "next/server";
+import { getPdfDocumentCompany } from "@/lib/billing/document-company";
 import { isDatabaseConfigured } from "@/lib/db";
 import { getQuoteById } from "@/lib/quotes";
 import { buildQuotePdfHtml } from "@/lib/quote-pdf";
@@ -24,7 +25,8 @@ export async function GET(request: Request, context: RouteContext) {
 
     const preferHtml = new URL(request.url).searchParams.get("format") === "html";
     const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? "https://sdcreativ.com";
-    const html = buildQuotePdfHtml(quote, siteUrl);
+    const company = await getPdfDocumentCompany(siteUrl);
+    const html = buildQuotePdfHtml(quote, siteUrl, { company });
 
     return htmlToPdfResponse(html, quote.reference || `devis-${id}`, { preferHtml });
   } catch (error) {

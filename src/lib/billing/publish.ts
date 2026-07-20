@@ -1,4 +1,5 @@
 import { buildQuoteEmailHtml } from "@/lib/quote-email";
+import { getPdfDocumentCompany } from "@/lib/billing/document-company";
 import { buildQuotePdfHtml } from "@/lib/quote-pdf";
 import { sendEmail } from "@/lib/email";
 import { getClientById } from "@/lib/clients";
@@ -89,10 +90,15 @@ export async function publishQuote(input: {
   const portalUrl = `${siteUrl}/espace-client?section=quotes`;
   const validUntil = computeQuoteValidUntil();
 
+  const company = await getPdfDocumentCompany(siteUrl);
   const html = buildQuotePdfHtml(
     { ...quote, clientId, status: "sent", validUntil: validUntil.toISOString() },
     siteUrl,
-    { forArchive: true, verification: await buildDocumentVerificationAssets("devis", quote.reference) },
+    {
+      forArchive: true,
+      company,
+      verification: await buildDocumentVerificationAssets("devis", quote.reference),
+    },
   );
   const rendered = await renderHtmlToDocument(html);
 

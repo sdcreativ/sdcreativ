@@ -1,14 +1,27 @@
 import type { Quote } from "@/lib/quotes";
 import { formatQuoteAmount, formatQuoteDate } from "@/content/quotes-labels";
 import { QUOTE_STATUS_LABELS } from "@/content/quotes-labels";
+import type { InvoiceDocumentCompany } from "@/lib/billing/document-company";
+import {
+  buildDefaultDocumentCompany,
+  buildDocumentCompanyHeader,
+} from "@/lib/billing/document-pdf-header";
 import type { PdfVerification } from "@/lib/billing/verification-html";
 import { injectVerificationBlock } from "@/lib/billing/verification-html";
+
+export type QuotePdfOptions = {
+  forArchive?: boolean;
+  verification?: PdfVerification;
+  company?: InvoiceDocumentCompany;
+};
 
 export function buildQuotePdfHtml(
   quote: Quote,
   siteUrl: string,
-  options?: { forArchive?: boolean; verification?: PdfVerification },
+  options?: QuotePdfOptions,
 ): string {
+  const company = options?.company ?? buildDefaultDocumentCompany(siteUrl);
+
   const lines = quote.lines.length
     ? quote.lines
         .map(
@@ -27,24 +40,32 @@ export function buildQuotePdfHtml(
 <html lang="fr">
 <head>
   <meta charset="utf-8" />
-  <title>Devis ${escapeHtml(quote.reference)} — SD CREATIV</title>
+  <title>Devis ${escapeHtml(quote.reference)} — ${escapeHtml(company.agencyName)}</title>
   <style>
-    body { font-family: system-ui, sans-serif; color: #111827; max-width: 800px; margin: 40px auto; padding: 0 24px; }
-    h1 { color: #1e40af; font-size: 1.5rem; margin-bottom: 0.25rem; }
-    .meta { color: #6b7280; font-size: 0.875rem; margin-bottom: 2rem; }
+    * { box-sizing: border-box; }
+    body {
+      font-family: "Segoe UI", system-ui, -apple-system, sans-serif;
+      color: #0f172a;
+      max-width: 820px;
+      margin: 0 auto;
+      padding: 32px 28px 40px;
+      background: #ffffff;
+      -webkit-print-color-adjust: exact;
+      print-color-adjust: exact;
+    }
     table { width: 100%; border-collapse: collapse; margin: 1.5rem 0; }
     th { text-align: left; padding: 8px 12px; background: #f3f4f6; font-size: 0.75rem; text-transform: uppercase; }
-    .total { font-size: 1.25rem; font-weight: 700; color: #1e40af; text-align: right; margin-top: 1rem; }
+    .total { font-size: 1.25rem; font-weight: 700; color: ${company.primaryColor}; text-align: right; margin-top: 1rem; }
     .footer { margin-top: 3rem; padding-top: 1rem; border-top: 1px solid #e5e7eb; font-size: 0.75rem; color: #9ca3af; }
-    @media print { body { margin: 0; } }
+    @media print { body { margin: 0; padding: 0; } }
   </style>
 </head>
 <body>
-  <h1>SD CREATIV</h1>
-  <p class="meta">Agence Web & Solutions Digitales · ${escapeHtml(siteUrl)}</p>
+  ${buildDocumentCompanyHeader(company)}
 
-  <h2 style="font-size:1.125rem;margin-bottom:0.5rem">Devis ${escapeHtml(quote.reference)}</h2>
-  <p class="meta">
+  <p style="margin:0 0 6px;font-size:11px;font-weight:700;letter-spacing:0.14em;text-transform:uppercase;color:${company.primaryColor}">Devis</p>
+  <h2 style="font-size:1.25rem;margin:0 0 0.5rem;color:#0f172a">Devis ${escapeHtml(quote.reference)}</h2>
+  <p style="color:#6b7280;font-size:0.875rem;margin:0 0 1.5rem">
     Date : ${formatQuoteDate(quote.createdAt)} · Statut : ${QUOTE_STATUS_LABELS[quote.status]}
   </p>
 
@@ -65,7 +86,7 @@ export function buildQuotePdfHtml(
   ${quote.message ? `<div style="margin-top:2rem;padding:1rem;background:#f9fafb;border-radius:8px"><strong>Notes :</strong><br/>${escapeHtml(quote.message)}</div>` : ""}
 
   <div class="footer">
-    SD CREATIV — Devis valable 30 jours. TVA non applicable (art. 293 B du CGI) sauf mention contraire.
+    ${escapeHtml(company.agencyName)} — Devis valable 30 jours. TVA non applicable (art. 293 B du CGI) sauf mention contraire.
   </div>
   ${options?.forArchive ? "" : "<script>window.onload=function(){window.print()}</script>"}
 </body>
@@ -83,12 +104,12 @@ export function buildSignedQuotePdfHtml(
     signatureHash: string;
     signatureDataUrl: string;
   },
-  options?: { verification?: PdfVerification },
+  options?: QuotePdfOptions,
 ): string {
   const base = buildQuotePdfHtml(
     { ...quote, status: "signed" },
     siteUrl,
-    { forArchive: true, verification: options?.verification },
+    { ...options, forArchive: true },
   );
 
   const signedBlock = `
