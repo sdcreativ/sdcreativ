@@ -72,6 +72,5 @@ Thumbs.db
 # --- Divers ---
 .turbo
 
-# --- Docs : versionnées (runbooks sans secrets). Captures tablette optionnelles ---
-# /docs n’est plus ignoré — voir docs/README.md
-/docs/_local/
+# --- Docs (locales uniquement, non versionnées) ---
+/docs/
