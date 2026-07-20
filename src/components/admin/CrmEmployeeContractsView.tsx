@@ -2,6 +2,12 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import {
+  buildDefaultBenefits,
+  buildDefaultClauses,
+  buildDefaultMissions,
+  type EmployeeContractClause,
+} from "@/content/employee-contract-clauses";
+import {
   EMPLOYEE_COMPENSATION_PERIOD_LABELS,
   EMPLOYEE_COMPENSATION_PERIODS,
   EMPLOYEE_CONTRACT_STATUS_LABELS,
@@ -16,9 +22,11 @@ import {
 import { CURRENCY_LABELS, SUPPORTED_CURRENCIES, formatMoney } from "@/lib/currencies";
 import type { EmployeeContract } from "@/lib/employee-contracts";
 import {
+  archiveEmployeeContractApi,
   createEmployeeContractApi,
   deleteEmployeeContractApi,
   fetchEmployeeContracts,
+  getEmployeeContractPdfUrl,
   sendEmployeeContractForEsignApi,
   sendEmployeeContractForNativeSignApi,
   updateEmployeeContractApi,
@@ -30,11 +38,15 @@ import {
   AlertTriangle,
   Briefcase,
   CalendarDays,
+  Cloud,
+  CloudOff,
+  Eye,
   FileSignature,
   Loader2,
   Pencil,
   PenLine,
   Plus,
+  Printer,
   Trash2,
 } from "lucide-react";
 
@@ -57,6 +69,10 @@ type FormState = {
   compensationPeriod: (typeof EMPLOYEE_COMPENSATION_PERIODS)[number];
   reminderDaysBefore: string;
   notes: string;
+  internalReference: string;
+  missions: string;
+  benefitsText: string;
+  clauses: EmployeeContractClause[];
 };
 
 const emptyForm = (): FormState => ({
@@ -65,7 +81,7 @@ const emptyForm = (): FormState => ({
   title: "",
   jobTitle: "",
   department: "",
-  workLocation: "",
+  workLocation: "Abidjan, Côte d'Ivoire",
   startDate: "",
   endDate: "",
   trialEndDate: "",
@@ -75,6 +91,10 @@ const emptyForm = (): FormState => ({
   compensationPeriod: "monthly",
   reminderDaysBefore: "30",
   notes: "",
+  internalReference: "",
+  missions: buildDefaultMissions("cdi"),
+  benefitsText: buildDefaultBenefits("cdi").join("\n"),
+  clauses: buildDefaultClauses("cdi"),
 });
 
 function formatDateFr(value: string | null): string {
@@ -161,6 +181,17 @@ export function CrmEmployeeContractsView() {
     setShowForm(true);
   }
 
+  function applyTemplateForType(type: EmployeeContractType, keepCustomTitle = true) {
+    setForm((f) => ({
+      ...f,
+      contractType: type,
+      title: keepCustomTitle && f.title.trim() ? f.title : defaultTitle(type, f.jobTitle),
+      missions: buildDefaultMissions(type),
+      benefitsText: buildDefaultBenefits(type).join("\n"),
+      clauses: buildDefaultClauses(type),
+    }));
+  }
+
   function openEdit(contract: EmployeeContract) {
     setEditingId(contract.id);
     setForm({
@@ -185,6 +216,16 @@ export function CrmEmployeeContractsView() {
       compensationPeriod: contract.compensationPeriod,
       reminderDaysBefore: String(contract.reminderDaysBefore),
       notes: contract.notes ?? "",
+      internalReference: contract.internalReference ?? "",
+      missions: contract.missions ?? buildDefaultMissions(contract.contractType),
+      benefitsText: (contract.benefits.length
+        ? contract.benefits
+        : buildDefaultBenefits(contract.contractType)
+      ).join("\n"),
+      clauses:
+        contract.clauses.length > 0
+          ? contract.clauses
+          : buildDefaultClauses(contract.contractType),
     });
     setShowForm(true);
   }
@@ -208,6 +249,10 @@ export function CrmEmployeeContractsView() {
     setSaving(true);
     setError("");
     const title = form.title.trim() || defaultTitle(form.contractType, form.jobTitle);
+    const benefits = form.benefitsText
+      .split("\n")
+      .map((l) => l.replace(/^[-•*]\s*/, "").trim())
+      .filter(Boolean);
     const payload = {
       userId: form.userId,
       contractType: form.contractType,
@@ -224,6 +269,10 @@ export function CrmEmployeeContractsView() {
       compensationPeriod: form.compensationPeriod,
       reminderDaysBefore: form.reminderDaysBefore ? Number(form.reminderDaysBefore) : 30,
       notes: form.notes.trim() || null,
+      internalReference: form.internalReference.trim() || null,
+      missions: form.missions.trim() || null,
+      benefits,
+      clauses: form.clauses,
     };
 
     try {
@@ -284,6 +333,19 @@ export function CrmEmployeeContractsView() {
       });
     } catch (err) {
       setError(err instanceof Error ? err.message : "Envoi signature impossible.");
+    } finally {
+      setSignBusyId(null);
+    }
+  }
+
+  async function archiveToS3(contract: EmployeeContract) {
+    setSignBusyId(contract.id);
+    setError("");
+    try {
+      const archived = await archiveEmployeeContractApi(contract.id);
+      setContracts((prev) => prev.map((c) => (c.id === archived.id ? archived : c)));
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Archivage S3 impossible.");
     } finally {
       setSignBusyId(null);
     }
@@ -471,11 +533,20 @@ export function CrmEmployeeContractsView() {
                 value={form.contractType}
                 onChange={(e) => {
                   const contractType = e.target.value as EmployeeContractType;
-                  setForm((f) => ({
-                    ...f,
-                    contractType,
-                    title: f.title || defaultTitle(contractType, f.jobTitle),
-                  }));
+                  if (
+                    !editingId ||
+                    window.confirm(
+                      "Recharger les clauses, missions et avantages du modèle pour ce type de contrat ?",
+                    )
+                  ) {
+                    applyTemplateForType(contractType);
+                  } else {
+                    setForm((f) => ({
+                      ...f,
+                      contractType,
+                      title: f.title || defaultTitle(contractType, f.jobTitle),
+                    }));
+                  }
                 }}
                 className={fieldClass}
               >
@@ -502,6 +573,18 @@ export function CrmEmployeeContractsView() {
                 onChange={(e) => setForm((f) => ({ ...f, title: e.target.value }))}
                 className={fieldClass}
                 placeholder="Auto si vide"
+              />
+            </label>
+            <label className="block md:col-span-2">
+              <span className="mb-1 block text-xs font-medium text-gray-text">
+                Référence interne
+              </span>
+              <input
+                value={form.internalReference}
+                onChange={(e) => setForm((f) => ({ ...f, internalReference: e.target.value }))}
+                className={fieldClass}
+                placeholder="Ex. RH-2026-004 / dossier personnel"
+                maxLength={80}
               />
             </label>
             <label className="block">
@@ -628,16 +711,118 @@ export function CrmEmployeeContractsView() {
               />
             </label>
             <label className="block md:col-span-2">
-              <span className="mb-1 block text-xs font-medium text-gray-text">Notes</span>
+              <span className="mb-1 block text-xs font-medium text-gray-text">
+                Missions (corps du contrat)
+              </span>
+              <textarea
+                value={form.missions}
+                onChange={(e) => setForm((f) => ({ ...f, missions: e.target.value }))}
+                rows={5}
+                className={fieldClass}
+                placeholder="Liste des missions principales…"
+              />
+              <span className="mt-1 block text-[11px] text-gray-text">
+                Placeholders possibles : {"{{jobTitle}}"}, {"{{departmentName}}"}
+              </span>
+            </label>
+            <label className="block md:col-span-2">
+              <span className="mb-1 block text-xs font-medium text-gray-text">
+                Avantages (une ligne = un avantage)
+              </span>
+              <textarea
+                value={form.benefitsText}
+                onChange={(e) => setForm((f) => ({ ...f, benefitsText: e.target.value }))}
+                rows={4}
+                className={fieldClass}
+                placeholder={"Couverture CNPS\nCongés payés\nMatériel professionnel…"}
+              />
+            </label>
+            <label className="block md:col-span-2">
+              <span className="mb-1 block text-xs font-medium text-gray-text">
+                Notes internes (hors PDF)
+              </span>
               <textarea
                 value={form.notes}
                 onChange={(e) => setForm((f) => ({ ...f, notes: e.target.value }))}
-                rows={3}
+                rows={2}
                 className={fieldClass}
-                placeholder="Clauses particulières, avantages, références internes…"
+                placeholder="Commentaires RH non inclus dans le document signé…"
               />
             </label>
           </div>
+
+          <div className="space-y-3 rounded-xl border border-gray/25 bg-white/70 p-4">
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <div>
+                <p className="text-sm font-semibold text-foreground">
+                  Clauses juridiques ({form.clauses.length})
+                </p>
+                <p className="text-xs text-gray-text">
+                  Droit ivoirien · éditables · présentes dans le PDF signé
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => {
+                  if (
+                    window.confirm(
+                      "Réinitialiser toutes les clauses, missions et avantages selon le type de contrat ?",
+                    )
+                  ) {
+                    applyTemplateForType(form.contractType);
+                  }
+                }}
+                className="rounded-lg border border-gray/40 px-3 py-1.5 text-xs font-semibold text-foreground hover:bg-gray-light/50"
+              >
+                Réinitialiser le modèle
+              </button>
+            </div>
+            <div className="max-h-[28rem] space-y-3 overflow-y-auto pr-1">
+              {form.clauses.map((clause, index) => (
+                <details
+                  key={clause.key}
+                  className="rounded-lg border border-gray/20 bg-gray-light/20 open:bg-white"
+                  open={index < 2}
+                >
+                  <summary className="cursor-pointer px-3 py-2 text-xs font-semibold text-foreground">
+                    {clause.title}
+                  </summary>
+                  <div className="space-y-2 border-t border-gray/15 px-3 py-3">
+                    <input
+                      value={clause.title}
+                      onChange={(e) => {
+                        const title = e.target.value;
+                        setForm((f) => ({
+                          ...f,
+                          clauses: f.clauses.map((c, i) =>
+                            i === index ? { ...c, title } : c,
+                          ),
+                        }));
+                      }}
+                      className={fieldClass}
+                      aria-label={`Titre article ${index + 1}`}
+                    />
+                    <textarea
+                      value={clause.body}
+                      onChange={(e) => {
+                        const body = e.target.value;
+                        setForm((f) => ({
+                          ...f,
+                          clauses: f.clauses.map((c, i) =>
+                            i === index ? { ...c, body } : c,
+                          ),
+                        }));
+                      }}
+                      rows={6}
+                      className={fieldClass}
+                      aria-label={`Corps article ${index + 1}`}
+                    />
+                  </div>
+                </details>
+              ))}
+            </div>
+          </div>
+
           <div className="flex flex-wrap gap-2">
             <button
               type="submit"
@@ -711,6 +896,17 @@ export function CrmEmployeeContractsView() {
                           Yousign
                         </span>
                       )}
+                      {contract.documentS3Key ? (
+                        <span className="inline-flex items-center gap-1 rounded-lg bg-emerald-50 px-2 py-0.5 text-[10px] font-semibold text-emerald-800">
+                          <Cloud className="h-3 w-3" aria-hidden />
+                          S3
+                        </span>
+                      ) : (
+                        <span className="inline-flex items-center gap-1 rounded-lg bg-amber-50 px-2 py-0.5 text-[10px] font-semibold text-amber-800">
+                          <CloudOff className="h-3 w-3" aria-hidden />
+                          Non archivé
+                        </span>
+                      )}
                     </div>
                     <p className="text-base font-semibold text-foreground">{contract.title}</p>
                     <p className="text-sm text-gray-text">
@@ -736,6 +932,46 @@ export function CrmEmployeeContractsView() {
                     </p>
                   </div>
                   <div className="flex flex-wrap gap-1.5">
+                    <a
+                      href={getEmployeeContractPdfUrl(contract.id)}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center gap-1 rounded-lg border border-primary/30 bg-primary/5 px-2.5 py-1.5 text-xs font-semibold text-primary hover:bg-primary/10"
+                      title={
+                        contract.documentS3Key
+                          ? "Ouvrir le PDF archivé sur S3"
+                          : "Aperçu / archivage S3 automatique"
+                      }
+                    >
+                      <Eye className="h-3.5 w-3.5" aria-hidden />
+                      {contract.status === "signed" || contract.status === "active"
+                        ? "Voir signé"
+                        : "Voir PDF"}
+                    </a>
+                    <a
+                      href={getEmployeeContractPdfUrl(contract.id, {
+                        format: "html",
+                        print: true,
+                      })}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center gap-1 rounded-lg border border-gray/40 px-2.5 py-1.5 text-xs font-medium hover:bg-gray-light/50"
+                      title="Ouvrir et lancer l’impression"
+                    >
+                      <Printer className="h-3.5 w-3.5" aria-hidden />
+                      Imprimer
+                    </a>
+                    {!contract.documentS3Key && (
+                      <button
+                        type="button"
+                        disabled={signBusyId === contract.id}
+                        onClick={() => void archiveToS3(contract)}
+                        className="inline-flex items-center gap-1 rounded-lg border border-amber-200 bg-amber-50 px-2.5 py-1.5 text-xs font-semibold text-amber-900 hover:bg-amber-100 disabled:opacity-50"
+                      >
+                        <Cloud className="h-3.5 w-3.5" aria-hidden />
+                        Archiver S3
+                      </button>
+                    )}
                     {canSendForSignature(contract) && (
                       <>
                         <button
@@ -798,10 +1034,15 @@ export function CrmEmployeeContractsView() {
                     )}
                   </div>
                 </div>
+                <div className="mt-3 flex flex-wrap gap-x-4 gap-y-1 border-t border-gray/15 pt-3 text-xs text-gray-text">
+                  {contract.internalReference && (
+                    <span>Réf. interne : {contract.internalReference}</span>
+                  )}
+                  <span>{contract.clauses.length} clauses</span>
+                  <span>{contract.benefits.length} avantages</span>
+                </div>
                 {contract.notes && (
-                  <p className="mt-3 border-t border-gray/15 pt-3 text-xs leading-relaxed text-gray-text">
-                    {contract.notes}
-                  </p>
+                  <p className="mt-2 text-xs leading-relaxed text-gray-text">{contract.notes}</p>
                 )}
               </li>
             );

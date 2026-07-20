@@ -1,4 +1,9 @@
 import { createHash, randomBytes } from "node:crypto";
+import { getInvoiceDocumentCompany } from "@/lib/billing/document-company";
+import {
+  archiveEmployeeContractToS3,
+  rearchiveEditableEmployeeContract,
+} from "@/lib/employee-contract-archive";
 import {
   getEmployeeContractById,
   type EmployeeContract,
@@ -6,7 +11,6 @@ import {
 import { withDb } from "@/lib/db";
 import { sendEmail, escapeHtml } from "@/lib/email";
 import { renderHtmlToDocument } from "@/lib/billing/pdf";
-import { isS3Configured, sanitizeFilename, uploadObjectBuffer } from "@/lib/s3";
 import { buildEmployeeContractPdfHtml } from "@/lib/signature/employee-contract-pdf";
 import { verifySignatureOtp } from "@/lib/signature/otp";
 import { logSignatureEvent } from "@/lib/signature/events";
@@ -64,6 +68,9 @@ export async function sendEmployeeContractForNativeSignature(input: {
       [contract.id, email, tokenHash, expiresAt],
     );
   });
+
+  const pending = (await getEmployeeContractById(contract.id))!;
+  await rearchiveEditableEmployeeContract(pending);
 
   await logSignatureEvent({
     entityType: "employee_contract",
@@ -148,13 +155,19 @@ export async function signEmployeeContractNative(input: {
   const signedAt = new Date();
   const signerEmail = otp.email;
   const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? "https://sdcreativ.com";
+  const company = await getInvoiceDocumentCompany(siteUrl);
 
-  const draftHtml = buildEmployeeContractPdfHtml(contract, siteUrl, {
-    signerName,
-    signedAt: signedAt.toISOString(),
-    signatureHash: "pending",
-    signatureDataUrl: input.signatureData,
-  });
+  const draftHtml = buildEmployeeContractPdfHtml(
+    contract,
+    siteUrl,
+    {
+      signerName,
+      signedAt: signedAt.toISOString(),
+      signatureHash: "pending",
+      signatureDataUrl: input.signatureData,
+    },
+    company,
+  );
   const draftDoc = await renderHtmlToDocument(draftHtml);
   const documentSha256 = createHash("sha256").update(draftDoc.buffer).digest("hex");
   const signatureHash = createHash("sha256")
@@ -163,13 +176,18 @@ export async function signEmployeeContractNative(input: {
     )
     .digest("hex");
 
-  const finalHtml = buildEmployeeContractPdfHtml(contract, siteUrl, {
-    signerName,
-    signedAt: signedAt.toISOString(),
-    signatureHash,
-    signatureDataUrl: input.signatureData,
-    documentSha256,
-  });
+  const finalHtml = buildEmployeeContractPdfHtml(
+    contract,
+    siteUrl,
+    {
+      signerName,
+      signedAt: signedAt.toISOString(),
+      signatureHash,
+      signatureDataUrl: input.signatureData,
+      documentSha256,
+    },
+    company,
+  );
   const rendered = await renderHtmlToDocument(finalHtml);
   const finalDocumentSha256 = createHash("sha256").update(rendered.buffer).digest("hex");
 
@@ -182,13 +200,36 @@ export async function signEmployeeContractNative(input: {
     payload: { documentSha256: finalDocumentSha256, signatureHash },
   });
 
-  let proofS3Key: string | null = null;
-  const documentName = `${contract.reference}-signe.${rendered.extension}`;
-  if (isS3Configured()) {
-    const safe = sanitizeFilename(documentName);
-    proofS3Key = `employee-contracts/${contract.userId}/${contract.id}/${safe}`;
-    await uploadObjectBuffer(proofS3Key, rendered.buffer, rendered.mimeType);
-  }
+  await withDb(async (query) => {
+    await query(
+      `UPDATE employee_contracts SET
+         status = 'signed',
+         signed_at = $2,
+         signature_provider = 'native',
+         esign_completed_at = NOW(),
+         native_sign_token_hash = NULL,
+         native_sign_token_expires_at = NULL,
+         updated_at = NOW()
+       WHERE id = $1`,
+      [contract.id, signedAt],
+    );
+  });
+
+  const signedContract = (await getEmployeeContractById(contract.id))!;
+  const archived = await archiveEmployeeContractToS3({
+    contract: signedContract,
+    variant: "signed",
+    buffer: rendered.buffer,
+    mimeType: rendered.mimeType,
+    extension: rendered.extension,
+    signature: {
+      signerName,
+      signedAt: signedAt.toISOString(),
+      signatureHash,
+      signatureDataUrl: input.signatureData,
+      documentSha256: finalDocumentSha256,
+    },
+  });
 
   await withDb(async (query) => {
     await query(
@@ -209,22 +250,8 @@ export async function signEmployeeContractNative(input: {
         input.ipAddress ?? null,
         input.userAgent ?? null,
         signedAt,
-        proofS3Key,
+        archived.documentS3Key,
       ],
-    );
-    await query(
-      `UPDATE employee_contracts SET
-         status = 'signed',
-         signed_at = $2,
-         signature_provider = 'native',
-         esign_completed_at = NOW(),
-         native_sign_token_hash = NULL,
-         native_sign_token_expires_at = NULL,
-         document_s3_key = COALESCE($3, document_s3_key),
-         document_name = COALESCE($4, document_name),
-         updated_at = NOW()
-       WHERE id = $1`,
-      [contract.id, signedAt, proofS3Key, proofS3Key ? documentName : null],
     );
   });
 
@@ -234,8 +261,12 @@ export async function signEmployeeContractNative(input: {
     eventType: "signed",
     ipAddress: input.ipAddress,
     userAgent: input.userAgent,
-    payload: { signatureHash, documentSha256: finalDocumentSha256 },
+    payload: {
+      signatureHash,
+      documentSha256: finalDocumentSha256,
+      documentS3Key: archived.documentS3Key,
+    },
   });
 
-  return (await getEmployeeContractById(contract.id))!;
+  return archived;
 }

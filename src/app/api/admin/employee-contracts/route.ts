@@ -7,11 +7,13 @@ import {
   EMPLOYEE_CONTRACT_STATUSES,
   EMPLOYEE_CONTRACT_TYPES,
 } from "@/content/employee-contracts-labels";
+import { archiveEmployeeContractToS3 } from "@/lib/employee-contract-archive";
 import {
   createEmployeeContract,
   createEmployeeContractSchema,
   listEmployeeContracts,
 } from "@/lib/employee-contracts";
+import { isS3Configured } from "@/lib/s3";
 
 export async function GET(request: Request) {
   const authError = await crmApiAuth.hr.read();
@@ -63,7 +65,34 @@ export async function POST(request: Request) {
     const createdBy =
       session && session.userId !== "legacy" ? session.userId : null;
 
-    const contract = await createEmployeeContract(parsed.data, createdBy);
+    if (!isS3Configured()) {
+      return NextResponse.json(
+        {
+          error:
+            "Stockage S3 non configuré : les contrats doivent être archivés. Configurez AWS_S3_BUCKET et les clés AWS.",
+        },
+        { status: 503 },
+      );
+    }
+
+    let contract = await createEmployeeContract(parsed.data, createdBy);
+    try {
+      contract = await archiveEmployeeContractToS3({
+        contract,
+        variant: "draft",
+      });
+    } catch (archiveError) {
+      console.error("[api/admin/employee-contracts] archive S3", archiveError);
+      return NextResponse.json(
+        {
+          error:
+            archiveError instanceof Error
+              ? archiveError.message
+              : "Impossible d’archiver le contrat sur S3.",
+        },
+        { status: 502 },
+      );
+    }
 
     if (session) {
       await logCrmAudit({

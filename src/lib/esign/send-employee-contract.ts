@@ -1,3 +1,5 @@
+import { getInvoiceDocumentCompany } from "@/lib/billing/document-company";
+import { archiveEmployeeContractToS3 } from "@/lib/employee-contract-archive";
 import {
   getEmployeeContractById,
   type EmployeeContract,
@@ -8,6 +10,7 @@ import {
   activateYousignSignatureRequest,
   addYousignSigner,
   createYousignSignatureRequest,
+  downloadYousignSignedDocuments,
   isYousignConfigured,
   uploadYousignDocument,
 } from "@/lib/esign/yousign";
@@ -49,13 +52,23 @@ export async function sendEmployeeContractForEsign(input: {
   }
 
   const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? "https://sdcreativ.com";
-  const html = buildEmployeeContractPdfHtml(contract, siteUrl);
+  const company = await getInvoiceDocumentCompany(siteUrl);
+  const html = buildEmployeeContractPdfHtml(contract, siteUrl, undefined, company);
   const doc = await renderHtmlToDocument(html);
   if (doc.mimeType !== "application/pdf") {
     throw new Error(
       "Impossible de générer le PDF contrat (Chromium indisponible). Définissez CHROMIUM_EXECUTABLE_PATH.",
     );
   }
+
+  // Archive S3 du PDF envoyé à la signature
+  await archiveEmployeeContractToS3({
+    contract,
+    variant: "draft",
+    buffer: doc.buffer,
+    mimeType: doc.mimeType,
+    extension: doc.extension,
+  });
 
   const typeLabel = EMPLOYEE_CONTRACT_TYPE_LABELS[contract.contractType];
   const request = await createYousignSignatureRequest({
@@ -112,14 +125,16 @@ export async function markEmployeeContractSignedFromWebhook(input: {
   eventType: string;
   payload: unknown;
 }): Promise<EmployeeContract | null> {
-  return withDb(async (query) => {
+  const contractId = await withDb(async (query) => {
     const { rows } = await query<{ id: string }>(
       `SELECT id FROM employee_contracts WHERE esign_external_id = $1 LIMIT 1`,
       [input.externalId],
     );
-    const contractId = rows[0]?.id;
-    if (!contractId) return null;
+    return rows[0]?.id ?? null;
+  });
+  if (!contractId) return null;
 
+  await withDb(async (query) => {
     await query(
       `UPDATE employee_contracts SET
         status = 'signed',
@@ -139,6 +154,26 @@ export async function markEmployeeContractSignedFromWebhook(input: {
         JSON.stringify(input.payload ?? {}),
       ],
     );
-    return getEmployeeContractById(contractId);
   });
+
+  const contract = await getEmployeeContractById(contractId);
+  if (!contract) return null;
+
+  // Archive l’exemplaire signé Yousign dans S3 pour consultation CRM
+  try {
+    const signedPdf = await downloadYousignSignedDocuments(input.externalId);
+    return await archiveEmployeeContractToS3({
+      contract,
+      variant: "signed",
+      buffer: signedPdf,
+      mimeType: "application/pdf",
+      extension: "pdf",
+    });
+  } catch (error) {
+    console.warn(
+      "[send-employee-contract] téléchargement Yousign impossible, archive locale :",
+      error,
+    );
+    return archiveEmployeeContractToS3({ contract, variant: "signed" });
+  }
 }

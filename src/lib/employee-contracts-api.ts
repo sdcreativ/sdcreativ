@@ -96,3 +96,27 @@ export async function sendEmployeeContractForEsignApi(
   const json = await parseJson<{ contract: EmployeeContract }>(res);
   return json.contract;
 }
+
+/** URL PDF du contrat (aperçu ou exemplaire signé). Ouvrir dans un nouvel onglet pour voir / imprimer. */
+export function getEmployeeContractPdfUrl(
+  id: string,
+  options?: { format?: "html"; print?: boolean },
+): string {
+  const params = new URLSearchParams();
+  if (options?.format === "html") params.set("format", "html");
+  if (options?.print) params.set("print", "1");
+  const qs = params.toString();
+  return `/api/admin/employee-contracts/${encodeURIComponent(id)}/pdf${qs ? `?${qs}` : ""}`;
+}
+
+export async function archiveEmployeeContractApi(id: string): Promise<EmployeeContract> {
+  const res = await fetch(
+    `/api/admin/employee-contracts/${encodeURIComponent(id)}/archive`,
+    {
+      method: "POST",
+      credentials: "include",
+    },
+  );
+  const json = await parseJson<{ contract: EmployeeContract }>(res);
+  return json.contract;
+}

@@ -142,3 +142,28 @@ export function verifyYousignWebhookSecret(headerValue: string | null): boolean 
   if (!headerValue) return false;
   return headerValue === config.webhookSecret;
 }
+
+/** Télécharge le PDF signé (version completed) d’une demande Yousign. */
+export async function downloadYousignSignedDocuments(
+  signatureRequestId: string,
+): Promise<Buffer> {
+  const config = getYousignConfig();
+  if (!config) throw new Error("Yousign non configuré (YOUSIGN_API_KEY manquant).");
+
+  const res = await fetch(
+    `${config.baseUrl}/signature_requests/${encodeURIComponent(signatureRequestId)}/documents/download?version=completed`,
+    {
+      headers: { Authorization: `Bearer ${config.apiKey}` },
+    },
+  );
+
+  if (!res.ok) {
+    const text = await res.text().catch(() => "");
+    throw new Error(
+      `Yousign download ${res.status}: ${text.slice(0, 300) || res.statusText}`,
+    );
+  }
+
+  const bytes = await res.arrayBuffer();
+  return Buffer.from(bytes);
+}

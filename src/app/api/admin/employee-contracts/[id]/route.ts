@@ -3,12 +3,14 @@ import { crmApiAuth } from "@/lib/crm-api-auth";
 import { NextResponse } from "next/server";
 import { isDatabaseConfigured } from "@/lib/db";
 import { logCrmAudit } from "@/lib/crm-audit";
+import { rearchiveEditableEmployeeContract } from "@/lib/employee-contract-archive";
 import {
   deleteEmployeeContract,
   getEmployeeContractById,
   updateEmployeeContract,
   updateEmployeeContractSchema,
 } from "@/lib/employee-contracts";
+import { isS3Configured } from "@/lib/s3";
 
 type Params = { params: Promise<{ id: string }> };
 
@@ -52,9 +54,30 @@ export async function PATCH(request: Request, { params }: Params) {
       );
     }
 
-    const contract = await updateEmployeeContract(id, parsed.data);
+    let contract = await updateEmployeeContract(id, parsed.data);
     if (!contract) {
       return NextResponse.json({ error: "Contrat introuvable." }, { status: 404 });
+    }
+
+    // Réarchive le PDF S3 tant que le contrat est modifiable
+    if (
+      isS3Configured() &&
+      !["signed", "active", "ended", "cancelled"].includes(contract.status)
+    ) {
+      try {
+        contract = await rearchiveEditableEmployeeContract(contract);
+      } catch (archiveError) {
+        console.error("[api/admin/employee-contracts/[id]] archive S3", archiveError);
+        return NextResponse.json(
+          {
+            error:
+              archiveError instanceof Error
+                ? archiveError.message
+                : "Impossible de mettre à jour l’archive S3 du contrat.",
+          },
+          { status: 502 },
+        );
+      }
     }
 
     const session = await getAdminSession();
