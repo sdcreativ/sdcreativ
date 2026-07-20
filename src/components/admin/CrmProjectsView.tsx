@@ -737,6 +737,12 @@ function ProjectDetailPanel({
   );
 }
 
+function suggestProjectName(client: Client, type: ProjectType): string {
+  const label = PROJECT_TYPE_LABELS[type] ?? "Projet";
+  const who = (client.company || client.name).trim();
+  return who ? `${label} — ${who}` : label;
+}
+
 function CreateProjectModal({
   onClose,
   onCreated,
@@ -748,7 +754,18 @@ function CreateProjectModal({
   const [loadingClients, setLoadingClients] = useState(true);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const [clientId, setClientId] = useState("");
+  const [projectType, setProjectType] = useState<ProjectType>("site_vitrine");
+  const [name, setName] = useState("");
+  const [assignee, setAssignee] = useState("");
+  const [nameTouched, setNameTouched] = useState(false);
+  const [assigneeTouched, setAssigneeTouched] = useState(false);
   const assignees = useCrmAssignees();
+
+  const selectedClient = useMemo(
+    () => clients.find((c) => c.id === clientId) ?? null,
+    [clients, clientId],
+  );
 
   useEffect(() => {
     void fetchCrmClients()
@@ -757,6 +774,16 @@ function CreateProjectModal({
       .finally(() => setLoadingClients(false));
   }, []);
 
+  function applyClientDefaults(client: Client, type: ProjectType) {
+    if (!nameTouched) {
+      setName(suggestProjectName(client, type));
+    }
+    if (!assigneeTouched) {
+      const manager = client.accountManager?.trim() ?? "";
+      setAssignee(manager && assignees.includes(manager) ? manager : "");
+    }
+  }
+
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
     setLoading(true);
@@ -764,20 +791,16 @@ function CreateProjectModal({
     const data = new FormData(e.currentTarget);
 
     try {
-      const assigneeRaw = String(data.get("assignee") || "");
-      const assignee =
-        assigneeRaw && assigneeRaw !== "Non assigné" ? assigneeRaw : null;
-
       const project = await createProjectApi({
-        clientId: String(data.get("clientId")),
-        name: String(data.get("name")),
-        type: String(data.get("type") || "site_vitrine"),
+        clientId,
+        name: name.trim(),
+        type: projectType,
         status: String(data.get("status") || "discovery"),
         startDate: String(data.get("startDate") || "") || null,
         dueDate: String(data.get("dueDate") || "") || null,
         budget: data.get("budget") ? Number(data.get("budget")) : null,
         description: String(data.get("description") || "") || null,
-        assignee,
+        assignee: assignee.trim() || null,
         seedMilestones: true,
       });
       onCreated(project);
@@ -814,7 +837,19 @@ function CreateProjectModal({
         ) : (
           <>
             <div className="grid gap-3">
-              <select name="clientId" required className={fieldClass} aria-label="Client">
+              <select
+                name="clientId"
+                required
+                value={clientId}
+                className={fieldClass}
+                aria-label="Client"
+                onChange={(e) => {
+                  const id = e.target.value;
+                  setClientId(id);
+                  const client = clients.find((c) => c.id === id);
+                  if (client) applyClientDefaults(client, projectType);
+                }}
+              >
                 <option value="">Client *</option>
                 {clients.map((client) => (
                   <option key={client.id} value={client.id}>
@@ -822,8 +857,48 @@ function CreateProjectModal({
                   </option>
                 ))}
               </select>
-              <input name="name" required placeholder="Nom du projet *" className={fieldClass} />
-              <select name="type" defaultValue="site_vitrine" className={fieldClass} aria-label="Type">
+
+              {selectedClient && (
+                <div className="rounded-xl border border-primary/15 bg-primary/3 px-3.5 py-3 text-sm">
+                  <p className="font-semibold text-foreground">
+                    {selectedClient.company || selectedClient.name}
+                  </p>
+                  <p className="mt-1 text-gray-text">
+                    {selectedClient.email}
+                    {selectedClient.phone ? ` · ${selectedClient.phone}` : ""}
+                  </p>
+                  {selectedClient.accountManager && (
+                    <p className="mt-0.5 text-xs text-gray-text">
+                      Compte géré par {selectedClient.accountManager}
+                    </p>
+                  )}
+                </div>
+              )}
+
+              <input
+                name="name"
+                required
+                value={name}
+                onChange={(e) => {
+                  setNameTouched(true);
+                  setName(e.target.value);
+                }}
+                placeholder="Nom du projet *"
+                className={fieldClass}
+              />
+              <select
+                name="type"
+                value={projectType}
+                className={fieldClass}
+                aria-label="Type"
+                onChange={(e) => {
+                  const next = e.target.value as ProjectType;
+                  setProjectType(next);
+                  if (selectedClient && !nameTouched) {
+                    setName(suggestProjectName(selectedClient, next));
+                  }
+                }}
+              >
                 {Object.entries(PROJECT_TYPE_LABELS).map(([value, label]) => (
                   <option key={value} value={value}>{label}</option>
                 ))}
@@ -833,7 +908,16 @@ function CreateProjectModal({
                   <option key={value} value={value}>{label}</option>
                 ))}
               </select>
-              <select name="assignee" defaultValue="" className={fieldClass} aria-label="Assigné à">
+              <select
+                name="assignee"
+                value={assignee}
+                className={fieldClass}
+                aria-label="Assigné à"
+                onChange={(e) => {
+                  setAssigneeTouched(true);
+                  setAssignee(e.target.value);
+                }}
+              >
                 <option value="">Non assigné</option>
                 {assignees.map((member) => (
                   <option key={member} value={member}>{member}</option>
@@ -849,7 +933,7 @@ function CreateProjectModal({
             {error && <p className="mt-3 text-sm text-accent">{error}</p>}
             <button
               type="submit"
-              disabled={loading}
+              disabled={loading || !clientId}
               className="mt-4 flex w-full items-center justify-center gap-2 rounded-xl bg-primary py-3 text-sm font-semibold text-white disabled:opacity-60"
             >
               {loading && <Loader2 className="h-4 w-4 animate-spin" aria-hidden />}
