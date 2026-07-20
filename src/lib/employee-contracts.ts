@@ -1,6 +1,12 @@
 import { z } from "zod";
 import type { QueryResultRow } from "pg";
 import {
+  buildDefaultBenefits,
+  buildDefaultClauses,
+  buildDefaultMissions,
+  type EmployeeContractClause,
+} from "@/content/employee-contract-clauses";
+import {
   EMPLOYEE_COMPENSATION_PERIODS,
   EMPLOYEE_CONTRACT_STATUSES,
   EMPLOYEE_CONTRACT_TYPES,
@@ -10,6 +16,8 @@ import {
 } from "@/content/employee-contracts-labels";
 import { SUPPORTED_CURRENCIES } from "@/lib/currencies";
 import { withDb } from "@/lib/db";
+
+export type { EmployeeContractClause };
 
 export type EmployeeContract = {
   id: string;
@@ -37,6 +45,10 @@ export type EmployeeContract = {
   documentS3Key: string | null;
   documentName: string | null;
   notes: string | null;
+  internalReference: string | null;
+  missions: string | null;
+  benefits: string[];
+  clauses: EmployeeContractClause[];
   metadata: Record<string, unknown>;
   signatureProvider: string | null;
   esignExternalId: string | null;
@@ -77,6 +89,10 @@ type EmployeeContractRow = {
   document_s3_key: string | null;
   document_name: string | null;
   notes: string | null;
+  internal_reference: string | null;
+  missions: string | null;
+  benefits: unknown;
+  clauses: unknown;
   metadata: Record<string, unknown> | null;
   signature_provider: string | null;
   esign_external_id: string | null;
@@ -114,11 +130,36 @@ function computeDaysUntilEnd(
   return Math.round((end.getTime() - today.getTime()) / 86_400_000);
 }
 
+function parseBenefits(raw: unknown, type: EmployeeContractType): string[] {
+  if (Array.isArray(raw) && raw.length > 0) {
+    return raw.map((b) => String(b).trim()).filter(Boolean);
+  }
+  return buildDefaultBenefits(type);
+}
+
+function parseClauses(raw: unknown, type: EmployeeContractType): EmployeeContractClause[] {
+  if (Array.isArray(raw) && raw.length > 0) {
+    return raw
+      .map((item) => {
+        if (!item || typeof item !== "object") return null;
+        const row = item as Record<string, unknown>;
+        const title = String(row.title ?? "").trim();
+        const body = String(row.body ?? "").trim();
+        const key = String(row.key ?? title).trim() || `clause-${title.slice(0, 12)}`;
+        if (!title || !body) return null;
+        return { key, title, body };
+      })
+      .filter((c): c is EmployeeContractClause => Boolean(c));
+  }
+  return buildDefaultClauses(type);
+}
+
 function mapContract(row: EmployeeContractRow): EmployeeContract {
   const weekly =
     row.weekly_hours == null || row.weekly_hours === ""
       ? null
       : Number(row.weekly_hours);
+  const type = row.contract_type;
 
   return {
     id: row.id,
@@ -126,7 +167,7 @@ function mapContract(row: EmployeeContractRow): EmployeeContract {
     userId: row.user_id,
     userName: row.user_name,
     userEmail: row.user_email,
-    contractType: row.contract_type,
+    contractType: type,
     title: row.title,
     status: row.status,
     startDate: toDateOnly(row.start_date),
@@ -146,6 +187,10 @@ function mapContract(row: EmployeeContractRow): EmployeeContract {
     documentS3Key: row.document_s3_key,
     documentName: row.document_name,
     notes: row.notes,
+    internalReference: row.internal_reference ?? null,
+    missions: row.missions?.trim() || buildDefaultMissions(type),
+    benefits: parseBenefits(row.benefits, type),
+    clauses: parseClauses(row.clauses, type),
     metadata: row.metadata ?? {},
     signatureProvider: row.signature_provider ?? null,
     esignExternalId: row.esign_external_id ?? null,
@@ -179,6 +224,12 @@ const dateField = z
   .optional()
   .nullable();
 
+const clauseSchema = z.object({
+  key: z.string().trim().min(1).max(80),
+  title: z.string().trim().min(2).max(200),
+  body: z.string().trim().min(10).max(12000),
+});
+
 export const createEmployeeContractSchema = z.object({
   userId: z.string().uuid(),
   contractType: z.enum(EMPLOYEE_CONTRACT_TYPES),
@@ -195,6 +246,11 @@ export const createEmployeeContractSchema = z.object({
   compensationPeriod: z.enum(EMPLOYEE_COMPENSATION_PERIODS).optional(),
   reminderDaysBefore: z.number().int().min(1).max(365).optional(),
   notes: z.string().trim().max(8000).optional().nullable(),
+  internalReference: z.string().trim().max(80).optional().nullable(),
+  missions: z.string().trim().max(12000).optional().nullable(),
+  benefits: z.array(z.string().trim().min(1).max(400)).max(40).optional(),
+  clauses: z.array(clauseSchema).max(40).optional(),
+  resetClausesFromTemplate: z.boolean().optional(),
 });
 
 export const updateEmployeeContractSchema = z.object({
@@ -213,6 +269,11 @@ export const updateEmployeeContractSchema = z.object({
   compensationPeriod: z.enum(EMPLOYEE_COMPENSATION_PERIODS).optional(),
   reminderDaysBefore: z.number().int().min(1).max(365).optional(),
   notes: z.string().trim().max(8000).optional().nullable(),
+  internalReference: z.string().trim().max(80).optional().nullable(),
+  missions: z.string().trim().max(12000).optional().nullable(),
+  benefits: z.array(z.string().trim().min(1).max(400)).max(40).optional(),
+  clauses: z.array(clauseSchema).max(40).optional(),
+  resetClausesFromTemplate: z.boolean().optional(),
   documentS3Key: z.string().trim().max(500).optional().nullable(),
   documentName: z.string().trim().max(255).optional().nullable(),
 });
@@ -262,6 +323,17 @@ export async function createEmployeeContract(
 ): Promise<EmployeeContract> {
   return withDb(async (query) => {
     const reference = await nextReference(query);
+    const clauses =
+      input.clauses && input.clauses.length > 0
+        ? input.clauses
+        : buildDefaultClauses(input.contractType);
+    const benefits =
+      input.benefits && input.benefits.length > 0
+        ? input.benefits
+        : buildDefaultBenefits(input.contractType);
+    const missions =
+      input.missions?.trim() || buildDefaultMissions(input.contractType);
+
     const { rows } = await query<EmployeeContractRow>(
       `WITH inserted AS (
          INSERT INTO employee_contracts (
@@ -269,13 +341,15 @@ export async function createEmployeeContract(
            start_date, end_date, trial_end_date,
            job_title, department, work_location, weekly_hours,
            compensation_amount, compensation_currency, compensation_period,
-           reminder_days_before, notes, created_by
+           reminder_days_before, notes, internal_reference, missions,
+           benefits, clauses, created_by
          ) VALUES (
            $1, $2, $3, $4,
            $5::date, $6::date, $7::date,
            $8, $9, $10, $11,
            $12, $13, $14,
-           $15, $16, $17
+           $15, $16, $17, $18,
+           $19::jsonb, $20::jsonb, $21
          )
          RETURNING *
        )
@@ -301,6 +375,10 @@ export async function createEmployeeContract(
         input.compensationPeriod ?? "monthly",
         input.reminderDaysBefore ?? 30,
         input.notes?.trim() || null,
+        input.internalReference?.trim() || null,
+        missions,
+        JSON.stringify(benefits),
+        JSON.stringify(clauses),
         createdBy ?? null,
       ],
     );
@@ -338,6 +416,23 @@ export async function updateEmployeeContract(
       endedAt = null;
     }
 
+    const nextType = input.contractType ?? existing.contractType;
+    const nextClauses = input.resetClausesFromTemplate
+      ? buildDefaultClauses(nextType)
+      : input.clauses !== undefined
+        ? input.clauses
+        : existing.clauses;
+    const nextBenefits =
+      input.benefits !== undefined ? input.benefits : existing.benefits;
+    const nextMissions =
+      input.missions !== undefined
+        ? input.missions?.trim() || buildDefaultMissions(nextType)
+        : existing.missions;
+    const nextInternalRef =
+      input.internalReference !== undefined
+        ? input.internalReference?.trim() || null
+        : existing.internalReference;
+
     const { rows } = await query<EmployeeContractRow>(
       `WITH updated AS (
          UPDATE employee_contracts SET
@@ -361,6 +456,10 @@ export async function updateEmployeeContract(
            signed_at = $19,
            sent_at = $20,
            ended_at = $21,
+           internal_reference = $22,
+           missions = $23,
+           benefits = $24::jsonb,
+           clauses = $25::jsonb,
            updated_at = NOW()
          WHERE id = $1
          RETURNING *
@@ -372,7 +471,7 @@ export async function updateEmployeeContract(
        LEFT JOIN crm_users cu ON cu.id = u.user_id`,
       [
         id,
-        input.contractType ?? existing.contractType,
+        nextType,
         input.title ?? existing.title,
         nextStatus,
         input.startDate !== undefined ? input.startDate : existing.startDate,
@@ -396,6 +495,10 @@ export async function updateEmployeeContract(
         signedAt,
         sentAt,
         endedAt,
+        nextInternalRef,
+        nextMissions,
+        JSON.stringify(nextBenefits),
+        JSON.stringify(nextClauses),
       ],
     );
     return rows[0] ? mapContract(rows[0]) : null;
@@ -423,5 +526,52 @@ export async function listExpiringEmployeeContracts(
       [withinDays],
     );
     return rows.map(mapContract);
+  });
+}
+
+export type EmployeeContractSignatureProof = {
+  signerName: string;
+  signerEmail: string;
+  signatureData: string;
+  signatureHash: string;
+  documentSha256: string | null;
+  signedAt: string;
+  proofS3Key: string | null;
+  provider: string;
+};
+
+export async function getEmployeeContractSignatureProof(
+  contractId: string,
+): Promise<EmployeeContractSignatureProof | null> {
+  return withDb(async (query) => {
+    const { rows } = await query<{
+      signer_name: string;
+      signer_email: string;
+      signature_data: string;
+      signature_hash: string;
+      document_sha256: string | null;
+      signed_at: Date;
+      proof_s3_key: string | null;
+      provider: string;
+    }>(
+      `SELECT signer_name, signer_email, signature_data, signature_hash,
+              document_sha256, signed_at, proof_s3_key, provider
+       FROM employee_contract_signatures
+       WHERE contract_id = $1
+       LIMIT 1`,
+      [contractId],
+    );
+    const row = rows[0];
+    if (!row) return null;
+    return {
+      signerName: row.signer_name,
+      signerEmail: row.signer_email,
+      signatureData: row.signature_data,
+      signatureHash: row.signature_hash,
+      documentSha256: row.document_sha256,
+      signedAt: row.signed_at.toISOString(),
+      proofS3Key: row.proof_s3_key,
+      provider: row.provider,
+    };
   });
 }
