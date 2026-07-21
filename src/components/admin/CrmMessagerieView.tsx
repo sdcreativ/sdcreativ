@@ -23,6 +23,7 @@ import { useDialog } from "@/components/ui/DialogProvider";
 import { MailThreadLinkControls } from "@/components/admin/MailThreadLinkControls";
 import { MailComposeModal, filesToAttachmentDrafts } from "@/components/admin/MailComposeModal";
 import { MailRichEditor } from "@/components/admin/MailRichEditor";
+import { sanitizeMailHtml } from "@/lib/mail/sanitize-html";
 import {
   bulkDeleteMailMessagesApi,
   bulkDeleteMailThreadsApi,
@@ -1467,11 +1468,15 @@ function MessageBubble({
   deleting: boolean;
 }) {
   const outbound = message.direction === "outbound";
-  const body =
+  const html = message.bodyHtml?.trim()
+    ? sanitizeMailHtml(message.bodyHtml)
+    : "";
+  const textFallback =
     message.bodyText?.trim() ||
     (message.bodyHtml
       ? message.bodyHtml.replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim()
-      : "(message vide)");
+      : "") ||
+    "(message vide)";
 
   return (
     <li
@@ -1507,7 +1512,14 @@ function MessageBubble({
           </button>
         </div>
       </div>
-      <p className="mt-1.5 whitespace-pre-wrap wrap-break-word leading-relaxed">{body}</p>
+      {html ? (
+        <div
+          className="mail-html-body mt-2 max-w-none overflow-x-auto text-[13px] leading-relaxed text-foreground [&_a]:font-medium [&_a]:text-primary [&_a]:underline [&_img]:max-h-64 [&_img]:max-w-full [&_img]:h-auto [&_table]:max-w-full"
+          dangerouslySetInnerHTML={{ __html: html }}
+        />
+      ) : (
+        <p className="mt-1.5 whitespace-pre-wrap wrap-break-word leading-relaxed">{textFallback}</p>
+      )}
       {attachments.length > 0 && (
         <ul className="mt-2 space-y-1">
           {attachments.map((att) => (
