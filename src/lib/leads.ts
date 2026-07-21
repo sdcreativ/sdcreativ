@@ -40,6 +40,7 @@ export type Lead = {
   estimatedValue: number | null;
   assignee: string | null;
   assigneeId: string | null;
+  marketingOptIn: boolean;
   metadata: Record<string, unknown>;
   createdAt: string;
   updatedAt: string;
@@ -60,6 +61,7 @@ type LeadRow = {
   estimated_value: number | null;
   assignee: string | null;
   assignee_id: string | null;
+  marketing_opt_in?: boolean | null;
   metadata: Record<string, unknown> | null;
   created_at: Date;
   updated_at: Date;
@@ -81,6 +83,7 @@ function mapLead(row: LeadRow): Lead {
     estimatedValue: row.estimated_value,
     assignee: row.assignee ?? null,
     assigneeId: row.assignee_id ?? null,
+    marketingOptIn: Boolean(row.marketing_opt_in),
     metadata: row.metadata ?? {},
     createdAt: row.created_at.toISOString(),
     updatedAt: row.updated_at.toISOString(),
@@ -101,6 +104,7 @@ export type CreateLeadInput = {
   estimatedValue?: number | null;
   assignee?: string | null;
   assigneeId?: string | null;
+  marketingOptIn?: boolean;
   actorName?: string | null;
   metadata?: Record<string, unknown>;
 };
@@ -119,6 +123,7 @@ export const createLeadSchema = z.object({
   estimatedValue: z.number().int().min(0).optional().nullable(),
   assignee: z.string().trim().max(100).optional().nullable(),
   assigneeId: z.string().uuid().optional().nullable(),
+  marketingOptIn: z.boolean().optional().default(false),
   metadata: z.record(z.string(), z.unknown()).optional(),
 });
 
@@ -134,6 +139,7 @@ export const updateLeadSchema = z.object({
   estimatedValue: z.number().int().min(0).optional().nullable(),
   assignee: z.string().trim().max(100).optional().nullable(),
   assigneeId: z.string().uuid().optional().nullable(),
+  marketingOptIn: z.boolean().optional(),
   metadata: z.record(z.string(), z.unknown()).optional(),
 });
 
@@ -150,8 +156,9 @@ export async function createLead(input: CreateLeadInput): Promise<Lead | null> {
       const { rows } = await query<LeadRow>(
         `INSERT INTO leads (
           name, email, phone, company, source, status,
-          service, budget, timeline, message, estimated_value, assignee, assignee_id, metadata
-        ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14)
+          service, budget, timeline, message, estimated_value, assignee, assignee_id,
+          marketing_opt_in, metadata
+        ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15)
         RETURNING *`,
         [
           input.name,
@@ -167,6 +174,7 @@ export async function createLead(input: CreateLeadInput): Promise<Lead | null> {
           input.estimatedValue ?? null,
           assigneeFields.assignee,
           assigneeFields.assigneeId,
+          input.marketingOptIn ?? false,
           JSON.stringify(input.metadata ?? {}),
         ],
       );
@@ -378,7 +386,8 @@ export async function updateLead(
         estimated_value = $10,
         assignee = $11,
         assignee_id = $12,
-        metadata = $13::jsonb,
+        marketing_opt_in = $13,
+        metadata = $14::jsonb,
         updated_at = NOW()
       WHERE id = $1
       RETURNING *`,
@@ -395,6 +404,9 @@ export async function updateLead(
         input.estimatedValue !== undefined ? input.estimatedValue : existing.estimated_value,
         nextAssignee,
         nextAssigneeId,
+        input.marketingOptIn !== undefined
+          ? input.marketingOptIn
+          : Boolean(existing.marketing_opt_in),
         JSON.stringify(mergedMetadata),
       ],
     );

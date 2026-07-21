@@ -72,7 +72,7 @@ export async function createLeadApi(input: CreateLeadInput): Promise<Lead> {
 
 export async function updateLeadApi(
   id: string,
-  input: Partial<CreateLeadInput> & { status?: LeadStatus },
+  input: Partial<CreateLeadInput> & { status?: LeadStatus; marketingOptIn?: boolean },
 ): Promise<Lead> {
   const res = await fetch(`/api/admin/leads/${id}`, {
     method: "PATCH",

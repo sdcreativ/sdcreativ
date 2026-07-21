@@ -564,6 +564,11 @@ export function CrmLeadsView() {
             setSelected(updated);
             setActivityRefreshKey((k) => k + 1);
           }}
+          onMarketingOptInChange={async (marketingOptIn) => {
+            const updated = await updateLeadApi(selected.id, { marketingOptIn });
+            setLeads((prev) => prev.map((l) => (l.id === updated.id ? updated : l)));
+            setSelected(updated);
+          }}
           onDelete={() => void handleDelete(selected.id)}
           onEmailSent={() => setActivityRefreshKey((k) => k + 1)}
         />
@@ -692,6 +697,7 @@ function LeadDetailPanel({
   onClose,
   onStatusChange,
   onAssigneeChange,
+  onMarketingOptInChange,
   onDelete,
   onEmailSent,
 }: {
@@ -701,6 +707,7 @@ function LeadDetailPanel({
   onClose: () => void;
   onStatusChange: (status: LeadStatus) => void;
   onAssigneeChange: (assignee: string | null) => void;
+  onMarketingOptInChange: (marketingOptIn: boolean) => void | Promise<void>;
   onDelete: () => void;
   onEmailSent: () => void;
 }) {
@@ -891,6 +898,21 @@ function LeadDetailPanel({
                   </option>
                 ))}
               </select>
+            </label>
+            <label className="flex items-start gap-2.5 rounded-xl border border-gray/40 bg-gray-light/40 px-3 py-2.5">
+              <input
+                type="checkbox"
+                checked={lead.marketingOptIn}
+                disabled={saving}
+                onChange={(e) => void onMarketingOptInChange(e.target.checked)}
+                className="mt-0.5 h-4 w-4 rounded border-gray/60"
+              />
+              <span>
+                <span className="block text-sm font-medium text-foreground">Opt-in marketing</span>
+                <span className="text-xs text-gray-text">
+                  Autorise les campagnes promo (en plus / à la place de la newsletter).
+                </span>
+              </span>
             </label>
             {(lead.status === "signed" || converted) && (
               <div className="rounded-xl border border-emerald-200 bg-emerald-50 p-3">
@@ -1158,6 +1180,7 @@ function CreateLeadModal({
         estimatedValue: data.get("estimatedValue")
           ? Number(data.get("estimatedValue"))
           : null,
+        marketingOptIn: data.get("marketingOptIn") === "on",
       });
       onCreated(lead);
     } catch (err) {
@@ -1209,6 +1232,13 @@ function CreateLeadModal({
           placeholder="Notes"
           className={`${fieldClass} mt-3`}
         />
+        <label className="mt-3 flex items-start gap-2.5 text-sm">
+          <input type="checkbox" name="marketingOptIn" className="mt-0.5 h-4 w-4 rounded border-gray/60" />
+          <span>
+            <span className="font-medium text-foreground">Opt-in marketing</span>
+            <span className="block text-xs text-gray-text">Campagnes promo / relances commerciales.</span>
+          </span>
+        </label>
         {error && <p className="mt-3 text-sm text-accent">{error}</p>}
         <button
           type="submit"

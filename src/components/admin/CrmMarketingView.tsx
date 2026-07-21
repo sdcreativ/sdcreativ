@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import { Loader2, Mail, Trash2, UserPlus } from "lucide-react";
+import { Loader2, Mail, Megaphone, Trash2, UserPlus } from "lucide-react";
 import type { NewsletterSubscriber, WaitlistEntry } from "@/lib/marketing-subscribers";
 import {
   deleteWaitlistEntryApi,
@@ -11,6 +11,7 @@ import {
 } from "@/lib/marketing-api";
 import { useDialog } from "@/components/ui/DialogProvider";
 import { CrmMarketingSequencesPanel } from "@/components/admin/CrmMarketingSequencesPanel";
+import { CrmPromoCampaignsPanel } from "@/components/admin/CrmPromoCampaignsPanel";
 import { cn } from "@/lib/utils";
 
 const INTEREST_LABELS: Record<string, string> = {
@@ -19,7 +20,7 @@ const INTEREST_LABELS: Record<string, string> = {
   general: "Intérêt général",
 };
 
-type Tab = "newsletter" | "waitlist" | "sequences";
+type Tab = "newsletter" | "waitlist" | "sequences" | "campaigns";
 
 export function CrmMarketingView() {
   const [tab, setTab] = useState<Tab>("newsletter");
@@ -73,6 +74,7 @@ export function CrmMarketingView() {
             { id: "newsletter" as const, label: "Newsletter", icon: Mail },
             { id: "waitlist" as const, label: "Waitlist", icon: UserPlus },
             { id: "sequences" as const, label: "Séquences", icon: Mail },
+            { id: "campaigns" as const, label: "Campagnes", icon: Megaphone },
           ] as const
         ).map(({ id, label, icon: Icon }) => (
           <button
@@ -169,6 +171,8 @@ export function CrmMarketingView() {
         )
       ) : tab === "sequences" ? (
         <CrmMarketingSequencesPanel />
+      ) : tab === "campaigns" ? (
+        <CrmPromoCampaignsPanel />
       ) : waitlist.length === 0 ? (
         <EmptyState>Aucune inscription waitlist.</EmptyState>
       ) : (
