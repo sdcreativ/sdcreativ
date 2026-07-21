@@ -29,6 +29,8 @@ export type CrmSessionInfo = {
   dashboardLayout?: DashboardLayout | null;
   /** Flag runtime (`.env.docker` → `CRM_MESSAGERIE_ENABLED`). */
   messagerieEnabled?: boolean;
+  /** Déconnexion après inactivité (minutes, 0 = off). */
+  idleTimeoutMinutes?: number;
 };
 
 export async function saveDashboardLayoutApi(layout: DashboardLayout): Promise<void> {

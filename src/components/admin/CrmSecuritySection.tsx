@@ -88,6 +88,29 @@ export function CrmSecuritySection() {
             className={`${fieldClass} mt-1`}
             disabled={saving}
           />
+          <span className="mt-1 block text-xs text-gray-text">
+            Durée maximale du cookie, indépendante de l’inactivité.
+          </span>
+        </label>
+        <label className="block text-sm">
+          <span className="font-medium text-foreground">
+            Déconnexion après inactivité (minutes)
+          </span>
+          <input
+            type="number"
+            min={0}
+            max={480}
+            value={security.idleTimeoutMinutes}
+            onChange={(e) =>
+              setSecurity({ ...security, idleTimeoutMinutes: Number(e.target.value) })
+            }
+            onBlur={() => void save({ idleTimeoutMinutes: security.idleTimeoutMinutes })}
+            className={`${fieldClass} mt-1`}
+            disabled={saving}
+          />
+          <span className="mt-1 block text-xs text-gray-text">
+            0 = désactivé. Un avertissement s’affiche avant la déconnexion.
+          </span>
         </label>
       </div>
 

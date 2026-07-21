@@ -3,6 +3,8 @@ import { withDb } from "@/lib/db";
 
 export type CrmSecuritySettings = {
   sessionMaxHours: number;
+  /** Déconnexion CRM après inactivité (0 = désactivé). */
+  idleTimeoutMinutes: number;
   webhooks: {
     genericUrl: string;
     slackUrl: string;
@@ -17,6 +19,7 @@ export type CrmSecuritySettings = {
 
 export const DEFAULT_CRM_SECURITY: CrmSecuritySettings = {
   sessionMaxHours: 8,
+  idleTimeoutMinutes: 30,
   webhooks: {
     genericUrl: "",
     slackUrl: "",
@@ -31,6 +34,7 @@ export const DEFAULT_CRM_SECURITY: CrmSecuritySettings = {
 
 const securitySchema = z.object({
   sessionMaxHours: z.number().int().min(1).max(720).optional(),
+  idleTimeoutMinutes: z.number().int().min(0).max(480).optional(),
   webhooks: z
     .object({
       genericUrl: z.string().trim().max(500).optional(),
@@ -48,6 +52,8 @@ const securitySchema = z.object({
 function mergeSecurity(stored: Partial<CrmSecuritySettings> | null): CrmSecuritySettings {
   return {
     sessionMaxHours: stored?.sessionMaxHours ?? DEFAULT_CRM_SECURITY.sessionMaxHours,
+    idleTimeoutMinutes:
+      stored?.idleTimeoutMinutes ?? DEFAULT_CRM_SECURITY.idleTimeoutMinutes,
     webhooks: {
       ...DEFAULT_CRM_SECURITY.webhooks,
       ...(stored?.webhooks ?? {}),
@@ -90,6 +96,7 @@ export async function updateCrmSecuritySettings(
     const current = await getCrmSecuritySettings();
     const next: CrmSecuritySettings = {
       sessionMaxHours: input.sessionMaxHours ?? current.sessionMaxHours,
+      idleTimeoutMinutes: input.idleTimeoutMinutes ?? current.idleTimeoutMinutes,
       webhooks: {
         ...current.webhooks,
         ...(input.webhooks ?? {}),

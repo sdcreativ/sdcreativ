@@ -11,6 +11,7 @@ import { CrmBillingNotificationEngine } from "@/components/admin/CrmBillingNotif
 import { CrmSidebar } from "@/components/admin/CrmSidebar";
 import { CrmMobileNav } from "@/components/admin/CrmMobileNav";
 import { CrmMailboxOnboardingBanner } from "@/components/admin/CrmMailboxOnboardingBanner";
+import { CrmIdleTimeoutWatcher } from "@/components/admin/CrmIdleTimeoutWatcher";
 import { getCrmPageTitle } from "@/content/crm-nav";
 import type { CalendarReminder } from "@/lib/calendar-reminders";
 import type { CrmNotification } from "@/lib/billing/notifications";
@@ -99,6 +100,7 @@ export function CrmShell({ children, subtitle, showNewButton }: Props) {
             setBillingUnreadCount(unreadCount);
           }}
         />
+        <CrmIdleTimeoutWatcher />
       </div>
     </CrmBrandingProvider>
   );
