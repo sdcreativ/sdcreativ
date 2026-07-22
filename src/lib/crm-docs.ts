@@ -331,6 +331,65 @@ export async function importStaticCrmDocs(): Promise<{
   return { categories, pages, skipped };
 }
 
+/**
+ * Garantit qu’une fiche existe en base pour l’édition.
+ * Réutilise la page DB si présente, sinon crée depuis le catalogue (ou un squelette minimal).
+ */
+export async function ensureCrmDocPageBySlug(slug: string): Promise<CrmDocPageRecord> {
+  const normalized = slug.trim().toLowerCase();
+  if (!normalized) {
+    throw new Error("Slug requis.");
+  }
+
+  const existing = await getCrmDocPageBySlug(normalized);
+  if (existing) return existing;
+
+  const featureIndex = CRM_DOC_FEATURES.findIndex((f) => f.id === normalized);
+  const feature = featureIndex >= 0 ? CRM_DOC_FEATURES[featureIndex]! : null;
+
+  if (feature) {
+    return createCrmDocPage({
+      slug: feature.id,
+      title: feature.title,
+      categorySlug: feature.category,
+      summary: feature.summary,
+      explanation: feature.explanation,
+      howItWorks: feature.howItWorks,
+      contentHtml: buildDefaultHtml(feature.explanation, feature.howItWorks),
+      href: feature.href ?? null,
+      screenshots: feature.screenshots ?? [],
+      titleEn: "",
+      summaryEn: "",
+      explanationEn: "",
+      howItWorksEn: "",
+      contentHtmlEn: "",
+      isRecent: Boolean(feature.recent),
+      status: "published",
+      sortOrder: featureIndex,
+    });
+  }
+
+  return createCrmDocPage({
+    slug: normalized,
+    title: normalized,
+    categorySlug: "overview",
+    summary: "",
+    explanation: "",
+    howItWorks: "",
+    contentHtml: "",
+    href: null,
+    screenshots: [],
+    titleEn: "",
+    summaryEn: "",
+    explanationEn: "",
+    howItWorksEn: "",
+    contentHtmlEn: "",
+    isRecent: false,
+    status: "draft",
+    sortOrder: 0,
+  });
+}
+
 export async function countCrmDocPages(): Promise<number> {
   if (!isDatabaseConfigured()) return 0;
   return withDb(async (query) => {

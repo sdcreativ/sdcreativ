@@ -38,6 +38,7 @@ import {
   CRM_DOC_FAVORITES_MAX,
 } from "@/content/crm-docs/context-map";
 import {
+  ensureCrmDocPageApi,
   fetchCrmDocCategoriesApi,
   fetchCrmDocFavoritesApi,
   fetchCrmDocPagesApi,
@@ -186,8 +187,18 @@ export function CrmDocumentationView() {
       setFavoriteSlugs(favorites);
       const visible = pages.filter((p) => !p.deletedAt);
       if (visible.length > 0) {
-        setItems(visible.map(pageToItem));
-        setSource("db");
+        // Fusion catalogue + DB : une fiche importée seule ne masque pas le reste du catalogue.
+        const bySlug = new Map(visible.map((p) => [p.slug, p]));
+        const catalogSlugs = new Set(CRM_DOC_FEATURES.map((f) => f.id));
+        const merged: ListItem[] = CRM_DOC_FEATURES.map((feature) => {
+          const page = bySlug.get(feature.id);
+          return page ? pageToItem(page) : featureToItem(feature);
+        });
+        for (const page of visible) {
+          if (!catalogSlugs.has(page.slug)) merged.push(pageToItem(page));
+        }
+        setItems(merged);
+        setSource(merged.every((i) => i.editId) ? "db" : "catalog");
         if (cats.length > 0) {
           setCategories(
             cats.map((c) => ({ id: c.slug, label: c.label, description: c.description })),
@@ -265,14 +276,18 @@ export function CrmDocumentationView() {
     if (nextCat) params.set("cat", nextCat);
     else params.delete("cat");
     const qs = params.toString();
-    const hash = typeof window !== "undefined" ? window.location.hash : "";
+    // Normalise l’ancre (évite #slug#slug… si l’URL était déjà corrompue).
+    const rawHash =
+      typeof window !== "undefined" ? window.location.hash.replace(/^#/, "").split("#")[0] : "";
+    const hash = rawHash ? `#${encodeURIComponent(decodeURIComponent(rawHash))}` : "";
     router.replace(`/admin/crm/documentation${qs ? `?${qs}` : ""}${hash}`, { scroll: false });
   }, [query, category, router, searchParams]);
 
   useEffect(() => {
     if (loading) return;
-    const hash = typeof window !== "undefined" ? window.location.hash.replace(/^#/, "") : "";
-    const slug = decodeURIComponent(hash || "");
+    const rawHash =
+      typeof window !== "undefined" ? window.location.hash.replace(/^#/, "").split("#")[0] : "";
+    const slug = decodeURIComponent(rawHash || "");
     if (!slug) return;
     const el = document.getElementById(slug);
     if (el) {
@@ -422,7 +437,11 @@ export function CrmDocumentationView() {
             <p className="mt-2 text-xs text-gray-text">
               {items.length} fiches · {withScreenshot} illustrées · {favoriteSlugs.length}/
               {CRM_DOC_FAVORITES_MAX} favoris · source{" "}
-              {source === "db" ? "base de données" : "catalogue code (fallback)"}
+              {source === "db"
+                ? "base de données"
+                : items.some((i) => i.editId)
+                  ? "catalogue + base"
+                  : "catalogue code (fallback)"}
             </p>
           </div>
           <div className="flex flex-wrap gap-2">
@@ -786,8 +805,10 @@ function FeatureCard({
   onToggleFavorite: () => void;
   onFeedback: (kind: "helpful" | "error", message?: string) => Promise<void>;
 }) {
-  const { prompt } = useDialog();
+  const router = useRouter();
+  const { prompt, alert } = useDialog();
   const [feedbackBusy, setFeedbackBusy] = useState(false);
+  const [editBusy, setEditBusy] = useState(false);
   const articleRef = useRef<HTMLElement | null>(null);
   const viewedRef = useRef(false);
   const localized = localizeCrmDocPage(item, locale);
@@ -795,6 +816,26 @@ function FeatureCard({
     CRM_DOC_CATEGORIES.find((c) => c.id === item.category)?.label ?? item.category;
   const reviewedLabel = formatReviewedAt(item.reviewedAt);
   const stale = item.status === "published" && isReviewStale(item.reviewedAt);
+
+  async function handleEdit() {
+    if (editBusy) return;
+    if (item.editId) {
+      router.push(`/admin/crm/documentation/${item.editId}`);
+      return;
+    }
+    setEditBusy(true);
+    try {
+      const page = await ensureCrmDocPageApi(item.slug);
+      router.push(`/admin/crm/documentation/${page.id}`);
+    } catch (err) {
+      await alert({
+        title: "Édition impossible",
+        message: err instanceof Error ? err.message : "La fiche n’a pas pu être ouverte.",
+      });
+    } finally {
+      setEditBusy(false);
+    }
+  }
 
   useEffect(() => {
     const el = articleRef.current;
@@ -848,23 +889,41 @@ function FeatureCard({
             <span className="rounded-full bg-gray/20 px-2 py-0.5 text-[10px] font-semibold uppercase text-gray-text">
               {categoryLabel}
             </span>
-            <button
-              type="button"
-              onClick={onToggleFavorite}
-              className={cn(
-                "ml-auto inline-flex items-center gap-1 rounded-lg px-2 py-1 text-xs font-semibold transition-colors",
-                isFavorite
-                  ? "bg-amber-100 text-amber-900"
-                  : "bg-gray/15 text-gray-text hover:bg-gray/25",
-              )}
-              title={isFavorite ? "Retirer de Mes modules" : "Épingler dans Mes modules"}
-            >
-              <Star
-                className={cn("h-3.5 w-3.5", isFavorite && "fill-current")}
-                aria-hidden
-              />
-              {isFavorite ? "Épinglé" : "Épingler"}
-            </button>
+            <div className="ml-auto flex flex-wrap items-center gap-1.5">
+              {canWrite ? (
+                <button
+                  type="button"
+                  disabled={editBusy}
+                  onClick={() => void handleEdit()}
+                  className="inline-flex items-center gap-1 rounded-lg bg-primary px-2.5 py-1 text-xs font-semibold text-white shadow-sm transition-colors hover:bg-primary/90 disabled:opacity-60"
+                  title="Modifier cette fiche"
+                >
+                  {editBusy ? (
+                    <Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden />
+                  ) : (
+                    <Pencil className="h-3.5 w-3.5" aria-hidden />
+                  )}
+                  Modifier
+                </button>
+              ) : null}
+              <button
+                type="button"
+                onClick={onToggleFavorite}
+                className={cn(
+                  "inline-flex items-center gap-1 rounded-lg px-2 py-1 text-xs font-semibold transition-colors",
+                  isFavorite
+                    ? "bg-amber-100 text-amber-900"
+                    : "bg-gray/15 text-gray-text hover:bg-gray/25",
+                )}
+                title={isFavorite ? "Retirer de Mes modules" : "Épingler dans Mes modules"}
+              >
+                <Star
+                  className={cn("h-3.5 w-3.5", isFavorite && "fill-current")}
+                  aria-hidden
+                />
+                {isFavorite ? "Épinglé" : "Épingler"}
+              </button>
+            </div>
           </div>
 
           <p className="text-xs text-gray-text">
@@ -933,8 +992,11 @@ function FeatureCard({
               className="inline-flex items-center gap-1.5 text-sm font-semibold text-foreground hover:underline"
               onClick={(e) => {
                 e.preventDefault();
-                const href = buildDocShareHref(item.slug);
-                void navigator.clipboard?.writeText(`${window.location.origin}${href}`);
+                const url = new URL(window.location.href);
+                // Une seule ancre, sans duplication.
+                url.hash = item.slug;
+                const href = `${url.pathname}${url.search}#${encodeURIComponent(item.slug)}`;
+                void navigator.clipboard?.writeText(`${url.origin}${href}`);
                 window.history.replaceState(null, "", href);
                 document.getElementById(item.slug)?.scrollIntoView({ behavior: "smooth" });
               }}
@@ -942,14 +1004,20 @@ function FeatureCard({
               <Link2 className="h-3.5 w-3.5" aria-hidden />
               Copier le lien
             </a>
-            {canWrite && item.editId ? (
-              <Link
-                href={`/admin/crm/documentation/${item.editId}`}
-                className="inline-flex items-center gap-1.5 text-sm font-semibold text-foreground hover:underline"
+            {canWrite ? (
+              <button
+                type="button"
+                disabled={editBusy}
+                onClick={() => void handleEdit()}
+                className="inline-flex items-center gap-1.5 text-sm font-semibold text-foreground hover:underline disabled:opacity-60"
               >
-                <Pencil className="h-3.5 w-3.5" aria-hidden />
-                Éditer
-              </Link>
+                {editBusy ? (
+                  <Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden />
+                ) : (
+                  <Pencil className="h-3.5 w-3.5" aria-hidden />
+                )}
+                Modifier
+              </button>
             ) : null}
             <button
               type="button"

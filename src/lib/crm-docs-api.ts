@@ -117,6 +117,18 @@ export async function importStaticCrmDocsApi(): Promise<{
   return parseFetchJson(res);
 }
 
+/** Crée la fiche en base si absente (catalogue → DB), puis renvoie la page éditable. */
+export async function ensureCrmDocPageApi(slug: string): Promise<CrmDocPageRecord> {
+  const res = await fetch("/api/admin/crm-docs/ensure", {
+    method: "POST",
+    credentials: "include",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ slug }),
+  });
+  const json = await parseFetchJson<{ page: CrmDocPageRecord }>(res);
+  return json.page;
+}
+
 export async function fetchCrmDocCategoriesApi(): Promise<CrmDocCategoryRecord[]> {
   const res = await fetch("/api/admin/crm-doc-categories", { credentials: "include" });
   const json = await parseFetchJson<{ categories: CrmDocCategoryRecord[] }>(res);
