@@ -25,6 +25,7 @@ export const CRM_MOBILE_SECONDARY_IDS = [
   "communications",
   "deals",
   "inbox",
+  "documentation",
   "settings",
 ] as const;
 
@@ -64,6 +65,7 @@ export const CRM_MOBILE_SHORT_LABELS: Partial<Record<string, string>> = {
   tickets: "Tickets",
   deals: "Opport.",
   inbox: "Inbox",
+  documentation: "Docs",
   settings: "Param.",
 };
 

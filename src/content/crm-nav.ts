@@ -3,6 +3,7 @@ import {
   BarChart3,
   CheckSquare,
   Archive,
+  BookOpen,
   Calendar,
   Clock,
   FileText,
@@ -101,6 +102,13 @@ export const crmNavGroups: CrmNavGroup[] = [
     id: "admin",
     label: "Admin",
     items: [
+      {
+        id: "documentation",
+        label: "Documentation",
+        href: "/admin/crm/documentation",
+        icon: BookOpen,
+        ready: true,
+      },
       { id: "settings", label: "Paramètres", href: "/admin/crm/parametres", icon: Settings, ready: true },
     ],
   },
