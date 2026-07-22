@@ -12,8 +12,10 @@ import { filterCrmNavGroups } from "@/lib/crm-access";
 import { formatNavBadge, type CrmNavBadges } from "@/lib/crm-nav-badges";
 import { fetchCrmNavBadges } from "@/lib/crm-nav-badges-api";
 import { CRM_SESSION_CHANGED_EVENT } from "@/lib/crm-session-events";
+import { openCrmDocumentationWindow } from "@/lib/crm-docs-window";
 import { useCrmFetch } from "@/hooks/useCrmFetch";
 import { cn } from "@/lib/utils";
+import { ExternalLink } from "lucide-react";
 
 const NAV_BADGE_KEYS: Partial<Record<string, keyof CrmNavBadges>> = {
   leads: "leads",
@@ -98,20 +100,33 @@ export function CrmSidebar({ onNavigate }: Props) {
                 const badgeKey = NAV_BADGE_KEYS[id];
                 const badgeCount = badgeKey && badges ? badges[badgeKey] : 0;
                 const badgeLabel = formatNavBadge(badgeCount);
+                const openInWindow = id === "documentation";
                 return (
                   <Link
                     key={href}
                     href={href}
-                    onClick={onNavigate}
+                    target={openInWindow ? "_blank" : undefined}
+                    rel={openInWindow ? "noopener noreferrer" : undefined}
+                    onClick={(e) => {
+                      if (openInWindow) {
+                        e.preventDefault();
+                        openCrmDocumentationWindow(href);
+                      }
+                      onNavigate?.();
+                    }}
                     className={cn(
                       "flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors",
                       active
                         ? "bg-primary text-white shadow-sm"
                         : "text-white/70 hover:bg-white/5 hover:text-white",
                     )}
+                    title={openInWindow ? "Ouvrir dans une nouvelle fenêtre" : undefined}
                   >
                     <Icon className="h-4 w-4 shrink-0 opacity-90" aria-hidden />
                     <span className="min-w-0 flex-1 truncate">{label}</span>
+                    {openInWindow ? (
+                      <ExternalLink className="h-3.5 w-3.5 shrink-0 opacity-70" aria-hidden />
+                    ) : null}
                     {badgeLabel ? (
                       <span
                         className={cn(

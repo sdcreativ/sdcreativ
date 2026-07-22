@@ -35,6 +35,8 @@ export const CRM_PERMISSIONS = [
   "documents.write",
   "blog.read",
   "blog.write",
+  "docs.read",
+  "docs.write",
   "site.read",
   "site.write",
   "mail.read",
@@ -100,7 +102,7 @@ export const CRM_PERMISSION_GROUPS: Array<{
   {
     id: "content",
     label: "Contenu & site",
-    permissions: ["blog.read", "blog.write", "site.read", "site.write"],
+    permissions: ["blog.read", "blog.write", "docs.read", "docs.write", "site.read", "site.write"],
   },
   {
     id: "insights",
@@ -158,6 +160,8 @@ export const CRM_PERMISSION_LABELS: Record<CrmPermission, string> = {
   "documents.write": "Gérer les documents",
   "blog.read": "Voir le blog",
   "blog.write": "Gérer le blog",
+  "docs.read": "Voir la documentation CRM",
+  "docs.write": "Éditer la documentation CRM (admin / rôle contenu)",
   "site.read": "Voir le contenu du site vitrine",
   "site.write": "Gérer le contenu du site vitrine",
   "mail.read": "Voir la messagerie (emails Hostinger)",
@@ -198,6 +202,7 @@ export const ROLE_PERMISSIONS: Record<CrmRole, CrmPermission[]> = {
     "communications.read",
     "communications.write",
     "hr.read",
+    "docs.read",
   ],
   commercial: [
     "leads.read",
@@ -220,6 +225,7 @@ export const ROLE_PERMISSIONS: Record<CrmRole, CrmPermission[]> = {
     "mail.write",
     "communications.read",
     "communications.write",
+    "docs.read",
   ],
   project_manager: [
     "clients.read",
@@ -243,6 +249,7 @@ export const ROLE_PERMISSIONS: Record<CrmRole, CrmPermission[]> = {
     "communications.read",
     "hr.read",
     "hr.write",
+    "docs.read",
   ],
   readonly: [
     "leads.read",
@@ -263,6 +270,7 @@ export const ROLE_PERMISSIONS: Record<CrmRole, CrmPermission[]> = {
     "mail.write",
     "communications.read",
     "hr.read",
+    "docs.read",
   ],
 };
 

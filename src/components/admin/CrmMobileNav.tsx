@@ -17,6 +17,7 @@ import { formatNavBadge, type CrmNavBadges } from "@/lib/crm-nav-badges";
 import { fetchCrmNavBadges } from "@/lib/crm-nav-badges-api";
 import { useCrmFetch } from "@/hooks/useCrmFetch";
 import { useCrmPermissions } from "@/hooks/useCrmPermissions";
+import { openCrmDocumentationWindow } from "@/lib/crm-docs-window";
 import { cn } from "@/lib/utils";
 import { LayoutGrid, X } from "lucide-react";
 
@@ -189,7 +190,13 @@ export function CrmMobileNav() {
                   <li key={item.id}>
                     <Link
                       href={item.href}
-                      onClick={() => setPlusOpen(false)}
+                      onClick={(e) => {
+                        if (item.id === "documentation") {
+                          e.preventDefault();
+                          openCrmDocumentationWindow(item.href);
+                        }
+                        setPlusOpen(false);
+                      }}
                       className={cn(
                         "relative flex flex-col items-center gap-2 rounded-xl px-3 py-4 text-center text-xs font-medium transition-colors",
                         active

@@ -14,6 +14,7 @@ import { CrmUserAvatar } from "@/components/admin/CrmUserAvatar";
 import { CrmGlobalSearch, type CrmGlobalSearchHandle } from "@/components/admin/CrmGlobalSearch";
 import {
   Bell,
+  BookOpen,
   CalendarClock,
   ChevronDown,
   ExternalLink,
@@ -27,6 +28,9 @@ import {
   Users,
   CheckSquare,
 } from "lucide-react";
+import { usePathname } from "next/navigation";
+import { buildContextualHelpHref, resolveCrmDocSlugFromPath } from "@/content/crm-docs/context-map";
+import { openCrmDocumentationWindow } from "@/lib/crm-docs-window";
 import { fetchThreeCxWebClientUrl } from "@/lib/communications-api";
 
 const NEW_ITEMS = [
@@ -63,9 +67,12 @@ export function CrmHeader({
   const [notifOpen, setNotifOpen] = useState(false);
   const [dismissedOperational, setDismissedOperational] = useState<Set<string>>(() => new Set());
   const [webClientUrl, setWebClientUrl] = useState<string | null>(null);
+  const pathname = usePathname() ?? "/admin/crm";
   const { session, permissions } = useCrmPermissions();
   const canTasks = hasCrmPermission(permissions, "tasks.read");
   const canTickets = hasCrmPermission(permissions, "tickets.read");
+  const canDocs = hasCrmPermission(permissions, "docs.read");
+  const helpSlug = resolveCrmDocSlugFromPath(pathname);
   const canSearch = hasCrmPermission(permissions, [
     "leads.read",
     "clients.read",
@@ -193,6 +200,21 @@ export function CrmHeader({
 
         <div className="flex flex-wrap items-center gap-3">
           {canSearch && <CrmGlobalSearch ref={searchRef} />}
+
+          {canDocs && helpSlug && !pathname.startsWith("/admin/crm/documentation") ? (
+            <button
+              type="button"
+              onClick={() =>
+                openCrmDocumentationWindow(buildContextualHelpHref(pathname, helpSlug))
+              }
+              className="inline-flex items-center gap-2 rounded-xl border border-gray/60 px-3 py-2.5 text-sm font-medium text-gray-text transition-colors hover:border-primary/40 hover:text-foreground"
+              title="Ouvrir l’aide dans une nouvelle fenêtre"
+            >
+              <BookOpen className="h-4 w-4 text-primary" aria-hidden />
+              <span className="hidden sm:inline">Aide</span>
+              <ExternalLink className="hidden h-3.5 w-3.5 sm:inline" aria-hidden />
+            </button>
+          ) : null}
 
           {canCommunications && webClientUrl ? (
             <a

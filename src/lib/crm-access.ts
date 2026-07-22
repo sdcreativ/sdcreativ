@@ -31,7 +31,7 @@ export const CRM_NAV_PERMISSIONS: Record<string, CrmPermission | CrmPermission[]
   site: "site.read",
   reports: "reports.view",
   workload: "reports.view",
-  documentation: null,
+  documentation: "docs.read",
   settings: ["settings.manage", "users.manage", "audit.view"],
 };
 

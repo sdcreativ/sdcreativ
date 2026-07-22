@@ -4,9 +4,12 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import type { CrmNotification } from "@/lib/billing/notifications";
 import { cn } from "@/lib/utils";
-import { FileSignature, CheckSquare, LifeBuoy, Receipt } from "lucide-react";
+import { FileSignature, CheckSquare, LifeBuoy, Receipt, BookOpen } from "lucide-react";
 
 function notificationIcon(notification: CrmNotification) {
+  if (notification.category === "docs" || notification.eventType.startsWith("doc_")) {
+    return BookOpen;
+  }
   if (notification.category === "tasks" || notification.eventType.startsWith("task")) {
     return CheckSquare;
   }

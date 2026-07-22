@@ -163,6 +163,16 @@ export function getCrmBreadcrumbs(pathname: string): CrmBreadcrumb[] {
       const segment = rest.split("/")[0];
       if (segment && item.id === "projects") {
         crumbs.push({ label: "Détail projet", href: pathname });
+      } else if (segment && item.id === "documentation") {
+        crumbs.push({
+          label:
+            segment === "nouveau"
+              ? "Nouvelle fiche"
+              : segment === "categories"
+                ? "Catégories"
+                : "Édition",
+          href: pathname,
+        });
       } else if (segment && item.id === "blog") {
         crumbs.push({
           label: segment === "nouveau" ? "Nouvel article" : "Édition",

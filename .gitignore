@@ -13,6 +13,8 @@
 # --- User uploads (blog media fallback local) ---
 /public/uploads/blog/*
 !/public/uploads/blog/.gitkeep
+/public/uploads/crm-docs/*
+!/public/uploads/crm-docs/.gitkeep
 
 # --- Docker (config Nginx générée par init-letsencrypt.sh) ---
 /docker/nginx/conf.d/sdcreativ.conf
