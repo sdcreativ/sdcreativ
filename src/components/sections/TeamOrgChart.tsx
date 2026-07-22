@@ -1,8 +1,6 @@
-import Image from "next/image";
 import { AnimatedCard } from "@/components/ui/AnimatedSection";
+import { TeamMemberAvatar } from "@/components/sections/TeamMemberAvatar";
 import type { TeamMember } from "@/content/team";
-import { DEFAULT_IMAGE_POSITION } from "@/lib/image-position";
-import { resolveImageDisplayUrl, isProxiedMediaUrl } from "@/lib/image-url";
 import { splitTeamByOrgTier } from "@/lib/team-org";
 import { cn } from "@/lib/utils";
 
@@ -18,6 +16,13 @@ type Props = {
   };
 };
 
+const STATIC_TEAM_FALLBACKS: Record<string, string> = {
+  "simeon-auguste-ba": "/images/team/simeon-auguste-ba.png",
+  "gnonzion-guelapble-paterne": "/images/team/gnonzion-guelapble-paterne.png",
+  "kossa-disseka-ange-valeri": "/images/team/kossa-disseka-ange-valeri.png",
+  "kady-coulibaly": "/images/team/kady-coulibaly.png",
+};
+
 function MemberNode({
   member,
   delay,
@@ -29,11 +34,7 @@ function MemberNode({
   showMissions: boolean;
   size: "compact" | "large";
 }) {
-  const imageSrc = resolveImageDisplayUrl(member.image);
-  const avatarClass =
-    size === "large"
-      ? "mb-5 h-28 w-28 md:h-32 md:w-32"
-      : "mb-4 h-20 w-20";
+  const fallback = STATIC_TEAM_FALLBACKS[member.id] ?? null;
 
   return (
     <AnimatedCard
@@ -43,23 +44,14 @@ function MemberNode({
         showMissions && "hover:shadow-lg",
       )}
     >
-      <div
-        className={cn(
-          "relative shrink-0 overflow-hidden rounded-full bg-gray-light ring-4 ring-primary-light",
-          avatarClass,
-          size === "large" && "shadow-md transition-transform duration-300 group-hover:scale-105",
-        )}
-      >
-        <Image
-          src={imageSrc}
-          alt={member.imageAlt}
-          fill
-          sizes={size === "large" ? "128px" : "80px"}
-          unoptimized={isProxiedMediaUrl(imageSrc)}
-          className="object-cover"
-          style={{ objectPosition: member.imagePosition ?? DEFAULT_IMAGE_POSITION }}
-        />
-      </div>
+      <TeamMemberAvatar
+        image={member.image}
+        imageAlt={member.imageAlt}
+        imagePosition={member.imagePosition}
+        fallbackSrc={fallback && fallback !== member.image ? fallback : null}
+        initials={member.initials}
+        size={size}
+      />
       <h3
         className={cn(
           "font-bold leading-snug text-foreground",

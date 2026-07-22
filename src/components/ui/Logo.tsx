@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { LOGO, LOGO_FOOTER, SITE } from "@/lib/constants";
@@ -46,16 +47,19 @@ export function Logo({
   const usesCustomLogo = Boolean(customLogo && customLogo !== LOGO.src);
   const tagline = sitePublic.tagline || SITE.tagline;
   const altName = sitePublic.companyName || SITE.name;
+  const [customFailed, setCustomFailed] = useState(false);
 
   // Sur fond sombre, préférer le PNG coloré (logo_sd.svg a un canvas opaque blanc).
   const defaultAsset = variant === "footer" || onDark ? LOGO_FOOTER : LOGO;
 
-  const imageSrc = usesCustomLogo
-    ? resolveImageDisplayUrl(customLogo!)
-    : defaultAsset.src;
+  const imageSrc =
+    usesCustomLogo && !customFailed
+      ? resolveImageDisplayUrl(customLogo!)
+      : defaultAsset.src;
   const proxied = isProxiedMediaUrl(imageSrc);
+  const showCustom = usesCustomLogo && !customFailed;
 
-  const image = usesCustomLogo ? (
+  const image = showCustom ? (
     // eslint-disable-next-line @next/next/no-img-element
     <img
       src={imageSrc}
@@ -64,6 +68,7 @@ export function Logo({
         LOGO_IMAGE_SIZES[imageSize],
         href !== null && "transition-opacity group-hover:opacity-90",
       )}
+      onError={() => setCustomFailed(true)}
     />
   ) : (
     <Image

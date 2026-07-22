@@ -69,8 +69,9 @@ export function sanitizeFilename(filename: string): string {
   const base = filename.split(/[/\\]/).pop() ?? "document";
   const cleaned = base
     .normalize("NFKD")
-    .replace(/[^\w.\-() ]+/g, "-")
+    .replace(/[^\w.\-()]+/g, "-")
     .replace(/-+/g, "-")
+    .replace(/^-|-$/g, "")
     .trim();
 
   return cleaned.slice(0, 120) || "document";
