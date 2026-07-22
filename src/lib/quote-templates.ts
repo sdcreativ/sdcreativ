@@ -62,7 +62,7 @@ const templateLineInputSchema = z.object({
   catalogItemId: z.string().uuid().optional().nullable(),
   label: z.string().trim().min(2).max(200),
   quantity: z.number().positive().max(9999).default(1),
-  unitPrice: z.number().int().min(0),
+  unitPrice: z.number().int().min(0).optional().default(0),
 });
 
 export const createQuoteTemplateSchema = z.object({

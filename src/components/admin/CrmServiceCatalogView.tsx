@@ -125,9 +125,15 @@ export function CrmServiceCatalogView() {
     setSaving(true);
     setError("");
     setMessage("");
-    const unitPrice = Number(form.unitPrice);
-    if (!form.name.trim() || Number.isNaN(unitPrice) || unitPrice < 0) {
-      setError("Nom et prix unitaire valides requis.");
+    if (!form.name.trim()) {
+      setError("Le nom de la prestation est requis.");
+      setSaving(false);
+      return;
+    }
+    const rawPrice = form.unitPrice.trim();
+    const unitPrice = rawPrice === "" ? 0 : Number(rawPrice);
+    if (Number.isNaN(unitPrice) || unitPrice < 0) {
+      setError("Le prix unitaire doit être un montant positif ou vide.");
       setSaving(false);
       return;
     }
@@ -459,10 +465,9 @@ export function CrmServiceCatalogView() {
                 <input
                   type="number"
                   min={0}
-                  required
                   value={form.unitPrice}
                   onChange={(e) => setForm((prev) => ({ ...prev, unitPrice: e.target.value }))}
-                  placeholder="Prix unitaire HT *"
+                  placeholder="Prix unitaire HT (optionnel)"
                   className={fieldClass}
                 />
               </div>

@@ -57,8 +57,8 @@ const serviceFaqSchema = z.object({
 export const storedServiceDetailSchema = z.object({
   metaDescription: z.string().trim().min(10).max(320),
   heroDescription: z.string().trim().min(10).max(600),
-  startingFrom: z.string().trim().min(1).max(80),
-  delay: z.string().trim().min(1).max(80),
+  startingFrom: z.string().trim().max(80).optional().default(""),
+  delay: z.string().trim().max(80).optional().default(""),
   problem: z.object({
     title: z.string().trim().min(1).max(200),
     text: z.string().trim().min(10).max(1000),

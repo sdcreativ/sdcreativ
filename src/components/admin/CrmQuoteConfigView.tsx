@@ -46,6 +46,19 @@ function slugifyId(label: string): string {
     .slice(0, 80);
 }
 
+/** Prix optionnel : champ vide → 0. */
+function parseOptionalPrice(raw: string): number {
+  const trimmed = raw.trim();
+  if (trimmed === "") return 0;
+  const n = Number(trimmed);
+  if (!Number.isFinite(n) || n < 0) return 0;
+  return Math.round(n);
+}
+
+function priceInputValue(amount: number): string | number {
+  return amount > 0 ? amount : "";
+}
+
 export function CrmQuoteConfigView() {
   const { confirm } = useDialog();
   const [form, setForm] = useState<SiteQuoteConfigSettings | null>(null);
@@ -253,19 +266,22 @@ export function CrmQuoteConfigView() {
                   />
                 </label>
                 <label className="block">
-                  <span className="mb-1 block text-xs text-gray-text">Prix base (FCFA)</span>
+                  <span className="mb-1 block text-xs text-gray-text">Prix base (FCFA, optionnel)</span>
                   <input
-                    required
                     type="number"
                     min={0}
-                    value={type.basePrice}
+                    value={priceInputValue(type.basePrice)}
                     onChange={(e) =>
                       setForm((p) => {
                         const projectTypes = [...p!.projectTypes];
-                        projectTypes[index] = { ...projectTypes[index]!, basePrice: Number(e.target.value) };
+                        projectTypes[index] = {
+                          ...projectTypes[index]!,
+                          basePrice: parseOptionalPrice(e.target.value),
+                        };
                         return { ...p!, projectTypes };
                       })
                     }
+                    placeholder="Sur devis"
                     className={fieldClass}
                   />
                 </label>
@@ -365,19 +381,22 @@ export function CrmQuoteConfigView() {
                   />
                 </label>
                 <label className="block">
-                  <span className="mb-1 block text-xs text-gray-text">Supplément (FCFA)</span>
+                  <span className="mb-1 block text-xs text-gray-text">Supplément (FCFA, optionnel)</span>
                   <input
-                    required
                     type="number"
                     min={0}
-                    value={tier.extraPrice}
+                    value={priceInputValue(tier.extraPrice)}
                     onChange={(e) =>
                       setForm((p) => {
                         const pageTiers = [...p!.pageTiers];
-                        pageTiers[index] = { ...pageTiers[index]!, extraPrice: Number(e.target.value) };
+                        pageTiers[index] = {
+                          ...pageTiers[index]!,
+                          extraPrice: parseOptionalPrice(e.target.value),
+                        };
                         return { ...p!, pageTiers };
                       })
                     }
+                    placeholder="0"
                     className={fieldClass}
                   />
                 </label>
@@ -460,19 +479,22 @@ export function CrmQuoteConfigView() {
                   />
                 </label>
                 <label className="block">
-                  <span className="mb-1 block text-xs text-gray-text">Prix (FCFA)</span>
+                  <span className="mb-1 block text-xs text-gray-text">Prix (FCFA, optionnel)</span>
                   <input
-                    required
                     type="number"
                     min={0}
-                    value={addon.price}
+                    value={priceInputValue(addon.price)}
                     onChange={(e) =>
                       setForm((p) => {
                         const addons = [...p!.addons];
-                        addons[index] = { ...addons[index]!, price: Number(e.target.value) };
+                        addons[index] = {
+                          ...addons[index]!,
+                          price: parseOptionalPrice(e.target.value),
+                        };
                         return { ...p!, addons };
                       })
                     }
+                    placeholder="Sur devis"
                     className={fieldClass}
                   />
                 </label>

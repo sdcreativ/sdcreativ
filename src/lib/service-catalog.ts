@@ -54,7 +54,7 @@ export const createServiceCatalogSchema = z.object({
   description: z.string().trim().max(2000).optional().nullable(),
   category: z.enum(SERVICE_CATALOG_CATEGORIES).default("autre"),
   unit: z.enum(SERVICE_CATALOG_UNITS).default("forfait"),
-  unitPrice: z.number().int().min(0),
+  unitPrice: z.number().int().min(0).optional().default(0),
   isActive: z.boolean().default(true),
 });
 
@@ -131,7 +131,7 @@ export async function createServiceCatalogItem(
         input.description ?? null,
         input.category,
         input.unit,
-        input.unitPrice,
+        input.unitPrice ?? 0,
         sortOrder,
         input.isActive,
       ],

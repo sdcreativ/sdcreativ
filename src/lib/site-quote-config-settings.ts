@@ -20,7 +20,7 @@ const slugSchema = z
 const projectTypeSchema = z.object({
   id: slugSchema,
   label: z.string().trim().min(1).max(120),
-  basePrice: z.number().int().min(0),
+  basePrice: z.number().int().min(0).optional().default(0),
   supportsPages: z.boolean(),
   defaultPages: z.number().int().min(0).max(999),
 });
@@ -30,13 +30,13 @@ const pageTierSchema = z.object({
   label: z.string().trim().min(1).max(120),
   minPages: z.number().int().min(0).max(999),
   maxPages: z.number().int().min(0).max(999),
-  extraPrice: z.number().int().min(0),
+  extraPrice: z.number().int().min(0).optional().default(0),
 });
 
 const addonSchema = z.object({
   id: slugSchema,
   label: z.string().trim().min(1).max(120),
-  price: z.number().int().min(0),
+  price: z.number().int().min(0).optional().default(0),
   forProjects: z.array(slugSchema).optional(),
 });
 

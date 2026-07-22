@@ -240,31 +240,41 @@ export function CrmMaintenanceView() {
                           className={crmFieldClass}
                         />
                       </CrmFormField>
-                      <CrmFormField label="Prix mensuel (FCFA)">
+                      <CrmFormField label="Prix mensuel (FCFA, optionnel)">
                         <input
                           type="number"
                           min={0}
                           step={1000}
-                          value={plan.priceMonthly}
+                          value={plan.priceMonthly > 0 ? plan.priceMonthly : ""}
                           onChange={(e) => {
                             const plans = [...form.plans];
-                            plans[i] = { ...plans[i]!, priceMonthly: Number(e.target.value) };
+                            const raw = e.target.value.trim();
+                            plans[i] = {
+                              ...plans[i]!,
+                              priceMonthly: raw === "" ? 0 : Number(raw) || 0,
+                            };
                             setForm({ ...form, plans });
                           }}
+                          placeholder="Sur devis"
                           className={crmFieldClass}
                         />
                       </CrmFormField>
-                      <CrmFormField label="Prix annuel (FCFA)">
+                      <CrmFormField label="Prix annuel (FCFA, optionnel)">
                         <input
                           type="number"
                           min={0}
                           step={1000}
-                          value={plan.priceAnnual}
+                          value={plan.priceAnnual > 0 ? plan.priceAnnual : ""}
                           onChange={(e) => {
                             const plans = [...form.plans];
-                            plans[i] = { ...plans[i]!, priceAnnual: Number(e.target.value) };
+                            const raw = e.target.value.trim();
+                            plans[i] = {
+                              ...plans[i]!,
+                              priceAnnual: raw === "" ? 0 : Number(raw) || 0,
+                            };
                             setForm({ ...form, plans });
                           }}
+                          placeholder="Sur devis"
                           className={crmFieldClass}
                         />
                       </CrmFormField>

@@ -174,18 +174,23 @@ export function CrmSolutionsIaView() {
                       className={crmFieldClass}
                     />
                   </CrmFormField>
-                  <CrmFormField label="Prix à partir de (FCFA)" hint="Montant en francs CFA, sans séparateur.">
+                  <CrmFormField label="Prix à partir de (FCFA, optionnel)" hint="Montant en francs CFA, sans séparateur. Laisser vide = sur devis.">
                     <input
                       aria-label="Prix à partir de (FCFA)"
                       type="number"
                       min={0}
                       step={1000}
-                      value={pack.priceFrom}
+                      value={pack.priceFrom > 0 ? pack.priceFrom : ""}
                       onChange={(e) => {
                         const packs = [...form.packs];
-                        packs[i] = { ...packs[i]!, priceFrom: Number(e.target.value) };
+                        const raw = e.target.value.trim();
+                        packs[i] = {
+                          ...packs[i]!,
+                          priceFrom: raw === "" ? 0 : Number(raw) || 0,
+                        };
                         setForm({ ...form, packs });
                       }}
+                      placeholder="Sur devis"
                       className={crmFieldClass}
                     />
                   </CrmFormField>

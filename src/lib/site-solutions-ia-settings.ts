@@ -72,7 +72,7 @@ export const updateSiteSolutionsIaSchema = z.object({
         id: z.string().trim().min(1).max(80),
         name: z.string().trim().min(1).max(80),
         tagline: z.string().trim().min(1).max(200),
-        priceFrom: z.number().int().min(0),
+        priceFrom: z.number().int().min(0).optional().default(0),
         features: z.array(z.string().trim().min(1).max(200)).min(1).max(20),
         highlighted: z.boolean().optional(),
       }),
