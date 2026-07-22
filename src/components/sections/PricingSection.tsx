@@ -2,8 +2,8 @@ import { Check, Clock, Monitor, Headphones, Target } from "lucide-react";
 import { AnimatedSection, AnimatedCard } from "@/components/ui/AnimatedSection";
 import { SectionHeading } from "@/components/ui/SectionHeading";
 import { Button } from "@/components/ui/Button";
-import { formatPriceFrom } from "@/lib/format";
 import { getPricingPlans, getPricingReassurance } from "@/lib/public-pricing-resolver";
+import { SITE_VALUE_PROP } from "@/lib/site-value-prop";
 import { cn } from "@/lib/utils";
 
 const reassuranceIcons = [Clock, Monitor, Headphones, Target];
@@ -27,8 +27,11 @@ export async function PricingSection({ locale = "fr" }: Props) {
           eyebrow="Nos offres"
           title="Choisissez la formule"
           highlight="adaptée"
-          className="mb-14"
+          className="mb-6"
         />
+        <p className="mx-auto mb-14 max-w-2xl text-center text-base font-semibold text-primary md:text-lg">
+          {SITE_VALUE_PROP}
+        </p>
 
         <div className="grid gap-8 lg:grid-cols-3">
           {pricingPlans.map((plan, i) => (
@@ -50,21 +53,14 @@ export async function PricingSection({ locale = "fr" }: Props) {
               )}
               <h3 className="text-2xl font-bold uppercase text-foreground">{plan.name}</h3>
               <p className="mt-1 text-gray-text">{plan.tagline}</p>
-              {plan.priceFrom != null && (
-                <p
-                  className={cn(
-                    "mt-4 text-2xl font-bold",
-                    plan.variant === "accent" ? "text-accent" : "text-primary",
-                  )}
-                >
-                  {formatPriceFrom(plan.priceFrom)}
-                </p>
-              )}
-              {plan.priceNote && (
-                <p className={cn("text-xs text-gray-text", plan.priceFrom != null ? "mt-1" : "mt-4 text-base font-semibold text-foreground")}>
-                  {plan.priceNote}
-                </p>
-              )}
+              <p
+                className={cn(
+                  "mt-4 text-base font-semibold",
+                  plan.variant === "accent" ? "text-accent" : "text-primary",
+                )}
+              >
+                Devis personnalisé gratuit
+              </p>
               <ul className="mt-8 flex-1 space-y-3">
                 {plan.features.map((feature) => (
                   <li key={feature} className="flex items-start gap-3 text-sm">
@@ -84,7 +80,7 @@ export async function PricingSection({ locale = "fr" }: Props) {
                 variant={plan.variant === "accent" ? "accent" : "primary"}
                 className="mt-8 w-full justify-center"
               >
-                Estimer en FCFA
+                Demander un devis
               </Button>
             </AnimatedCard>
           ))}

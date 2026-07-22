@@ -2,7 +2,7 @@ export type PricingPlan = {
   id: string;
   name: string;
   tagline: string;
-  /** Prix de départ en FCFA (HT), omis si sur devis uniquement */
+  /** Prix de départ en FCFA (HT) — non affiché sur le site public. */
   priceFrom?: number;
   priceNote?: string;
   features: string[];
@@ -10,13 +10,13 @@ export type PricingPlan = {
   variant: "primary" | "accent";
 };
 
+/** Formules sans montants publics — devis personnalisé. */
 export const pricingPlans: PricingPlan[] = [
   {
     id: "essentiel",
     name: "Essentiel",
     tagline: "Pour démarrer.",
-    priceFrom: 350_000,
-    priceNote: "HT · devis personnalisé gratuit",
+    priceNote: "Devis personnalisé gratuit",
     variant: "primary",
     features: [
       "Site vitrine professionnel (jusqu'à 5 pages)",
@@ -30,8 +30,7 @@ export const pricingPlans: PricingPlan[] = [
     id: "professionnel",
     name: "Professionnel",
     tagline: "Pour accélérer.",
-    priceFrom: 850_000,
-    priceNote: "HT · devis personnalisé gratuit",
+    priceNote: "Devis personnalisé gratuit",
     variant: "primary",
     highlighted: true,
     features: [
@@ -47,8 +46,7 @@ export const pricingPlans: PricingPlan[] = [
     id: "business",
     name: "Business",
     tagline: "Pour vendre.",
-    priceFrom: 1_800_000,
-    priceNote: "HT · devis personnalisé gratuit",
+    priceNote: "Devis personnalisé gratuit",
     variant: "accent",
     features: [
       "Boutique e-commerce complète",

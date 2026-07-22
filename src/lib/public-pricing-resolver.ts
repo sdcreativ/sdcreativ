@@ -10,14 +10,17 @@ import {
   toPricingPlan,
 } from "@/lib/public-pricing";
 import type { PricingPlan } from "@/content/pricing";
-import { allowStaticContentFallback } from "@/lib/static-content-fallback";
 
 export const PUBLIC_PRICING_PLANS_TAG = "public-pricing-plans";
 export const PUBLIC_PRICING_REASSURANCE_TAG = "public-pricing-reassurance";
 
+/**
+ * Les 3 formules tarifs sont du contenu produit (pas de démo) :
+ * si la CMS est vide / plans masqués, on garde toujours le catalogue code.
+ */
 async function loadPricingPlans(locale: string): Promise<PricingPlan[]> {
   if (!isDatabaseConfigured()) {
-    return allowStaticContentFallback() ? staticPlans : [];
+    return staticPlans;
   }
 
   try {
@@ -27,12 +30,12 @@ async function loadPricingPlans(locale: string): Promise<PricingPlan[]> {
     console.error("[public-pricing] plans fallback:", error);
   }
 
-  return allowStaticContentFallback() ? staticPlans : [];
+  return staticPlans;
 }
 
 async function loadPricingReassurance(locale: string) {
   if (!isDatabaseConfigured()) {
-    return allowStaticContentFallback() ? staticReassurance : [];
+    return staticReassurance;
   }
 
   try {
@@ -44,7 +47,7 @@ async function loadPricingReassurance(locale: string) {
     console.error("[public-pricing] reassurance fallback:", error);
   }
 
-  return allowStaticContentFallback() ? staticReassurance : [];
+  return staticReassurance;
 }
 
 /** Tarifs publics — cache taggé (ISR) plutôt que force-dynamic + connection(). */

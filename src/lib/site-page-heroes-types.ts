@@ -80,10 +80,10 @@ export const defaultSitePageHeroesSettings: SitePageHeroesSettings = {
   },
   tarifs: {
     eyebrow: "Nos offres",
-    title: "Tarifs transparents,",
+    title: "Des formules claires,",
     highlight: "résultats concrets",
     description:
-      "Choisissez la formule qui correspond à vos ambitions. Chaque projet fait l'objet d'un devis personnalisé gratuit.",
+      "Choisissez la formule qui correspond à vos ambitions. Chaque projet fait l'objet d'un devis personnalisé gratuit — sans grille tarifaire publique.",
     breadcrumb: [{ label: "Accueil", href: "/" }, { label: "Tarifs" }],
   },
   devis: {

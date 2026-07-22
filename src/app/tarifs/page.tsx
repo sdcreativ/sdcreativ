@@ -9,9 +9,9 @@ export const revalidate = 300;
 
 
 export const metadata = createMetadata({
-  title: "Tarifs & Offres",
+  title: "Offres & formules",
   description:
-    "Découvrez nos formules Essentiel, Professionnel et Business — des offres adaptées à chaque étape de votre croissance digitale.",
+    "Découvrez nos formules Essentiel, Professionnel et Business — des offres adaptées à chaque étape de votre croissance digitale. Devis personnalisé gratuit.",
   path: "/tarifs",
 });
 
@@ -27,8 +27,8 @@ export default function TarifsPage() {
               Estimez ou planifiez votre projet
             </h2>
             <p className="mt-4 text-gray-text">
-              Utilisez notre configurateur pour une estimation instantanée en FCFA, ou
-              réservez un appel de 30 minutes avec notre équipe.
+              Utilisez notre configurateur pour cadrer votre besoin, ou réservez un appel
+              de 30 minutes avec notre équipe — devis personnalisé ensuite.
             </p>
             <div className="mt-6 flex flex-col gap-3 sm:flex-row">
               <Button href="/devis">Configurateur de devis</Button>
