@@ -357,6 +357,8 @@ export function CrmEmployeeContractsView() {
     const email = await prompt({
       title: "Signature Yousign (forte valeur)",
       message: "Email du signataire — prestataire eIDAS (recommandé pour CDI / CDD).",
+      label: "Email",
+      inputType: "email",
       defaultValue: contract.esignSignerEmail ?? contract.userEmail ?? "",
       placeholder: "prenom@exemple.com",
       confirmLabel: "Envoyer via Yousign",
