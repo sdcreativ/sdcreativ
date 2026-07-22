@@ -57,6 +57,7 @@ pm2-*.log
 Thumbs.db
 *.pem
 .idea/
+.cursor/
 .vscode/*
 !.vscode/extensions.json
 !.vscode/settings.json.example
