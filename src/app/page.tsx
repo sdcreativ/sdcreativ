@@ -1,4 +1,5 @@
 import { HeroSection } from "@/components/sections/HeroSection";
+import { ValuePropBanner } from "@/components/sections/ValuePropBanner";
 import { WhyUsSection } from "@/components/sections/WhyUsSection";
 import { ServicesSection } from "@/components/sections/ServicesSection";
 import { PartnersSection } from "@/components/sections/PartnersSection";
@@ -14,6 +15,7 @@ export default function HomePage() {
   return (
     <>
       <HeroSection />
+      <ValuePropBanner />
       <WhyUsSection />
       <ServicesSection />
       <PartnersSection />

@@ -31,7 +31,7 @@ export const serviceDetails: ServiceDetail[] = [
       "Création de site vitrine professionnel : design sur mesure, responsive, SEO de base, formulaire contact et WhatsApp. Devis gratuit en FCFA.",
     heroDescription:
       "Présentez votre activité avec un site clair, crédible et pensé pour convertir vos visiteurs en prospects — sur mobile comme sur ordinateur.",
-    startingFrom: "350 000 FCFA HT",
+    startingFrom: "Votre vitrine digitale, pensée pour convertir",
     delay: "2 à 4 semaines",
     problem: {
       title: "Votre activité mérite mieux qu'une simple page Facebook",
@@ -109,7 +109,7 @@ export const serviceDetails: ServiceDetail[] = [
       "Boutique en ligne sur mesure : catalogue, paiement sécurisé, gestion des commandes et tableau de bord. E-commerce pour PME en FCFA.",
     heroDescription:
       "Vendez en ligne avec une boutique performante, sécurisée et simple à administrer — catalogue, panier, paiement et suivi des commandes inclus.",
-    startingFrom: "1 800 000 FCFA HT",
+    startingFrom: "Vendez en ligne avec une boutique qui vous ressemble",
     delay: "4 à 8 semaines",
     problem: {
       title: "Vendre uniquement sur les réseaux sociaux limite votre croissance",
@@ -187,7 +187,7 @@ export const serviceDetails: ServiceDetail[] = [
       "Refonte de site web : nouveau design, performance, mobile-first et migration sécurisée. Modernisez votre image en ligne. Devis en FCFA.",
     heroDescription:
       "Redonnez vie à un site daté : design actuel, expérience mobile fluide, temps de chargement réduit et parcours utilisateur repensé pour convertir.",
-    startingFrom: "450 000 FCFA HT",
+    startingFrom: "Modernisez votre image, boostez vos conversions",
     delay: "3 à 6 semaines",
     problem: {
       title: "Un site vieillissant freine votre croissance",
@@ -265,7 +265,7 @@ export const serviceDetails: ServiceDetail[] = [
       "Création d'identité visuelle : logo, charte graphique, supports print et web. Image de marque cohérente pour PME. Devis en FCFA.",
     heroDescription:
       "Construisez une marque reconnaissable et professionnelle — logo, couleurs, typographies et déclinaisons pour tous vos supports digitaux et print.",
-    startingFrom: "200 000 FCFA HT",
+    startingFrom: "Une identité qui inspire confiance dès le premier regard",
     delay: "2 à 4 semaines",
     problem: {
       title: "Une image incohérente brouille votre message",
@@ -343,7 +343,7 @@ export const serviceDetails: ServiceDetail[] = [
       "SEO local : optimisation Google Business, référencement géolocalisé, contenus et suivi. Soyez visible près de chez vous. Devis en FCFA.",
     heroDescription:
       "Apparaissez en tête des recherches locales sur Google — fiche établissement optimisée, pages géolocalisées et contenus pensés pour attirer des clients près de vous.",
-    startingFrom: "150 000 FCFA HT",
+    startingFrom: "Soyez trouvé là où vos clients vous cherchent",
     delay: "4 à 8 semaines (résultats progressifs)",
     problem: {
       title: "Invisible sur Google, vous laissez des clients à vos concurrents",
@@ -421,7 +421,7 @@ export const serviceDetails: ServiceDetail[] = [
       "Automatisation métier : workflows n8n, Make, Zapier, intégrations API et synchronisation de données. Gagnez du temps. Devis en FCFA.",
     heroDescription:
       "Connectez vos outils et automatisez les tâches répétitives — leads, emails, factures, stocks — pour gagner du temps et réduire les erreurs humaines.",
-    startingFrom: "600 000 FCFA HT",
+    startingFrom: "Gagnez du temps : automatisez l’essentiel",
     delay: "2 à 5 semaines",
     problem: {
       title: "Vos équipes perdent des heures en tâches manuelles",
@@ -499,7 +499,7 @@ export const serviceDetails: ServiceDetail[] = [
       "DevOps : pipelines CI/CD, Docker, monitoring et Infrastructure as Code. Livrez plus vite et en sécurité. Devis en FCFA.",
     heroDescription:
       "Industrialisez vos déploiements avec des pipelines CI/CD, de la conteneurisation et un monitoring fiable — pour livrer plus souvent, sans stress.",
-    startingFrom: "700 000 FCFA HT",
+    startingFrom: "Infrastructure fiable, déploiements sereins",
     delay: "3 à 6 semaines",
     problem: {
       title: "Des déploiements manuels = risques et lenteur",
@@ -577,7 +577,7 @@ export const serviceDetails: ServiceDetail[] = [
       "Services cloud : migration AWS, GCP, Azure, Vercel, haute disponibilité et optimisation des coûts. Devis en FCFA.",
     heroDescription:
       "Hébergez et faites évoluer vos applications dans le cloud — migration sécurisée, architecture scalable et coûts maîtrisés.",
-    startingFrom: "500 000 FCFA HT",
+    startingFrom: "Le cloud à la hauteur de vos ambitions",
     delay: "2 à 6 semaines",
     problem: {
       title: "Une infrastructure rigide ou coûteuse vous freine",
@@ -655,7 +655,7 @@ export const serviceDetails: ServiceDetail[] = [
       "Développement d'applications mobiles iOS et Android : React Native, Flutter, UI/UX mobile-first. Devis en FCFA.",
     heroDescription:
       "Touchez vos clients sur iOS et Android avec une application performante, intuitive et connectée à votre écosystème digital existant.",
-    startingFrom: "1 200 000 FCFA HT",
+    startingFrom: "Une app mobile qui reste dans la poche de vos clients",
     delay: "8 à 16 semaines",
     problem: {
       title: "Un site seul ne suffit plus pour fidéliser",
@@ -733,7 +733,7 @@ export const serviceDetails: ServiceDetail[] = [
       "Développement sur mesure : SaaS, portails clients, APIs et tableaux de bord. Solutions web adaptées à vos processus. Devis en FCFA.",
     heroDescription:
       "Quand le prêt-à-l'emploi ne suffit plus — nous concevons plateformes web, SaaS et outils métier taillés pour vos processus et votre croissance.",
-    startingFrom: "1 500 000 FCFA HT",
+    startingFrom: "Des solutions sur mesure, calibrées pour votre métier",
     delay: "6 à 16 semaines",
     problem: {
       title: "Les outils génériques plafonnent votre efficacité",

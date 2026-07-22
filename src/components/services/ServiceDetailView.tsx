@@ -7,7 +7,7 @@ import {
   Clock,
   HelpCircle,
   MessageCircle,
-  Wallet,
+  Sparkles,
 } from "lucide-react";
 import { AccordionItem } from "@/components/ui/Accordion";
 import { Button } from "@/components/ui/Button";
@@ -20,6 +20,7 @@ import type { ResolvedService } from "@/lib/public-services-types";
 import { buildWhatsappUrl } from "@/lib/site-public-resolver";
 import { getSitePublicSettings } from "@/lib/site-public-settings";
 import { isProxiedMediaUrl, resolveImageDisplayUrl } from "@/lib/image-url";
+import { resolveServiceValueBadge } from "@/lib/site-value-prop";
 
 type Props = {
   service: ResolvedService;
@@ -48,6 +49,7 @@ export async function ServiceDetailView({ service, detail }: Props) {
   const serviceImageSrc = service.image
     ? resolveImageDisplayUrl(service.image)
     : undefined;
+  const valueBadge = resolveServiceValueBadge(detail.startingFrom);
 
   return (
     <>
@@ -68,9 +70,9 @@ export async function ServiceDetailView({ service, detail }: Props) {
       <section className="border-b border-gray/40 bg-white py-10 md:py-12">
         <div className="container mx-auto px-4 md:px-6 lg:px-8">
           <div className="flex flex-wrap gap-4">
-            <div className="inline-flex items-center gap-2 rounded-full border border-primary/20 bg-primary-light/50 px-4 py-2 text-sm font-semibold text-primary">
-              <Wallet className="h-4 w-4" aria-hidden />À partir de{" "}
-              {detail.startingFrom || "sur devis"}
+            <div className="inline-flex max-w-full items-center gap-2 rounded-full border border-primary/20 bg-primary-light/50 px-4 py-2 text-sm font-semibold text-primary">
+              <Sparkles className="h-4 w-4 shrink-0" aria-hidden />
+              <span>{valueBadge}</span>
             </div>
             <div className="inline-flex items-center gap-2 rounded-full border border-gray/60 bg-gray-light px-4 py-2 text-sm font-medium text-foreground/80">
               <Clock className="h-4 w-4 text-primary" aria-hidden />

@@ -41,7 +41,7 @@ export function normalizeServiceDetail(
     id: slug,
     metaDescription: "",
     heroDescription: "",
-    startingFrom: "Sur devis",
+    startingFrom: "Une qualité internationale à un prix accessible aux entreprises",
     delay: "Selon projet",
     problem: { title: "", text: "" },
     solution: { title: "", text: "" },
