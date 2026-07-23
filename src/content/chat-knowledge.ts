@@ -24,7 +24,7 @@ export const chatKnowledge: ChatKnowledgeEntry[] = [
       "essentiel", "professionnel", "business", "formule", "offre",
     ],
     answer:
-      "Nos formules démarrent à 350 000 FCFA HT (Essentiel — site vitrine), 850 000 FCFA HT (Professionnel) et 1 800 000 FCFA HT (Business — e-commerce). Les agents IA démarrent à 800 000 FCFA, la maintenance annuelle à 480 000 FCFA. Chaque projet fait l'objet d'un devis personnalisé gratuit.",
+      "Nous proposons des formules Essentiel, Professionnel et Business (sites vitrine à e-commerce), des packs agents IA et des formules maintenance. Chaque projet fait l'objet d'un devis personnalisé gratuit — indiquez votre besoin et nous vous répondons sous 24 à 48 h.",
     links: [
       { label: "Voir les tarifs", href: "/tarifs" },
       { label: "Configurateur de devis", href: "/devis" },
@@ -59,7 +59,7 @@ export const chatKnowledge: ChatKnowledgeEntry[] = [
       "llm", "automatisation", "assistant", "whatsapp",
     ],
     answer:
-      "Nous concevons des agents IA sur mesure : chatbots site web, assistants WhatsApp, qualification de leads et automatisation métier. Stack : OpenAI, Claude, n8n, intégrations CRM. À partir de 800 000 FCFA HT. Ce chatbot est d'ailleurs une démo de notre savoir-faire !",
+      "Nous concevons des agents IA sur mesure : chatbots site web, assistants WhatsApp, qualification de leads et automatisation métier. Stack : OpenAI, Claude, n8n, intégrations CRM. Devis personnalisé gratuit. Ce chatbot est d'ailleurs une démo de notre savoir-faire !",
     links: [
       { label: "Solutions IA", href: "/solutions-ia" },
       { label: "Devis agents IA", href: "/devis?type=agents-ia" },
@@ -72,7 +72,7 @@ export const chatKnowledge: ChatKnowledgeEntry[] = [
       "monitoring", "abonnement", "mensuel", "annuel", "forfait",
     ],
     answer:
-      "Nous proposons 3 formules maintenance : Essentiel (45 000 FCFA/mois ou 480 000 FCFA/an), Professionnel (85 000 FCFA/mois) et Premium SLA (150 000 FCFA/mois, réponse sous 4h). Inclus : sauvegardes, mises à jour, monitoring et assistance technique.",
+      "Nous proposons 3 formules maintenance : Essentiel, Professionnel et Premium SLA (réponse sous 4h). Inclus : sauvegardes, mises à jour, monitoring et assistance technique. Devis personnalisé selon le niveau de SLA souhaité.",
     links: [
       { label: "Formules maintenance", href: "/maintenance" },
       { label: "Devis maintenance", href: "/devis?type=maintenance" },
@@ -118,7 +118,7 @@ export const chatKnowledge: ChatKnowledgeEntry[] = [
       "mobile money", "orange money", "wave", "momo", "paiement", "commande", "vente en ligne",
     ],
     answer:
-      "Notre formule Business (à partir de 1 800 000 FCFA HT) inclut une boutique e-commerce complète avec paiement Mobile Money (Orange Money, Wave), gestion des commandes et formation admin.",
+      "Notre formule Business inclut une boutique e-commerce complète avec paiement Mobile Money (Orange Money, Wave), gestion des commandes et formation admin. Devis personnalisé gratuit.",
     links: [
       { label: "Tarifs e-commerce", href: "/tarifs" },
       { label: "Estimer mon projet", href: "/devis?type=e-commerce" },

@@ -14,6 +14,7 @@ import {
   INFRA_RESTORE_LATEST_CMD,
 } from "@/lib/infra-health-types";
 import { isDatabaseConfigured, withDb } from "@/lib/db";
+import { getStorageErrorMessage } from "@/lib/s3-errors";
 import { isS3Configured } from "@/lib/s3";
 import { readFile } from "node:fs/promises";
 
@@ -54,6 +55,7 @@ function formatAgeHours(hours: number): string {
 }
 
 function formatDateFr(date: Date): string {
+  if (Number.isNaN(date.getTime())) return "—";
   return date.toLocaleString("fr-FR", {
     day: "2-digit",
     month: "2-digit",
@@ -61,6 +63,17 @@ function formatDateFr(date: Date): string {
     hour: "2-digit",
     minute: "2-digit",
   });
+}
+
+function normalizeS3BackupPrefix(raw: string | undefined): string {
+  const base = (raw?.trim() || "backups/sdcreativ").replace(/^\/+/, "").replace(/\/+$/, "");
+  return `${base}/`;
+}
+
+function s3ErrorCode(error: unknown): string {
+  if (!error || typeof error !== "object") return "";
+  const err = error as { name?: string; Code?: string; $metadata?: { httpStatusCode?: number } };
+  return err.Code ?? err.name ?? "";
 }
 
 async function readHostStatus(): Promise<InfraHostStatus | null> {
@@ -219,20 +232,29 @@ async function checkS3Backup(host: InfraHostStatus | null): Promise<InfraCheck> 
     };
   }
 
-  const prefix = `${process.env.AWS_S3_BACKUP_PREFIX ?? "backups/sdcreativ"}/`;
+  const bucket = process.env.AWS_S3_BUCKET!;
+  const region = process.env.AWS_REGION!;
+  const prefix = normalizeS3BackupPrefix(process.env.AWS_S3_BACKUP_PREFIX);
   const client = new S3Client({
-    region: process.env.AWS_REGION,
+    region,
     credentials: {
       accessKeyId: process.env.AWS_ACCESS_KEY_ID!,
       secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY!,
     },
   });
 
+  const localName = host?.latestLocalBackup?.trim() || null;
+  const localAt = localName ? parseBackupTimestamp(localName) : null;
+  const localAgeHours = localAt ? (Date.now() - localAt.getTime()) / 3_600_000 : null;
+  const localRecent =
+    localAgeHours != null && localAgeHours <= BACKUP_MAX_AGE_WARN_HOURS;
+
   try {
     const response = await client.send(
       new ListObjectsV2Command({
-        Bucket: process.env.AWS_S3_BUCKET!,
+        Bucket: bucket,
         Prefix: prefix,
+        MaxKeys: 100,
       }),
     );
 
@@ -247,12 +269,35 @@ async function checkS3Backup(host: InfraHostStatus | null): Promise<InfraCheck> 
       [];
 
     if (dumps.length === 0) {
+      // Dumps locaux récents : alerte, pas critique (souvent upload S3 non encore parti / IAM Put).
+      if (localRecent && localName) {
+        return {
+          id: "s3-backup",
+          label: "Sauvegarde S3",
+          status: "warning",
+          detail: "Aucun dump sur S3 (copie locale OK)",
+          metrics: [
+            { label: "Dernière sauvegarde", value: `locale · ${localName}` },
+            {
+              label: "Date locale",
+              value: localAt ? formatDateFr(localAt) : "—",
+            },
+            {
+              label: "Copies locales",
+              value: host?.localBackupCount != null ? String(host.localBackupCount) : "—",
+            },
+            { label: "Prefix S3", value: `s3://${bucket}/${prefix}` },
+          ],
+          hint: "Les dumps locaux existent : vérifiez l’upload S3 (db-backup.sh) et les droits s3:PutObject sur backups/*.",
+          actions: restoreActions,
+        };
+      }
       return {
         id: "s3-backup",
         label: "Sauvegarde S3",
         status: "error",
         detail: "Aucun dump sur S3",
-        hint: "Lancez ./scripts/db-backup.sh sur le VPS",
+        hint: `Lancez ./scripts/db-backup.sh sur le VPS (prefix s3://${bucket}/${prefix})`,
         actions: restoreActions,
       };
     }
@@ -298,13 +343,62 @@ async function checkS3Backup(host: InfraHostStatus | null): Promise<InfraCheck> 
           : "La restauration s'exécute en SSH sur le VPS (commande ci-dessous).",
       actions: restoreActions,
     };
-  } catch {
+  } catch (error) {
+    console.error("[infra-health] s3-backup list", {
+      bucket,
+      region,
+      prefix,
+      error,
+    });
+
+    const code = s3ErrorCode(error);
+    const isAccess =
+      code === "AccessDenied" ||
+      code === "AllAccessDisabled" ||
+      code === "AccessDeniedException";
+    const isRegion =
+      code === "PermanentRedirect" ||
+      code === "AuthorizationHeaderMalformed" ||
+      code === "IllegalLocationConstraintException";
+
+    let hint = getStorageErrorMessage(error);
+    if (isAccess) {
+      hint =
+        `IAM : autorisez s3:ListBucket (prefix ${prefix}*) et s3:GetObject/PutObject sur s3://${bucket}/${prefix}* — la policy « clients/* » seule bloque les backups.`;
+    } else if (isRegion) {
+      hint = `Région incorrecte : AWS_REGION=${region} doit correspondre au bucket ${bucket}.`;
+    }
+
+    // Ne pas passer tout le widget en Critique si les dumps locaux sont frais.
+    if (localRecent && localName) {
+      return {
+        id: "s3-backup",
+        label: "Sauvegarde S3",
+        status: "warning",
+        detail: "S3 inaccessible (copie locale OK)",
+        metrics: [
+          { label: "Dernière sauvegarde", value: `locale · ${localName}` },
+          {
+            label: "Date locale",
+            value: localAt ? formatDateFr(localAt) : "—",
+          },
+          {
+            label: "Copies locales",
+            value: host?.localBackupCount != null ? String(host.localBackupCount) : "—",
+          },
+          { label: "Bucket", value: `${bucket} (${region})` },
+        ],
+        hint,
+        actions: restoreActions,
+      };
+    }
+
     return {
       id: "s3-backup",
       label: "Sauvegarde S3",
       status: "error",
       detail: "Impossible de lister les sauvegardes S3",
-      hint: "Vérifiez les permissions IAM sur le prefix backups/",
+      hint,
       actions: restoreActions,
     };
   }

@@ -266,7 +266,9 @@ export function CrmQuoteConfigView() {
                   />
                 </label>
                 <label className="block">
-                  <span className="mb-1 block text-xs text-gray-text">Prix base (FCFA, optionnel)</span>
+                  <span className="mb-1 block text-xs text-gray-text">
+                    Prix base (FCFA, optionnel — vide = devis)
+                  </span>
                   <input
                     type="number"
                     min={0}
@@ -381,7 +383,9 @@ export function CrmQuoteConfigView() {
                   />
                 </label>
                 <label className="block">
-                  <span className="mb-1 block text-xs text-gray-text">Supplément (FCFA, optionnel)</span>
+                  <span className="mb-1 block text-xs text-gray-text">
+                    Supplément (FCFA, optionnel — vide = 0)
+                  </span>
                   <input
                     type="number"
                     min={0}
@@ -479,7 +483,9 @@ export function CrmQuoteConfigView() {
                   />
                 </label>
                 <label className="block">
-                  <span className="mb-1 block text-xs text-gray-text">Prix (FCFA, optionnel)</span>
+                  <span className="mb-1 block text-xs text-gray-text">
+                    Prix (FCFA, optionnel — vide = devis)
+                  </span>
                   <input
                     type="number"
                     min={0}

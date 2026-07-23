@@ -174,7 +174,10 @@ export function CrmSolutionsIaView() {
                       className={crmFieldClass}
                     />
                   </CrmFormField>
-                  <CrmFormField label="Prix à partir de (FCFA, optionnel)" hint="Montant en francs CFA, sans séparateur. Laisser vide = sur devis.">
+                  <CrmFormField
+                    label="Prix à partir de (FCFA, optionnel)"
+                    hint="Vide → « Devis personnalisé gratuit » sur le site"
+                  >
                     <input
                       aria-label="Prix à partir de (FCFA)"
                       type="number"

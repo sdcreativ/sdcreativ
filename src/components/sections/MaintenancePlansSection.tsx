@@ -3,7 +3,7 @@ import { AnimatedSection, AnimatedCard } from "@/components/ui/AnimatedSection";
 import { SectionHeading } from "@/components/ui/SectionHeading";
 import { Button } from "@/components/ui/Button";
 import { getSiteMaintenanceSettings } from "@/lib/site-maintenance-settings";
-import { formatFcfa } from "@/lib/format";
+import { formatFcfa, hasPublicPrice, PRICE_ON_REQUEST_LABEL } from "@/lib/format";
 import { cn } from "@/lib/utils";
 
 export async function MaintenancePlansSection() {
@@ -21,7 +21,11 @@ export async function MaintenancePlansSection() {
         />
 
         <div className="grid gap-8 lg:grid-cols-3">
-          {plans.map((plan, i) => (
+          {plans.map((plan, i) => {
+            const showMonthly = hasPublicPrice(plan.priceMonthly);
+            const showAnnual = hasPublicPrice(plan.priceAnnual);
+
+            return (
             <AnimatedCard
               key={plan.id}
               delay={i * 0.1}
@@ -44,13 +48,30 @@ export async function MaintenancePlansSection() {
               <p className="mt-1 text-gray-text">{plan.tagline}</p>
 
               <div className="mt-6 space-y-1">
-                <p className="text-2xl font-bold text-primary">
-                  {formatFcfa(plan.priceMonthly)} FCFA
-                  <span className="text-base font-normal text-gray-text"> / mois</span>
-                </p>
-                <p className="text-sm text-gray-text">
-                  ou {formatFcfa(plan.priceAnnual)} FCFA / an HT
-                </p>
+                {showMonthly || showAnnual ? (
+                  <>
+                    {showMonthly && (
+                      <p className="text-2xl font-bold text-primary">
+                        {formatFcfa(plan.priceMonthly)} FCFA
+                        <span className="text-base font-normal text-gray-text"> / mois</span>
+                      </p>
+                    )}
+                    {showAnnual && (
+                      <p
+                        className={
+                          showMonthly
+                            ? "text-sm text-gray-text"
+                            : "text-2xl font-bold text-primary"
+                        }
+                      >
+                        {showMonthly ? "ou " : ""}
+                        {formatFcfa(plan.priceAnnual)} FCFA / an HT
+                      </p>
+                    )}
+                  </>
+                ) : (
+                  <p className="text-xl font-semibold text-primary">{PRICE_ON_REQUEST_LABEL}</p>
+                )}
               </div>
 
               <p className="mt-4 rounded-lg bg-primary-light px-3 py-2 text-sm font-medium text-foreground">
@@ -74,7 +95,8 @@ export async function MaintenancePlansSection() {
                 Demander un devis
               </Button>
             </AnimatedCard>
-          ))}
+            );
+          })}
         </div>
       </div>
     </AnimatedSection>

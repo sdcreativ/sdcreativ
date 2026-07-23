@@ -149,7 +149,7 @@ export const iaPacks: IaPack[] = [
     id: "assistant-site",
     name: "Assistant site",
     tagline: "Chatbot intégré à votre site web.",
-    priceFrom: 800_000,
+    priceFrom: 0,
     features: [
       "Chatbot site web personnalisé",
       "Base de connaissances métier",
@@ -162,7 +162,7 @@ export const iaPacks: IaPack[] = [
     id: "whatsapp-pro",
     name: "WhatsApp Pro",
     tagline: "Assistant sur WhatsApp Business.",
-    priceFrom: 1_200_000,
+    priceFrom: 0,
     highlighted: true,
     features: [
       "Tout Assistant site +",
@@ -176,7 +176,7 @@ export const iaPacks: IaPack[] = [
     id: "automation-suite",
     name: "Automation Suite",
     tagline: "Agent IA + workflows métier.",
-    priceFrom: 1_800_000,
+    priceFrom: 0,
     features: [
       "Tout WhatsApp Pro +",
       "Workflows n8n / Make sur mesure",
@@ -191,7 +191,7 @@ export const iaFaq = [
   {
     question: "Combien coûte un agent IA ?",
     answer:
-      "Nos packs démarrent à 800 000 FCFA HT pour un assistant site web. Les projets WhatsApp ou automatisation avancée sont entre 1,2M et 1,8M FCFA HT selon le périmètre. Devis personnalisé gratuit.",
+      "Chaque pack fait l'objet d'un devis personnalisé gratuit selon le périmètre (assistant site, WhatsApp, automatisation avancée). Contactez-nous pour une estimation adaptée à votre besoin.",
   },
   {
     question: "Quels modèles IA utilisez-vous ?",

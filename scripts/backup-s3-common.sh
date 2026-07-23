@@ -6,12 +6,16 @@ backup_s3_load_env() {
   ROOT_DIR="${ROOT_DIR:-$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)}"
   cd "$ROOT_DIR"
 
-  if [ -f .env.docker ]; then
-    set -a
-    # shellcheck disable=SC1091
-    source "${ROOT_DIR}/scripts/lib/load-env-file.sh"
+  # shellcheck disable=SC1091
+  source "${ROOT_DIR}/scripts/lib/load-env-file.sh"
+
+  # .env (Compose) peut contenir d’anciennes clés AWS — on les ignore pour S3.
+  # Source de vérité : .env.docker uniquement.
+  unset AWS_ACCESS_KEY_ID AWS_SECRET_ACCESS_KEY AWS_REGION AWS_S3_BUCKET
+  unset AWS_S3_BACKUP_PREFIX AWS_S3_PUBLIC_BASE_URL S3_BACKUP_RETENTION_DAYS
+
+  if [ -f "${ROOT_DIR}/.env.docker" ]; then
     load_env_file "${ROOT_DIR}/.env.docker"
-    set +a
   fi
 
   AWS_S3_BACKUP_PREFIX="${AWS_S3_BACKUP_PREFIX:-backups/sdcreativ}"

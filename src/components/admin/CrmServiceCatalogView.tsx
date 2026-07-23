@@ -358,7 +358,9 @@ export function CrmServiceCatalogView() {
                     <p className="mt-1 text-sm text-gray-text">{item.description}</p>
                   )}
                   <p className="mt-2 text-sm text-gray-text">
-                    {formatQuoteAmount(item.unitPrice)} / {SERVICE_CATALOG_UNIT_LABELS[item.unit]}
+                    {item.unitPrice > 0
+                      ? `${formatQuoteAmount(item.unitPrice)} / ${SERVICE_CATALOG_UNIT_LABELS[item.unit]}`
+                      : "Prix sur devis"}
                   </p>
                 </div>
                 <div className="flex flex-wrap items-center gap-1">

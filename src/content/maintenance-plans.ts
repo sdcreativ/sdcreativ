@@ -22,8 +22,8 @@ export const maintenancePlans: MaintenancePlan[] = [
     id: "essentiel",
     name: "Essentiel",
     tagline: "Sérénité au quotidien.",
-    priceMonthly: 45_000,
-    priceAnnual: 480_000,
+    priceMonthly: 0,
+    priceAnnual: 0,
     sla: "Standard",
     responseTime: "48h ouvrées",
     features: [
@@ -38,8 +38,8 @@ export const maintenancePlans: MaintenancePlan[] = [
     id: "professionnel",
     name: "Professionnel",
     tagline: "Pour les sites actifs.",
-    priceMonthly: 85_000,
-    priceAnnual: 900_000,
+    priceMonthly: 0,
+    priceAnnual: 0,
     sla: "Prioritaire",
     responseTime: "24h ouvrées",
     highlighted: true,
@@ -56,8 +56,8 @@ export const maintenancePlans: MaintenancePlan[] = [
     id: "premium",
     name: "Premium SLA",
     tagline: "Réactivité maximale.",
-    priceMonthly: 150_000,
-    priceAnnual: 1_600_000,
+    priceMonthly: 0,
+    priceAnnual: 0,
     sla: "Premium",
     responseTime: "4h ouvrées",
     features: [
@@ -115,7 +115,7 @@ export const maintenanceFaq = [
   {
     question: "Puis-je payer mensuellement ou annuellement ?",
     answer:
-      "Oui, les deux options sont disponibles. L'abonnement annuel vous fait économiser l'équivalent de 2 mois (ex. Essentiel : 480 000 FCFA/an au lieu de 540 000 FCFA en mensuel).",
+      "Oui, les deux options sont disponibles. L'abonnement annuel inclut en général l'équivalent de 2 mois offerts — le détail figure sur votre devis personnalisé.",
   },
   {
     question: "Que couvre une intervention ?",

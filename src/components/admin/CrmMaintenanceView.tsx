@@ -240,7 +240,10 @@ export function CrmMaintenanceView() {
                           className={crmFieldClass}
                         />
                       </CrmFormField>
-                      <CrmFormField label="Prix mensuel (FCFA, optionnel)">
+                      <CrmFormField
+                        label="Prix mensuel (FCFA, optionnel)"
+                        hint="Vide → « Devis personnalisé gratuit » sur le site"
+                      >
                         <input
                           type="number"
                           min={0}
@@ -255,11 +258,14 @@ export function CrmMaintenanceView() {
                             };
                             setForm({ ...form, plans });
                           }}
-                          placeholder="Sur devis"
+                          placeholder="Laisser vide"
                           className={crmFieldClass}
                         />
                       </CrmFormField>
-                      <CrmFormField label="Prix annuel (FCFA, optionnel)">
+                      <CrmFormField
+                        label="Prix annuel (FCFA, optionnel)"
+                        hint="Vide → masqué si le mensuel l’est aussi"
+                      >
                         <input
                           type="number"
                           min={0}
@@ -274,7 +280,7 @@ export function CrmMaintenanceView() {
                             };
                             setForm({ ...form, plans });
                           }}
-                          placeholder="Sur devis"
+                          placeholder="Laisser vide"
                           className={crmFieldClass}
                         />
                       </CrmFormField>

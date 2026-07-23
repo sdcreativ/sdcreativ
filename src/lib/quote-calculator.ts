@@ -5,7 +5,7 @@ import {
   quoteProjectTypes,
 } from "@/content/quote-config";
 import type { SiteQuoteConfigSettings } from "@/lib/site-quote-config-types";
-import { formatFcfa } from "@/lib/format";
+import { formatFcfa, hasPublicPrice, PRICE_ON_REQUEST_LABEL } from "@/lib/format";
 
 export type QuoteInput = {
   projectTypeId: string;
@@ -30,6 +30,8 @@ export type QuoteResult = {
   formattedSubtotal: string;
   formattedRange: string;
   note: string;
+  /** false si tous les prix config sont à 0 / absents. */
+  hasPricedEstimate: boolean;
 };
 
 export type QuoteCalculatorConfig = Pick<
@@ -67,13 +69,14 @@ export function calculateQuote(
   const project = getProjectType(input.projectTypeId, config);
   if (!project) return null;
 
-  const lines: QuoteLine[] = [
-    { label: `${project.label} — base`, amount: project.basePrice },
-  ];
+  const lines: QuoteLine[] = [];
+  if (hasPublicPrice(project.basePrice)) {
+    lines.push({ label: `${project.label} — base`, amount: project.basePrice });
+  }
 
   if (project.supportsPages && input.pageTierId) {
     const tier = config.pageTiers.find((t) => t.id === input.pageTierId);
-    if (tier && tier.extraPrice > 0) {
+    if (tier && hasPublicPrice(tier.extraPrice)) {
       lines.push({ label: tier.label, amount: tier.extraPrice });
     }
   }
@@ -82,10 +85,12 @@ export function calculateQuote(
     const addon = config.addons.find((a) => a.id === addonId);
     if (!addon) continue;
     if (addon.forProjects && !addon.forProjects.includes(project.id)) continue;
+    if (!hasPublicPrice(addon.price)) continue;
     lines.push({ label: addon.label, amount: addon.price });
   }
 
   const subtotal = lines.reduce((sum, line) => sum + line.amount, 0);
+  const hasPricedEstimate = hasPublicPrice(subtotal);
   const estimateMin = Math.round(subtotal * (1 - RANGE_MARGIN));
   const estimateMax = Math.round(subtotal * (1 + RANGE_MARGIN));
 
@@ -95,8 +100,13 @@ export function calculateQuote(
     subtotal,
     estimateMin,
     estimateMax,
-    formattedSubtotal: `${formatFcfa(subtotal)} FCFA`,
-    formattedRange: `${formatFcfa(estimateMin)} – ${formatFcfa(estimateMax)} FCFA`,
+    formattedSubtotal: hasPricedEstimate
+      ? `${formatFcfa(subtotal)} FCFA`
+      : PRICE_ON_REQUEST_LABEL,
+    formattedRange: hasPricedEstimate
+      ? `${formatFcfa(estimateMin)} – ${formatFcfa(estimateMax)} FCFA`
+      : PRICE_ON_REQUEST_LABEL,
     note: config.estimateNote,
+    hasPricedEstimate,
   };
 }

@@ -7,7 +7,7 @@ export const faqItems: FaqItem[] = [
   {
     question: "Combien coûte un site web ?",
     answer:
-      "Nos formules démarrent à partir de 350 000 FCFA (Essentiel), 850 000 FCFA (Professionnel) et 1 800 000 FCFA (Business), hors taxes. Le tarif final dépend du nombre de pages, des fonctionnalités et du niveau d'accompagnement. Contactez-nous pour un devis personnalisé gratuit.",
+      "Nous proposons trois formules (Essentiel, Professionnel, Business) adaptées à chaque étape. Le tarif dépend du nombre de pages, des fonctionnalités et du niveau d'accompagnement. Contactez-nous pour un devis personnalisé gratuit.",
   },
   {
     question: "Le site sera-t-il adapté aux mobiles ?",
@@ -22,7 +22,7 @@ export const faqItems: FaqItem[] = [
   {
     question: "Proposez-vous la maintenance après livraison ?",
     answer:
-      "Absolument. Nous proposons 3 formules maintenance (Essentiel, Professionnel, Premium SLA) en paiement mensuel ou annuel en FCFA — sauvegardes, mises à jour, monitoring et assistance technique. Voir /maintenance pour le détail.",
+      "Absolument. Nous proposons 3 formules maintenance (Essentiel, Professionnel, Premium SLA) — sauvegardes, mises à jour, monitoring et assistance technique. Voir /maintenance pour le détail et demander un devis.",
   },
   {
     question: "Puis-je modifier mon site moi-même ?",

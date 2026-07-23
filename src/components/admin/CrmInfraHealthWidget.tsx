@@ -274,8 +274,9 @@ function InfraCheckCard({ check }: { check: InfraCheck }) {
 }
 
 function buildSummary(health: InfraHealth) {
-  const dockerRunning = health.dockerServices.filter((s) => s.status === "running").length;
-  const dockerTotal = health.dockerServices.filter((s) => s.name !== "certbot").length;
+  const coreDocker = health.dockerServices.filter((s) => s.name !== "certbot");
+  const dockerRunning = coreDocker.filter((s) => s.status === "running").length;
+  const dockerTotal = coreDocker.length;
   const diskCheck = health.checks.find((c) => c.id === "disk");
   const diskUsed = diskCheck?.metrics?.find((m) => m.label === "Utilisation")?.value ?? "—";
   const backupCheck = health.checks.find((c) => c.id === "s3-backup");

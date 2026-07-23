@@ -14,9 +14,12 @@ export function getStorageErrorMessage(error: unknown): string {
     case "NoSuchBucket":
       return "Bucket S3 introuvable — vérifiez AWS_S3_BUCKET et la région AWS_REGION.";
     case "AccessDenied":
-      return "Accès S3 refusé — l'utilisateur IAM doit avoir s3:ListBucket, s3:GetObject, s3:PutObject et s3:DeleteObject.";
+    case "AccessDeniedException":
+    case "AllAccessDisabled":
+      return "Accès S3 refusé — l'utilisateur IAM doit avoir s3:ListBucket (prefix clients/* et backups/*) ainsi que GetObject/PutObject/DeleteObject sur ces préfixes.";
     case "PermanentRedirect":
     case "AuthorizationHeaderMalformed":
+    case "IllegalLocationConstraintException":
       return "Région S3 incorrecte — vérifiez que AWS_REGION correspond à votre bucket.";
     default:
       if (err.message?.includes("AWS S3 is not configured")) {

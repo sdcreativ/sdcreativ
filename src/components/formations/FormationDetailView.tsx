@@ -21,7 +21,7 @@ import {
   getFormationPriceFrom,
   type ResolvedFormationCategory,
 } from "@/lib/formations-resolver";
-import { formatFcfa, formatPriceFrom } from "@/lib/format";
+import { formatFcfa, formatPriceFrom, PRICE_ON_REQUEST_LABEL } from "@/lib/format";
 import { isProxiedMediaUrl, resolveImageDisplayUrl } from "@/lib/image-url";
 import { buildWhatsappUrl } from "@/lib/site-public-resolver";
 import { getSitePublicSettings } from "@/lib/site-public-settings";
@@ -199,7 +199,9 @@ export async function FormationDetailView({ category, related }: Props) {
                           {formatFcfa(course.price)} FCFA
                         </span>
                       ) : (
-                        <span className="text-xs font-medium text-gray-text">Sur devis</span>
+                        <span className="text-xs font-medium text-gray-text">
+                          {PRICE_ON_REQUEST_LABEL}
+                        </span>
                       )}
                     </div>
                   </div>

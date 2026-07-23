@@ -56,7 +56,7 @@ export const localSeoPages: LocalSeoPage[] = [
       {
         question: "Combien coûte un site web à Abidjan ?",
         answer:
-          "Nos formules démarrent à 350 000 FCFA HT pour un site vitrine. Utilisez notre configurateur de devis en ligne pour une estimation instantanée.",
+          "Chaque projet fait l'objet d'un devis personnalisé gratuit. Utilisez notre configurateur de devis en ligne pour décrire votre besoin.",
       },
     ],
   },
@@ -87,7 +87,7 @@ export const localSeoPages: LocalSeoPage[] = [
       },
     ],
     benefits: [
-      "Tarifs transparents en FCFA",
+      "Devis personnalisé gratuit",
       "Sites 100 % responsive",
       "E-commerce Mobile Money",
       "Formation incluse",

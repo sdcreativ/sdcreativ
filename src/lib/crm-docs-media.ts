@@ -29,7 +29,7 @@ export function getCrmDocS3PublicUrl(key: string): string {
   if (base) return `${base}/${key}`;
 
   const bucket = process.env.AWS_S3_BUCKET;
-  const region = process.env.AWS_REGION ?? "eu-west-1";
+  const region = process.env.AWS_REGION ?? "eu-west-3";
   if (!bucket) throw new Error("AWS_S3_BUCKET is not configured.");
   return `https://${bucket}.s3.${region}.amazonaws.com/${key}`;
 }

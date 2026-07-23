@@ -3,6 +3,7 @@ import { AnimatedSection, AnimatedCard } from "@/components/ui/AnimatedSection";
 import { SectionHeading } from "@/components/ui/SectionHeading";
 import { Button } from "@/components/ui/Button";
 import { getPricingPlans, getPricingReassurance } from "@/lib/public-pricing-resolver";
+import { PRICE_ON_REQUEST_LABEL } from "@/lib/format";
 import { SITE_VALUE_PROP } from "@/lib/site-value-prop";
 import { cn } from "@/lib/utils";
 
@@ -59,7 +60,7 @@ export async function PricingSection({ locale = "fr" }: Props) {
                   plan.variant === "accent" ? "text-accent" : "text-primary",
                 )}
               >
-                Devis personnalisé gratuit
+                {locale === "en" ? "Free custom quote" : PRICE_ON_REQUEST_LABEL}
               </p>
               <ul className="mt-8 flex-1 space-y-3">
                 {plan.features.map((feature) => (

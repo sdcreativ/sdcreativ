@@ -14,6 +14,7 @@ set -euo pipefail
 ROOT_DIR="$(cd "$(dirname "$0")/.." && pwd)"
 cd "$ROOT_DIR"
 
+# Compose / Postgres : .env (hôte). AWS S3 : uniquement via backup_s3_load_env (.env.docker).
 if [ -f .env ]; then
   set -a
   # shellcheck disable=SC1091

@@ -3,7 +3,7 @@ import { Check } from "lucide-react";
 import { PageHero } from "@/components/ui/PageHero";
 import { Button } from "@/components/ui/Button";
 import { enMaintenance } from "@/i18n/en-content";
-import { formatFcfa } from "@/lib/format";
+import { formatFcfa, hasPublicPrice } from "@/lib/format";
 import { getSiteMaintenanceSettings } from "@/lib/site-maintenance-settings";
 import { createMetadata } from "@/lib/metadata";
 
@@ -40,9 +40,15 @@ export default async function EnMaintenancePage() {
               </p>
               <h2 className="mt-2 text-2xl font-bold text-foreground">{plan.name}</h2>
               <p className="mt-1 text-sm text-gray-text">{plan.tagline}</p>
-              <p className="mt-6 text-2xl font-bold text-primary">
-                {formatFcfa(plan.priceMonthly)} FCFA
-                <span className="text-base font-normal text-gray-text"> / mo</span>
+              <p className="mt-6 text-xl font-semibold text-primary">
+                {hasPublicPrice(plan.priceMonthly) ? (
+                  <>
+                    {formatFcfa(plan.priceMonthly)} FCFA
+                    <span className="text-base font-normal text-gray-text"> / mo</span>
+                  </>
+                ) : (
+                  "Free custom quote"
+                )}
               </p>
               <ul className="mt-6 flex-1 space-y-2">
                 {plan.features.map((f) => (

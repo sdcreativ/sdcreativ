@@ -173,7 +173,7 @@ export default async function SolutionsIaPage() {
                 )}
                 <h3 className="text-xl font-bold text-foreground">{pack.name}</h3>
                 <p className="mt-1 text-sm text-gray-text">{pack.tagline}</p>
-                <p className="mt-4 text-2xl font-bold text-primary">
+                <p className="mt-4 text-xl font-semibold text-primary">
                   {formatPriceFrom(pack.priceFrom)}
                 </p>
                 <ul className="mt-6 flex-1 space-y-2">

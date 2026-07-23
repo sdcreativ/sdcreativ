@@ -66,9 +66,15 @@ export async function POST(request: Request) {
       .filter(Boolean)
       .join(", ");
 
-    const breakdown = quote.lines
-      .map((line) => `<li>${line.label} : ${line.amount.toLocaleString("fr-FR")} FCFA</li>`)
-      .join("");
+    const estimateBlock = quote.hasPricedEstimate
+      ? `<h3>Estimation calculée</h3>
+        <ul>${quote.lines
+          .map((line) => `<li>${line.label} : ${line.amount.toLocaleString("fr-FR")} FCFA</li>`)
+          .join("")}</ul>
+        <p><strong>Total indicatif :</strong> ${quote.formattedSubtotal} HT</p>
+        <p><strong>Fourchette :</strong> ${quote.formattedRange} HT</p>`
+      : `<h3>Estimation</h3>
+        <p>Devis personnalisé — montants à confirmer après étude du besoin.</p>`;
 
     const trackLabel = presentation.track === "salon" ? "Salon" : "Bureau";
     const locationLabel = PRESENTATION_LOCATION_LABELS[presentation.location];
@@ -92,10 +98,7 @@ export async function POST(request: Request) {
         ${htmlRow("Options", addonLabels || "—")}
         ${htmlRow("Budget indicatif client", getBudgetLabel(data.budget))}
         ${htmlRow("Délai souhaité", getTimelineLabel(data.timeline))}
-        <h3>Estimation calculée</h3>
-        <ul>${breakdown}</ul>
-        <p><strong>Total indicatif :</strong> ${quote.formattedSubtotal} HT</p>
-        <p><strong>Fourchette :</strong> ${quote.formattedRange} HT</p>
+        ${estimateBlock}
         ${data.message ? `<p><strong>Précisions :</strong><br>${data.message.replace(/\n/g, "<br>")}</p>` : ""}
       `,
     });
@@ -118,7 +121,7 @@ export async function POST(request: Request) {
       budget: data.budget,
       timeline: data.timeline,
       message: data.message || null,
-      estimatedValue: quote.subtotal,
+      estimatedValue: quote.hasPricedEstimate ? quote.subtotal : null,
       assignee: presentation.presenterName,
       actorName: presentation.presenterName,
       metadata: {

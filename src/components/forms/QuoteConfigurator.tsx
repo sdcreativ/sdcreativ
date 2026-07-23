@@ -461,7 +461,7 @@ export function QuoteConfigurator({
                 </li>
               ))}
             </ul>
-            <p className="mt-4 text-base font-bold text-primary">Devis sur mesure</p>
+            <p className="mt-4 text-base font-bold text-primary">Devis personnalisé gratuit</p>
             <p className="mt-1 text-sm text-gray-text">
               Nous calculons un montant adapté à votre contexte (périmètre, délais, contraintes).
             </p>

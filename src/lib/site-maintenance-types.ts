@@ -42,7 +42,8 @@ export const defaultSiteMaintenanceSettings: SiteMaintenanceSettings = {
     eyebrow: "Formules récurrentes",
     title: "Choisissez votre",
     highlight: "niveau de sérénité",
-    description: "Paiement mensuel ou annuel en FCFA. L'abonnement annuel inclut 2 mois offerts.",
+    description:
+      "Formules adaptées à votre niveau d'exigence. Devis personnalisé — paiement mensuel ou annuel possible.",
   },
   plans: maintenancePlans.map((p) => ({ ...p, features: [...p.features] })),
   slaComparison: slaComparison.map((r) => ({ ...r })),

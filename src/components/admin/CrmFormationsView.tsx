@@ -448,7 +448,7 @@ export function CrmFormationsView() {
                             setForm({ ...form, categories });
                           }}
                           className={crmFieldClass}
-                          placeholder="Prix FCFA"
+                          placeholder="Vide = devis personnalisé"
                         />
                         <button
                           type="button"
