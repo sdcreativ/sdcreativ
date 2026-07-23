@@ -1,9 +1,12 @@
 import type { MetadataRoute } from "next";
 import { SITE } from "@/lib/constants";
 import { localSeoPages } from "@/content/local-seo";
+import { LOCALE_ROUTE_PAIRS } from "@/i18n/routes";
 import { getFormationCategorySlugs } from "@/lib/formations-resolver";
 import { getServiceDetailSlugs } from "@/lib/public-services-resolver";
 import { getBlogPosts, getRealisations } from "@/lib/cms";
+
+const EXTRA_STATIC_FR = ["/carrieres"] as const;
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const [blogPosts, realisations, formationSlugs] = await Promise.all([
@@ -12,30 +15,11 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     getFormationCategorySlugs(),
   ]);
 
-  const staticPages = [
-    "",
-    "/services",
-    "/realisations",
-    "/a-propos",
-    "/tarifs",
-    "/devis",
-    "/audit-gratuit",
-    "/solutions-ia",
-    "/formations",
-    "/maintenance",
-    "/faq",
-    "/blog",
-    "/contact",
-    "/carrieres",
-    "/en",
-    "/en/services",
-    "/en/training",
-    "/en/pricing",
-    "/en/about",
-    "/en/contact",
-    "/mentions-legales",
-    "/politique-confidentialite",
-  ];
+  const pairPaths = LOCALE_ROUTE_PAIRS.flatMap((pair) =>
+    pair.fr === "/" ? ["", pair.en] : [pair.fr, pair.en],
+  );
+
+  const staticPages = Array.from(new Set([...pairPaths, ...EXTRA_STATIC_FR]));
 
   const blogEntries = blogPosts.map((post) => ({
     url: `${SITE.url}/blog/${post.slug}`,

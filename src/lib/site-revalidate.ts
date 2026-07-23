@@ -3,7 +3,9 @@ import {
   PUBLIC_PRICING_PLANS_TAG,
   PUBLIC_PRICING_REASSURANCE_TAG,
 } from "@/lib/public-pricing-resolver";
+import { SITE_AUDIT_SETTINGS_TAG } from "@/lib/site-audit-settings";
 import { SITE_PUBLIC_SETTINGS_TAG } from "@/lib/site-public-settings";
+import { SITE_QUOTE_CONFIG_TAG } from "@/lib/site-quote-config-settings";
 
 /** Invalide les pages publiques après modification des coordonnées / réseaux sociaux. */
 export function revalidateSitePublicPages() {
@@ -36,6 +38,7 @@ export function revalidateTestimonialsPages() {
 export function revalidateFaqPages() {
   revalidatePath("/");
   revalidatePath("/faq");
+  revalidatePath("/en/faq");
   revalidatePath("/sitemap.xml");
 }
 
@@ -48,7 +51,9 @@ export function revalidateHeroPages() {
 }
 
 export function revalidateDevisPages() {
+  revalidateTag(SITE_QUOTE_CONFIG_TAG, "max");
   revalidatePath("/devis");
+  revalidatePath("/en/devis");
 }
 
 export function revalidatePricingPages() {
@@ -99,6 +104,7 @@ export function revalidatePageHeroesPages() {
 
 export function revalidateSolutionsIaPages() {
   revalidatePath("/solutions-ia");
+  revalidatePath("/en/solutions-ia");
   revalidatePath("/sitemap.xml");
 }
 
@@ -128,6 +134,7 @@ export function revalidateFormationsPages() {
 }
 
 export function revalidateAuditPages() {
+  revalidateTag(SITE_AUDIT_SETTINGS_TAG, "max");
   revalidatePath("/audit-gratuit");
   revalidatePath("/en/free-audit");
   revalidatePath("/sitemap.xml");

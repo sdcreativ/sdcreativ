@@ -19,5 +19,5 @@ export function hasPublicPrice(amount: number | null | undefined): boolean {
 /** « À partir de X FCFA » ou libellé devis si montant absent / 0. */
 export function formatPriceFrom(amount: number | null | undefined): string {
   if (!hasPublicPrice(amount)) return PRICE_ON_REQUEST_LABEL;
-  return `À partir de ${formatFcfa(amount)} FCFA`;
+  return `À partir de ${formatFcfa(amount as number)} FCFA`;
 }

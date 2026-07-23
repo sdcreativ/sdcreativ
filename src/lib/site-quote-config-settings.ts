@@ -1,10 +1,13 @@
 import { cache } from "react";
+import { unstable_cache } from "next/cache";
 import { z } from "zod";
 import { isDatabaseConfigured, withDb } from "@/lib/db";
 import {
   defaultSiteQuoteConfigSettings,
   type SiteQuoteConfigSettings,
 } from "@/lib/site-quote-config-types";
+
+export const SITE_QUOTE_CONFIG_TAG = "site-quote-config";
 
 type SiteQuoteConfigRow = {
   site_quote_config: Partial<SiteQuoteConfigSettings> | null;
@@ -91,7 +94,7 @@ function mergeQuoteConfig(raw: Partial<SiteQuoteConfigSettings> | null): SiteQuo
   };
 }
 
-export const getSiteQuoteConfigSettings = cache(async (): Promise<SiteQuoteConfigSettings> => {
+async function loadSiteQuoteConfigSettings(): Promise<SiteQuoteConfigSettings> {
   if (!isDatabaseConfigured()) return defaultSiteQuoteConfigSettings;
 
   try {
@@ -105,10 +108,18 @@ export const getSiteQuoteConfigSettings = cache(async (): Promise<SiteQuoteConfi
     console.error("[site-quote-config] getSiteQuoteConfigSettings fallback:", error);
     return defaultSiteQuoteConfigSettings;
   }
+}
+
+/** Config devis publique — cache taggé (ISR, sans force-dynamic). */
+export const getSiteQuoteConfigSettings = cache(async (): Promise<SiteQuoteConfigSettings> => {
+  return unstable_cache(loadSiteQuoteConfigSettings, ["site-quote-config"], {
+    tags: [SITE_QUOTE_CONFIG_TAG],
+    revalidate: 300,
+  })();
 });
 
 export async function getSiteQuoteConfigSettingsForAdmin(): Promise<SiteQuoteConfigSettings> {
-  return getSiteQuoteConfigSettings();
+  return loadSiteQuoteConfigSettings();
 }
 
 export async function updateSiteQuoteConfigSettings(

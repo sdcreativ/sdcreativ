@@ -7,7 +7,9 @@ import { getGooglePlaceReviews, isGooglePlacesConfigured } from "@/lib/google-pl
 
 const reviewUrl = process.env.NEXT_PUBLIC_GOOGLE_REVIEW_URL;
 
-export async function GoogleReviewsSection() {
+type Props = { locale?: "fr" | "en" };
+
+export async function GoogleReviewsSection({ locale = "fr" }: Props) {
   if (!reviewUrl && !isGooglePlacesConfigured()) return null;
 
   const payload = isGooglePlacesConfigured()
@@ -19,17 +21,23 @@ export async function GoogleReviewsSection() {
 
   if (!hasReviews && !reviewUrl) return null;
 
+  const isEn = locale === "en";
+
   return (
     <AnimatedSection className="bg-white py-20 md:py-28" id="avis-google">
       <div className="container mx-auto px-4 md:px-6 lg:px-8">
         <SectionHeading
-          eyebrow="Avis Google"
-          title="Ce que disent"
-          highlight="nos clients"
+          eyebrow={isEn ? "Google reviews" : "Avis Google"}
+          title={isEn ? "What our" : "Ce que disent"}
+          highlight={isEn ? "clients say" : "nos clients"}
           description={
             hasRating
-              ? `Note moyenne ${payload.rating.toFixed(1)}/5 basée sur ${payload.reviewCount} avis Google.`
-              : "Consultez nos avis clients sur Google ou partagez votre expérience."
+              ? isEn
+                ? `Average rating ${payload.rating.toFixed(1)}/5 based on ${payload.reviewCount} Google reviews.`
+                : `Note moyenne ${payload.rating.toFixed(1)}/5 basée sur ${payload.reviewCount} avis Google.`
+              : isEn
+                ? "Read our Google reviews or share your experience."
+                : "Consultez nos avis clients sur Google ou partagez votre expérience."
           }
           className="mb-10"
         />
@@ -55,7 +63,7 @@ export async function GoogleReviewsSection() {
           )}
           {reviewUrl && (
             <Button href={reviewUrl} external size="sm">
-              Voir les avis Google
+              {isEn ? "View Google reviews" : "Voir les avis Google"}
               <ExternalLink className="h-3.5 w-3.5" aria-hidden />
             </Button>
           )}
@@ -80,7 +88,7 @@ export async function GoogleReviewsSection() {
                 <footer className="mt-4 border-t border-gray/40 pt-4">
                   <p className="text-sm font-bold text-foreground">{review.author}</p>
                   <p className="text-xs text-gray-text">
-                    {new Date(review.date).toLocaleDateString("fr-FR", {
+                    {new Date(review.date).toLocaleDateString(isEn ? "en-GB" : "fr-FR", {
                       month: "long",
                       year: "numeric",
                     })}
@@ -99,7 +107,7 @@ export async function GoogleReviewsSection() {
               rel="noopener noreferrer"
               className="text-sm font-semibold text-primary hover:underline"
             >
-              Laisser un avis sur Google →
+              {isEn ? "Leave a Google review →" : "Laisser un avis sur Google →"}
             </Link>
           </p>
         )}

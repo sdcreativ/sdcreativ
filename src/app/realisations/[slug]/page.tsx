@@ -15,6 +15,7 @@ import {
 import { Breadcrumb } from "@/components/ui/Breadcrumb";
 import { Button } from "@/components/ui/Button";
 import { RealisationCard } from "@/components/realisations/RealisationCard";
+import { BreadcrumbJsonLd } from "@/components/seo/JsonLd";
 import { RealisationJsonLd } from "@/components/seo/RealisationJsonLd";
 import { getRealisation, getRelatedRealisations, getRealisations } from "@/lib/cms";
 import { getSitePublicSettings } from "@/lib/site-public-settings";
@@ -54,21 +55,21 @@ export default async function RealisationDetailPage({ params }: Props) {
   const { contact } = await getSitePublicSettings();
   const waUrl = buildWhatsappUrl(contact);
 
+  const breadcrumbItems = [
+    { label: "Accueil", href: "/" },
+    { label: "Réalisations", href: "/realisations" },
+    { label: project.title },
+  ];
+
   return (
     <>
       <RealisationJsonLd project={project} />
+      <BreadcrumbJsonLd items={breadcrumbItems} />
 
       {/* Hero */}
       <header className="bg-dark pt-28 pb-12 md:pt-32">
         <div className="container mx-auto px-4 md:px-6 lg:px-8">
-          <Breadcrumb
-            className="mb-6"
-            items={[
-              { label: "Accueil", href: "/" },
-              { label: "Réalisations", href: "/realisations" },
-              { label: project.title },
-            ]}
-          />
+          <Breadcrumb className="mb-6" items={breadcrumbItems} />
 
           <div className="flex flex-wrap items-center gap-3 text-sm text-white/60">
             <span

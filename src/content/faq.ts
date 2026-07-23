@@ -35,3 +35,37 @@ export const faqItems: FaqItem[] = [
       "Oui, nous sommes basés à Abidjan et accompagnons les PME et entrepreneurs ivoiriens avec un suivi de proximité. Nous intervenons également à l'international (Afrique de l'Ouest, Europe) pour des projets à distance.",
   },
 ];
+
+/** Fallback FAQ for the English public site when no CMS EN entries exist. */
+export const faqItemsEn: FaqItem[] = [
+  {
+    question: "How much does a website cost?",
+    answer:
+      "We offer three packages (Essentiel, Professionnel, Business) tailored to each stage. Pricing depends on pages, features and support level. Contact us for a free custom quote.",
+  },
+  {
+    question: "Will the site be mobile-friendly?",
+    answer:
+      "Yes — every site we deliver is fully responsive across smartphones, tablets and desktops.",
+  },
+  {
+    question: "How long does a project take?",
+    answer:
+      "Typically 15 to 30 days depending on complexity. We agree on a clear timeline when the quote is approved.",
+  },
+  {
+    question: "Do you offer maintenance after launch?",
+    answer:
+      "Yes. We provide three maintenance plans (Essentiel, Professionnel, Premium SLA) with backups, updates, monitoring and technical support. See /en/maintenance for details.",
+  },
+  {
+    question: "Can I update the site myself?",
+    answer:
+      "Yes — we can set up a CMS so you can edit texts, images and blog posts on your own.",
+  },
+  {
+    question: "Do you work with companies in Côte d'Ivoire?",
+    answer:
+      "Yes. We are based in Abidjan and support Ivorian SMEs closely. We also deliver remote projects across West Africa and Europe.",
+  },
+];

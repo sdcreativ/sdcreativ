@@ -6,6 +6,7 @@ import { SkipLink } from "@/components/layout/SkipLink";
 import { CookieConsent } from "@/components/layout/CookieConsent";
 import { AppProviders } from "@/components/layout/AppProviders";
 import { Analytics } from "@/components/analytics/Analytics";
+import { DocumentLang } from "@/components/i18n/DocumentLang";
 import { OrganizationJsonLd, LocalBusinessJsonLd, WebSiteJsonLd } from "@/components/seo/JsonLd";
 import { SITE } from "@/lib/constants";
 import { getSitePublicSettings } from "@/lib/site-public-settings";
@@ -43,6 +44,7 @@ export default async function RootLayout({
         suppressHydrationWarning
       >
         <AppProviders sitePublic={sitePublic}>
+          <DocumentLang />
           <SkipLink />
           <HeaderGate />
           <main id="main-content" className="flex-1">

@@ -17,18 +17,22 @@ const highlightIcons = [Monitor, Search, Smartphone, HeadphonesIcon];
 export async function HeroSection() {
   const hero = await getSiteHeroSettings();
   const backgroundSrc = resolveImageDisplayUrl(hero.backgroundImage);
+  const heroAlt = [hero.titleBefore, hero.titleHighlight, hero.titleAfter]
+    .filter(Boolean)
+    .join(" ")
+    .replace(/\s+/g, " ")
+    .trim();
 
   return (
     <section className="relative overflow-hidden bg-dark pt-[4.5rem] md:pt-[4.75rem]">
       <Image
         src={backgroundSrc}
-        alt=""
+        alt={heroAlt || "SD CREATIV — agence web Abidjan"}
         fill
         priority
         unoptimized={isProxiedMediaUrl(backgroundSrc)}
         className="object-cover object-[center_40%]"
         sizes="100vw"
-        aria-hidden
       />
       <div className="absolute inset-0 bg-[#0a1628]/62" />
       <div className="absolute inset-0 bg-gradient-to-r from-[#0a1628]/82 via-[#0a1628]/55 to-[#0a1628]/25" />

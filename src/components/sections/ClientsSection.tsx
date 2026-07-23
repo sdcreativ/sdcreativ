@@ -4,10 +4,14 @@ import { getRealisations } from "@/lib/cms";
 import { uniqueSectorsFromRealisations } from "@/lib/portfolio-public-stats";
 import { getTechnologyPartners } from "@/lib/public-partners-resolver";
 
-export async function ClientsSection() {
+type Props = { locale?: "fr" | "en" };
+
+export async function ClientsSection({ locale = "fr" }: Props) {
   const [items, partners] = await Promise.all([
     getRealisations(),
-    getTechnologyPartners("fr"),
+    getTechnologyPartners(locale === "en" ? "en" : "fr").then(async (list) =>
+      list.length > 0 || locale !== "en" ? list : getTechnologyPartners("fr"),
+    ),
   ]);
 
   const sectors = uniqueSectorsFromRealisations(items);
@@ -16,20 +20,26 @@ export async function ClientsSection() {
 
   if (labels.length === 0) return null;
 
+  const isEn = locale === "en";
+
   return (
     <AnimatedSection className="border-y border-gray/40 bg-gray-light/30 py-14 md:py-16">
       <div className="container mx-auto px-4 md:px-6 lg:px-8">
         <SectionHeading
-          eyebrow="Confiance"
-          title="Ils nous font"
-          highlight="confiance"
+          eyebrow={isEn ? "Trust" : "Confiance"}
+          title={isEn ? "They trust" : "Ils nous font"}
+          highlight={isEn ? "us" : "confiance"}
           align="center"
           className="mb-10"
         />
         <p className="mx-auto mb-10 max-w-2xl text-center text-sm text-gray-text">
           {sectors.length > 0
-            ? "Des secteurs variés nous confient leur présence digitale."
-            : "Des technologies et partenaires de confiance pour vos projets."}
+            ? isEn
+              ? "Organizations across industries entrust us with their digital presence."
+              : "Des secteurs variés nous confient leur présence digitale."
+            : isEn
+              ? "Trusted technologies and partners for your projects."
+              : "Des technologies et partenaires de confiance pour vos projets."}
         </p>
         <ul className="flex flex-wrap items-center justify-center gap-3 md:gap-4">
           {labels.map((label) => (

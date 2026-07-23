@@ -25,7 +25,7 @@ export default function EnContactPage() {
       />
       <section className="py-20 md:py-28">
         <div className="container mx-auto max-w-2xl px-4 md:px-6 lg:px-8">
-          <ContactForm />
+          <ContactForm locale="en" />
         </div>
       </section>
     </>

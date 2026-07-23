@@ -18,11 +18,12 @@ export function Header() {
   const isEn = pathname.startsWith("/en");
   const isAdmin = pathname.startsWith("/admin");
   const nav = isEn ? enNav : mainNav;
-  const devisHref = "/devis";
+  const devisHref = isEn ? "/en/devis" : "/devis";
   const ctaLabel = isEn ? "Get a quote" : "Demander un devis";
   const servicesLabel = isEn ? "Services" : "Services";
 
   const [mobileOpen, setMobileOpen] = useState(false);
+  const [mobileServicesOpen, setMobileServicesOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
   const [servicesOpen, setServicesOpen] = useState(false);
 
@@ -39,6 +40,10 @@ export function Header() {
     };
   }, [mobileOpen]);
 
+  useEffect(() => {
+    if (!mobileOpen) setMobileServicesOpen(false);
+  }, [mobileOpen]);
+
   if (isAdmin) return null;
 
   return (
@@ -53,7 +58,7 @@ export function Header() {
 
         <nav
           className="hidden flex-1 justify-center lg:flex"
-          aria-label="Navigation principale"
+          aria-label={isEn ? "Main navigation" : "Navigation principale"}
         >
           <div className="nav-pill-track">
             {nav.map((item) =>
@@ -167,20 +172,53 @@ export function Header() {
             id="mobile-navigation"
             className="fixed inset-x-0 top-[4.5rem] z-50 max-h-[calc(100vh-4.5rem)] overflow-y-auto border-b border-gray/60 bg-[#f6f6f6] lg:hidden md:top-[4.75rem]"
           >
-            <nav className="container mx-auto px-4 py-5" aria-label="Navigation mobile">
+            <nav
+              className="container mx-auto px-4 py-5"
+              aria-label={isEn ? "Mobile navigation" : "Navigation mobile"}
+            >
               <div className="flex flex-col gap-1 rounded-2xl border border-[#e0e0e0] bg-white p-2 shadow-sm">
-                {nav.map((item) => (
+                {nav.map((item) => {
+                  const hasChildren = "children" in item && Boolean(item.children?.length);
+                  return (
                   <div key={item.href}>
-                    <NavGlowLink
-                      href={item.href}
-                      variant="dropdown"
-                      active={isNavLinkActive(item.href, pathname)}
-                      className="text-base"
-                      onClick={() => setMobileOpen(false)}
-                    >
-                      {item.label}
-                    </NavGlowLink>
-                    {"children" in item &&
+                    <div className="flex items-center gap-1">
+                      <NavGlowLink
+                        href={item.href}
+                        variant="dropdown"
+                        active={isNavLinkActive(item.href, pathname)}
+                        className="flex-1 text-base"
+                        onClick={() => setMobileOpen(false)}
+                      >
+                        {item.label}
+                      </NavGlowLink>
+                      {hasChildren && (
+                        <button
+                          type="button"
+                          className="rounded-lg p-2 text-gray-text hover:bg-gray-light hover:text-foreground"
+                          aria-expanded={mobileServicesOpen}
+                          aria-label={
+                            isEn
+                              ? mobileServicesOpen
+                                ? "Hide services"
+                                : "Show services"
+                              : mobileServicesOpen
+                                ? "Masquer les services"
+                                : "Afficher les services"
+                          }
+                          onClick={() => setMobileServicesOpen((open) => !open)}
+                        >
+                          <ChevronDown
+                            className={cn(
+                              "h-4 w-4 transition-transform",
+                              mobileServicesOpen && "rotate-180",
+                            )}
+                            aria-hidden
+                          />
+                        </button>
+                      )}
+                    </div>
+                    {hasChildren &&
+                      mobileServicesOpen &&
                       item.children?.map((child) => (
                         <NavGlowLink
                           key={child.href}
@@ -193,7 +231,8 @@ export function Header() {
                         </NavGlowLink>
                       ))}
                   </div>
-                ))}
+                  );
+                })}
               </div>
               <div className="mt-4 flex justify-center sm:hidden">
                 <LocaleSwitcher />

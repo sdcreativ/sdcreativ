@@ -21,7 +21,7 @@ import { Button } from "@/components/ui/Button";
 import { HoneypotField } from "@/components/forms/HoneypotField";
 import { TurnstileWidget } from "@/components/forms/TurnstileWidget";
 import { useFormTurnstile } from "@/components/forms/useFormTurnstile";
-import { contactSubjectOptions } from "@/content/contact-options";
+import { contactFormCopy, getContactSubjectOptions, type FormLocale } from "@/i18n/form-copy";
 import { cn } from "@/lib/utils";
 
 type FormState = "idle" | "loading" | "success" | "error";
@@ -29,6 +29,7 @@ type FormState = "idle" | "loading" | "success" | "error";
 type ContactFormProps = {
   className?: string;
   defaultSubject?: string;
+  locale?: FormLocale;
 };
 
 type FormFieldProps = {
@@ -60,14 +61,19 @@ function FormField({ id, label, required, icon, children }: FormFieldProps) {
 const fieldClass =
   "w-full rounded-xl border border-gray/80 bg-white px-4 py-3.5 text-sm text-foreground shadow-sm transition-all duration-200 placeholder:text-gray-text/50 hover:border-primary/30 hover:shadow-md focus:border-primary focus:bg-white focus:outline-none focus:ring-4 focus:ring-primary/10";
 
-export function ContactForm({ className, defaultSubject = "" }: ContactFormProps) {
+export function ContactForm({
+  className,
+  defaultSubject = "",
+  locale = "fr",
+}: ContactFormProps) {
+  const t = contactFormCopy[locale];
+  const subjectOptions = getContactSubjectOptions(locale);
   const [state, setState] = useState<FormState>("idle");
   const [errorMessage, setErrorMessage] = useState("");
   const { turnstileToken, setTurnstileToken, validate, reset, onExpire, required } = useFormTurnstile();
 
   const resolvedDefaultSubject =
-    defaultSubject &&
-    contactSubjectOptions.some((option) => option.value === defaultSubject)
+    defaultSubject && subjectOptions.some((option) => option.value === defaultSubject)
       ? defaultSubject
       : "";
 
@@ -105,7 +111,7 @@ export function ContactForm({ className, defaultSubject = "" }: ContactFormProps
       const json = await res.json();
 
       if (!res.ok) {
-        throw new Error(json.error ?? "Une erreur est survenue.");
+        throw new Error(json.error ?? t.errorFallback);
       }
 
       setState("success");
@@ -113,7 +119,7 @@ export function ContactForm({ className, defaultSubject = "" }: ContactFormProps
       reset();
     } catch (err) {
       setState("error");
-      setErrorMessage(err instanceof Error ? err.message : "Une erreur est survenue.");
+      setErrorMessage(err instanceof Error ? err.message : t.errorFallback);
     }
   }
 
@@ -132,17 +138,15 @@ export function ContactForm({ className, defaultSubject = "" }: ContactFormProps
           <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-primary shadow-lg shadow-primary/30">
             <CheckCircle className="h-8 w-8 text-white" aria-hidden />
           </div>
-          <h3 className="mt-6 text-2xl font-bold text-foreground">Message envoyé !</h3>
-          <p className="mx-auto mt-3 max-w-sm leading-relaxed text-gray-text">
-            Merci pour votre message. Notre équipe vous répond sous 24 à 48 heures ouvrées.
-          </p>
+          <h3 className="mt-6 text-2xl font-bold text-foreground">{t.successTitle}</h3>
+          <p className="mx-auto mt-3 max-w-sm leading-relaxed text-gray-text">{t.successBody}</p>
           <Button
             type="button"
             variant="ghost"
             className="mt-8"
             onClick={() => setState("idle")}
           >
-            Envoyer un autre message
+            {t.successAgain}
           </Button>
         </div>
       </motion.div>
@@ -167,18 +171,15 @@ export function ContactForm({ className, defaultSubject = "" }: ContactFormProps
             <Inbox className="h-5 w-5 text-primary" aria-hidden />
           </div>
           <div>
-            <h2 className="text-xl font-bold text-foreground md:text-2xl">Nous écrire</h2>
-            <p className="mt-1 text-sm leading-relaxed text-gray-text">
-              Posez votre question ou décrivez votre besoin — nous vous répondons personnellement
-              sous 24 à 48 h.
-            </p>
+            <h2 className="text-xl font-bold text-foreground md:text-2xl">{t.title}</h2>
+            <p className="mt-1 text-sm leading-relaxed text-gray-text">{t.subtitle}</p>
           </div>
         </div>
 
         <p className="mb-6 rounded-xl border border-primary/15 bg-primary/5 px-4 py-3 text-sm text-gray-text">
-          Besoin d&apos;une estimation chiffrée en FCFA ?{" "}
-          <Link href="/devis" className="font-semibold text-primary underline underline-offset-2">
-            Utilisez le configurateur de devis →
+          {t.quoteHint}{" "}
+          <Link href={t.quoteHref} className="font-semibold text-primary underline underline-offset-2">
+            {t.quoteLink}
           </Link>
         </p>
 
@@ -187,7 +188,7 @@ export function ContactForm({ className, defaultSubject = "" }: ContactFormProps
           <div className="grid gap-6 sm:grid-cols-2">
             <FormField
               id="name"
-              label="Nom complet"
+              label={t.name}
               required
               icon={<User className="h-3.5 w-3.5" aria-hidden />}
             >
@@ -198,13 +199,13 @@ export function ContactForm({ className, defaultSubject = "" }: ContactFormProps
                 required
                 autoComplete="name"
                 className={fieldClass}
-                placeholder="Jean Dupont"
+                placeholder={t.namePh}
               />
             </FormField>
 
             <FormField
               id="email"
-              label="Email"
+              label={t.email}
               required
               icon={<Mail className="h-3.5 w-3.5" aria-hidden />}
             >
@@ -215,7 +216,7 @@ export function ContactForm({ className, defaultSubject = "" }: ContactFormProps
                 required
                 autoComplete="email"
                 className={fieldClass}
-                placeholder="vous@entreprise.com"
+                placeholder={t.emailPh}
               />
             </FormField>
           </div>
@@ -223,7 +224,7 @@ export function ContactForm({ className, defaultSubject = "" }: ContactFormProps
           <div className="grid gap-6 sm:grid-cols-2">
             <FormField
               id="phone"
-              label="Téléphone"
+              label={t.phone}
               icon={<Phone className="h-3.5 w-3.5" aria-hidden />}
             >
               <input
@@ -232,13 +233,13 @@ export function ContactForm({ className, defaultSubject = "" }: ContactFormProps
                 type="tel"
                 autoComplete="tel"
                 className={fieldClass}
-                placeholder="+225 07 00 00 00 00"
+                placeholder={t.phonePh}
               />
             </FormField>
 
             <FormField
               id="company"
-              label="Entreprise"
+              label={t.company}
               icon={<Building2 className="h-3.5 w-3.5" aria-hidden />}
             >
               <input
@@ -247,28 +248,28 @@ export function ContactForm({ className, defaultSubject = "" }: ContactFormProps
                 type="text"
                 autoComplete="organization"
                 className={fieldClass}
-                placeholder="Nom de votre société"
+                placeholder={t.companyPh}
               />
             </FormField>
           </div>
 
           <FormField
             id="subject"
-            label="Sujet"
+            label={t.subject}
             required
             icon={<Tag className="h-3.5 w-3.5" aria-hidden />}
           >
             <div className="relative">
               <select
-                aria-label="Sujet du message"
+                aria-label={t.subject}
                 id="subject"
                 name="subject"
                 required
                 defaultValue={resolvedDefaultSubject}
                 className={cn(fieldClass, "cursor-pointer appearance-none pr-10")}
               >
-                <option value="">Choisissez un sujet</option>
-                {contactSubjectOptions.map((option) => (
+                <option value="">{t.subjectPlaceholder}</option>
+                {subjectOptions.map((option) => (
                   <option key={option.value} value={option.value}>
                     {option.label}
                   </option>
@@ -283,7 +284,7 @@ export function ContactForm({ className, defaultSubject = "" }: ContactFormProps
 
           <FormField
             id="message"
-            label="Votre message"
+            label={t.message}
             required
             icon={<MessageSquare className="h-3.5 w-3.5" aria-hidden />}
           >
@@ -293,7 +294,7 @@ export function ContactForm({ className, defaultSubject = "" }: ContactFormProps
               required
               rows={5}
               className={cn(fieldClass, "min-h-[140px] resize-y leading-relaxed")}
-              placeholder="Décrivez votre question ou votre demande..."
+              placeholder={t.messagePh}
             />
           </FormField>
 
@@ -314,12 +315,12 @@ export function ContactForm({ className, defaultSubject = "" }: ContactFormProps
 
           <div className="flex flex-col gap-5 border-t border-gray/80 pt-6 sm:flex-row sm:items-center sm:justify-between">
             <p className="max-w-xs text-xs leading-relaxed text-gray-text">
-              En soumettant ce formulaire, vous acceptez notre{" "}
+              {t.privacyPrefix}{" "}
               <a
-                href="/politique-confidentialite"
+                href={t.privacyHref}
                 className="font-medium text-primary underline underline-offset-2"
               >
-                politique de confidentialité
+                {t.privacyLink}
               </a>
               .
             </p>
@@ -333,11 +334,11 @@ export function ContactForm({ className, defaultSubject = "" }: ContactFormProps
               {state === "loading" ? (
                 <>
                   <Loader2 className="h-4 w-4 animate-spin" aria-hidden />
-                  Envoi en cours...
+                  {t.submitting}
                 </>
               ) : (
                 <>
-                  Envoyer mon message
+                  {t.submit}
                   <Send className="h-4 w-4" aria-hidden />
                 </>
               )}

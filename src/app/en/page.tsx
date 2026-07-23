@@ -2,7 +2,10 @@ import Link from "next/link";
 import { ArrowRight, CheckCircle2 } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { enHome } from "@/i18n/en-content";
+import { PartnersSection } from "@/components/sections/PartnersSection";
+import { ClientsSection } from "@/components/sections/ClientsSection";
 import { PricingSection } from "@/components/sections/PricingSection";
+import { GoogleReviewsSection } from "@/components/sections/GoogleReviewsSection";
 import { TestimonialsSection } from "@/components/sections/TestimonialsSection";
 import { FaqSection } from "@/components/sections/FaqSection";
 import { createMetadata } from "@/lib/metadata";
@@ -32,7 +35,7 @@ export default function EnHomePage() {
             {enHome.hero.description}
           </p>
           <div className="mt-10 flex flex-col items-center justify-center gap-4 sm:flex-row">
-            <Button href="/en/contact" size="lg">
+            <Button href="/en/devis" size="lg">
               {enHome.hero.ctaPrimary}
             </Button>
             <Button href="/en/portfolio" variant="outline" size="lg">
@@ -63,7 +66,10 @@ export default function EnHomePage() {
         </div>
       </section>
 
+      <PartnersSection locale="en" />
+      <ClientsSection locale="en" />
       <PricingSection locale="en" />
+      <GoogleReviewsSection locale="en" />
       <TestimonialsSection locale="en" />
       <FaqSection locale="en" />
 
@@ -71,9 +77,14 @@ export default function EnHomePage() {
         <div className="container mx-auto px-4 md:px-6 lg:px-8">
           <h2 className="text-2xl font-bold text-white md:text-3xl">{enHome.cta.title}</h2>
           <p className="mx-auto mt-3 max-w-xl text-white/70">{enHome.cta.description}</p>
-          <Button href="/en/contact" className="mt-8" size="lg">
-            {enHome.cta.button}
-          </Button>
+          <div className="mt-8 flex flex-col items-center justify-center gap-4 sm:flex-row">
+            <Button href="/en/devis" size="lg">
+              {enHome.hero.ctaPrimary}
+            </Button>
+            <Button href="/en/contact" variant="outline" size="lg">
+              {enHome.cta.button}
+            </Button>
+          </div>
           <p className="mt-6">
             <Link
               href="/"

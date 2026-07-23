@@ -58,7 +58,7 @@ export default async function EnMaintenancePage() {
                   </li>
                 ))}
               </ul>
-              <Button href="/en/contact" className="mt-8 w-full justify-center">
+              <Button href="/en/devis?type=maintenance" className="mt-8 w-full justify-center">
                 {enMaintenance.cta}
               </Button>
             </article>

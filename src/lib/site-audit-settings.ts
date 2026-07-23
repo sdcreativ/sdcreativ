@@ -1,4 +1,5 @@
 import { cache } from "react";
+import { unstable_cache } from "next/cache";
 import { z } from "zod";
 import { isDatabaseConfigured, withDb } from "@/lib/db";
 import { LUCIDE_ICON_NAME_ENUM } from "@/lib/lucide-icon-map";
@@ -6,6 +7,8 @@ import {
   defaultSiteAuditSettings,
   type SiteAuditSettings,
 } from "@/lib/site-audit-types";
+
+export const SITE_AUDIT_SETTINGS_TAG = "site-audit-settings";
 
 type Row = { site_audit: Partial<SiteAuditSettings> | null };
 
@@ -48,7 +51,7 @@ function merge(raw: Partial<SiteAuditSettings> | null): SiteAuditSettings {
   };
 }
 
-export const getSiteAuditSettings = cache(async (): Promise<SiteAuditSettings> => {
+async function loadSiteAuditSettings(): Promise<SiteAuditSettings> {
   if (!isDatabaseConfigured()) return defaultSiteAuditSettings;
   try {
     return await withDb(async (query) => {
@@ -59,10 +62,17 @@ export const getSiteAuditSettings = cache(async (): Promise<SiteAuditSettings> =
     console.error("[site-audit] fallback:", error);
     return defaultSiteAuditSettings;
   }
+}
+
+export const getSiteAuditSettings = cache(async (): Promise<SiteAuditSettings> => {
+  return unstable_cache(loadSiteAuditSettings, ["site-audit-settings"], {
+    tags: [SITE_AUDIT_SETTINGS_TAG],
+    revalidate: 300,
+  })();
 });
 
 export async function getSiteAuditSettingsForAdmin() {
-  return getSiteAuditSettings();
+  return loadSiteAuditSettings();
 }
 
 export async function updateSiteAuditSettings(

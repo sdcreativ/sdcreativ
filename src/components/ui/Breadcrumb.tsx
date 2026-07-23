@@ -1,5 +1,9 @@
+"use client";
+
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 import { ChevronRight } from "lucide-react";
+import { isEnglishPath } from "@/i18n/routes";
 import { cn } from "@/lib/utils";
 
 type Crumb = { label: string; href?: string };
@@ -8,13 +12,25 @@ type BreadcrumbProps = {
   items: Crumb[];
   className?: string;
   variant?: "dark" | "light";
+  /** Override auto locale detection from the pathname. */
+  locale?: "fr" | "en";
 };
 
-export function Breadcrumb({ items, className, variant = "dark" }: BreadcrumbProps) {
+export function Breadcrumb({
+  items,
+  className,
+  variant = "dark",
+  locale,
+}: BreadcrumbProps) {
+  const pathname = usePathname() ?? "/";
+  const isEn = locale === "en" || (locale == null && isEnglishPath(pathname));
   const isLight = variant === "light";
 
   return (
-    <nav aria-label="Fil d'Ariane" className={cn("text-sm", className)}>
+    <nav
+      aria-label={isEn ? "Breadcrumb" : "Fil d'Ariane"}
+      className={cn("text-sm", className)}
+    >
       <ol
         className={cn(
           "flex flex-wrap items-center gap-1.5",

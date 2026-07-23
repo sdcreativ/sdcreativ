@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/Button";
 import { createMetadata } from "@/lib/metadata";
 import { getQuoteConfig } from "@/lib/quote-config-resolver";
 
-export const dynamic = "force-dynamic";
+export const revalidate = 300;
 
 export const metadata = createMetadata({
   title: "Devis en ligne",

@@ -30,7 +30,7 @@ export default function EnPricingPage() {
       />
       <PricingSection locale="en" />
       <section className="py-16 text-center">
-        <Button href="/devis" size="lg">
+        <Button href="/en/devis" size="lg">
           Online quote calculator
         </Button>
         <p className="mt-6 text-sm text-gray-text">

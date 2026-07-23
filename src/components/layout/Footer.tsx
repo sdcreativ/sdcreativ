@@ -15,15 +15,18 @@ import { NewsletterSignup } from "@/components/forms/NewsletterSignup";
 import { buildWhatsappUrl } from "@/lib/site-public-resolver";
 import type { ResolvedSitePublic } from "@/lib/site-public-types";
 import { footerQuickLinks, footerServices, footerSeoLinks, legalLinks } from "@/content/navigation";
+import { enFooter } from "@/i18n/en-content";
 
 type FooterProps = {
   sitePublic: ResolvedSitePublic;
+  locale?: "fr" | "en";
 };
 
-export function Footer({ sitePublic }: FooterProps) {
+export function Footer({ sitePublic, locale = "fr" }: FooterProps) {
   const { contact, social, companyName, tagline } = sitePublic;
   const waUrl = buildWhatsappUrl(contact);
   const year = new Date().getFullYear();
+  const isEn = locale === "en";
 
   const socialIcons = [
     { href: social.facebook, icon: FacebookIcon, label: "Facebook" },
@@ -32,24 +35,40 @@ export function Footer({ sitePublic }: FooterProps) {
     { href: social.youtube, icon: YouTubeIcon, label: "YouTube" },
   ] as const;
 
+  const quickLinks = isEn ? enFooter.links : footerQuickLinks;
+  const serviceLinks = isEn ? enFooter.serviceLinks : footerServices;
+  const legal = isEn ? enFooter.legal : legalLinks;
+
   return (
     <footer className="bg-dark-footer text-white">
       <div className="border-b border-white/10 bg-dark py-14">
         <div className="container mx-auto px-4 text-center md:px-6 lg:px-8">
           <h2 className="text-2xl font-bold uppercase leading-snug md:text-3xl lg:text-4xl">
-            Prêt à donner une nouvelle dimension
-            <br />
-            <span className="text-primary-light">à votre présence digitale ?</span>
+            {isEn ? (
+              <>
+                {enFooter.ctaTitle}
+                <br />
+                <span className="text-primary-light">{enFooter.ctaHighlight}</span>
+              </>
+            ) : (
+              <>
+                Prêt à donner une nouvelle dimension
+                <br />
+                <span className="text-primary-light">à votre présence digitale ?</span>
+              </>
+            )}
           </h2>
           <p className="mx-auto mt-4 max-w-2xl text-white/70">
-            Discutons de votre projet et construisons ensemble votre succès.
+            {isEn
+              ? enFooter.ctaDescription
+              : "Discutons de votre projet et construisons ensemble votre succès."}
           </p>
           <div className="mt-8 flex flex-col items-center justify-center gap-4 sm:flex-row">
-            <Button href="/devis" size="lg">
-              Demander un devis
+            <Button href={isEn ? "/en/devis" : "/devis"} size="lg">
+              {isEn ? enFooter.ctaQuote : "Demander un devis"}
             </Button>
             <Button href={waUrl} external variant="outline" size="lg">
-              Parler sur WhatsApp
+              {isEn ? enFooter.ctaWhatsapp : "Parler sur WhatsApp"}
             </Button>
           </div>
         </div>
@@ -59,7 +78,7 @@ export function Footer({ sitePublic }: FooterProps) {
         <div>
           <Logo variant="footer" />
           <p className="mt-4 text-sm leading-relaxed text-white/60">{tagline}</p>
-          <NewsletterSignup />
+          {!isEn && <NewsletterSignup />}
           <div className="mt-6 flex gap-3">
             {socialIcons.map(({ href, icon: Icon, label }) => (
               <a
@@ -78,10 +97,10 @@ export function Footer({ sitePublic }: FooterProps) {
 
         <div>
           <h3 className="mb-4 text-sm font-bold uppercase tracking-wider text-white/90">
-            Liens rapides
+            {isEn ? enFooter.quickLinks : "Liens rapides"}
           </h3>
           <ul className="space-y-2.5">
-            {footerQuickLinks.map((link) => (
+            {quickLinks.map((link) => (
               <li key={link.href}>
                 <NavGlowLink href={link.href} variant="footer">
                   {link.label}
@@ -93,10 +112,10 @@ export function Footer({ sitePublic }: FooterProps) {
 
         <div>
           <h3 className="mb-4 text-sm font-bold uppercase tracking-wider text-white/90">
-            Nos services
+            {isEn ? enFooter.services : "Nos services"}
           </h3>
           <ul className="space-y-2.5">
-            {footerServices.map((link) => (
+            {serviceLinks.map((link) => (
               <li key={link.href}>
                 <NavGlowLink href={link.href} variant="footer">
                   {link.label}
@@ -108,7 +127,7 @@ export function Footer({ sitePublic }: FooterProps) {
 
         <div>
           <h3 className="mb-4 text-sm font-bold uppercase tracking-wider text-white/90">
-            Contactez-nous
+            {isEn ? enFooter.contact : "Contactez-nous"}
           </h3>
           <ul className="space-y-4">
             <li>
@@ -143,18 +162,21 @@ export function Footer({ sitePublic }: FooterProps) {
 
       <div className="border-t border-white/10">
         <div className="container mx-auto flex flex-col items-center justify-between gap-4 px-4 py-6 text-sm text-white/50 md:flex-row md:px-6 lg:px-8">
-          <p>© {year} {companyName}. Tous droits réservés.</p>
+          <p>
+            © {year} {companyName}. {isEn ? enFooter.rights : "Tous droits réservés."}
+          </p>
           <div className="flex flex-wrap justify-center gap-4">
-            {footerSeoLinks.map((link) => (
-              <Link
-                key={link.href}
-                href={link.href}
-                className="nav-glow-link nav-glow-link--footer transition-colors hover:text-white"
-              >
-                <span className="nav-glow-link__inner">{link.label}</span>
-              </Link>
-            ))}
-            {legalLinks.map((link) => (
+            {!isEn &&
+              footerSeoLinks.map((link) => (
+                <Link
+                  key={link.href}
+                  href={link.href}
+                  className="nav-glow-link nav-glow-link--footer transition-colors hover:text-white"
+                >
+                  <span className="nav-glow-link__inner">{link.label}</span>
+                </Link>
+              ))}
+            {legal.map((link) => (
               <Link
                 key={link.href}
                 href={link.href}

@@ -30,6 +30,10 @@ export function PageHero({
   const backgroundSrc = backgroundImage
     ? resolveImageDisplayUrl(backgroundImage)
     : null;
+  const imageAlt =
+    backgroundAlt.trim() ||
+    [title, highlight].filter(Boolean).join(" — ").trim() ||
+    "SD CREATIV";
 
   return (
     <>
@@ -44,7 +48,7 @@ export function PageHero({
         <>
           <Image
             src={backgroundSrc}
-            alt={backgroundAlt}
+            alt={imageAlt}
             fill
             priority
             unoptimized={isProxiedMediaUrl(backgroundSrc)}

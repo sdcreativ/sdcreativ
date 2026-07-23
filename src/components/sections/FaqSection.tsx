@@ -21,9 +21,9 @@ export async function FaqSection({ items, locale = "fr" }: Props) {
     <AnimatedSection className="bg-white py-20 md:py-28" id="faq">
       <div className="container mx-auto px-4 md:px-6 lg:px-8">
         <SectionHeading
-          eyebrow="Questions fréquentes"
-          title="Vous avez des"
-          highlight="questions ?"
+          eyebrow={locale === "en" ? "FAQ" : "Questions fréquentes"}
+          title={locale === "en" ? "Got" : "Vous avez des"}
+          highlight={locale === "en" ? "questions?" : "questions ?"}
           className="mb-14"
         />
 

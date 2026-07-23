@@ -8,7 +8,7 @@ import { getLucideIcon } from "@/lib/lucide-icon-map";
 import { getSiteAuditSettings } from "@/lib/site-audit-settings";
 import { createMetadata } from "@/lib/metadata";
 
-export const dynamic = "force-dynamic";
+export const revalidate = 300;
 
 export const metadata = createMetadata({
   title: "Free website audit",

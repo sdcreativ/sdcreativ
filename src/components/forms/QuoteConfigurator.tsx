@@ -19,6 +19,12 @@ import {
   budgetOptions,
   timelineOptions,
 } from "@/content/contact-options";
+import {
+  budgetOptionsEn,
+  quoteFormCopy,
+  timelineOptionsEn,
+  type FormLocale,
+} from "@/i18n/form-copy";
 import type { SiteQuoteConfigSettings } from "@/lib/site-quote-config-types";
 import type { PresentationContext } from "@/lib/presentation-types";
 import {
@@ -43,6 +49,7 @@ type Props = {
   variant?: "public" | "presentation";
   presentationMeta?: PresentationMetaInput;
   onPresentationSuccess?: (leadId: string | null) => void;
+  locale?: FormLocale;
 };
 
 export function QuoteConfigurator({
@@ -50,7 +57,11 @@ export function QuoteConfigurator({
   variant = "public",
   presentationMeta,
   onPresentationSuccess,
+  locale = "fr",
 }: Props) {
+  const t = quoteFormCopy[locale];
+  const budgetOpts = locale === "en" ? budgetOptionsEn : budgetOptions;
+  const timelineOpts = locale === "en" ? timelineOptionsEn : timelineOptions;
   const searchParams = useSearchParams();
   const [projectTypeId, setProjectTypeId] = useState(config.projectTypes[0]?.id ?? "");
   const [pageTierId, setPageTierId] = useState(config.pageTiers[0]?.id ?? "1-5");
@@ -162,7 +173,7 @@ export function QuoteConfigurator({
         });
 
         const json = await res.json();
-        if (!res.ok) throw new Error(json.error ?? "Une erreur est survenue.");
+        if (!res.ok) throw new Error(json.error ?? t.errorFallback);
 
         if (onPresentationSuccess) {
           onPresentationSuccess(json.leadId ?? null);
@@ -175,7 +186,7 @@ export function QuoteConfigurator({
         setClientValidatedOrally(false);
       } catch (err) {
         setState("error");
-        setErrorMessage(err instanceof Error ? err.message : "Une erreur est survenue.");
+        setErrorMessage(err instanceof Error ? err.message : t.errorFallback);
       }
       return;
     }
@@ -188,7 +199,7 @@ export function QuoteConfigurator({
       });
 
       const json = await res.json();
-      if (!res.ok) throw new Error(json.error ?? "Une erreur est survenue.");
+      if (!res.ok) throw new Error(json.error ?? t.errorFallback);
 
       setState("success");
       form.reset();
@@ -196,7 +207,7 @@ export function QuoteConfigurator({
       reset();
     } catch (err) {
       setState("error");
-      setErrorMessage(err instanceof Error ? err.message : "Une erreur est survenue.");
+      setErrorMessage(err instanceof Error ? err.message : t.errorFallback);
     }
   }
 
@@ -210,13 +221,10 @@ export function QuoteConfigurator({
         <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-primary shadow-lg">
           <CheckCircle className="h-8 w-8 text-white" aria-hidden />
         </div>
-        <h3 className="mt-6 text-2xl font-bold text-foreground">Demande envoyée !</h3>
-        <p className="mx-auto mt-3 max-w-md text-gray-text">
-          Votre estimation a été transmise à notre équipe. Nous vous recontactons sous
-          24 à 48 heures avec un devis personnalisé.
-        </p>
+        <h3 className="mt-6 text-2xl font-bold text-foreground">{t.successTitle}</h3>
+        <p className="mx-auto mt-3 max-w-md text-gray-text">{t.successBody}</p>
         <Button type="button" variant="ghost" className="mt-8" onClick={() => setState("idle")}>
-          Faire une nouvelle estimation
+          {t.successAgain}
         </Button>
       </motion.div>
     );
@@ -242,7 +250,7 @@ export function QuoteConfigurator({
 
         <div>
           <label htmlFor="projectType" className="mb-2 block text-sm font-semibold text-foreground">
-            Type de projet <span className="text-accent">*</span>
+            {t.projectType} <span className="text-accent">*</span>
           </label>
           <div className="relative">
             <select
@@ -267,7 +275,7 @@ export function QuoteConfigurator({
         {project?.supportsPages && (
           <div>
             <label htmlFor="pageTier" className="mb-2 block text-sm font-semibold text-foreground">
-              Nombre de pages
+              {t.pages}
             </label>
             <div className="relative">
               <select
@@ -290,7 +298,7 @@ export function QuoteConfigurator({
         {availableAddons.length > 0 && (
           <fieldset>
             <legend className="mb-3 text-sm font-semibold text-foreground">
-              Options supplémentaires
+              {t.addons}
             </legend>
             <div className="grid gap-3 sm:grid-cols-2">
               {availableAddons.map((addon) => (
@@ -317,50 +325,50 @@ export function QuoteConfigurator({
         )}
 
         <div className="border-t border-gray/60 pt-8">
-          <h3 className="mb-4 font-bold text-foreground">Vos coordonnées</h3>
+          <h3 className="mb-4 font-bold text-foreground">{t.details}</h3>
           <div className="grid gap-4 sm:grid-cols-2">
             <div>
               <label htmlFor="name" className="mb-1.5 block text-xs font-semibold uppercase tracking-wider text-gray-text">
-                Nom complet *
+                {t.name}
               </label>
-              <input id="name" name="name" required className={fieldClass} placeholder="Jean Dupont" />
+              <input id="name" name="name" required className={fieldClass} placeholder={t.namePh} />
             </div>
             <div>
               <label htmlFor="email" className="mb-1.5 block text-xs font-semibold uppercase tracking-wider text-gray-text">
-                Email *
+                {t.email}
               </label>
-              <input id="email" name="email" type="email" required className={fieldClass} placeholder="vous@entreprise.com" />
+              <input id="email" name="email" type="email" required className={fieldClass} placeholder={t.emailPh} />
             </div>
             <div>
               <label htmlFor="phone" className="mb-1.5 block text-xs font-semibold uppercase tracking-wider text-gray-text">
-                Téléphone
+                {t.phone}
               </label>
               <input id="phone" name="phone" type="tel" className={fieldClass} placeholder="+225 07 00 00 00 00" />
             </div>
             <div>
               <label htmlFor="company" className="mb-1.5 block text-xs font-semibold uppercase tracking-wider text-gray-text">
-                Entreprise
+                {t.company}
               </label>
-              <input id="company" name="company" className={fieldClass} placeholder="Nom de votre société" />
+              <input id="company" name="company" className={fieldClass} placeholder={t.companyPh} />
             </div>
             <div>
               <label htmlFor="budget" className="mb-1.5 block text-xs font-semibold uppercase tracking-wider text-gray-text">
-                Budget indicatif *
+                {t.budget}
               </label>
               <select id="budget" name="budget" required className={cn(fieldClass, "cursor-pointer")}>
-                <option value="">Choisir...</option>
-                {budgetOptions.map((o) => (
+                <option value="">{t.choose}</option>
+                {budgetOpts.map((o) => (
                   <option key={o.value} value={o.value}>{o.label}</option>
                 ))}
               </select>
             </div>
             <div>
               <label htmlFor="timeline" className="mb-1.5 block text-xs font-semibold uppercase tracking-wider text-gray-text">
-                Délai souhaité *
+                {t.timeline}
               </label>
               <select id="timeline" name="timeline" required className={cn(fieldClass, "cursor-pointer")}>
-                <option value="">Choisir...</option>
-                {timelineOptions.map((o) => (
+                <option value="">{t.choose}</option>
+                {timelineOpts.map((o) => (
                   <option key={o.value} value={o.value}>{o.label}</option>
                 ))}
               </select>
@@ -368,9 +376,9 @@ export function QuoteConfigurator({
           </div>
           <div className="mt-4">
             <label htmlFor="message" className="mb-1.5 block text-xs font-semibold uppercase tracking-wider text-gray-text">
-              Précisions (optionnel)
+              {t.message}
             </label>
-            <textarea id="message" name="message" rows={3} className={cn(fieldClass, "resize-y")} placeholder="Décrivez brièvement votre projet..." />
+            <textarea id="message" name="message" rows={3} className={cn(fieldClass, "resize-y")} placeholder={t.messagePh} />
           </div>
         </div>
 
@@ -409,14 +417,14 @@ export function QuoteConfigurator({
               <>Brief interne — enregistré au CRM SD CREATIV avec la source « Présentation tablette ».</>
             ) : (
               <>
-                En soumettant ce formulaire, vous acceptez notre{" "}
+                {t.privacyPrefix}{" "}
                 <a
-                  href="/politique-confidentialite"
+                  href={t.privacyHref}
                   className="font-medium text-primary underline underline-offset-2"
                 >
-                  politique de confidentialité
+                  {t.privacyLink}
                 </a>
-                . Vos données servent uniquement à établir votre devis.
+                {t.privacySuffix}
               </>
             )}
           </p>
@@ -425,7 +433,7 @@ export function QuoteConfigurator({
           {state === "loading" ? (
             <>
               <Loader2 className="h-4 w-4 animate-spin" aria-hidden />
-              Envoi en cours...
+              {t.submitting}
             </>
           ) : isPresentation ? (
             <>
@@ -434,7 +442,7 @@ export function QuoteConfigurator({
             </>
           ) : (
             <>
-              Recevoir mon devis personnalisé
+              {t.submit}
               <Send className="h-4 w-4" aria-hidden />
             </>
           )}
@@ -447,7 +455,7 @@ export function QuoteConfigurator({
           <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-primary text-white">
             <Calculator className="h-5 w-5" aria-hidden />
           </div>
-          <h3 className="font-bold text-foreground">Votre configuration</h3>
+          <h3 className="font-bold text-foreground">{t.summaryTitle}</h3>
         </div>
 
         {quote && (
@@ -461,10 +469,8 @@ export function QuoteConfigurator({
                 </li>
               ))}
             </ul>
-            <p className="mt-4 text-base font-bold text-primary">Devis personnalisé gratuit</p>
-            <p className="mt-1 text-sm text-gray-text">
-              Nous calculons un montant adapté à votre contexte (périmètre, délais, contraintes).
-            </p>
+            <p className="mt-4 text-base font-bold text-primary">{t.summaryPrice}</p>
+            <p className="mt-1 text-sm text-gray-text">{t.summaryHint}</p>
             <p className="mt-4 text-xs leading-relaxed text-gray-text">{quote.note}</p>
           </div>
         )}

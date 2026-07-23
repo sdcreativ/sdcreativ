@@ -77,11 +77,11 @@ export async function PricingSection({ locale = "fr" }: Props) {
                 ))}
               </ul>
               <Button
-                href="/devis"
+                href={locale === "en" ? "/en/devis" : "/devis"}
                 variant={plan.variant === "accent" ? "accent" : "primary"}
                 className="mt-8 w-full justify-center"
               >
-                Demander un devis
+                {locale === "en" ? "Get a quote" : "Demander un devis"}
               </Button>
             </AnimatedCard>
           ))}

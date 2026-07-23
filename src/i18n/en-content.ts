@@ -1,9 +1,12 @@
 export const enNav = [
   { label: "Home", href: "/en" },
   { label: "Services", href: "/en/services" },
+  { label: "AI solutions", href: "/en/solutions-ia" },
   { label: "Training", href: "/en/training" },
   { label: "Portfolio", href: "/en/portfolio" },
   { label: "Pricing", href: "/en/pricing" },
+  { label: "Quote", href: "/en/devis" },
+  { label: "FAQ", href: "/en/faq" },
   { label: "About", href: "/en/about" },
   { label: "Contact", href: "/en/contact" },
 ] as const;
@@ -40,10 +43,89 @@ export const enContact = {
   description: "Questions, support or follow-up? Send us a message — we reply within 24–48 business hours.",
 } as const;
 
+export const enQuote = {
+  title: "Online quote",
+  highlight: "for your project",
+  description:
+    "Describe your needs and get a free custom quote. We reply within 24–48 business hours with a proposal tailored to your scope.",
+  bookTitle: "Prefer to talk it through?",
+  bookDescription:
+    "Book a 30-minute call with our team to refine your project and receive a personalized quote.",
+  contactCta: "Have a question? Write to us →",
+  configNote:
+    "Option labels may appear in French — our team will follow up with you in English.",
+} as const;
+
 export const enServices = {
   title: "Digital solutions",
   highlight: "for your business",
   description: "Showcase sites, e-commerce, AI, automation, mobile apps and more.",
+  banner:
+    "Detailed service pages are currently in French. Request a quote in English, or open the French brief if you prefer.",
+  ctaQuote: "Get a quote",
+  ctaDetailsFr: "Details (French)",
+} as const;
+
+export const enFaq = {
+  title: "Frequently asked",
+  highlight: "questions",
+  description:
+    "Clear answers about our web services, timelines, maintenance and how we work with SMEs in Côte d'Ivoire and abroad.",
+  ctaTitle: "Still have a question?",
+  ctaDescription: "Our team can answer your questions and prepare a free custom quote.",
+  ctaButton: "Contact us",
+} as const;
+
+export const enSolutionsIa = {
+  title: "AI agents",
+  highlight: "that work for your business",
+  description:
+    "Website chatbots, WhatsApp assistants, lead qualification and workflow automation — designed for SMEs in Côte d'Ivoire and beyond.",
+  demoTitle: "This site chatbot is a live demo",
+  demoDescription:
+    "Ask about our services, pricing approach or timelines — then book a call when you are ready.",
+  packsTitle: "Packages",
+  packsHighlight: "built around your needs",
+  faqTitle: "Questions about AI projects",
+  cta: "Estimate my AI project",
+  viewFr: "Full French page →",
+} as const;
+
+export const enFooter = {
+  ctaTitle: "Ready to elevate",
+  ctaHighlight: "your digital presence?",
+  ctaDescription: "Let's discuss your project and build your success together.",
+  ctaQuote: "Get a quote",
+  ctaWhatsapp: "Chat on WhatsApp",
+  quickLinks: "Quick links",
+  services: "Our services",
+  contact: "Contact us",
+  rights: "All rights reserved.",
+  links: [
+    { label: "Home", href: "/en" },
+    { label: "Services", href: "/en/services" },
+    { label: "AI solutions", href: "/en/solutions-ia" },
+    { label: "Portfolio", href: "/en/portfolio" },
+    { label: "Pricing", href: "/en/pricing" },
+    { label: "Training", href: "/en/training" },
+    { label: "Online quote", href: "/en/devis" },
+    { label: "FAQ", href: "/en/faq" },
+    { label: "About", href: "/en/about" },
+    { label: "Contact", href: "/en/contact" },
+  ],
+  serviceLinks: [
+    { label: "Showcase website", href: "/en/devis?type=site-vitrine" },
+    { label: "E-commerce", href: "/en/devis?type=e-commerce" },
+    { label: "AI agents", href: "/en/solutions-ia" },
+    { label: "Training", href: "/en/training" },
+    { label: "Maintenance & SLA", href: "/en/maintenance" },
+    { label: "Local SEO", href: "/en/devis?type=seo-local" },
+  ],
+  legal: [
+    { label: "Legal notice", href: "/en/legal" },
+    { label: "Privacy policy", href: "/en/privacy" },
+    { label: "Cookies", href: "/en/privacy#cookies" },
+  ],
 } as const;
 
 export const enPricing = {
