@@ -5,7 +5,7 @@ import {
   quoteProjectTypes,
 } from "@/content/quote-config";
 import type { SiteQuoteConfigSettings } from "@/lib/site-quote-config-types";
-import { formatFcfa, hasPublicPrice, PRICE_ON_REQUEST_LABEL } from "@/lib/format";
+import { hasPublicPrice, PRICE_ON_REQUEST_LABEL } from "@/lib/format";
 
 export type QuoteInput = {
   projectTypeId: string;
@@ -90,7 +90,8 @@ export function calculateQuote(
   }
 
   const subtotal = lines.reduce((sum, line) => sum + line.amount, 0);
-  const hasPricedEstimate = hasPublicPrice(subtotal);
+  /** Site public : jamais de montants, uniquement le libellé devis. */
+  const hasPricedEstimate = false;
   const estimateMin = Math.round(subtotal * (1 - RANGE_MARGIN));
   const estimateMax = Math.round(subtotal * (1 + RANGE_MARGIN));
 
@@ -100,12 +101,8 @@ export function calculateQuote(
     subtotal,
     estimateMin,
     estimateMax,
-    formattedSubtotal: hasPricedEstimate
-      ? `${formatFcfa(subtotal)} FCFA`
-      : PRICE_ON_REQUEST_LABEL,
-    formattedRange: hasPricedEstimate
-      ? `${formatFcfa(estimateMin)} – ${formatFcfa(estimateMax)} FCFA`
-      : PRICE_ON_REQUEST_LABEL,
+    formattedSubtotal: PRICE_ON_REQUEST_LABEL,
+    formattedRange: PRICE_ON_REQUEST_LABEL,
     note: config.estimateNote,
     hasPricedEstimate,
   };

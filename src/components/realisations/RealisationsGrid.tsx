@@ -14,7 +14,7 @@ const nextSteps = [
     icon: Calculator,
     title: "Estimer mon projet",
     description:
-      "Configurateur en ligne — type de projet, options et fourchette indicative en FCFA.",
+      "Configurateur en ligne — type de projet, options et demande de devis personnalisé.",
     href: "/devis",
     cta: "Configurer mon devis",
     featured: true,

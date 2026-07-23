@@ -8,7 +8,7 @@ import { createMetadata } from "@/lib/metadata";
 export const metadata = createMetadata({
   title: "FAQ — Questions fréquentes",
   description:
-    "Réponses aux questions les plus fréquentes sur nos services web, tarifs en FCFA, délais de livraison et accompagnement à Abidjan.",
+    "Réponses aux questions les plus fréquentes sur nos services web, devis, délais de livraison et accompagnement à Abidjan.",
   path: "/faq",
 });
 

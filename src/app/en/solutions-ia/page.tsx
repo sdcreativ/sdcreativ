@@ -7,7 +7,7 @@ import { AnimatedSection, AnimatedCard } from "@/components/ui/AnimatedSection";
 import { SectionHeading } from "@/components/ui/SectionHeading";
 import { FaqJsonLd } from "@/components/seo/JsonLd";
 import { enSolutionsIa } from "@/i18n/en-content";
-import { formatPriceFrom, hasPublicPrice } from "@/lib/format";
+import { PRICE_ON_REQUEST_LABEL_EN } from "@/lib/format";
 import { getSolutionsIaContent } from "@/lib/solutions-ia-resolver";
 import { createMetadata } from "@/lib/metadata";
 import { cn } from "@/lib/utils";
@@ -106,9 +106,7 @@ export default async function EnSolutionsIaPage() {
                 <h3 className="text-xl font-bold text-foreground">{pack.name}</h3>
                 <p className="mt-1 text-sm text-gray-text">{pack.tagline}</p>
                 <p className="mt-4 text-xl font-semibold text-primary">
-                  {hasPublicPrice(pack.priceFrom)
-                    ? formatPriceFrom(pack.priceFrom)
-                    : "Free custom quote"}
+                  {PRICE_ON_REQUEST_LABEL_EN}
                 </p>
                 <ul className="mt-6 flex-1 space-y-2">
                   {pack.features.map((f) => (

@@ -11,7 +11,7 @@ export const revalidate = 300;
 export const metadata = createMetadata({
   title: "Devis en ligne",
   description:
-    "Estimez le coût de votre projet web en FCFA : site vitrine, e-commerce, agents IA, mobile et plus. Recevez une estimation par email.",
+    "Configurez votre projet web (vitrine, e-commerce, agents IA, mobile…) et demandez un devis personnalisé gratuit par email.",
   path: "/devis",
 });
 

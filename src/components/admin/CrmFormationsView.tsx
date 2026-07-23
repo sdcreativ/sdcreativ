@@ -283,8 +283,7 @@ export function CrmFormationsView() {
         {activeTab === "categories" && (
           <CrmFormSection title="Domaines & modules">
             <p className="mb-4 text-sm text-gray-text">
-              Prix en FCFA (indicatif, par participant). Laissez vide pour masquer le tarif sur le
-              site.
+              Prix en FCFA (catalogue interne CRM uniquement). Jamais affichés sur le site public.
             </p>
             <div className="space-y-4">
               {form.categories.map((category, i) => (

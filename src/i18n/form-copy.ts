@@ -27,7 +27,7 @@ export const contactFormCopy = {
     title: "Nous écrire",
     subtitle:
       "Posez votre question ou décrivez votre besoin — nous vous répondons personnellement sous 24 à 48 h.",
-    quoteHint: "Besoin d'une estimation chiffrée en FCFA ?",
+    quoteHint: "Besoin d'un devis personnalisé gratuit ?",
     quoteLink: "Utilisez le configurateur de devis →",
     quoteHref: "/devis",
     name: "Nom complet",

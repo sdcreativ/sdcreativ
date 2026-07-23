@@ -91,7 +91,7 @@ export const defaultSitePageHeroesSettings: SitePageHeroesSettings = {
     title: "Estimez votre projet",
     highlight: "en quelques clics",
     description:
-      "Choisissez votre type de projet, le nombre de pages et les options. Obtenez une estimation en FCFA et recevez-la par email.",
+      "Choisissez votre type de projet, le nombre de pages et les options. Recevez un devis personnalisé gratuit par email.",
   },
   faq: {
     eyebrow: "Support",
@@ -145,7 +145,7 @@ export const defaultSitePageHeroesSettings: SitePageHeroesSettings = {
     title: "Maintenance",
     highlight: "& SLA",
     description:
-      "Gardez votre site rapide, sécurisé et à jour. Formules mensuelles ou annuelles en FCFA — revenus récurrents, sérénité garantie.",
+      "Gardez votre site rapide, sécurisé et à jour. Formules mensuelles ou annuelles sur devis — sérénité garantie.",
     breadcrumb: [{ label: "Accueil", href: "/" }, { label: "Maintenance & SLA" }],
   },
   realisations: {

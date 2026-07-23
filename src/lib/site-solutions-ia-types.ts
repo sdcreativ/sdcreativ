@@ -97,16 +97,16 @@ export const defaultSiteSolutionsIaSettings: SiteSolutionsIaSettings = {
       highlight: "en 5 étapes",
     },
     packs: {
-      eyebrow: "Packs indicatifs",
-      title: "Tarifs",
-      highlight: "en FCFA",
+      eyebrow: "Packs",
+      title: "Formules",
+      highlight: "sur devis",
       description:
-        "Prix de départ HT. Chaque projet fait l'objet d'un devis personnalisé après audit.",
+        "Chaque projet fait l'objet d'un devis personnalisé gratuit après audit de vos besoins.",
     },
   },
   ctaSection: {
     title: "Prêt à déployer votre agent IA ?",
-    description: "Discutons de votre cas d'usage et obtenez un devis personnalisé en FCFA.",
+    description: "Discutons de votre cas d'usage et obtenez un devis personnalisé gratuit.",
   },
   useCases: [
     {

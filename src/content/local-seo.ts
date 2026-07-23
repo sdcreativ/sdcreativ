@@ -41,7 +41,7 @@ export const localSeoPages: LocalSeoPage[] = [
     ],
     benefits: [
       "Équipe basée à Abidjan",
-      "Devis gratuit en FCFA",
+      "Devis personnalisé gratuit",
       "Paiement Mobile Money accepté",
       "Support WhatsApp réactif",
       "SEO local Abidjan",
@@ -65,7 +65,7 @@ export const localSeoPages: LocalSeoPage[] = [
     path: "/creation-site-cote-ivoire",
     metaTitle: "Création de site web en Côte d'Ivoire",
     metaDescription:
-      "Création de site internet professionnel en Côte d'Ivoire : vitrine, e-commerce, mobile. Tarifs en FCFA, livraison rapide. SD CREATIV — devis gratuit.",
+      "Création de site internet professionnel en Côte d'Ivoire : vitrine, e-commerce, mobile. Livraison rapide. SD CREATIV — devis personnalisé gratuit.",
     eyebrow: "Côte d'Ivoire",
     title: "Création de site web",
     highlight: "en Côte d'Ivoire",
@@ -82,7 +82,7 @@ export const localSeoPages: LocalSeoPage[] = [
       {
         heading: "Un processus simple et transparent",
         paragraphs: [
-          "Audit gratuit, devis en FCFA, validation du design, développement, tests et mise en ligne — avec formation et support après livraison.",
+          "Audit gratuit, devis personnalisé, validation du design, développement, tests et mise en ligne — avec formation et support après livraison.",
         ],
       },
     ],

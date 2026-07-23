@@ -28,7 +28,7 @@ export const serviceDetails: ServiceDetail[] = [
   {
     id: "site-vitrine",
     metaDescription:
-      "Création de site vitrine professionnel : design sur mesure, responsive, SEO de base, formulaire contact et WhatsApp. Devis gratuit en FCFA.",
+      "Création de site vitrine professionnel : design sur mesure, responsive, SEO de base, formulaire contact et WhatsApp. Devis personnalisé gratuit.",
     heroDescription:
       "Présentez votre activité avec un site clair, crédible et pensé pour convertir vos visiteurs en prospects — sur mobile comme sur ordinateur.",
     startingFrom: "Votre vitrine digitale, pensée pour convertir",
@@ -106,7 +106,7 @@ export const serviceDetails: ServiceDetail[] = [
   {
     id: "e-commerce",
     metaDescription:
-      "Boutique en ligne sur mesure : catalogue, paiement sécurisé, gestion des commandes et tableau de bord. E-commerce pour PME en FCFA.",
+      "Boutique en ligne sur mesure : catalogue, paiement sécurisé, gestion des commandes et tableau de bord. E-commerce pour PME.",
     heroDescription:
       "Vendez en ligne avec une boutique performante, sécurisée et simple à administrer — catalogue, panier, paiement et suivi des commandes inclus.",
     startingFrom: "Vendez en ligne avec une boutique qui vous ressemble",
@@ -184,7 +184,7 @@ export const serviceDetails: ServiceDetail[] = [
   {
     id: "refonte-web",
     metaDescription:
-      "Refonte de site web : nouveau design, performance, mobile-first et migration sécurisée. Modernisez votre image en ligne. Devis en FCFA.",
+      "Refonte de site web : nouveau design, performance, mobile-first et migration sécurisée. Modernisez votre image en ligne. Devis personnalisé gratuit.",
     heroDescription:
       "Redonnez vie à un site daté : design actuel, expérience mobile fluide, temps de chargement réduit et parcours utilisateur repensé pour convertir.",
     startingFrom: "Modernisez votre image, boostez vos conversions",
@@ -262,7 +262,7 @@ export const serviceDetails: ServiceDetail[] = [
   {
     id: "identite-visuelle",
     metaDescription:
-      "Création d'identité visuelle : logo, charte graphique, supports print et web. Image de marque cohérente pour PME. Devis en FCFA.",
+      "Création d'identité visuelle : logo, charte graphique, supports print et web. Image de marque cohérente pour PME. Devis personnalisé gratuit.",
     heroDescription:
       "Construisez une marque reconnaissable et professionnelle — logo, couleurs, typographies et déclinaisons pour tous vos supports digitaux et print.",
     startingFrom: "Une identité qui inspire confiance dès le premier regard",
@@ -340,7 +340,7 @@ export const serviceDetails: ServiceDetail[] = [
   {
     id: "seo-local",
     metaDescription:
-      "SEO local : optimisation Google Business, référencement géolocalisé, contenus et suivi. Soyez visible près de chez vous. Devis en FCFA.",
+      "SEO local : optimisation Google Business, référencement géolocalisé, contenus et suivi. Soyez visible près de chez vous. Devis personnalisé gratuit.",
     heroDescription:
       "Apparaissez en tête des recherches locales sur Google — fiche établissement optimisée, pages géolocalisées et contenus pensés pour attirer des clients près de vous.",
     startingFrom: "Soyez trouvé là où vos clients vous cherchent",
@@ -418,7 +418,7 @@ export const serviceDetails: ServiceDetail[] = [
   {
     id: "automatisation",
     metaDescription:
-      "Automatisation métier : workflows n8n, Make, Zapier, intégrations API et synchronisation de données. Gagnez du temps. Devis en FCFA.",
+      "Automatisation métier : workflows n8n, Make, Zapier, intégrations API et synchronisation de données. Gagnez du temps. Devis personnalisé gratuit.",
     heroDescription:
       "Connectez vos outils et automatisez les tâches répétitives — leads, emails, factures, stocks — pour gagner du temps et réduire les erreurs humaines.",
     startingFrom: "Gagnez du temps : automatisez l’essentiel",
@@ -496,7 +496,7 @@ export const serviceDetails: ServiceDetail[] = [
   {
     id: "devops",
     metaDescription:
-      "DevOps : pipelines CI/CD, Docker, monitoring et Infrastructure as Code. Livrez plus vite et en sécurité. Devis en FCFA.",
+      "DevOps : pipelines CI/CD, Docker, monitoring et Infrastructure as Code. Livrez plus vite et en sécurité. Devis personnalisé gratuit.",
     heroDescription:
       "Industrialisez vos déploiements avec des pipelines CI/CD, de la conteneurisation et un monitoring fiable — pour livrer plus souvent, sans stress.",
     startingFrom: "Infrastructure fiable, déploiements sereins",
@@ -574,7 +574,7 @@ export const serviceDetails: ServiceDetail[] = [
   {
     id: "cloud",
     metaDescription:
-      "Services cloud : migration AWS, GCP, Azure, Vercel, haute disponibilité et optimisation des coûts. Devis en FCFA.",
+      "Services cloud : migration AWS, GCP, Azure, Vercel, haute disponibilité et optimisation des coûts. Devis personnalisé gratuit.",
     heroDescription:
       "Hébergez et faites évoluer vos applications dans le cloud — migration sécurisée, architecture scalable et coûts maîtrisés.",
     startingFrom: "Le cloud à la hauteur de vos ambitions",
@@ -652,7 +652,7 @@ export const serviceDetails: ServiceDetail[] = [
   {
     id: "applications-mobiles",
     metaDescription:
-      "Développement d'applications mobiles iOS et Android : React Native, Flutter, UI/UX mobile-first. Devis en FCFA.",
+      "Développement d'applications mobiles iOS et Android : React Native, Flutter, UI/UX mobile-first. Devis personnalisé gratuit.",
     heroDescription:
       "Touchez vos clients sur iOS et Android avec une application performante, intuitive et connectée à votre écosystème digital existant.",
     startingFrom: "Une app mobile qui reste dans la poche de vos clients",
@@ -730,7 +730,7 @@ export const serviceDetails: ServiceDetail[] = [
   {
     id: "developpement-sur-mesure",
     metaDescription:
-      "Développement sur mesure : SaaS, portails clients, APIs et tableaux de bord. Solutions web adaptées à vos processus. Devis en FCFA.",
+      "Développement sur mesure : SaaS, portails clients, APIs et tableaux de bord. Solutions web adaptées à vos processus. Devis personnalisé gratuit.",
     heroDescription:
       "Quand le prêt-à-l'emploi ne suffit plus — nous concevons plateformes web, SaaS et outils métier taillés pour vos processus et votre croissance.",
     startingFrom: "Des solutions sur mesure, calibrées pour votre métier",

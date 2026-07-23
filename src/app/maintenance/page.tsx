@@ -14,7 +14,7 @@ export const revalidate = 300;
 export const metadata = createMetadata({
   title: "Maintenance & SLA",
   description:
-    "Formules de maintenance web en FCFA : Essentiel, Professionnel et Premium SLA. Sauvegardes, mises à jour, monitoring et support réactif à Abidjan.",
+    "Formules de maintenance web sur devis : Essentiel, Professionnel et Premium SLA. Sauvegardes, mises à jour, monitoring et support réactif à Abidjan.",
   path: "/maintenance",
 });
 

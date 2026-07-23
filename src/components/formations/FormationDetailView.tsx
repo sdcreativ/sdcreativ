@@ -17,11 +17,8 @@ import { Button } from "@/components/ui/Button";
 import { PageHero } from "@/components/ui/PageHero";
 import { AnimatedCard, AnimatedSection } from "@/components/ui/AnimatedSection";
 import { FaqJsonLd } from "@/components/seo/JsonLd";
-import {
-  getFormationPriceFrom,
-  type ResolvedFormationCategory,
-} from "@/lib/formations-resolver";
-import { formatFcfa, formatPriceFrom, PRICE_ON_REQUEST_LABEL } from "@/lib/format";
+import { type ResolvedFormationCategory } from "@/lib/formations-resolver";
+import { PRICE_ON_REQUEST_LABEL } from "@/lib/format";
 import { isProxiedMediaUrl, resolveImageDisplayUrl } from "@/lib/image-url";
 import { buildWhatsappUrl } from "@/lib/site-public-resolver";
 import { getSitePublicSettings } from "@/lib/site-public-settings";
@@ -37,7 +34,6 @@ export async function FormationDetailView({ category, related }: Props) {
   const { detail } = category;
   const Icon = category.icon;
   const imageSrc = resolveImageDisplayUrl(category.image);
-  const priceFrom = getFormationPriceFrom(category);
   const faqItems = detail.faq.length
     ? detail.faq
     : [
@@ -67,12 +63,10 @@ export async function FormationDetailView({ category, related }: Props) {
       <section className="border-b border-gray/40 bg-white py-10 md:py-12">
         <div className="container mx-auto px-4 md:px-6 lg:px-8">
           <div className="flex flex-wrap gap-3">
-            {priceFrom != null && (
-              <div className="inline-flex items-center gap-2 rounded-full border border-primary/20 bg-primary-light/50 px-4 py-2 text-sm font-semibold text-primary">
-                <Wallet className="h-4 w-4" aria-hidden />
-                {formatPriceFrom(priceFrom)}
-              </div>
-            )}
+            <div className="inline-flex items-center gap-2 rounded-full border border-primary/20 bg-primary-light/50 px-4 py-2 text-sm font-semibold text-primary">
+              <Wallet className="h-4 w-4" aria-hidden />
+              {PRICE_ON_REQUEST_LABEL}
+            </div>
             <div className="inline-flex items-center gap-2 rounded-full border border-gray/60 bg-gray-light px-4 py-2 text-sm font-medium text-foreground/80">
               <Clock className="h-4 w-4 text-primary" aria-hidden />
               {detail.durationSummary}
@@ -169,8 +163,8 @@ export async function FormationDetailView({ category, related }: Props) {
                 : "Composez votre parcours"}
             </h2>
             <p className="mt-3 text-gray-text">
-              Durées et tarifs indicatifs par participant — devis personnalisé selon le format et
-              le nombre de stagiaires.
+              Durées indicatives par participant — devis personnalisé selon le format et le nombre
+              de stagiaires.
             </p>
           </div>
 
@@ -194,15 +188,9 @@ export async function FormationDetailView({ category, related }: Props) {
                           {course.duration}
                         </span>
                       ) : null}
-                      {course.price != null && course.price > 0 ? (
-                        <span className="font-semibold text-primary">
-                          {formatFcfa(course.price)} FCFA
-                        </span>
-                      ) : (
-                        <span className="text-xs font-medium text-gray-text">
-                          {PRICE_ON_REQUEST_LABEL}
-                        </span>
-                      )}
+                      <span className="text-xs font-medium text-primary">
+                        {PRICE_ON_REQUEST_LABEL}
+                      </span>
                     </div>
                   </div>
                 </div>

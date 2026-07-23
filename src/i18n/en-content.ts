@@ -26,7 +26,7 @@ export const enHome = {
     highlight: "SD CREATIV",
     items: [
       { title: "Local expertise", description: "Based in Abidjan, we understand the Ivorian market." },
-      { title: "Transparent pricing", description: "Clear packages in FCFA, free personalized quotes." },
+      { title: "Transparent pricing", description: "Clear packages, free personalized quotes — no public price lists." },
       { title: "Full stack", description: "From showcase sites to AI agents and DevOps." },
     ],
   },

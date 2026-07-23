@@ -4,6 +4,7 @@ import {
   formatFcfaShort,
   formatPriceFrom,
   hasPublicPrice,
+  PRICE_ON_REQUEST_LABEL,
 } from "@/lib/format";
 
 describe("formatFcfa", () => {
@@ -17,22 +18,18 @@ describe("formatFcfa", () => {
 });
 
 describe("formatPriceFrom", () => {
-  it("préfixe le montant avec À partir de", () => {
-    expect(formatPriceFrom(500000)).toContain("À partir de");
-    expect(formatPriceFrom(500000)).toContain("FCFA");
-  });
-
-  it("renvoie le libellé devis si montant absent", () => {
-    expect(formatPriceFrom(0)).toBe("Devis personnalisé gratuit");
-    expect(formatPriceFrom(null)).toBe("Devis personnalisé gratuit");
+  it("n’affiche jamais de montant public", () => {
+    expect(formatPriceFrom(500000)).toBe(PRICE_ON_REQUEST_LABEL);
+    expect(formatPriceFrom(0)).toBe(PRICE_ON_REQUEST_LABEL);
+    expect(formatPriceFrom(null)).toBe(PRICE_ON_REQUEST_LABEL);
   });
 });
 
 describe("hasPublicPrice", () => {
-  it("ignore 0, null et valeurs invalides", () => {
+  it("est toujours false (politique sans prix publics)", () => {
     expect(hasPublicPrice(0)).toBe(false);
     expect(hasPublicPrice(null)).toBe(false);
     expect(hasPublicPrice(undefined)).toBe(false);
-    expect(hasPublicPrice(45_000)).toBe(true);
+    expect(hasPublicPrice(45_000)).toBe(false);
   });
 });
