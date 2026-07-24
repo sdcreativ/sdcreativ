@@ -1,13 +1,15 @@
 import { NextResponse } from "next/server";
 import { htmlRow, sendEmail } from "@/lib/email";
 import { isHoneypotTripped } from "@/lib/spam-guard";
+import {
+  PUBLIC_FORM_RATE_LIMIT,
+  consumeRateLimit,
+  getClientIp,
+  rateLimitExceededResponse,
+} from "@/lib/rate-limit";
 import { waitlistSchema } from "@/lib/validations/waitlist";
 import { createWaitlistEntry } from "@/lib/marketing-subscribers";
 import { isDatabaseConfigured } from "@/lib/db";
-
-const rateLimit = new Map<string, { count: number; resetAt: number }>();
-const RATE_LIMIT = 5;
-const RATE_WINDOW_MS = 60 * 60 * 1000;
 
 const interestLabels: Record<string, string> = {
   "espace-client": "Espace client (Phase 2)",
@@ -15,26 +17,11 @@ const interestLabels: Record<string, string> = {
   general: "Intérêt général Phase 2",
 };
 
-function isRateLimited(ip: string): boolean {
-  const now = Date.now();
-  const entry = rateLimit.get(ip);
-  if (!entry || now > entry.resetAt) {
-    rateLimit.set(ip, { count: 1, resetAt: now + RATE_WINDOW_MS });
-    return false;
-  }
-  if (entry.count >= RATE_LIMIT) return true;
-  entry.count++;
-  return false;
-}
-
 export async function POST(request: Request) {
   try {
-    const ip =
-      request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ?? "unknown";
-
-    if (isRateLimited(ip)) {
-      return NextResponse.json({ error: "Trop de requêtes." }, { status: 429 });
-    }
+    const ip = getClientIp(request);
+    const limited = consumeRateLimit("public-waitlist", ip, PUBLIC_FORM_RATE_LIMIT);
+    if (limited.limited) return rateLimitExceededResponse(limited.retryAfterSec);
 
     const body = await request.json();
 

@@ -5,6 +5,7 @@ import {
   listPublishedBlogPosts,
   toPublicBlogPost,
 } from "@/lib/blog-posts";
+import { allowLocaleStaticSeed } from "@/lib/cms-locale";
 import { isDatabaseConfigured } from "@/lib/db";
 import {
   realisations,
@@ -86,6 +87,9 @@ export async function getRealisations(locale = "fr"): Promise<Realisation[]> {
     }
   }
 
+  // Sanity / seed = contenu FR uniquement — jamais servi sur locale=en.
+  if (locale === "en") return [];
+
   if (isSanityConfigured()) {
     try {
       const items = await fetchRealisationsFromSanity();
@@ -94,19 +98,26 @@ export async function getRealisations(locale = "fr"): Promise<Realisation[]> {
       console.error("[CMS] Sanity projects fallback:", error);
     }
   }
-  return allowStaticContentFallback() ? realisations : [];
+  return allowLocaleStaticSeed(locale) ? realisations : [];
 }
 
-export async function getRealisation(id: string): Promise<Realisation | undefined> {
+export async function getRealisation(
+  id: string,
+  locale = "fr",
+): Promise<Realisation | undefined> {
   if (isDatabaseConfigured()) {
     try {
-      const { getPublicRealisationBySlug, toRealisation } = await import("@/lib/public-realisations");
-      const record = await getPublicRealisationBySlug(id);
+      const { getPublicRealisationBySlug, toRealisation } = await import(
+        "@/lib/public-realisations"
+      );
+      const record = await getPublicRealisationBySlug(id, locale);
       if (record) return toRealisation(record);
     } catch (error) {
       console.error("[CMS] Database realisation fallback:", error);
     }
   }
+
+  if (locale === "en") return undefined;
 
   if (isSanityConfigured()) {
     try {
@@ -116,15 +127,16 @@ export async function getRealisation(id: string): Promise<Realisation | undefine
       console.error("[CMS] Sanity project fallback:", error);
     }
   }
-  return allowStaticContentFallback() ? getStaticRealisation(id) : undefined;
+  return allowLocaleStaticSeed(locale) ? getStaticRealisation(id) : undefined;
 }
 
 export async function getRelatedRealisations(
   currentId: string,
   category: string,
   limit = 3,
+  locale = "fr",
 ): Promise<Realisation[]> {
-  const all = await getRealisations();
+  const all = await getRealisations(locale);
   return all
     .filter((r) => r.id !== currentId && r.category === category)
     .slice(0, limit);

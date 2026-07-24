@@ -1,4 +1,5 @@
 import { technologyPartners as staticPartners } from "@/content/partners";
+import { allowLocaleStaticSeed } from "@/lib/cms-locale";
 import { isDatabaseConfigured } from "@/lib/db";
 import { listPublicPartners, toTechnologyPartner } from "@/lib/public-partners";
 import type { TechnologyPartner } from "@/lib/public-partners";
@@ -8,9 +9,17 @@ function staticAsPartners(): TechnologyPartner[] {
   return staticPartners.map((p) => ({ name: p.name, category: p.category }));
 }
 
+/**
+ * Partenaires tech : noms de marques (souvent neutres).
+ * Pas de fallback EN→FR en base ; seed statique autorisé hors prod pour FR seulement,
+ * et aussi pour EN car les libellés ne sont pas rédigés en français.
+ */
 export async function getTechnologyPartners(locale = "fr"): Promise<TechnologyPartner[]> {
   if (!isDatabaseConfigured()) {
-    return allowStaticContentFallback() ? staticAsPartners() : [];
+    if (locale === "en") {
+      return allowStaticContentFallback() ? staticAsPartners() : [];
+    }
+    return allowLocaleStaticSeed(locale) ? staticAsPartners() : [];
   }
 
   try {
@@ -20,5 +29,9 @@ export async function getTechnologyPartners(locale = "fr"): Promise<TechnologyPa
     console.error("[public-partners] fallback:", error);
   }
 
-  return allowStaticContentFallback() ? staticAsPartners() : [];
+  // Jamais de bascule silencieuse vers locale=fr.
+  if (locale === "en") {
+    return allowStaticContentFallback() ? staticAsPartners() : [];
+  }
+  return allowLocaleStaticSeed(locale) ? staticAsPartners() : [];
 }

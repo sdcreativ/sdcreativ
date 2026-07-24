@@ -2,17 +2,19 @@ import { AnimatedSection, AnimatedCard } from "@/components/ui/AnimatedSection";
 import { SectionHeading } from "@/components/ui/SectionHeading";
 import { getLucideIcon } from "@/lib/lucide-icon-map";
 import { getSiteMethodSettings } from "@/lib/site-method-settings";
+import { methodContentEn } from "@/i18n/public-en";
 
-export async function MethodSection() {
-  const { eyebrow, title, highlight, steps } = await getSiteMethodSettings();
+export async function MethodSection({ locale = "fr" }: { locale?: "fr" | "en" }) {
+  const cms = await getSiteMethodSettings();
+  const content = locale === "en" ? methodContentEn : cms;
 
   return (
     <AnimatedSection className="bg-dark py-20 md:py-28" id="methode">
       <div className="container mx-auto px-4 md:px-6 lg:px-8">
         <SectionHeading
-          eyebrow={eyebrow}
-          title={title}
-          highlight={highlight}
+          eyebrow={content.eyebrow}
+          title={content.title}
+          highlight={content.highlight}
           dark
           className="mb-16"
         />
@@ -23,7 +25,7 @@ export async function MethodSection() {
             aria-hidden
           />
           <div className="grid gap-8 sm:grid-cols-2 lg:grid-cols-7">
-            {steps.map((step, i) => {
+            {content.steps.map((step, i) => {
               const Icon = getLucideIcon(step.icon);
               return (
                 <AnimatedCard key={step.number} delay={i * 0.07} className="relative text-center">

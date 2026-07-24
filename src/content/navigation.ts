@@ -22,6 +22,8 @@ export const mainNav = [
   { label: "Réalisations", href: "/realisations" },
   { label: "Tarifs", href: "/tarifs" },
   { label: "Blog", href: "/blog" },
+  { label: "Audit gratuit", href: "/audit-gratuit" },
+  { label: "Rendez-vous", href: "/rendez-vous" },
   { label: "À propos", href: "/a-propos" },
   { label: "Contact", href: "/contact" },
 ] as const;
@@ -33,10 +35,13 @@ export const footerQuickLinks = [
   { label: "Tarifs", href: "/tarifs" },
   { label: "Formations", href: "/formations" },
   { label: "Devis en ligne", href: "/devis" },
+  { label: "Audit web gratuit", href: "/audit-gratuit" },
+  { label: "Prendre rendez-vous", href: "/rendez-vous" },
   { label: "Blog", href: "/blog" },
   { label: "À propos", href: "/a-propos" },
   { label: "FAQ", href: "/faq" },
   { label: "Carrières", href: "/carrieres" },
+  { label: "Espace client", href: "/espace-client" },
   { label: "Contact", href: "/contact" },
 ] as const;
 
@@ -54,6 +59,13 @@ export const footerServices = [
 export const footerSeoLinks = [
   { label: "Agence web Abidjan", href: "/agence-web-abidjan" },
   { label: "Audit web gratuit", href: "/audit-gratuit" },
+  { label: "Prendre rendez-vous", href: "/rendez-vous" },
+] as const;
+
+export const footerSeoLinksEn = [
+  { label: "Web agency Abidjan", href: "/en/web-agency-abidjan" },
+  { label: "Free website audit", href: "/en/free-audit" },
+  { label: "Book a call", href: "/en/book" },
 ] as const;
 
 export const legalLinks = [

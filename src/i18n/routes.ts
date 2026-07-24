@@ -1,3 +1,5 @@
+import { isEnglishLocaleEnabled } from "@/i18n/config";
+
 /** Paires de routes FR ↔ EN indexables avec hreflang. */
 export const LOCALE_ROUTE_PAIRS = [
   { fr: "/", en: "/en" },
@@ -71,6 +73,12 @@ export function getHreflangAlternates(
   for (const pair of LOCALE_ROUTE_PAIRS) {
     if (normalized === pair.fr || normalized === pair.en) {
       const frUrl = pair.fr === "/" ? siteUrl : `${siteUrl}${pair.fr}`;
+      if (!isEnglishLocaleEnabled()) {
+        return {
+          fr: frUrl,
+          "x-default": frUrl,
+        };
+      }
       const enUrl = `${siteUrl}${pair.en}`;
       return {
         fr: frUrl,

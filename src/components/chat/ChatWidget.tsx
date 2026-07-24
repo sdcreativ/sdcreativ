@@ -318,6 +318,7 @@ export function ChatWidget({ mode = "default", locale = "fr" }: Props) {
           type="button"
           onClick={() => setOpen(true)}
           className={toggleClassName}
+          data-track-cta="chat_open"
           aria-label={isEn ? "Open SD CREATIV assistant" : "Ouvrir l'assistant SD CREATIV"}
           aria-expanded="false"
         >

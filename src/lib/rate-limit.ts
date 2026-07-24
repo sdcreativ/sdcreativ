@@ -24,6 +24,22 @@ export const ADMIN_OTP_RESEND_RATE_LIMIT: RateLimitConfig = {
   windowMs: 15 * 60 * 1000,
 };
 
+/** Formulaires publics (contact, devis, carrière, waitlist…). */
+export const PUBLIC_FORM_RATE_LIMIT: RateLimitConfig = {
+  limit: 5,
+  windowMs: 60 * 60 * 1000,
+};
+
+export const PUBLIC_NEWSLETTER_RATE_LIMIT: RateLimitConfig = {
+  limit: 3,
+  windowMs: 60 * 60 * 1000,
+};
+
+export const PUBLIC_CHAT_RATE_LIMIT: RateLimitConfig = {
+  limit: 20,
+  windowMs: 60 * 60 * 1000,
+};
+
 function getBucket(namespace: string): Map<string, RateLimitEntry> {
   let bucket = buckets.get(namespace);
   if (!bucket) {

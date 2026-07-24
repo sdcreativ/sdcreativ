@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useCallback, useEffect, useId, useRef, useState } from "react";
 import { usePathname } from "next/navigation";
 import { ChevronDown, Menu, X, MessageCircle } from "lucide-react";
 import { Logo } from "@/components/ui/Logo";
@@ -21,11 +21,13 @@ export function Header() {
   const devisHref = isEn ? "/en/devis" : "/devis";
   const ctaLabel = isEn ? "Get a quote" : "Demander un devis";
   const servicesLabel = isEn ? "Services" : "Services";
+  const servicesMenuId = useId();
 
   const [mobileOpen, setMobileOpen] = useState(false);
   const [mobileServicesOpen, setMobileServicesOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
   const [servicesOpen, setServicesOpen] = useState(false);
+  const servicesWrapRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 20);
@@ -43,6 +45,30 @@ export function Header() {
   useEffect(() => {
     if (!mobileOpen) setMobileServicesOpen(false);
   }, [mobileOpen]);
+
+  useEffect(() => {
+    setServicesOpen(false);
+  }, [pathname]);
+
+  const closeServices = useCallback(() => setServicesOpen(false), []);
+
+  useEffect(() => {
+    if (!servicesOpen) return;
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") closeServices();
+    };
+    const onPointerDown = (event: MouseEvent) => {
+      if (!servicesWrapRef.current?.contains(event.target as Node)) {
+        closeServices();
+      }
+    };
+    document.addEventListener("keydown", onKeyDown);
+    document.addEventListener("mousedown", onPointerDown);
+    return () => {
+      document.removeEventListener("keydown", onKeyDown);
+      document.removeEventListener("mousedown", onPointerDown);
+    };
+  }, [servicesOpen, closeServices]);
 
   if (isAdmin) return null;
 
@@ -65,16 +91,28 @@ export function Header() {
               "children" in item && item.children ? (
                 <div
                   key={item.href}
+                  ref={servicesWrapRef}
                   className="relative"
                   onMouseEnter={() => setServicesOpen(true)}
                   onMouseLeave={() => setServicesOpen(false)}
                 >
                   <NavGlowLink
                     href={item.href}
-                    active={
-                      isNavLinkActive(item.href, pathname) || servicesOpen
-                    }
-                    className={cn(servicesOpen && !isNavLinkActive(item.href, pathname) && "bg-[#f1f5f9] text-[var(--dark)]")}
+                    active={isNavLinkActive(item.href, pathname) || servicesOpen}
+                    className={cn(
+                      servicesOpen &&
+                        !isNavLinkActive(item.href, pathname) &&
+                        "bg-[#f1f5f9] text-[var(--dark)]",
+                    )}
+                    aria-expanded={servicesOpen}
+                    aria-haspopup="menu"
+                    aria-controls={servicesMenuId}
+                    onKeyDown={(event) => {
+                      if (event.key === "ArrowDown" || event.key === "Enter" || event.key === " ") {
+                        event.preventDefault();
+                        setServicesOpen(true);
+                      }
+                    }}
                   >
                     {item.label}
                     <ChevronDown
@@ -87,13 +125,20 @@ export function Header() {
                   </NavGlowLink>
                   {servicesOpen && (
                     <div className="absolute left-1/2 top-[calc(100%+0.5rem)] z-50 -translate-x-1/2 pt-1">
-                      <div className="nav-dropdown-panel">
+                      <div
+                        id={servicesMenuId}
+                        role="menu"
+                        aria-label={servicesLabel}
+                        className="nav-dropdown-panel"
+                      >
                         <p className="nav-dropdown-panel__label">{servicesLabel}</p>
                         {item.children.map((child) => (
                           <NavGlowLink
                             key={child.href}
                             href={child.href}
                             variant="dropdown"
+                            role="menuitem"
+                            onClick={closeServices}
                           >
                             {child.label}
                           </NavGlowLink>
@@ -122,6 +167,7 @@ export function Header() {
               href={devisHref}
               size="sm"
               className="rounded-full px-5 shadow-[0_4px_16px_rgba(0,114,181,0.4)] hover:shadow-[0_6px_20px_rgba(0,114,181,0.45)]"
+              data-track-cta="nav_devis"
             >
               {ctaLabel}
             </Button>
@@ -131,6 +177,7 @@ export function Header() {
               variant="whatsappLight"
               size="sm"
               className="rounded-full px-4 font-semibold"
+              data-track-cta="nav_whatsapp"
             >
               <MessageCircle className="h-4 w-4 text-[#25D366]" aria-hidden />
               <span className="hidden xl:inline">WhatsApp</span>
@@ -144,6 +191,7 @@ export function Header() {
               onClick={() => setMobileOpen(false)}
               aria-label={isEn ? "Close menu" : "Fermer le menu"}
               aria-expanded="true"
+              aria-controls="mobile-navigation"
             >
               <X className="h-5 w-5" aria-hidden />
             </button>
@@ -154,6 +202,7 @@ export function Header() {
               onClick={() => setMobileOpen(true)}
               aria-label={isEn ? "Open menu" : "Ouvrir le menu"}
               aria-expanded="false"
+              aria-controls="mobile-navigation"
             >
               <Menu className="h-5 w-5" aria-hidden />
             </button>
@@ -179,58 +228,62 @@ export function Header() {
               <div className="flex flex-col gap-1 rounded-2xl border border-[#e0e0e0] bg-white p-2 shadow-sm">
                 {nav.map((item) => {
                   const hasChildren = "children" in item && Boolean(item.children?.length);
+                  const panelId = `${servicesMenuId}-mobile-${item.href}`;
                   return (
-                  <div key={item.href}>
-                    <div className="flex items-center gap-1">
-                      <NavGlowLink
-                        href={item.href}
-                        variant="dropdown"
-                        active={isNavLinkActive(item.href, pathname)}
-                        className="flex-1 text-base"
-                        onClick={() => setMobileOpen(false)}
-                      >
-                        {item.label}
-                      </NavGlowLink>
-                      {hasChildren && (
-                        <button
-                          type="button"
-                          className="rounded-lg p-2 text-gray-text hover:bg-gray-light hover:text-foreground"
-                          aria-expanded={mobileServicesOpen}
-                          aria-label={
-                            isEn
-                              ? mobileServicesOpen
-                                ? "Hide services"
-                                : "Show services"
-                              : mobileServicesOpen
-                                ? "Masquer les services"
-                                : "Afficher les services"
-                          }
-                          onClick={() => setMobileServicesOpen((open) => !open)}
-                        >
-                          <ChevronDown
-                            className={cn(
-                              "h-4 w-4 transition-transform",
-                              mobileServicesOpen && "rotate-180",
-                            )}
-                            aria-hidden
-                          />
-                        </button>
-                      )}
-                    </div>
-                    {hasChildren &&
-                      mobileServicesOpen &&
-                      item.children?.map((child) => (
+                    <div key={item.href}>
+                      <div className="flex items-center gap-1">
                         <NavGlowLink
-                          key={child.href}
-                          href={child.href}
+                          href={item.href}
                           variant="dropdown"
-                          className="pl-6 text-sm opacity-80"
+                          active={isNavLinkActive(item.href, pathname)}
+                          className="flex-1 text-base"
                           onClick={() => setMobileOpen(false)}
                         >
-                          {child.label}
+                          {item.label}
                         </NavGlowLink>
-                      ))}
-                  </div>
+                        {hasChildren && (
+                          <button
+                            type="button"
+                            className="rounded-lg p-2 text-gray-text hover:bg-gray-light hover:text-foreground"
+                            aria-expanded={mobileServicesOpen}
+                            aria-controls={panelId}
+                            aria-label={
+                              isEn
+                                ? mobileServicesOpen
+                                  ? "Hide services"
+                                  : "Show services"
+                                : mobileServicesOpen
+                                  ? "Masquer les services"
+                                  : "Afficher les services"
+                            }
+                            onClick={() => setMobileServicesOpen((open) => !open)}
+                          >
+                            <ChevronDown
+                              className={cn(
+                                "h-4 w-4 transition-transform",
+                                mobileServicesOpen && "rotate-180",
+                              )}
+                              aria-hidden
+                            />
+                          </button>
+                        )}
+                      </div>
+                      {hasChildren && mobileServicesOpen && (
+                        <div id={panelId} role="group" aria-label={item.label}>
+                          {item.children?.map((child) => (
+                            <NavGlowLink
+                              key={child.href}
+                              href={child.href}
+                              variant="dropdown"
+                              className="pl-6 text-sm opacity-80"
+                              onClick={() => setMobileOpen(false)}
+                            >
+                              {child.label}
+                            </NavGlowLink>
+                          ))}
+                        </div>
+                      )}
+                    </div>
                   );
                 })}
               </div>
@@ -238,7 +291,11 @@ export function Header() {
                 <LocaleSwitcher />
               </div>
               <div className="mt-5 flex flex-col gap-2.5">
-                <Button href={devisHref} className="w-full justify-center rounded-full">
+                <Button
+                  href={devisHref}
+                  className="w-full justify-center rounded-full"
+                  data-track-cta="nav_devis_mobile"
+                >
                   {ctaLabel}
                 </Button>
                 <Button
@@ -246,6 +303,7 @@ export function Header() {
                   external
                   variant="whatsappLight"
                   className="w-full justify-center rounded-full"
+                  data-track-cta="nav_whatsapp_mobile"
                 >
                   <MessageCircle className="h-4 w-4 text-[#25D366]" />
                   WhatsApp

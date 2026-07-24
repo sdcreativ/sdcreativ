@@ -2,9 +2,11 @@ import { AnimatedSection, AnimatedCard } from "@/components/ui/AnimatedSection";
 import { SectionHeading } from "@/components/ui/SectionHeading";
 import { getLucideIcon } from "@/lib/lucide-icon-map";
 import { getSiteWhyUsSettings } from "@/lib/site-why-us-settings";
+import { whyUsContentEn } from "@/i18n/public-en";
 
-export async function WhyUsSection() {
-  const { eyebrow, title, highlight, intro, items } = await getSiteWhyUsSettings();
+export async function WhyUsSection({ locale = "fr" }: { locale?: "fr" | "en" }) {
+  const cms = await getSiteWhyUsSettings();
+  const content = locale === "en" ? whyUsContentEn : cms;
 
   return (
     <AnimatedSection className="bg-white py-20 md:py-28" id="pourquoi">
@@ -12,16 +14,16 @@ export async function WhyUsSection() {
         <div className="grid gap-12 lg:grid-cols-2 lg:gap-16">
           <div>
             <SectionHeading
-              eyebrow={eyebrow}
-              title={title}
-              highlight={highlight}
+              eyebrow={content.eyebrow}
+              title={content.title}
+              highlight={content.highlight}
               align="left"
             />
-            <p className="mt-6 text-lg leading-relaxed text-gray-text">{intro}</p>
+            <p className="mt-6 text-lg leading-relaxed text-gray-text">{content.intro}</p>
           </div>
 
           <div className="grid gap-6 sm:grid-cols-2">
-            {items.map((item, i) => {
+            {content.items.map((item, i) => {
               const Icon = getLucideIcon(item.icon);
               return (
                 <AnimatedCard

@@ -28,6 +28,12 @@ import {
   experienceOptions,
   availabilityOptions,
 } from "@/content/carrieres";
+import {
+  availabilityOptionsEn,
+  careerFormCopy,
+  experienceOptionsEn,
+  type FormLocale,
+} from "@/i18n/form-copy";
 import { cn } from "@/lib/utils";
 
 type FormState = "idle" | "loading" | "success" | "error";
@@ -36,6 +42,7 @@ type Props = {
   className?: string;
   defaultJobId?: string;
   jobSelectOptions?: ReadonlyArray<{ value: string; label: string }>;
+  locale?: FormLocale;
 };
 
 type FormFieldProps = {
@@ -80,12 +87,15 @@ export function CarriereForm({
   className,
   defaultJobId = "",
   jobSelectOptions = staticJobSelectOptions,
+  locale = "fr",
 }: Props) {
+  const t = careerFormCopy[locale];
   const searchParams = useSearchParams();
   const [jobId, setJobId] = useState(defaultJobId);
   const [state, setState] = useState<FormState>("idle");
   const [errorMessage, setErrorMessage] = useState("");
-  const { turnstileToken, setTurnstileToken, validate, reset, onExpire, required } = useFormTurnstile();
+  const { turnstileToken, setTurnstileToken, validate, reset, onExpire, required } =
+    useFormTurnstile();
 
   useEffect(() => {
     const poste = searchParams.get("poste");
@@ -133,7 +143,7 @@ export function CarriereForm({
       const json = (await res.json()) as { error?: string };
 
       if (!res.ok) {
-        throw new Error(json.error ?? "Une erreur est survenue.");
+        throw new Error(json.error ?? t.errorFallback);
       }
 
       setState("success");
@@ -142,7 +152,7 @@ export function CarriereForm({
       reset();
     } catch (err) {
       setState("error");
-      setErrorMessage(err instanceof Error ? err.message : "Une erreur est survenue.");
+      setErrorMessage(err instanceof Error ? err.message : t.errorFallback);
     }
   }
 
@@ -159,12 +169,10 @@ export function CarriereForm({
         <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-primary shadow-lg shadow-primary/30">
           <CheckCircle className="h-8 w-8 text-white" aria-hidden />
         </div>
-        <h3 className="mt-6 text-2xl font-bold text-foreground">Candidature envoyée !</h3>
-        <p className="mx-auto mt-3 max-w-sm text-gray-text">
-          Merci pour votre intérêt. Notre équipe RH vous recontactera sous 5 à 10 jours ouvrés.
-        </p>
+        <h3 className="mt-6 text-2xl font-bold text-foreground">{t.successTitle}</h3>
+        <p className="mx-auto mt-3 max-w-sm text-gray-text">{t.successBody}</p>
         <Button type="button" variant="ghost" className="mt-8" onClick={() => setState("idle")}>
-          Nouvelle candidature
+          {t.successAgain}
         </Button>
       </motion.div>
     );
@@ -183,26 +191,21 @@ export function CarriereForm({
 
       <div className="p-8 md:p-10">
         <div className="mb-8">
-          <h2 className="text-xl font-bold text-foreground md:text-2xl">
-            Postuler chez SD CREATIV
-          </h2>
-          <p className="mt-2 text-sm text-gray-text">
-            Remplissez le formulaire ci-dessous. Joignez un lien vers votre CV (Google Drive,
-            LinkedIn, Canva…).
-          </p>
+          <h2 className="text-xl font-bold text-foreground md:text-2xl">{t.title}</h2>
+          <p className="mt-2 text-sm text-gray-text">{t.subtitle}</p>
         </div>
 
         <form onSubmit={handleSubmit} className="relative space-y-6" noValidate>
           <HoneypotField />
           <FormField
             id="jobId"
-            label="Poste visé"
+            label={t.job}
             required
             icon={<Briefcase className="h-3.5 w-3.5" aria-hidden />}
           >
             <div className="relative">
               <select
-                aria-label="Poste visé"
+                aria-label={t.job}
                 id="jobId"
                 name="jobId"
                 required
@@ -210,7 +213,7 @@ export function CarriereForm({
                 onChange={(e) => setJobId(e.target.value)}
                 className={cn(fieldClass, "cursor-pointer appearance-none pr-10")}
               >
-                <option value="">Sélectionnez un poste</option>
+                <option value="">{t.jobPlaceholder}</option>
                 {jobSelectOptions.map((option) => (
                   <option key={option.value} value={option.value}>
                     {option.label}
@@ -224,7 +227,7 @@ export function CarriereForm({
           <div className="grid gap-6 sm:grid-cols-2">
             <FormField
               id="name"
-              label="Nom complet"
+              label={t.name}
               required
               icon={<User className="h-3.5 w-3.5" aria-hidden />}
             >
@@ -235,13 +238,13 @@ export function CarriereForm({
                 required
                 autoComplete="name"
                 className={fieldClass}
-                placeholder="Prénom Nom"
+                placeholder={t.namePh}
               />
             </FormField>
 
             <FormField
               id="email"
-              label="Email"
+              label={t.email}
               required
               icon={<Mail className="h-3.5 w-3.5" aria-hidden />}
             >
@@ -252,7 +255,7 @@ export function CarriereForm({
                 required
                 autoComplete="email"
                 className={fieldClass}
-                placeholder="vous@email.com"
+                placeholder="you@email.com"
               />
             </FormField>
           </div>
@@ -260,7 +263,7 @@ export function CarriereForm({
           <div className="grid gap-6 sm:grid-cols-2">
             <FormField
               id="phone"
-              label="Téléphone / WhatsApp"
+              label={t.phone}
               required
               icon={<Phone className="h-3.5 w-3.5" aria-hidden />}
             >
@@ -277,7 +280,7 @@ export function CarriereForm({
 
             <FormField
               id="city"
-              label="Ville / zone"
+              label={t.city}
               required
               icon={<MapPin className="h-3.5 w-3.5" aria-hidden />}
             >
@@ -287,7 +290,7 @@ export function CarriereForm({
                 type="text"
                 required
                 className={fieldClass}
-                placeholder="Ex. Cocody, Bouaké, Paris…"
+                placeholder={t.cityPh}
               />
             </FormField>
           </div>
@@ -295,22 +298,24 @@ export function CarriereForm({
           <div className="grid gap-6 sm:grid-cols-2">
             <FormField
               id="experience"
-              label="Expérience commerciale"
+              label={t.experience}
               required
               icon={<Briefcase className="h-3.5 w-3.5" aria-hidden />}
             >
               <div className="relative">
                 <select
-                  aria-label="Expérience commerciale"
+                  aria-label={t.experience}
                   id="experience"
                   name="experience"
                   required
                   className={cn(fieldClass, "cursor-pointer appearance-none pr-10")}
                 >
-                  <option value="">Choisir</option>
+                  <option value="">{t.choose}</option>
                   {experienceOptions.map((option) => (
                     <option key={option.value} value={option.value}>
-                      {option.label}
+                      {locale === "en"
+                        ? experienceOptionsEn[option.value] ?? option.label
+                        : option.label}
                     </option>
                   ))}
                 </select>
@@ -320,22 +325,24 @@ export function CarriereForm({
 
             <FormField
               id="availability"
-              label="Disponibilité"
+              label={t.availability}
               required
               icon={<Clock className="h-3.5 w-3.5" aria-hidden />}
             >
               <div className="relative">
                 <select
-                  aria-label="Disponibilité"
+                  aria-label={t.availability}
                   id="availability"
                   name="availability"
                   required
                   className={cn(fieldClass, "cursor-pointer appearance-none pr-10")}
                 >
-                  <option value="">Choisir</option>
+                  <option value="">{t.choose}</option>
                   {availabilityOptions.map((option) => (
                     <option key={option.value} value={option.value}>
-                      {option.label}
+                      {locale === "en"
+                        ? availabilityOptionsEn[option.value] ?? option.label
+                        : option.label}
                     </option>
                   ))}
                 </select>
@@ -346,21 +353,21 @@ export function CarriereForm({
 
           <FormField
             id="hasVehicle"
-            label="Permis B / véhicule"
+            label={t.vehicle}
             required
             icon={<Car className="h-3.5 w-3.5" aria-hidden />}
           >
             <div className="relative">
               <select
-                aria-label="Permis B / véhicule"
+                aria-label={t.vehicle}
                 id="hasVehicle"
                 name="hasVehicle"
                 required
                 className={cn(fieldClass, "cursor-pointer appearance-none pr-10")}
               >
-                <option value="">Choisir</option>
-                <option value="oui">Oui</option>
-                <option value="non">Non</option>
+                <option value="">{t.choose}</option>
+                <option value="oui">{t.yes}</option>
+                <option value="non">{t.no}</option>
               </select>
               <SelectChevron />
             </div>
@@ -369,7 +376,7 @@ export function CarriereForm({
           <div className="grid gap-6 sm:grid-cols-2">
             <FormField
               id="cvLink"
-              label="Lien CV"
+              label={t.cvLink}
               icon={<FileText className="h-3.5 w-3.5" aria-hidden />}
             >
               <input
@@ -383,7 +390,7 @@ export function CarriereForm({
 
             <FormField
               id="linkedin"
-              label="LinkedIn / portfolio"
+              label={t.linkedin}
               icon={<Link2 className="h-3.5 w-3.5" aria-hidden />}
             >
               <input
@@ -398,7 +405,7 @@ export function CarriereForm({
 
           <FormField
             id="motivation"
-            label="Motivation"
+            label={t.motivation}
             required
             icon={<FileText className="h-3.5 w-3.5" aria-hidden />}
           >
@@ -409,7 +416,7 @@ export function CarriereForm({
               rows={5}
               minLength={50}
               className={cn(fieldClass, "min-h-[140px] resize-y leading-relaxed")}
-              placeholder="Pourquoi souhaitez-vous rejoindre SD CREATIV ? Votre expérience commerciale, votre réseau local…"
+              placeholder={t.motivationPh}
             />
           </FormField>
 
@@ -421,17 +428,14 @@ export function CarriereForm({
           )}
 
           {required && (
-            <TurnstileWidget
-              onToken={setTurnstileToken}
-              onExpire={onExpire}
-            />
+            <TurnstileWidget onToken={setTurnstileToken} onExpire={onExpire} />
           )}
 
           <div className="flex flex-col gap-5 border-t border-gray/80 pt-6 sm:flex-row sm:items-center sm:justify-between">
             <p className="max-w-xs text-xs text-gray-text">
-              En postulant, vous acceptez notre{" "}
-              <a href="/politique-confidentialite" className="text-primary hover:underline">
-                politique de confidentialité
+              {t.privacyPrefix}{" "}
+              <a href={t.privacyHref} className="text-primary hover:underline">
+                {t.privacyLink}
               </a>
               .
             </p>
@@ -444,11 +448,11 @@ export function CarriereForm({
               {state === "loading" ? (
                 <>
                   <Loader2 className="h-4 w-4 animate-spin" aria-hidden />
-                  Envoi…
+                  {t.submitting}
                 </>
               ) : (
                 <>
-                  Envoyer ma candidature
+                  {t.submit}
                   <Send className="h-4 w-4" aria-hidden />
                 </>
               )}

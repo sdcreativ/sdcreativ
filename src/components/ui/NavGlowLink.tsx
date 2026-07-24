@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import type { KeyboardEventHandler } from "react";
 import { cn } from "@/lib/utils";
 
 type NavGlowLinkProps = {
@@ -10,6 +11,11 @@ type NavGlowLinkProps = {
   className?: string;
   variant?: "header" | "dropdown" | "footer";
   onClick?: () => void;
+  onKeyDown?: KeyboardEventHandler<HTMLAnchorElement>;
+  role?: string;
+  "aria-expanded"?: boolean;
+  "aria-haspopup"?: boolean | "menu" | "listbox" | "tree" | "grid" | "dialog";
+  "aria-controls"?: string;
 };
 
 export function NavGlowLink({
@@ -19,11 +25,21 @@ export function NavGlowLink({
   className,
   variant = "header",
   onClick,
+  onKeyDown,
+  role,
+  "aria-expanded": ariaExpanded,
+  "aria-haspopup": ariaHaspopup,
+  "aria-controls": ariaControls,
 }: NavGlowLinkProps) {
   return (
     <Link
       href={href}
       onClick={onClick}
+      onKeyDown={onKeyDown}
+      role={role}
+      aria-expanded={ariaExpanded}
+      aria-haspopup={ariaHaspopup}
+      aria-controls={ariaControls}
       data-active={active ? "true" : undefined}
       className={cn(
         "nav-glow-link",
@@ -46,8 +62,9 @@ export function isNavLinkActive(href: string, pathname: string): boolean {
   const base = href.split("#")[0];
   if (!base) return false;
 
-  if (base === "/services") {
-    return pathname === "/services" || pathname.startsWith("/en/services");
+  if (base === "/services" || base === "/en/services") {
+    return pathname === "/services" || pathname.startsWith("/services/") ||
+      pathname === "/en/services" || pathname.startsWith("/en/services/");
   }
 
   return pathname === base || pathname.startsWith(`${base}/`);

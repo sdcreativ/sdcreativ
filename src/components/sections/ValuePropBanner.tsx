@@ -1,9 +1,9 @@
 import { Sparkles } from "lucide-react";
 import { AnimatedSection } from "@/components/ui/AnimatedSection";
-import { SITE_VALUE_PROP } from "@/lib/site-value-prop";
+import { SITE_VALUE_PROP, SITE_VALUE_PROP_EN } from "@/lib/site-value-prop";
 
 /** Bandeau d’accueil : proposition de valeur bien visible. */
-export function ValuePropBanner() {
+export function ValuePropBanner({ locale = "fr" }: { locale?: "fr" | "en" }) {
   return (
     <AnimatedSection className="relative overflow-hidden border-y border-primary/15 bg-gradient-to-r from-primary via-[#0a5f9e] to-primary">
       <div
@@ -20,7 +20,7 @@ export function ValuePropBanner() {
             <Sparkles className="h-6 w-6" aria-hidden />
           </div>
           <p className="text-lg font-bold leading-snug tracking-tight text-white md:text-2xl md:leading-snug">
-            {SITE_VALUE_PROP}
+            {locale === "en" ? SITE_VALUE_PROP_EN : SITE_VALUE_PROP}
           </p>
         </div>
       </div>

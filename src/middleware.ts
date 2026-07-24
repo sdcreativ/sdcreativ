@@ -1,5 +1,7 @@
 import type { NextRequest } from "next/server";
 import { NextResponse } from "next/server";
+import { isEnglishLocaleEnabled } from "@/i18n/config";
+import { getAlternatePath, isEnglishPath } from "@/i18n/routes";
 import {
   ADMIN_SESSION_COOKIE,
   verifyCrmSession,
@@ -33,6 +35,14 @@ export async function middleware(request: NextRequest) {
   // Captures statiques : servies sans auth (optimiseur Next.js + chargement tablette/mobile).
   if (pathname.startsWith("/presentation/captures/")) {
     return NextResponse.next();
+  }
+
+  // EN suspendu : toute URL /en → équivalent FR (code EN conservé pour plus tard).
+  if (!isEnglishLocaleEnabled() && isEnglishPath(pathname)) {
+    const frPath = getAlternatePath(pathname, "fr");
+    const url = request.nextUrl.clone();
+    url.pathname = frPath;
+    return NextResponse.redirect(url, 308);
   }
 
   const isAdmin = pathname.startsWith("/admin");
@@ -74,5 +84,11 @@ export async function middleware(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ["/admin/:path*", "/presentation", "/presentation/:path*"],
+  matcher: [
+    "/en",
+    "/en/:path*",
+    "/admin/:path*",
+    "/presentation",
+    "/presentation/:path*",
+  ],
 };

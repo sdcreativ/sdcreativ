@@ -6,6 +6,7 @@ import { SkipLink } from "@/components/layout/SkipLink";
 import { CookieConsent } from "@/components/layout/CookieConsent";
 import { AppProviders } from "@/components/layout/AppProviders";
 import { Analytics } from "@/components/analytics/Analytics";
+import { TrackCtaListener } from "@/components/analytics/TrackCtaListener";
 import { DocumentLang } from "@/components/i18n/DocumentLang";
 import { OrganizationJsonLd, LocalBusinessJsonLd, WebSiteJsonLd } from "@/components/seo/JsonLd";
 import { SITE } from "@/lib/constants";
@@ -54,6 +55,7 @@ export default async function RootLayout({
           <FloatingWidgets />
           <CookieConsent />
           <Analytics />
+          <TrackCtaListener />
         </AppProviders>
       </body>
     </html>

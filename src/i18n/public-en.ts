@@ -170,6 +170,214 @@ export const servicesEnById: Record<
   },
 };
 
+/** Accueil EN — overlays alignés sur les defaults CMS FR. */
+export const heroContentEn = {
+  eyebrow: "Web agency & digital solutions",
+  titleBefore: "Your brand,",
+  titleHighlight: "your website",
+  titleAfter: ", your impact.",
+  description:
+    "SD CREATIV helps SMEs, entrepreneurs, retailers and organizations build modern, accessible and high-performing websites.",
+  features: [
+    "Showcase sites",
+    "E-commerce",
+    "Website redesign",
+    "Local SEO",
+    "Maintenance",
+  ],
+  highlights: [
+    { label: "100% Responsive", description: "Built for every screen" },
+    { label: "SEO Ready", description: "Visible on Google" },
+    { label: "Guided Delivery", description: "From brief to launch" },
+    { label: "Post-launch Support", description: "We stay with you" },
+  ],
+  ctaPrimaryLabel: "Get my quote",
+  ctaPrimaryHref: "/en/devis",
+  ctaSecondaryLabel: "Explore our services",
+  ctaSecondaryHref: "/en/services",
+} as const;
+
+export const whyUsContentEn = {
+  eyebrow: "Why choose SD CREATIV?",
+  title: "Much more",
+  highlight: "than a website.",
+  intro:
+    "At SD CREATIV, we do not just deliver a website. We build a growth tool with you — designed for your business, audience and commercial goals.",
+  items: [
+    {
+      icon: "Accessibility" as const,
+      title: "Accessibility",
+      description:
+        "Solutions tailored to SMEs and entrepreneurs, with clear scopes and controlled budgets.",
+    },
+    {
+      icon: "Award" as const,
+      title: "Professional quality",
+      description:
+        "Modern, fast and secure sites built to professional web standards.",
+    },
+    {
+      icon: "Handshake" as const,
+      title: "Partnership",
+      description:
+        "Human support before, during and after go-live to help you succeed.",
+    },
+    {
+      icon: "TrendingUp" as const,
+      title: "Performance",
+      description:
+        "Digital experiences designed to turn visitors into customers.",
+    },
+  ],
+};
+
+export const methodContentEn = {
+  eyebrow: "Our smooth method",
+  title: "A simple method",
+  highlight: "in 7 steps",
+  steps: [
+    {
+      number: "01",
+      icon: "Ear" as const,
+      title: "Listen",
+      description: "Understand your business, goals and expectations.",
+    },
+    {
+      number: "02",
+      icon: "Search" as const,
+      title: "Diagnose",
+      description: "Review your current presence and identify growth levers.",
+    },
+    {
+      number: "03",
+      icon: "Lightbulb" as const,
+      title: "Propose",
+      description: "Define the right solution with a clear, transparent quote.",
+    },
+    {
+      number: "04",
+      icon: "PenTool" as const,
+      title: "Design",
+      description: "Create mockups and visuals aligned with your brand.",
+    },
+    {
+      number: "05",
+      icon: "Code2" as const,
+      title: "Build",
+      description: "Ship a performant, responsive, SEO-ready website.",
+    },
+    {
+      number: "06",
+      icon: "Rocket" as const,
+      title: "Launch",
+      description: "Go live, test thoroughly and train your team.",
+    },
+    {
+      number: "07",
+      icon: "LineChart" as const,
+      title: "Follow",
+      description: "Maintenance, iterations and continuous improvement.",
+    },
+  ],
+};
+
+export const contactPageEn = {
+  benefits: [
+    "Reply within 24–48 business hours",
+    "Team available Monday to Friday",
+    "Support, questions and project follow-up",
+    "WhatsApp for a quick conversation",
+  ],
+  coordsTitle: "Contact details",
+  coordsSubtitle: "We are available Monday to Friday.",
+  whatsapp: "Chat on WhatsApp",
+  whyTitle: "Why contact us?",
+} as const;
+
+export const jobOffersEnById: Record<
+  string,
+  {
+    title: string;
+    type: string;
+    location: string;
+    department: string;
+    description: string;
+    missions: string[];
+    profile: string[];
+  }
+> = {
+  "commercial-terrain-abidjan": {
+    title: "Field sales — Abidjan",
+    type: "Full-time / Freelance",
+    location: "Abidjan, Côte d'Ivoire",
+    department: "Sales",
+    description:
+      "Grow the SME and entrepreneur pipeline through direct field prospecting in Abidjan and surrounding areas.",
+    missions: [
+      "On-the-ground prospecting (Cocody, Plateau, Marcory, Yopougon…)",
+      "Present SD CREATIV offers (websites, AI, maintenance)",
+      "Qualify needs and book meetings with the delivery team",
+      "Follow quotes and commercial follow-ups",
+      "Weekly CRM pipeline reporting",
+    ],
+    profile: [
+      "B2B sales experience, ideally digital or services",
+      "Strong oral communication in French",
+      "Autonomy, rigor and results focus",
+      "Driving license and mobility in Abidjan appreciated",
+      "Local SME / entrepreneur network is a plus",
+    ],
+  },
+  "commercial-terrain-interieur": {
+    title: "Field sales — Interior cities",
+    type: "Freelance / Commission",
+    location: "Bouaké, Yamoussoukro, San-Pédro…",
+    department: "Sales",
+    description:
+      "Represent SD CREATIV in interior cities and grow our presence beyond Abidjan.",
+    missions: [
+      "Prospect local SMEs and institutions",
+      "Organize video calls with the technical team",
+      "Activate local networks (CCI, pro associations…)",
+      "Client follow-up and maintenance upsell",
+    ],
+    profile: [
+      "Knowledge of the local business fabric",
+      "Comfortable with WhatsApp and digital tools",
+      "Motivation for commercial development",
+      "Availability for regular travel",
+    ],
+  },
+  "business-developer-diaspora": {
+    title: "Business developer — Diaspora",
+    type: "Freelance / Remote",
+    location: "Remote (FR, US, CA…)",
+    department: "Sales",
+    description:
+      "Engage Ivorian diaspora entrepreneurs who want to launch or digitize their business back home.",
+    missions: [
+      "Prospect via LinkedIn, email and diaspora events",
+      "Present our offers bilingually (FR/EN)",
+      "Coordinate with the Abidjan team for delivery",
+      "Generate qualified leads for the quote configurator",
+    ],
+    profile: [
+      "Fluent French and English",
+      "Understanding of diaspora ↔ Côte d'Ivoire challenges",
+      "Experience selling services or SaaS",
+      "Autonomy in remote work",
+    ],
+  },
+};
+
+export const careerBenefitsEn = [
+  "Attractive commissions on closed deals",
+  "Product training (web, AI, maintenance)",
+  "CRM tools and quote configurator",
+  "Growing brand on the Ivorian market",
+  "Technical team based in Abidjan",
+] as const;
+
 export const quoteLabelsEn = {
   projectTypes: {
     "site-vitrine": "Showcase website",

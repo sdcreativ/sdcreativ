@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { isEnglishLocaleEnabled } from "@/i18n/config";
 import { getAlternatePath, isEnglishPath } from "@/i18n/routes";
 import { localeSwitcher } from "@/i18n/en-content";
 import { cn } from "@/lib/utils";
@@ -13,6 +14,8 @@ type Props = {
 export function LocaleSwitcher({ className }: Props) {
   const pathname = usePathname() ?? "/";
   const isEn = isEnglishPath(pathname);
+
+  if (!isEnglishLocaleEnabled()) return null;
 
   return (
     <div

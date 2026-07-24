@@ -6,11 +6,7 @@ type Props = { locale?: "fr" | "en" };
 
 export async function PartnersSection({ locale = "fr" }: Props) {
   const technologyPartners = await getTechnologyPartners(locale);
-  if (technologyPartners.length === 0) {
-    const fallback = locale === "en" ? await getTechnologyPartners("fr") : [];
-    if (fallback.length === 0) return null;
-    return renderPartners(fallback, locale);
-  }
+  if (technologyPartners.length === 0) return null;
   return renderPartners(technologyPartners, locale);
 }
 

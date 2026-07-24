@@ -6,15 +6,22 @@ import { Button } from "@/components/ui/Button";
 import { HoneypotField } from "@/components/forms/HoneypotField";
 import { TurnstileWidget } from "@/components/forms/TurnstileWidget";
 import { useFormTurnstile } from "@/components/forms/useFormTurnstile";
+import { newsletterFormCopy, type FormLocale } from "@/i18n/form-copy";
 
 type Status = "idle" | "loading" | "success" | "error";
 
-export function NewsletterSignup() {
+type Props = {
+  locale?: FormLocale;
+};
+
+export function NewsletterSignup({ locale = "fr" }: Props) {
+  const t = newsletterFormCopy[locale];
   const [email, setEmail] = useState("");
   const [consent, setConsent] = useState(false);
   const [status, setStatus] = useState<Status>("idle");
   const [error, setError] = useState("");
-  const { turnstileToken, setTurnstileToken, validate, reset, onExpire, required } = useFormTurnstile();
+  const { turnstileToken, setTurnstileToken, validate, reset, onExpire, required } =
+    useFormTurnstile();
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -34,13 +41,18 @@ export function NewsletterSignup() {
       const res = await fetch("/api/newsletter", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email, consent, _hp: hp, turnstileToken: turnstileToken || undefined }),
+        body: JSON.stringify({
+          email,
+          consent,
+          _hp: hp,
+          turnstileToken: turnstileToken || undefined,
+        }),
       });
 
       const data = (await res.json()) as { error?: string };
 
       if (!res.ok) {
-        setError(data.error ?? "Une erreur est survenue.");
+        setError(data.error ?? t.errorFallback);
         setStatus("error");
         return;
       }
@@ -49,7 +61,7 @@ export function NewsletterSignup() {
       setEmail("");
       reset();
     } catch {
-      setError("Impossible de s'inscrire. Réessayez plus tard.");
+      setError(t.errorNetwork);
       setStatus("error");
     }
   }
@@ -58,7 +70,7 @@ export function NewsletterSignup() {
     return (
       <div className="mt-6 flex items-center gap-2 text-sm text-primary-light">
         <CheckCircle2 className="h-4 w-4 shrink-0" aria-hidden />
-        Merci ! Vous êtes inscrit à notre newsletter.
+        {t.success}
       </div>
     );
   }
@@ -66,13 +78,11 @@ export function NewsletterSignup() {
   return (
     <form onSubmit={handleSubmit} className="relative mt-6">
       <HoneypotField />
-      <p className="mb-3 text-sm font-semibold text-white/90">Newsletter</p>
-      <p className="mb-3 text-xs text-white/50">
-        Conseils web, actualités et offres exclusives.
-      </p>
+      <p className="mb-3 text-sm font-semibold text-white/90">{t.title}</p>
+      <p className="mb-3 text-xs text-white/50">{t.subtitle}</p>
       <div className="flex flex-col gap-2 sm:flex-row">
         <label htmlFor="newsletter-email" className="sr-only">
-          Adresse email
+          {t.emailLabel}
         </label>
         <div className="relative flex-1">
           <Mail
@@ -85,7 +95,7 @@ export function NewsletterSignup() {
             required
             value={email}
             onChange={(e) => setEmail(e.target.value)}
-            placeholder="votre@email.com"
+            placeholder={t.emailPh}
             className="w-full rounded-lg border border-white/10 bg-white/5 py-2.5 pl-10 pr-4 text-sm text-white placeholder:text-white/40 focus:border-primary-light focus:outline-none focus:ring-1 focus:ring-primary-light"
           />
         </div>
@@ -94,11 +104,12 @@ export function NewsletterSignup() {
           size="sm"
           disabled={status === "loading"}
           className="shrink-0 justify-center"
+          data-track-cta="newsletter_subscribe"
         >
           {status === "loading" ? (
             <Loader2 className="h-4 w-4 animate-spin" aria-hidden />
           ) : (
-            "S'inscrire"
+            t.submit
           )}
         </Button>
       </div>
@@ -112,14 +123,14 @@ export function NewsletterSignup() {
           className="mt-0.5 h-3.5 w-3.5 shrink-0 rounded border-white/20 accent-primary"
         />
         <span>
-          J&apos;accepte de recevoir la newsletter et j&apos;ai lu la{" "}
+          {t.consentPrefix}{" "}
           <a
-            href="/politique-confidentialite"
+            href={t.privacyHref}
             className="font-medium text-primary-light underline underline-offset-2"
           >
-            politique de confidentialité
+            {t.privacyLink}
           </a>
-          . Désinscription possible à tout moment.
+          {t.consentSuffix}
         </span>
       </label>
       {required && (

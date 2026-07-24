@@ -20,14 +20,13 @@ type Props = { params: Promise<{ slug: string }> };
 export const revalidate = 300;
 
 export async function generateStaticParams() {
-  const [en, fr] = await Promise.all([getRealisations("en"), getRealisations("fr")]);
-  const ids = new Set([...en, ...fr].map((r) => r.id));
-  return Array.from(ids).map((slug) => ({ slug }));
+  const items = await getRealisations("en");
+  return items.map((r) => ({ slug: r.id }));
 }
 
 export async function generateMetadata({ params }: Props) {
   const { slug } = await params;
-  const project = await getRealisation(slug);
+  const project = await getRealisation(slug, "en");
   if (!project) return {};
 
   return createMetadata({
@@ -40,11 +39,11 @@ export async function generateMetadata({ params }: Props) {
 
 export default async function EnPortfolioDetailPage({ params }: Props) {
   const { slug } = await params;
-  const project = await getRealisation(slug);
+  const project = await getRealisation(slug, "en");
 
   if (!project) notFound();
 
-  const related = await getRelatedRealisations(slug, project.category);
+  const related = await getRelatedRealisations(slug, project.category, 3, "en");
   const imageSrc = resolveImageDisplayUrl(project.image);
 
   return (

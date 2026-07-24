@@ -209,8 +209,19 @@ export async function getPublicRealisationById(id: string): Promise<PublicRealis
 
 export async function getPublicRealisationBySlug(
   slug: string,
+  locale?: string,
 ): Promise<PublicRealisationRecord | null> {
   return withDb(async (query) => {
+    if (locale) {
+      const { rows } = await query<RealisationRow>(
+        `SELECT * FROM public_realisations
+         WHERE slug = $1 AND locale = $2 AND is_visible = true
+         LIMIT 1`,
+        [slug, locale],
+      );
+      return rows[0] ? mapRow(rows[0]) : null;
+    }
+
     const { rows } = await query<RealisationRow>(
       `SELECT * FROM public_realisations WHERE slug = $1 AND is_visible = true LIMIT 1`,
       [slug],

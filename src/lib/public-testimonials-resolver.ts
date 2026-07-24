@@ -1,12 +1,12 @@
 import { testimonials as staticTestimonials } from "@/content/testimonials";
 import type { Testimonial } from "@/content/testimonials";
+import { allowLocaleStaticSeed } from "@/lib/cms-locale";
 import { isDatabaseConfigured } from "@/lib/db";
 import { listPublicTestimonials, toTestimonial } from "@/lib/public-testimonials";
-import { allowStaticContentFallback } from "@/lib/static-content-fallback";
 
 export async function getTestimonials(locale = "fr"): Promise<Testimonial[]> {
   if (!isDatabaseConfigured()) {
-    return allowStaticContentFallback() ? staticTestimonials : [];
+    return allowLocaleStaticSeed(locale) ? staticTestimonials : [];
   }
 
   try {
@@ -16,5 +16,5 @@ export async function getTestimonials(locale = "fr"): Promise<Testimonial[]> {
     console.error("[public-testimonials] getTestimonials fallback:", error);
   }
 
-  return allowStaticContentFallback() ? staticTestimonials : [];
+  return allowLocaleStaticSeed(locale) ? staticTestimonials : [];
 }

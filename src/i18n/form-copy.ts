@@ -165,3 +165,120 @@ export const timelineOptionsEn = [
   { value: "3-plus", label: "More than 3 months" },
   { value: "flexible", label: "Flexible / to be defined" },
 ] as const;
+
+export const newsletterFormCopy = {
+  fr: {
+    title: "Newsletter",
+    subtitle: "Conseils web, actualités et offres exclusives.",
+    emailLabel: "Adresse email",
+    emailPh: "votre@email.com",
+    submit: "S'inscrire",
+    consentPrefix: "J'accepte de recevoir la newsletter et j'ai lu la",
+    privacyLink: "politique de confidentialité",
+    privacyHref: "/politique-confidentialite",
+    consentSuffix: ". Désinscription possible à tout moment.",
+    success: "Merci ! Vous êtes inscrit à notre newsletter.",
+    errorFallback: "Une erreur est survenue.",
+    errorNetwork: "Impossible de s'inscrire. Réessayez plus tard.",
+  },
+  en: {
+    title: "Newsletter",
+    subtitle: "Web tips, product updates and exclusive offers.",
+    emailLabel: "Email address",
+    emailPh: "you@email.com",
+    submit: "Subscribe",
+    consentPrefix: "I agree to receive the newsletter and have read the",
+    privacyLink: "privacy policy",
+    privacyHref: "/en/privacy",
+    consentSuffix: ". You can unsubscribe at any time.",
+    success: "Thanks! You are subscribed to our newsletter.",
+    errorFallback: "Something went wrong.",
+    errorNetwork: "Unable to subscribe. Please try again later.",
+  },
+} as const;
+
+export const experienceOptionsEn: Record<string, string> = {
+  debutant: "Entry level (0–1 year)",
+  "1-3": "1 to 3 years",
+  "3-5": "3 to 5 years",
+  "5-plus": "More than 5 years",
+};
+
+export const availabilityOptionsEn: Record<string, string> = {
+  immediate: "Immediate",
+  "1-mois": "Within 1 month",
+  "2-mois-plus": "2 months or more",
+};
+
+export const careerFormCopy = {
+  fr: {
+    successTitle: "Candidature envoyée !",
+    successBody:
+      "Merci pour votre intérêt. Notre équipe RH vous recontactera sous 5 à 10 jours ouvrés.",
+    successAgain: "Nouvelle candidature",
+    title: "Postuler chez SD CREATIV",
+    subtitle:
+      "Remplissez le formulaire ci-dessous. Joignez un lien vers votre CV (Google Drive, LinkedIn, Canva…).",
+    job: "Poste visé",
+    jobPlaceholder: "Sélectionnez un poste",
+    name: "Nom complet",
+    email: "Email",
+    phone: "Téléphone / WhatsApp",
+    city: "Ville / zone",
+    experience: "Expérience commerciale",
+    availability: "Disponibilité",
+    vehicle: "Permis B / véhicule",
+    choose: "Choisir",
+    yes: "Oui",
+    no: "Non",
+    cvLink: "Lien CV",
+    linkedin: "LinkedIn / portfolio",
+    motivation: "Motivation",
+    namePh: "Prénom Nom",
+    cityPh: "Ex. Cocody, Bouaké, Paris…",
+    motivationPh:
+      "Pourquoi souhaitez-vous rejoindre SD CREATIV ? Votre expérience commerciale, votre réseau local…",
+    privacyPrefix: "En postulant, vous acceptez notre",
+    privacyLink: "politique de confidentialité",
+    privacyHref: "/politique-confidentialite",
+    submit: "Envoyer ma candidature",
+    submitting: "Envoi…",
+    errorFallback: "Une erreur est survenue.",
+    spontaneous: "Candidature spontanée",
+  },
+  en: {
+    successTitle: "Application sent!",
+    successBody:
+      "Thank you for your interest. Our HR team will get back to you within 5–10 business days.",
+    successAgain: "New application",
+    title: "Apply to SD CREATIV",
+    subtitle:
+      "Fill in the form below. Add a link to your CV (Google Drive, LinkedIn, Canva…).",
+    job: "Role",
+    jobPlaceholder: "Select a role",
+    name: "Full name",
+    email: "Email",
+    phone: "Phone / WhatsApp",
+    city: "City / area",
+    experience: "Sales experience",
+    availability: "Availability",
+    vehicle: "Driving license / vehicle",
+    choose: "Choose",
+    yes: "Yes",
+    no: "No",
+    cvLink: "CV link",
+    linkedin: "LinkedIn / portfolio",
+    motivation: "Motivation",
+    namePh: "First Last",
+    cityPh: "e.g. Cocody, Bouaké, Paris…",
+    motivationPh:
+      "Why do you want to join SD CREATIV? Share your sales experience and local network…",
+    privacyPrefix: "By applying, you agree to our",
+    privacyLink: "privacy policy",
+    privacyHref: "/en/privacy",
+    submit: "Send my application",
+    submitting: "Sending…",
+    errorFallback: "Something went wrong.",
+    spontaneous: "Spontaneous application",
+  },
+} as const;

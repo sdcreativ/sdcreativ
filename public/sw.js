@@ -1,5 +1,5 @@
 const CACHE = "sdcreativ-v2";
-const PRECACHE = ["/", "/offline", "/en", "/en/offline"];
+const PRECACHE = ["/", "/offline"];
 
 self.addEventListener("install", (event) => {
   event.waitUntil(
@@ -32,8 +32,7 @@ self.addEventListener("fetch", (event) => {
       .catch(() =>
         caches.match(event.request).then((cached) => {
           if (cached) return cached;
-          const offlinePath = url.pathname.startsWith("/en") ? "/en/offline" : "/offline";
-          return caches.match(offlinePath);
+          return caches.match("/offline");
         }),
       ),
   );

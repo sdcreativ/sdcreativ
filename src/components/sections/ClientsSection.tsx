@@ -8,10 +8,8 @@ type Props = { locale?: "fr" | "en" };
 
 export async function ClientsSection({ locale = "fr" }: Props) {
   const [items, partners] = await Promise.all([
-    getRealisations(),
-    getTechnologyPartners(locale === "en" ? "en" : "fr").then(async (list) =>
-      list.length > 0 || locale !== "en" ? list : getTechnologyPartners("fr"),
-    ),
+    getRealisations(locale),
+    getTechnologyPartners(locale),
   ]);
 
   const sectors = uniqueSectorsFromRealisations(items);

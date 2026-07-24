@@ -1,13 +1,13 @@
 import { teamMembers as staticTeamMembers } from "@/content/team";
 import type { TeamMember } from "@/content/team";
+import { allowLocaleStaticSeed } from "@/lib/cms-locale";
 import { isDatabaseConfigured } from "@/lib/db";
 import { listPublicTeamMembers, toTeamMember } from "@/lib/public-team-members";
-import { allowStaticContentFallback } from "@/lib/static-content-fallback";
 
-/** Membres visibles sur le site public (DB → fallback seed hors prod). */
+/** Membres visibles sur le site public (DB → seed FR hors prod uniquement). */
 export async function getTeamMembers(locale = "fr"): Promise<TeamMember[]> {
   if (!isDatabaseConfigured()) {
-    return allowStaticContentFallback() ? staticTeamMembers : [];
+    return allowLocaleStaticSeed(locale) ? staticTeamMembers : [];
   }
 
   try {
@@ -19,5 +19,5 @@ export async function getTeamMembers(locale = "fr"): Promise<TeamMember[]> {
     console.error("[public-team] getTeamMembers fallback:", error);
   }
 
-  return allowStaticContentFallback() ? staticTeamMembers : [];
+  return allowLocaleStaticSeed(locale) ? staticTeamMembers : [];
 }

@@ -9,13 +9,24 @@ import {
   Smartphone,
 } from "lucide-react";
 import { Button } from "@/components/ui/Button";
+import { heroContentEn } from "@/i18n/public-en";
 import { getSiteHeroSettings } from "@/lib/site-hero-settings";
 import { isProxiedMediaUrl, resolveImageDisplayUrl } from "@/lib/image-url";
 
 const highlightIcons = [Monitor, Search, Smartphone, HeadphonesIcon];
 
-export async function HeroSection() {
-  const hero = await getSiteHeroSettings();
+export async function HeroSection({ locale = "fr" }: { locale?: "fr" | "en" }) {
+  const cms = await getSiteHeroSettings();
+  const isEn = locale === "en";
+  const hero = isEn
+    ? {
+        ...cms,
+        ...heroContentEn,
+        highlights: [...heroContentEn.highlights],
+        features: [...heroContentEn.features],
+        backgroundImage: cms.backgroundImage,
+      }
+    : cms;
   const backgroundSrc = resolveImageDisplayUrl(hero.backgroundImage);
   const heroAlt = [hero.titleBefore, hero.titleHighlight, hero.titleAfter]
     .filter(Boolean)
@@ -27,7 +38,7 @@ export async function HeroSection() {
     <section className="relative overflow-hidden bg-dark pt-[4.5rem] md:pt-[4.75rem]">
       <Image
         src={backgroundSrc}
-        alt={heroAlt || "SD CREATIV — agence web Abidjan"}
+        alt={heroAlt || (isEn ? "SD CREATIV — web agency Abidjan" : "SD CREATIV — agence web Abidjan")}
         fill
         priority
         unoptimized={isProxiedMediaUrl(backgroundSrc)}

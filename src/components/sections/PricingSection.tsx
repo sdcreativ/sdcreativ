@@ -4,7 +4,7 @@ import { SectionHeading } from "@/components/ui/SectionHeading";
 import { Button } from "@/components/ui/Button";
 import { getPricingPlans, getPricingReassurance } from "@/lib/public-pricing-resolver";
 import { PRICE_ON_REQUEST_LABEL, PRICE_ON_REQUEST_LABEL_EN } from "@/lib/format";
-import { SITE_VALUE_PROP } from "@/lib/site-value-prop";
+import { SITE_VALUE_PROP, SITE_VALUE_PROP_EN } from "@/lib/site-value-prop";
 import { cn } from "@/lib/utils";
 
 const reassuranceIcons = [Clock, Monitor, Headphones, Target];
@@ -31,9 +31,7 @@ export async function PricingSection({ locale = "fr" }: Props) {
           className="mb-6"
         />
         <p className="mx-auto mb-14 max-w-2xl text-center text-base font-semibold text-primary md:text-lg">
-          {locale === "en"
-            ? "International quality at a price accessible to businesses"
-            : SITE_VALUE_PROP}
+          {locale === "en" ? SITE_VALUE_PROP_EN : SITE_VALUE_PROP}
         </p>
 
         <div className="grid gap-8 lg:grid-cols-3">

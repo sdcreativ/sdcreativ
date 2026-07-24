@@ -9,37 +9,19 @@ import { htmlRow, sendEmail } from "@/lib/email";
 import { createLead } from "@/lib/leads";
 import { createQuoteFromDevis } from "@/lib/quotes";
 import { rejectIfBot } from "@/lib/form-guard";
+import {
+  PUBLIC_FORM_RATE_LIMIT,
+  consumeRateLimit,
+  getClientIp,
+  rateLimitExceededResponse,
+} from "@/lib/rate-limit";
 import { createDevisSchema } from "@/lib/validations/devis";
-
-const rateLimit = new Map<string, { count: number; resetAt: number }>();
-const RATE_LIMIT = 5;
-const RATE_WINDOW_MS = 60 * 60 * 1000;
-
-function isRateLimited(ip: string): boolean {
-  const now = Date.now();
-  const entry = rateLimit.get(ip);
-
-  if (!entry || now > entry.resetAt) {
-    rateLimit.set(ip, { count: 1, resetAt: now + RATE_WINDOW_MS });
-    return false;
-  }
-
-  if (entry.count >= RATE_LIMIT) return true;
-  entry.count++;
-  return false;
-}
 
 export async function POST(request: Request) {
   try {
-    const ip =
-      request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ?? "unknown";
-
-    if (isRateLimited(ip)) {
-      return NextResponse.json(
-        { error: "Trop de requêtes. Réessayez dans une heure." },
-        { status: 429 },
-      );
-    }
+    const ip = getClientIp(request);
+    const limited = consumeRateLimit("public-devis", ip, PUBLIC_FORM_RATE_LIMIT);
+    if (limited.limited) return rateLimitExceededResponse(limited.retryAfterSec);
 
     const body = await request.json();
 

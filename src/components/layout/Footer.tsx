@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { Phone, Mail, MapPin, Clock } from "lucide-react";
+import { Phone, Mail, MapPin, Clock, LayoutDashboard } from "lucide-react";
 import {
   FacebookIcon,
   LinkedInIcon,
@@ -14,7 +14,13 @@ import { NavGlowLink } from "@/components/ui/NavGlowLink";
 import { NewsletterSignup } from "@/components/forms/NewsletterSignup";
 import { buildWhatsappUrl } from "@/lib/site-public-resolver";
 import type { ResolvedSitePublic } from "@/lib/site-public-types";
-import { footerQuickLinks, footerServices, footerSeoLinks, legalLinks } from "@/content/navigation";
+import {
+  footerQuickLinks,
+  footerServices,
+  footerSeoLinks,
+  footerSeoLinksEn,
+  legalLinks,
+} from "@/content/navigation";
 import { enFooter } from "@/i18n/en-content";
 
 type FooterProps = {
@@ -64,10 +70,20 @@ export function Footer({ sitePublic, locale = "fr" }: FooterProps) {
               : "Discutons de votre projet et construisons ensemble votre succès."}
           </p>
           <div className="mt-8 flex flex-col items-center justify-center gap-4 sm:flex-row">
-            <Button href={isEn ? "/en/devis" : "/devis"} size="lg">
+            <Button
+              href={isEn ? "/en/devis" : "/devis"}
+              size="lg"
+              data-track-cta="footer_devis"
+            >
               {isEn ? enFooter.ctaQuote : "Demander un devis"}
             </Button>
-            <Button href={waUrl} external variant="outline" size="lg">
+            <Button
+              href={waUrl}
+              external
+              variant="outline"
+              size="lg"
+              data-track-cta="footer_whatsapp"
+            >
               {isEn ? enFooter.ctaWhatsapp : "Parler sur WhatsApp"}
             </Button>
           </div>
@@ -78,7 +94,27 @@ export function Footer({ sitePublic, locale = "fr" }: FooterProps) {
         <div>
           <Logo variant="footer" />
           <p className="mt-4 text-sm leading-relaxed text-white/60">{tagline}</p>
-          {!isEn && <NewsletterSignup />}
+          <NewsletterSignup locale={isEn ? "en" : "fr"} />
+          <div className="mt-6 rounded-xl border border-white/10 bg-white/5 p-4">
+            <p className="flex items-center gap-2 text-sm font-semibold text-white/90">
+              <LayoutDashboard className="h-4 w-4 text-primary-light" aria-hidden />
+              {isEn ? enFooter.clientPortalTitle : "Espace client"}
+            </p>
+            <p className="mt-2 text-xs leading-relaxed text-white/50">
+              {isEn
+                ? enFooter.clientPortalDescription
+                : "Déjà client ? Accédez à vos factures, documents et suivi de projet."}
+            </p>
+            <Button
+              href="/espace-client"
+              size="sm"
+              variant="ghost"
+              className="mt-3 w-full justify-center border border-white/15 text-white hover:bg-white/10"
+              data-track-cta="footer_espace_client"
+            >
+              {isEn ? enFooter.clientPortalCta : "Se connecter au portail"}
+            </Button>
+          </div>
           <div className="mt-6 flex gap-3">
             {socialIcons.map(({ href, icon: Icon, label }) => (
               <a
@@ -166,16 +202,22 @@ export function Footer({ sitePublic, locale = "fr" }: FooterProps) {
             © {year} {companyName}. {isEn ? enFooter.rights : "Tous droits réservés."}
           </p>
           <div className="flex flex-wrap justify-center gap-4">
-            {!isEn &&
-              footerSeoLinks.map((link) => (
-                <Link
-                  key={link.href}
-                  href={link.href}
-                  className="nav-glow-link nav-glow-link--footer transition-colors hover:text-white"
-                >
-                  <span className="nav-glow-link__inner">{link.label}</span>
-                </Link>
-              ))}
+            {(isEn ? footerSeoLinksEn : footerSeoLinks).map((link) => (
+              <Link
+                key={link.href}
+                href={link.href}
+                className="nav-glow-link nav-glow-link--footer transition-colors hover:text-white"
+                data-track-cta={
+                  link.href.includes("audit") || link.href.includes("free-audit")
+                    ? "footer_seo_audit"
+                    : link.href.includes("rendez-vous") || link.href.includes("/book")
+                      ? "footer_seo_book"
+                      : "footer_seo_link"
+                }
+              >
+                <span className="nav-glow-link__inner">{link.label}</span>
+              </Link>
+            ))}
             {legal.map((link) => (
               <Link
                 key={link.href}
