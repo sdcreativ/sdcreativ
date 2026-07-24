@@ -1,5 +1,5 @@
-const CACHE = "sdcreativ-v1";
-const PRECACHE = ["/", "/offline"];
+const CACHE = "sdcreativ-v2";
+const PRECACHE = ["/", "/offline", "/en", "/en/offline"];
 
 self.addEventListener("install", (event) => {
   event.waitUntil(
@@ -30,7 +30,11 @@ self.addEventListener("fetch", (event) => {
         return response;
       })
       .catch(() =>
-        caches.match(event.request).then((cached) => cached ?? caches.match("/offline")),
+        caches.match(event.request).then((cached) => {
+          if (cached) return cached;
+          const offlinePath = url.pathname.startsWith("/en") ? "/en/offline" : "/offline";
+          return caches.match(offlinePath);
+        }),
       ),
   );
 });

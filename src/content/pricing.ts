@@ -59,9 +59,64 @@ export const pricingPlans: PricingPlan[] = [
   },
 ];
 
+export const pricingPlansEn: PricingPlan[] = [
+  {
+    id: "essentiel",
+    name: "Essential",
+    tagline: "To get started.",
+    priceNote: "Free custom quote",
+    variant: "primary",
+    features: [
+      "Professional showcase site (up to 5 pages)",
+      "Responsive design",
+      "Contact form",
+      "Initial SEO",
+      "WhatsApp integration",
+    ],
+  },
+  {
+    id: "professionnel",
+    name: "Professional",
+    tagline: "To accelerate.",
+    priceNote: "Free custom quote",
+    variant: "primary",
+    highlighted: true,
+    features: [
+      "More pages & sections",
+      "Gallery & portfolio",
+      "Blog module",
+      "Hardened security",
+      "Advanced SEO optimization",
+      "Priority support for 3 months",
+    ],
+  },
+  {
+    id: "business",
+    name: "Business",
+    tagline: "To sell online.",
+    priceNote: "Free custom quote",
+    variant: "accent",
+    features: [
+      "Full e-commerce store",
+      "Product catalog",
+      "Online payments (Mobile Money, card)",
+      "Order management",
+      "Dedicated support",
+      "Admin training",
+    ],
+  },
+];
+
 export const pricingReassurance = [
   { label: "15-30 Jours", description: "Délai de livraison moyen" },
   { label: "100% Sites responsive", description: "Mobile, tablette, desktop" },
   { label: "Support", description: "Après livraison" },
   { label: "Objectif Visibilité", description: "Visibilité + conversion" },
+] as const;
+
+export const pricingReassuranceEn = [
+  { label: "15-30 days", description: "Average delivery time" },
+  { label: "100% responsive", description: "Mobile, tablet, desktop" },
+  { label: "Support", description: "After launch" },
+  { label: "Visibility goal", description: "Visibility + conversion" },
 ] as const;

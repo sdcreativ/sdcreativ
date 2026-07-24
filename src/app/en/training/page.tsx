@@ -8,10 +8,10 @@ import { formationsPageCopyEn } from "@/content/formations";
 import { getFormationsContent } from "@/lib/formations-resolver";
 import { isProxiedMediaUrl, resolveImageDisplayUrl } from "@/lib/image-url";
 import { enTraining } from "@/i18n/en-content";
+import { trainingCatalogEn } from "@/i18n/public-en";
 import { createMetadata } from "@/lib/metadata";
 
 export const revalidate = 300;
-
 
 export const metadata = createMetadata({
   title: "Professional training",
@@ -37,12 +37,9 @@ export default async function EnTrainingPage() {
       <section className="border-b border-gray/40 bg-primary-light py-12 md:py-16">
         <div className="container mx-auto max-w-3xl px-4 text-center md:px-6 lg:px-8">
           <p className="text-gray-text">{formationsPageCopyEn.intro}</p>
-          <div className="mt-6 flex flex-col items-center justify-center gap-3 sm:flex-row">
-            <Button href="/en/contact" size="lg">
+          <div className="mt-6 flex justify-center">
+            <Button href="/en/devis" size="lg">
               {enTraining.cta}
-            </Button>
-            <Button href="/formations" variant="ghost" size="lg">
-              {enTraining.viewFr}
             </Button>
           </div>
         </div>
@@ -54,23 +51,26 @@ export default async function EnTrainingPage() {
             eyebrow="Catalog"
             title="Training"
             highlight="domains"
-            description="Each card opens the full French detail page with modules, pricing and pedagogy."
+            description="Browse our domains and request a free custom quote for your team."
             className="mb-12"
           />
           <div className="grid gap-5 sm:grid-cols-2 xl:grid-cols-3">
             {content.categories.map((category, i) => {
               const Icon = category.icon;
               const imageSrc = resolveImageDisplayUrl(category.image);
+              const en = trainingCatalogEn[category.id];
+              const title = en?.title ?? category.title;
+              const description = en?.description ?? category.description;
               return (
                 <Link
                   key={category.id}
-                  href={`/formations/${category.id}`}
+                  href={`/en/training/${category.id}`}
                   className="group relative overflow-hidden rounded-2xl bg-dark shadow-sm ring-1 ring-black/5 transition-shadow hover:shadow-xl"
                 >
                   <div className="relative aspect-[5/4] overflow-hidden">
                     <Image
                       src={imageSrc}
-                      alt={category.imageAlt || category.title}
+                      alt={category.imageAlt || title}
                       fill
                       sizes="(max-width: 640px) 100vw, (max-width: 1280px) 50vw, 33vw"
                       className="object-cover transition-transform duration-700 group-hover:scale-105"
@@ -89,10 +89,10 @@ export default async function EnTrainingPage() {
                         {category.courses.length} modules
                       </p>
                       <h2 className="mt-1 text-lg font-bold leading-snug text-white md:text-xl">
-                        {category.title}
+                        {title}
                       </h2>
                       <p className="mt-2 line-clamp-2 text-sm text-white/75">
-                        {category.description}
+                        {description}
                       </p>
                       <span className="mt-4 inline-flex items-center gap-1.5 text-sm font-semibold text-white">
                         View details
@@ -103,25 +103,6 @@ export default async function EnTrainingPage() {
                 </Link>
               );
             })}
-          </div>
-        </div>
-      </section>
-
-      <section className="bg-dark py-16 text-center md:py-20">
-        <div className="container mx-auto px-4 md:px-6 lg:px-8">
-          <h2 className="text-2xl font-bold text-white md:text-3xl">
-            Need a tailored training plan?
-          </h2>
-          <p className="mx-auto mt-3 max-w-xl text-white/70">
-            Tell us your goals, audience and timeline — we build the right program.
-          </p>
-          <div className="mt-8 flex flex-col items-center justify-center gap-4 sm:flex-row">
-            <Button href="/en/contact" size="lg">
-              {enTraining.cta}
-            </Button>
-            <Button href="/en/book" variant="outline" size="lg">
-              Book a call
-            </Button>
           </div>
         </div>
       </section>

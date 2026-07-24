@@ -1,11 +1,10 @@
-import Link from "next/link";
 import { CheckCircle2 } from "lucide-react";
 import { PageHero } from "@/components/ui/PageHero";
 import { Button } from "@/components/ui/Button";
 import { ContactForm } from "@/components/forms/ContactForm";
 import { enAudit } from "@/i18n/en-content";
+import { auditContentEn } from "@/i18n/public-en";
 import { getLucideIcon } from "@/lib/lucide-icon-map";
-import { getSiteAuditSettings } from "@/lib/site-audit-settings";
 import { createMetadata } from "@/lib/metadata";
 
 export const revalidate = 300;
@@ -18,9 +17,7 @@ export const metadata = createMetadata({
   locale: "en",
 });
 
-export default async function EnFreeAuditPage() {
-  const content = await getSiteAuditSettings();
-
+export default function EnFreeAuditPage() {
   return (
     <>
       <PageHero
@@ -32,7 +29,7 @@ export default async function EnFreeAuditPage() {
       <section className="py-16 md:py-20">
         <div className="container mx-auto px-4 md:px-6 lg:px-8">
           <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
-            {content.points.map((point) => {
+            {auditContentEn.points.map((point) => {
               const Icon = getLucideIcon(point.icon);
               return (
                 <div
@@ -47,7 +44,7 @@ export default async function EnFreeAuditPage() {
             })}
           </div>
           <ul className="mx-auto mt-12 max-w-2xl space-y-3">
-            {content.checklist.map((item) => (
+            {auditContentEn.checklist.map((item) => (
               <li key={item} className="flex items-start gap-3 text-sm text-foreground/85">
                 <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-primary" aria-hidden />
                 {item}
@@ -64,15 +61,9 @@ export default async function EnFreeAuditPage() {
       <section id="request-audit" className="border-t border-gray/40 bg-gray-light py-20">
         <div className="container mx-auto max-w-3xl px-4">
           <h2 className="mb-8 text-center text-2xl font-bold text-foreground">
-            {content.formTitle}
+            {auditContentEn.formTitle}
           </h2>
-          <ContactForm defaultSubject="audit" />
-          <p className="mt-6 text-center text-sm text-gray-text">
-            Prefer French?{" "}
-            <Link href="/audit-gratuit" className="font-semibold text-primary hover:underline">
-              /audit-gratuit →
-            </Link>
-          </p>
+          <ContactForm defaultSubject="audit" locale="en" />
         </div>
       </section>
     </>

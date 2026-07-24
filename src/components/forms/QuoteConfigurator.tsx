@@ -25,6 +25,7 @@ import {
   timelineOptionsEn,
   type FormLocale,
 } from "@/i18n/form-copy";
+import { labelEn, quoteLabelsEn } from "@/i18n/public-en";
 import type { SiteQuoteConfigSettings } from "@/lib/site-quote-config-types";
 import type { PresentationContext } from "@/lib/presentation-types";
 import {
@@ -62,6 +63,12 @@ export function QuoteConfigurator({
   const t = quoteFormCopy[locale];
   const budgetOpts = locale === "en" ? budgetOptionsEn : budgetOptions;
   const timelineOpts = locale === "en" ? timelineOptionsEn : timelineOptions;
+  const labelProject = (id: string, fallback: string) =>
+    locale === "en" ? labelEn(quoteLabelsEn.projectTypes, id, fallback) : fallback;
+  const labelTier = (id: string, fallback: string) =>
+    locale === "en" ? labelEn(quoteLabelsEn.pageTiers, id, fallback) : fallback;
+  const labelAddon = (id: string, fallback: string) =>
+    locale === "en" ? labelEn(quoteLabelsEn.addons, id, fallback) : fallback;
   const searchParams = useSearchParams();
   const [projectTypeId, setProjectTypeId] = useState(config.projectTypes[0]?.id ?? "");
   const [pageTierId, setPageTierId] = useState(config.pageTiers[0]?.id ?? "1-5");
@@ -264,7 +271,7 @@ export function QuoteConfigurator({
             >
               {config.projectTypes.map((type) => (
                 <option key={type.id} value={type.id}>
-                  {type.label}
+                  {labelProject(type.id, type.label)}
                 </option>
               ))}
             </select>
@@ -286,7 +293,7 @@ export function QuoteConfigurator({
               >
                 {config.pageTiers.map((tier) => (
                   <option key={tier.id} value={tier.id}>
-                    {tier.label}
+                    {labelTier(tier.id, tier.label)}
                   </option>
                 ))}
               </select>
@@ -317,7 +324,9 @@ export function QuoteConfigurator({
                     onChange={() => toggleAddon(addon.id)}
                     className="mt-0.5 accent-primary"
                   />
-                  <span className="font-medium text-foreground">{addon.label}</span>
+                  <span className="font-medium text-foreground">
+                    {labelAddon(addon.id, addon.label)}
+                  </span>
                 </label>
               ))}
             </div>

@@ -1,14 +1,13 @@
-import Link from "next/link";
 import { Check } from "lucide-react";
 import { PageHero } from "@/components/ui/PageHero";
 import { Button } from "@/components/ui/Button";
 import { enMaintenance } from "@/i18n/en-content";
+import { maintenancePlansEn } from "@/i18n/public-en";
 import { PRICE_ON_REQUEST_LABEL_EN } from "@/lib/format";
-import { getSiteMaintenanceSettings } from "@/lib/site-maintenance-settings";
 import { createMetadata } from "@/lib/metadata";
+import { cn } from "@/lib/utils";
 
 export const revalidate = 300;
-
 
 export const metadata = createMetadata({
   title: "Maintenance & support",
@@ -17,9 +16,7 @@ export const metadata = createMetadata({
   locale: "en",
 });
 
-export default async function EnMaintenancePage() {
-  const { plans, note } = await getSiteMaintenanceSettings();
-
+export default function EnMaintenancePage() {
   return (
     <>
       <PageHero
@@ -30,10 +27,13 @@ export default async function EnMaintenancePage() {
       />
       <section className="py-16 md:py-20">
         <div className="container mx-auto grid gap-8 px-4 md:grid-cols-3 md:px-6 lg:px-8">
-          {plans.map((plan) => (
+          {maintenancePlansEn.map((plan) => (
             <article
               key={plan.id}
-              className="flex flex-col rounded-2xl border border-gray/60 bg-white p-8 shadow-sm"
+              className={cn(
+                "flex flex-col rounded-2xl border border-gray/60 bg-white p-8 shadow-sm",
+                "highlighted" in plan && plan.highlighted && "border-primary ring-2 ring-primary/20",
+              )}
             >
               <p className="text-xs font-semibold uppercase tracking-wider text-primary">
                 SLA {plan.sla}
@@ -43,6 +43,7 @@ export default async function EnMaintenancePage() {
               <p className="mt-6 text-xl font-semibold text-primary">
                 {PRICE_ON_REQUEST_LABEL_EN}
               </p>
+              <p className="mt-2 text-sm text-gray-text">Response: {plan.responseTime}</p>
               <ul className="mt-6 flex-1 space-y-2">
                 {plan.features.map((f) => (
                   <li key={f} className="flex gap-2 text-sm text-gray-text">
@@ -57,13 +58,6 @@ export default async function EnMaintenancePage() {
             </article>
           ))}
         </div>
-        <p className="mt-8 text-center text-xs text-gray-text">{note}</p>
-        <p className="mt-6 text-center text-sm text-gray-text">
-          Full French page:{" "}
-          <Link href="/maintenance" className="font-semibold text-primary hover:underline">
-            /maintenance →
-          </Link>
-        </p>
       </section>
     </>
   );

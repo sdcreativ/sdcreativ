@@ -4,14 +4,18 @@ import { PageHero } from "@/components/ui/PageHero";
 import { Button } from "@/components/ui/Button";
 import { AccordionItem } from "@/components/ui/Accordion";
 import { FaqJsonLd } from "@/components/seo/JsonLd";
-import { localSeoPages, type LocalSeoPage } from "@/content/local-seo";
+import type { LocalSeoPage } from "@/content/local-seo";
 import { createMetadata } from "@/lib/metadata";
 
-type Props = { page: LocalSeoPage };
+type Props = {
+  page: LocalSeoPage;
+  locale?: "fr" | "en";
+};
 
-export function LocalSeoPageView({ page }: Props) {
+export function LocalSeoPageView({ page, locale = "fr" }: Props) {
+  const isEn = locale === "en";
   const crumbs = [
-    { label: "Accueil", href: "/" },
+    { label: isEn ? "Home" : "Accueil", href: isEn ? "/en" : "/" },
     { label: page.metaTitle },
   ];
 
@@ -40,7 +44,9 @@ export function LocalSeoPageView({ page }: Props) {
           ))}
 
           <div className="rounded-2xl bg-primary-light p-8">
-            <h2 className="text-lg font-bold text-foreground">Pourquoi SD CREATIV ?</h2>
+            <h2 className="text-lg font-bold text-foreground">
+              {isEn ? "Why SD CREATIV?" : "Pourquoi SD CREATIV ?"}
+            </h2>
             <ul className="mt-4 grid gap-3 sm:grid-cols-2">
               {page.benefits.map((benefit) => (
                 <li key={benefit} className="flex items-center gap-2 text-sm text-foreground/85">
@@ -55,7 +61,9 @@ export function LocalSeoPageView({ page }: Props) {
 
       <section className="border-t border-gray/40 bg-gray-light py-16 md:py-20">
         <div className="container mx-auto max-w-3xl px-4 md:px-6 lg:px-8">
-          <h2 className="mb-8 text-2xl font-bold text-foreground">Questions fréquentes</h2>
+          <h2 className="mb-8 text-2xl font-bold text-foreground">
+            {isEn ? "Frequently asked questions" : "Questions fréquentes"}
+          </h2>
           {page.faq.map((item) => (
             <AccordionItem
               key={item.question}
@@ -68,22 +76,28 @@ export function LocalSeoPageView({ page }: Props) {
 
       <section className="py-16 text-center md:py-20">
         <div className="container mx-auto px-4 md:px-6 lg:px-8">
-          <h2 className="text-2xl font-bold text-foreground">Prêt à démarrer ?</h2>
+          <h2 className="text-2xl font-bold text-foreground">
+            {isEn ? "Ready to start?" : "Prêt à démarrer ?"}
+          </h2>
           <p className="mx-auto mt-3 max-w-xl text-gray-text">
-            Obtenez une estimation instantanée ou contactez notre équipe pour un devis
-            personnalisé gratuit.
+            {isEn
+              ? "Request a free custom quote or contact our team to discuss your project."
+              : "Obtenez une estimation instantanée ou contactez notre équipe pour un devis personnalisé gratuit."}
           </p>
           <div className="mt-8 flex flex-col items-center justify-center gap-4 sm:flex-row">
-            <Button href="/devis" size="lg">
-              Configurateur de devis
+            <Button href={isEn ? "/en/devis" : "/devis"} size="lg">
+              {isEn ? "Quote configurator" : "Configurateur de devis"}
             </Button>
-            <Button href="/contact" variant="ghost" size="lg">
-              Nous contacter
+            <Button href={isEn ? "/en/contact" : "/contact"} variant="ghost" size="lg">
+              {isEn ? "Contact us" : "Nous contacter"}
             </Button>
           </div>
           <p className="mt-6 text-sm text-gray-text">
-            <Link href="/audit-gratuit" className="text-primary hover:underline">
-              Audit web gratuit →
+            <Link
+              href={isEn ? "/en/free-audit" : "/audit-gratuit"}
+              className="text-primary hover:underline"
+            >
+              {isEn ? "Free website audit →" : "Audit web gratuit →"}
             </Link>
           </p>
         </div>
@@ -92,14 +106,11 @@ export function LocalSeoPageView({ page }: Props) {
   );
 }
 
-export function createLocalSeoMetadata(page: LocalSeoPage) {
+export function createLocalSeoMetadata(page: LocalSeoPage, locale: "fr" | "en" = "fr") {
   return createMetadata({
     title: page.metaTitle,
     description: page.metaDescription,
     path: page.path,
+    locale,
   });
-}
-
-export function getLocalSeoStaticParams() {
-  return localSeoPages.map((p) => ({ slug: p.slug }));
 }

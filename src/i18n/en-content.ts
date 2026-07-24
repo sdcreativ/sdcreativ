@@ -5,6 +5,7 @@ export const enNav = [
   { label: "Training", href: "/en/training" },
   { label: "Portfolio", href: "/en/portfolio" },
   { label: "Pricing", href: "/en/pricing" },
+  { label: "Blog", href: "/en/blog" },
   { label: "Quote", href: "/en/devis" },
   { label: "FAQ", href: "/en/faq" },
   { label: "About", href: "/en/about" },
@@ -53,17 +54,15 @@ export const enQuote = {
     "Book a 30-minute call with our team to refine your project and receive a personalized quote.",
   contactCta: "Have a question? Write to us →",
   configNote:
-    "Option labels may appear in French — our team will follow up with you in English.",
+    "Choose your project type and options — we reply with a free personalized quote in English.",
 } as const;
 
 export const enServices = {
   title: "Digital solutions",
   highlight: "for your business",
   description: "Showcase sites, e-commerce, AI, automation, mobile apps and more.",
-  banner:
-    "Detailed service pages are currently in French. Request a quote in English, or open the French brief if you prefer.",
   ctaQuote: "Get a quote",
-  ctaDetailsFr: "Details (French)",
+  ctaDetails: "View details",
 } as const;
 
 export const enFaq = {
@@ -88,7 +87,6 @@ export const enSolutionsIa = {
   packsHighlight: "built around your needs",
   faqTitle: "Questions about AI projects",
   cta: "Estimate my AI project",
-  viewFr: "Full French page →",
 } as const;
 
 export const enFooter = {
@@ -108,8 +106,10 @@ export const enFooter = {
     { label: "Portfolio", href: "/en/portfolio" },
     { label: "Pricing", href: "/en/pricing" },
     { label: "Training", href: "/en/training" },
+    { label: "Blog", href: "/en/blog" },
     { label: "Online quote", href: "/en/devis" },
     { label: "FAQ", href: "/en/faq" },
+    { label: "Careers", href: "/en/careers" },
     { label: "About", href: "/en/about" },
     { label: "Contact", href: "/en/contact" },
   ],
@@ -119,6 +119,7 @@ export const enFooter = {
     { label: "AI agents", href: "/en/solutions-ia" },
     { label: "Training", href: "/en/training" },
     { label: "Maintenance & SLA", href: "/en/maintenance" },
+    { label: "Web agency Abidjan", href: "/en/web-agency-abidjan" },
     { label: "Local SEO", href: "/en/devis?type=seo-local" },
   ],
   legal: [
@@ -154,7 +155,6 @@ export const enTraining = {
   description:
     "Web & mobile, AI, cybersecurity, cloud, databases, digital marketing and more — for individuals, teams and public organizations.",
   cta: "Request a quote",
-  viewFr: "View full catalog (French)",
 } as const;
 
 export const enAudit = {
@@ -171,7 +171,7 @@ export const enLegal = {
   noticeTitle: "Legal notice",
   privacyTitle: "Privacy policy",
   privacyIntro:
-    "We protect your personal data in line with GDPR principles and Ivorian law 2013-450. Full details are maintained in French and mirrored below when available.",
+    "We protect your personal data in line with GDPR principles and Ivorian law 2013-450.",
 } as const;
 
 export const localeSwitcher = {

@@ -25,13 +25,15 @@ export async function PricingSection({ locale = "fr" }: Props) {
     <AnimatedSection className="bg-white py-20 md:py-28" id="tarifs">
       <div className="container mx-auto px-4 md:px-6 lg:px-8">
         <SectionHeading
-          eyebrow="Nos offres"
-          title="Choisissez la formule"
-          highlight="adaptée"
+          eyebrow={locale === "en" ? "Our plans" : "Nos offres"}
+          title={locale === "en" ? "Choose the right" : "Choisissez la formule"}
+          highlight={locale === "en" ? "package" : "adaptée"}
           className="mb-6"
         />
         <p className="mx-auto mb-14 max-w-2xl text-center text-base font-semibold text-primary md:text-lg">
-          {SITE_VALUE_PROP}
+          {locale === "en"
+            ? "International quality at a price accessible to businesses"
+            : SITE_VALUE_PROP}
         </p>
 
         <div className="grid gap-8 lg:grid-cols-3">
@@ -49,7 +51,7 @@ export async function PricingSection({ locale = "fr" }: Props) {
             >
               {plan.highlighted && (
                 <span className="absolute -top-3 left-1/2 -translate-x-1/2 rounded-full bg-primary px-4 py-1 text-xs font-semibold text-white">
-                  Populaire
+                  {locale === "en" ? "Popular" : "Populaire"}
                 </span>
               )}
               <h3 className="text-2xl font-bold uppercase text-foreground">{plan.name}</h3>

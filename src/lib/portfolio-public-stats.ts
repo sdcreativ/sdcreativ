@@ -6,7 +6,10 @@ export type PortfolioPublicStat = {
 };
 
 /** Stats affichables dérivées uniquement des réalisations publiées. */
-export function buildPortfolioPublicStats(items: Realisation[]): PortfolioPublicStat[] {
+export function buildPortfolioPublicStats(
+  items: Realisation[],
+  locale: "fr" | "en" = "fr",
+): PortfolioPublicStat[] {
   if (items.length === 0) return [];
 
   const sectors = new Set(
@@ -16,18 +19,31 @@ export function buildPortfolioPublicStats(items: Realisation[]): PortfolioPublic
     items.map((item) => item.category?.trim()).filter((s): s is string => Boolean(s)),
   );
   const sectorCount = sectors.size > 0 ? sectors.size : categories.size;
+  const isEn = locale === "en";
 
   const stats: PortfolioPublicStat[] = [
     {
       value: String(items.length),
-      label: items.length > 1 ? "Projets publiés" : "Projet publié",
+      label: isEn
+        ? items.length > 1
+          ? "Published projects"
+          : "Published project"
+        : items.length > 1
+          ? "Projets publiés"
+          : "Projet publié",
     },
   ];
 
   if (sectorCount > 0) {
     stats.push({
       value: String(sectorCount),
-      label: sectorCount > 1 ? "Secteurs couverts" : "Secteur couvert",
+      label: isEn
+        ? sectorCount > 1
+          ? "Sectors covered"
+          : "Sector covered"
+        : sectorCount > 1
+          ? "Secteurs couverts"
+          : "Secteur couvert",
     });
   }
 

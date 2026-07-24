@@ -10,10 +10,12 @@ import { motion, AnimatePresence } from "framer-motion";
 
 type Props = {
   testimonials: Testimonial[];
+  locale?: "fr" | "en";
 };
 
-export function TestimonialsCarousel({ testimonials }: Props) {
+export function TestimonialsCarousel({ testimonials, locale = "fr" }: Props) {
   const [active, setActive] = useState(0);
+  const isEn = locale === "en";
 
   if (testimonials.length === 0) return null;
 
@@ -24,9 +26,9 @@ export function TestimonialsCarousel({ testimonials }: Props) {
     <AnimatedSection className="bg-gray-light py-20 md:py-28" id="temoignages">
       <div className="container mx-auto px-4 md:px-6 lg:px-8">
         <SectionHeading
-          eyebrow="Témoignages"
-          title="Ils nous font"
-          highlight="confiance"
+          eyebrow={isEn ? "Testimonials" : "Témoignages"}
+          title={isEn ? "Trusted by" : "Ils nous font"}
+          highlight={isEn ? "growing teams" : "confiance"}
           className="mb-14"
         />
 
@@ -79,7 +81,7 @@ export function TestimonialsCarousel({ testimonials }: Props) {
                     "h-2.5 rounded-full transition-all duration-300",
                     safeActive === i ? "w-8 bg-primary" : "w-2.5 bg-gray hover:bg-primary/50",
                   )}
-                  aria-label={`Témoignage ${i + 1}`}
+                  aria-label={isEn ? `Testimonial ${i + 1}` : `Témoignage ${i + 1}`}
                 />
               ))}
             </div>

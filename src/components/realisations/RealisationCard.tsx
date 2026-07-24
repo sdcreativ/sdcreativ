@@ -12,10 +12,17 @@ type RealisationCardProps = {
   project: Realisation;
   index: number;
   large?: boolean;
+  locale?: "fr" | "en";
 };
 
-export function RealisationCard({ project, index, large }: RealisationCardProps) {
-  const href = `/realisations/${project.id}`;
+export function RealisationCard({
+  project,
+  index,
+  large,
+  locale = "fr",
+}: RealisationCardProps) {
+  const isEn = locale === "en";
+  const href = isEn ? `/en/portfolio/${project.id}` : `/realisations/${project.id}`;
   const imageSrc = resolveImageDisplayUrl(project.image);
 
   return (
@@ -54,7 +61,7 @@ export function RealisationCard({ project, index, large }: RealisationCardProps)
 
           <div className="absolute inset-0 z-10 flex items-end justify-center pb-6 opacity-0 transition-all duration-300 group-hover:opacity-100">
             <span className="flex items-center gap-2 rounded-full bg-white px-5 py-2.5 text-sm font-semibold text-foreground shadow-xl">
-              Voir le projet
+              {isEn ? "View project" : "Voir le projet"}
               <ArrowUpRight className="h-4 w-4 text-primary" aria-hidden />
             </span>
           </div>

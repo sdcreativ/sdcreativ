@@ -16,6 +16,7 @@ export default function robots(): MetadataRoute.Robots {
         "/promo/",
         "/verifier/",
         "/offline",
+        "/en/offline",
       ],
     },
     sitemap: `${SITE.url}/sitemap.xml`,

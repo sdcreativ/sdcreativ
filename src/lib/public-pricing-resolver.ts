@@ -1,7 +1,9 @@
 import { unstable_cache } from "next/cache";
 import {
   pricingPlans as staticPlans,
+  pricingPlansEn as staticPlansEn,
   pricingReassurance as staticReassurance,
+  pricingReassuranceEn as staticReassuranceEn,
 } from "@/content/pricing";
 import { isDatabaseConfigured } from "@/lib/db";
 import {
@@ -20,7 +22,7 @@ export const PUBLIC_PRICING_REASSURANCE_TAG = "public-pricing-reassurance";
  */
 async function loadPricingPlans(locale: string): Promise<PricingPlan[]> {
   if (!isDatabaseConfigured()) {
-    return staticPlans;
+    return locale === "en" ? staticPlansEn : staticPlans;
   }
 
   try {
@@ -30,12 +32,12 @@ async function loadPricingPlans(locale: string): Promise<PricingPlan[]> {
     console.error("[public-pricing] plans fallback:", error);
   }
 
-  return staticPlans;
+  return locale === "en" ? staticPlansEn : staticPlans;
 }
 
 async function loadPricingReassurance(locale: string) {
   if (!isDatabaseConfigured()) {
-    return staticReassurance;
+    return locale === "en" ? staticReassuranceEn : staticReassurance;
   }
 
   try {
@@ -47,7 +49,7 @@ async function loadPricingReassurance(locale: string) {
     console.error("[public-pricing] reassurance fallback:", error);
   }
 
-  return staticReassurance;
+  return locale === "en" ? staticReassuranceEn : staticReassurance;
 }
 
 /** Tarifs publics — cache taggé (ISR) plutôt que force-dynamic + connection(). */

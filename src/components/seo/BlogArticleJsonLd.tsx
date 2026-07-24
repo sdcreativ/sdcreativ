@@ -1,10 +1,13 @@
 import type { BlogPost } from "@/content/blog";
 import { SITE } from "@/lib/constants";
 
-type Props = { post: BlogPost };
+type Props = { post: BlogPost; locale?: "fr" | "en" };
 
-export function BlogArticleJsonLd({ post }: Props) {
-  const url = `${SITE.url}/blog/${post.slug}`;
+export function BlogArticleJsonLd({ post, locale = "fr" }: Props) {
+  const url =
+    locale === "en"
+      ? `${SITE.url}/en/blog/${post.slug}`
+      : `${SITE.url}/blog/${post.slug}`;
 
   const jsonLd = {
     "@context": "https://schema.org",

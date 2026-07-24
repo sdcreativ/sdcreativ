@@ -1,10 +1,10 @@
 import { OfflinePageContent } from "@/components/layout/OfflinePageContent";
 
 export const metadata = {
-  title: "Hors ligne",
+  title: "Offline",
   robots: { index: false, follow: false },
 };
 
-export default function OfflinePage() {
+export default function EnOfflinePage() {
   return <OfflinePageContent />;
 }

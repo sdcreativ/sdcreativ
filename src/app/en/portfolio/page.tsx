@@ -19,7 +19,7 @@ export default async function EnPortfolioPage() {
   if (items.length === 0) {
     items = await getRealisations("fr");
   }
-  const stats = buildPortfolioPublicStats(items);
+  const stats = buildPortfolioPublicStats(items, "en");
 
   return (
     <>
@@ -31,7 +31,7 @@ export default async function EnPortfolioPage() {
       />
       <section className="py-20 md:py-28">
         <div className="container mx-auto px-4 md:px-6 lg:px-8">
-          <RealisationsGrid items={items} stats={stats} />
+          <RealisationsGrid items={items} stats={stats} locale="en" />
         </div>
       </section>
     </>

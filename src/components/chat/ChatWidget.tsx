@@ -4,7 +4,7 @@ import { useEffect, useRef, useState, type FormEvent } from "react";
 import Link from "next/link";
 import { Bot, Headphones, Loader2, Send, X } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
-import { chatSuggestions } from "@/content/chat-knowledge";
+import { chatSuggestions, chatSuggestionsEn } from "@/content/chat-knowledge";
 import { HoneypotField } from "@/components/forms/HoneypotField";
 import {
   getAiGreeting,
@@ -24,9 +24,11 @@ type Message = {
 type Props = {
   /** Phase 7 — message d’accueil contextualisé (handoff / hors horaires). */
   mode?: AiCommsMode;
+  locale?: "fr" | "en";
 };
 
-export function ChatWidget({ mode = "default" }: Props) {
+export function ChatWidget({ mode = "default", locale = "fr" }: Props) {
+  const isEn = locale === "en";
   const [open, setOpen] = useState(false);
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState("");
@@ -41,7 +43,7 @@ export function ChatWidget({ mode = "default" }: Props) {
       modeRef.current = mode;
       setInitialized(false);
       if (open) {
-        const greeting = getAiGreeting(mode);
+        const greeting = getAiGreeting(mode, isEn ? "en" : "fr");
         setMessages([
           {
             id: "welcome",
@@ -54,11 +56,11 @@ export function ChatWidget({ mode = "default" }: Props) {
         setInitialized(true);
       }
     }
-  }, [mode, open]);
+  }, [mode, open, isEn]);
 
   useEffect(() => {
     if (open && !initialized) {
-      const greeting = getAiGreeting(mode);
+      const greeting = getAiGreeting(mode, isEn ? "en" : "fr");
       setMessages([
         {
           id: "welcome",
@@ -70,7 +72,7 @@ export function ChatWidget({ mode = "default" }: Props) {
       ]);
       setInitialized(true);
     }
-  }, [open, initialized, mode]);
+  }, [open, initialized, mode, isEn]);
 
   useEffect(() => {
     if (open) {
@@ -97,7 +99,7 @@ export function ChatWidget({ mode = "default" }: Props) {
       const res = await fetch("/api/chat", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ message: trimmed, _hp: hp ?? "" }),
+        body: JSON.stringify({ message: trimmed, locale: isEn ? "en" : "fr", _hp: hp ?? "" }),
       });
 
       const data = (await res.json()) as {
@@ -115,7 +117,7 @@ export function ChatWidget({ mode = "default" }: Props) {
         {
           id: `assistant-${crypto.randomUUID()}`,
           role: "assistant",
-          content: data.answer ?? "Désolé, une erreur est survenue.",
+          content: data.answer ?? (isEn ? "Sorry, something went wrong." : "Désolé, une erreur est survenue."),
           links: data.links,
         },
       ]);
@@ -125,9 +127,15 @@ export function ChatWidget({ mode = "default" }: Props) {
         {
           id: `error-${crypto.randomUUID()}`,
           role: "assistant",
-          content:
-            "Impossible de répondre pour le moment. Contactez-nous via WhatsApp ou le formulaire de contact.",
-          links: [{ label: "Contact", href: "/contact" }],
+          content: isEn
+            ? "We cannot reply right now. Contact us via WhatsApp or the contact form."
+            : "Impossible de répondre pour le moment. Contactez-nous via WhatsApp ou le formulaire de contact.",
+          links: [
+            {
+              label: isEn ? "Contact" : "Contact",
+              href: isEn ? "/en/contact" : "/contact",
+            },
+          ],
         },
       ]);
     } finally {
@@ -158,27 +166,35 @@ export function ChatWidget({ mode = "default" }: Props) {
             className="fixed bottom-36 left-4 z-[55] flex h-[min(520px,calc(100vh-10rem))] w-[min(380px,calc(100vw-2rem))] flex-col overflow-hidden rounded-2xl border border-gray/40 bg-white shadow-2xl shadow-black/15 md:bottom-28 md:left-8"
             id="chat-widget-panel"
             role="dialog"
-            aria-label="Assistant SD CREATIV"
+            aria-label={isEn ? "SD CREATIV assistant" : "Assistant SD CREATIV"}
           >
             <header className="flex items-center gap-3 bg-dark px-4 py-3.5">
               <div className="flex h-9 w-9 items-center justify-center rounded-full bg-primary">
                 <Bot className="h-5 w-5 text-white" aria-hidden />
               </div>
               <div className="min-w-0 flex-1">
-                <p className="truncate text-sm font-bold text-white">Assistant SD CREATIV</p>
+                <p className="truncate text-sm font-bold text-white">
+                  {isEn ? "SD CREATIV assistant" : "Assistant SD CREATIV"}
+                </p>
                 <p className="text-xs text-white/60">
-                  {mode === "handoff"
-                    ? "Conseiller dispo · ou IA"
-                    : mode === "after_hours"
-                      ? "Hors horaires · RDV / WhatsApp"
-                      : "Propulsé par IA · Démo live"}
+                  {isEn
+                    ? mode === "handoff"
+                      ? "Advisor available · or AI"
+                      : mode === "after_hours"
+                        ? "After hours · Booking / WhatsApp"
+                        : "AI-powered · Live demo"
+                    : mode === "handoff"
+                      ? "Conseiller dispo · ou IA"
+                      : mode === "after_hours"
+                        ? "Hors horaires · RDV / WhatsApp"
+                        : "Propulsé par IA · Démo live"}
                 </p>
               </div>
               <button
                 type="button"
                 onClick={() => setOpen(false)}
                 className="rounded-lg p-1.5 text-white/70 transition-colors hover:bg-white/10 hover:text-white"
-                aria-label="Fermer le chat"
+                aria-label={isEn ? "Close chat" : "Fermer le chat"}
               >
                 <X className="h-5 w-5" />
               </button>
@@ -237,14 +253,14 @@ export function ChatWidget({ mode = "default" }: Props) {
                 <div className="flex justify-start">
                   <div className="flex items-center gap-2 rounded-2xl bg-gray-light px-4 py-2.5 text-sm text-gray-text">
                     <Loader2 className="h-4 w-4 animate-spin" aria-hidden />
-                    Réflexion…
+                    {isEn ? "Thinking…" : "Réflexion…"}
                   </div>
                 </div>
               )}
 
               {messages.length === 1 && !loading && (
                 <div className="flex flex-wrap gap-2 pt-1">
-                  {chatSuggestions.map((suggestion) => (
+                  {(isEn ? chatSuggestionsEn : chatSuggestions).map((suggestion) => (
                     <button
                       key={suggestion}
                       type="button"
@@ -268,17 +284,17 @@ export function ChatWidget({ mode = "default" }: Props) {
                 type="text"
                 value={input}
                 onChange={(e) => setInput(e.target.value)}
-                placeholder="Votre question…"
+                placeholder={isEn ? "Your question…" : "Votre question…"}
                 maxLength={500}
                 disabled={loading}
                 className="min-w-0 flex-1 rounded-xl border border-gray/60 px-3 py-2.5 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 disabled:opacity-60"
-                aria-label="Votre message"
+                aria-label={isEn ? "Your message" : "Votre message"}
               />
               <button
                 type="submit"
                 disabled={loading || !input.trim()}
                 className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-primary text-white transition-colors hover:bg-primary-dark disabled:opacity-50"
-                aria-label="Envoyer"
+                aria-label={isEn ? "Send" : "Envoyer"}
               >
                 <Send className="h-4 w-4" />
               </button>
@@ -292,7 +308,7 @@ export function ChatWidget({ mode = "default" }: Props) {
           type="button"
           onClick={() => setOpen(false)}
           className={toggleClassName}
-          aria-label="Fermer l'assistant"
+          aria-label={isEn ? "Close assistant" : "Fermer l'assistant"}
           aria-expanded="true"
         >
           <X className="h-6 w-6" aria-hidden />
@@ -302,7 +318,7 @@ export function ChatWidget({ mode = "default" }: Props) {
           type="button"
           onClick={() => setOpen(true)}
           className={toggleClassName}
-          aria-label="Ouvrir l'assistant SD CREATIV"
+          aria-label={isEn ? "Open SD CREATIV assistant" : "Ouvrir l'assistant SD CREATIV"}
           aria-expanded="false"
         >
           <Bot className="h-6 w-6" aria-hidden />

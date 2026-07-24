@@ -2,8 +2,10 @@
 
 import { useSyncExternalStore } from "react";
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 import { Cookie } from "lucide-react";
 import { Button } from "@/components/ui/Button";
+import { isEnglishPath } from "@/i18n/routes";
 
 const STORAGE_KEY = "sdcreativ-cookie-consent";
 
@@ -27,6 +29,8 @@ function subscribe(onChange: () => void) {
 }
 
 export function CookieConsent() {
+  const pathname = usePathname() ?? "/";
+  const isEn = isEnglishPath(pathname);
   const consent = useSyncExternalStore(
     subscribe,
     getCookieConsent,
@@ -54,17 +58,31 @@ export function CookieConsent() {
           </div>
           <div>
             <p id="cookie-consent-title" className="font-semibold text-foreground">
-              Nous utilisons des cookies
+              {isEn ? "We use cookies" : "Nous utilisons des cookies"}
             </p>
             <p id="cookie-consent-desc" className="mt-1 text-sm text-gray-text">
-              Des cookies analytiques nous aident à améliorer le site. Vous pouvez
-              accepter ou refuser.{" "}
-              <Link
-                href="/politique-confidentialite#cookies"
-                className="text-primary underline underline-offset-2"
-              >
-                En savoir plus
-              </Link>
+              {isEn ? (
+                <>
+                  Analytics cookies help us improve the site. You can accept or decline.{" "}
+                  <Link
+                    href="/en/privacy#cookies"
+                    className="text-primary underline underline-offset-2"
+                  >
+                    Learn more
+                  </Link>
+                </>
+              ) : (
+                <>
+                  Des cookies analytiques nous aident à améliorer le site. Vous pouvez
+                  accepter ou refuser.{" "}
+                  <Link
+                    href="/politique-confidentialite#cookies"
+                    className="text-primary underline underline-offset-2"
+                  >
+                    En savoir plus
+                  </Link>
+                </>
+              )}
             </p>
           </div>
         </div>
@@ -75,14 +93,14 @@ export function CookieConsent() {
             className="justify-center text-foreground"
             onClick={() => setCookieConsent("rejected")}
           >
-            Refuser
+            {isEn ? "Decline" : "Refuser"}
           </Button>
           <Button
             size="sm"
             className="justify-center"
             onClick={() => setCookieConsent("accepted")}
           >
-            Accepter
+            {isEn ? "Accept" : "Accepter"}
           </Button>
         </div>
       </div>

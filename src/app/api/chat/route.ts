@@ -48,7 +48,7 @@ export async function POST(request: Request) {
       );
     }
 
-    const response = await getChatResponse(parsed.data.message);
+    const response = await getChatResponse(parsed.data.message, parsed.data.locale);
 
     return NextResponse.json({
       answer: response.answer,

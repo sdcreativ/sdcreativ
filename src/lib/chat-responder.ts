@@ -1,10 +1,13 @@
 import {
   chatFallback,
+  chatFallbackEn,
   chatKnowledge,
+  chatKnowledgeEn,
   type ChatKnowledgeEntry,
 } from "@/content/chat-knowledge";
 
 export type ChatLink = { label: string; href: string };
+export type ChatLocale = "fr" | "en";
 
 export type ChatResponse = {
   answer: string;
@@ -33,11 +36,15 @@ function scoreEntry(message: string, entry: ChatKnowledgeEntry): number {
   return score;
 }
 
-export function respondFromKnowledge(message: string): ChatResponse {
+export function respondFromKnowledge(
+  message: string,
+  locale: ChatLocale = "fr",
+): ChatResponse {
+  const knowledge = locale === "en" ? chatKnowledgeEn : chatKnowledge;
   let best: ChatKnowledgeEntry | null = null;
   let bestScore = 0;
 
-  for (const entry of chatKnowledge) {
+  for (const entry of knowledge) {
     const score = scoreEntry(message, entry);
     if (score > bestScore) {
       bestScore = score;
@@ -53,6 +60,17 @@ export function respondFromKnowledge(message: string): ChatResponse {
     };
   }
 
+  if (locale === "en") {
+    return {
+      answer: chatFallbackEn,
+      links: [
+        { label: "Contact", href: "/en/contact" },
+        { label: "Online quote", href: "/en/devis" },
+      ],
+      source: "fallback",
+    };
+  }
+
   return {
     answer: chatFallback,
     links: [
@@ -63,20 +81,30 @@ export function respondFromKnowledge(message: string): ChatResponse {
   };
 }
 
-const SYSTEM_PROMPT = `Tu es l'assistant commercial de SD CREATIV, agence web à Abidjan (Côte d'Ivoire).
+const SYSTEM_PROMPT_FR = `Tu es l'assistant commercial de SD CREATIV, agence web à Abidjan (Côte d'Ivoire).
 Réponds en français, de façon concise (2-4 phrases max).
 Tarifs : toujours sur devis personnalisé gratuit (pas de montants publics). Orienter vers /tarifs, /devis ou /contact.
 Délais moyens : 15-30 jours pour un site, 4-8 semaines pour IA/sur mesure.
 Oriente vers /devis, /contact, /solutions-ia ou /maintenance quand pertinent.
 Ne invente pas de tarifs ou délais non mentionnés.`;
 
-export async function respondWithLlm(message: string): Promise<ChatResponse | null> {
+const SYSTEM_PROMPT_EN = `You are the sales assistant for SD CREATIV, a web agency in Abidjan (Côte d'Ivoire).
+Reply in English, concisely (2-4 sentences max).
+Pricing: always a free custom quote (no public amounts). Point to /en/pricing, /en/devis or /en/contact.
+Average timelines: 15-30 days for a website, 4-8 weeks for AI/custom work.
+Suggest /en/devis, /en/contact, /en/solutions-ia or /en/maintenance when relevant.
+Do not invent prices or timelines not mentioned.`;
+
+export async function respondWithLlm(
+  message: string,
+  locale: ChatLocale = "fr",
+): Promise<ChatResponse | null> {
   const apiKey = process.env.OPENAI_API_KEY;
   if (!apiKey) return null;
 
-  const context = chatKnowledge
-    .map((e) => `[${e.id}] ${e.answer}`)
-    .join("\n");
+  const knowledge = locale === "en" ? chatKnowledgeEn : chatKnowledge;
+  const systemPrompt = locale === "en" ? SYSTEM_PROMPT_EN : SYSTEM_PROMPT_FR;
+  const context = knowledge.map((e) => `[${e.id}] ${e.answer}`).join("\n");
 
   try {
     const res = await fetch("https://api.openai.com/v1/chat/completions", {
@@ -92,7 +120,7 @@ export async function respondWithLlm(message: string): Promise<ChatResponse | nu
         messages: [
           {
             role: "system",
-            content: `${SYSTEM_PROMPT}\n\nBase de connaissances :\n${context}`,
+            content: `${systemPrompt}\n\nKnowledge base:\n${context}`,
           },
           { role: "user", content: message },
         ],
@@ -113,13 +141,16 @@ export async function respondWithLlm(message: string): Promise<ChatResponse | nu
   }
 }
 
-export async function getChatResponse(message: string): Promise<ChatResponse> {
-  const knowledge = respondFromKnowledge(message);
+export async function getChatResponse(
+  message: string,
+  locale: ChatLocale = "fr",
+): Promise<ChatResponse> {
+  const knowledge = respondFromKnowledge(message, locale);
 
   if (knowledge.source !== "fallback") {
     return knowledge;
   }
 
-  const llm = await respondWithLlm(message);
+  const llm = await respondWithLlm(message, locale);
   return llm ?? knowledge;
 }

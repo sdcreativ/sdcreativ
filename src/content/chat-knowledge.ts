@@ -16,6 +16,13 @@ export const chatSuggestions = [
   "Maintenance et SLA ?",
 ] as const;
 
+export const chatSuggestionsEn = [
+  "How does pricing work?",
+  "How long for a website?",
+  "Do you build AI agents?",
+  "Maintenance & SLA?",
+] as const;
+
 export const chatKnowledge: ChatKnowledgeEntry[] = [
   {
     id: "tarifs",
@@ -128,3 +135,118 @@ export const chatKnowledge: ChatKnowledgeEntry[] = [
 
 export const chatFallback =
   "Je n'ai pas trouvé de réponse précise à votre question. En heures ouvrées, ouvrez le chat conseiller (bas à droite). Sinon : WhatsApp, formulaire de contact ou prise de rendez-vous.";
+
+export const chatFallbackEn =
+  "I could not find a precise answer. During business hours, open the advisor chat (bottom right). Otherwise: WhatsApp, contact form or online booking.";
+
+export const chatGreetingEn =
+  "Hello! I am the SD CREATIV assistant. Ask about our services, quotes or timelines — I will point you in the right direction.";
+
+/** Knowledge base EN (same ids as FR). */
+export const chatKnowledgeEn: ChatKnowledgeEntry[] = [
+  {
+    id: "tarifs",
+    keywords: [
+      "price", "pricing", "cost", "budget", "quote", "estimate", "how much", "tarif", "devis",
+      "essential", "professional", "business", "package", "plan",
+    ],
+    answer:
+      "We offer Essential, Professional and Business packages (showcase to e-commerce), AI agent packs and maintenance plans. Every project gets a free custom quote — tell us what you need and we reply within 24–48 hours.",
+    links: [
+      { label: "View pricing", href: "/en/pricing" },
+      { label: "Quote configurator", href: "/en/devis" },
+    ],
+  },
+  {
+    id: "delais",
+    keywords: [
+      "timeline", "deadline", "duration", "how long", "delivery", "days", "weeks", "fast", "délai",
+    ],
+    answer:
+      "On average, expect 15 to 30 days for a showcase or e-commerce site depending on complexity. AI or custom projects may take 4 to 8 weeks. We set a precise schedule once the quote is validated.",
+    links: [{ label: "Request a quote", href: "/en/devis" }],
+  },
+  {
+    id: "services",
+    keywords: [
+      "service", "offer", "what do you", "digital", "showcase", "e-commerce", "ecommerce", "store",
+      "redesign", "seo", "branding",
+    ],
+    answer:
+      "SD CREATIV offers 12 services: showcase sites, e-commerce, redesign, visual identity, local SEO, maintenance, AI agents, automation, DevOps, cloud, mobile apps and custom development. Based in Abidjan, we support Ivorian SMEs.",
+    links: [
+      { label: "Our services", href: "/en/services" },
+      { label: "AI solutions", href: "/en/solutions-ia" },
+    ],
+  },
+  {
+    id: "ia",
+    keywords: [
+      "ai", "artificial", "intelligence", "agent", "chatbot", "bot", "openai", "claude", "llm",
+      "automation", "assistant", "whatsapp",
+    ],
+    answer:
+      "We design custom AI agents: website chatbots, WhatsApp assistants, lead qualification and business automation. Stack: OpenAI, Claude, n8n, CRM integrations. Free custom quote. This chatbot is a live demo of our work!",
+    links: [
+      { label: "AI solutions", href: "/en/solutions-ia" },
+      { label: "AI quote", href: "/en/devis?type=agents-ia" },
+    ],
+  },
+  {
+    id: "maintenance",
+    keywords: [
+      "maintenance", "sla", "support", "backup", "update", "monitoring", "subscription", "monthly",
+    ],
+    answer:
+      "We offer 3 maintenance plans: Essential, Professional and Premium SLA (response within 4h). Included: backups, updates, monitoring and technical support. Free custom quote based on the SLA you need.",
+    links: [
+      { label: "Maintenance plans", href: "/en/maintenance" },
+      { label: "Maintenance quote", href: "/en/devis?type=maintenance" },
+    ],
+  },
+  {
+    id: "contact",
+    keywords: [
+      "contact", "call", "email", "meeting", "book", "appointment", "team", "abidjan", "rdv",
+    ],
+    answer:
+      "During business hours (Mon–Fri 8am–6pm Abidjan), an advisor can help via live chat / audio (bubble bottom right). Outside hours: WhatsApp, contact form or online booking. We are based in Abidjan.",
+    links: [
+      { label: "Book a call", href: "/en/book" },
+      { label: "Contact", href: "/en/contact" },
+      { label: "Free website audit", href: "/en/free-audit" },
+    ],
+  },
+  {
+    id: "conseiller",
+    keywords: [
+      "advisor", "human", "person", "phone", "live chat", "3cx", "talk to", "agent",
+    ],
+    answer:
+      "Yes — Monday to Friday, 8am–6pm (Abidjan), open the advisor chat (or audio call) via the bubble bottom right. Outside hours, book a meeting or message us on WhatsApp; a human will follow up when we open.",
+    links: [
+      { label: "Book a call", href: "/en/book" },
+      { label: "Contact", href: "/en/contact" },
+    ],
+  },
+  {
+    id: "mobile",
+    keywords: ["mobile", "responsive", "smartphone", "tablet"],
+    answer:
+      "Yes — 100% of our sites are responsive and optimized for smartphone, tablet and desktop. Included in every package.",
+    links: [{ label: "Our pricing", href: "/en/pricing" }],
+  },
+  {
+    id: "ecommerce",
+    keywords: [
+      "mobile money", "orange money", "wave", "momo", "payment", "order", "online store", "sell",
+    ],
+    answer:
+      "Our Business package includes a full e-commerce store with Mobile Money payments (Orange Money, Wave), order management and admin training. Free custom quote.",
+    links: [
+      { label: "E-commerce pricing", href: "/en/pricing" },
+      { label: "Estimate my project", href: "/en/devis?type=e-commerce" },
+    ],
+  },
+];
+

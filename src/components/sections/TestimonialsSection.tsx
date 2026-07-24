@@ -7,5 +7,5 @@ type Props = {
 
 export async function TestimonialsSection({ locale = "fr" }: Props) {
   const testimonials = await getTestimonials(locale);
-  return <TestimonialsCarousel testimonials={testimonials} />;
+  return <TestimonialsCarousel testimonials={testimonials} locale={locale} />;
 }

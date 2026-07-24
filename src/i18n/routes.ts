@@ -14,6 +14,9 @@ export const LOCALE_ROUTE_PAIRS = [
   { fr: "/audit-gratuit", en: "/en/free-audit" },
   { fr: "/faq", en: "/en/faq" },
   { fr: "/solutions-ia", en: "/en/solutions-ia" },
+  { fr: "/blog", en: "/en/blog" },
+  { fr: "/agence-web-abidjan", en: "/en/web-agency-abidjan" },
+  { fr: "/creation-site-cote-ivoire", en: "/en/website-development-cote-divoire" },
   { fr: "/mentions-legales", en: "/en/legal" },
   { fr: "/politique-confidentialite", en: "/en/privacy" },
 ] as const;
@@ -30,6 +33,30 @@ export function getAlternatePath(pathname: string, target: "fr" | "en"): string 
     if (path === pair.fr || path === pair.en) {
       return target === "en" ? pair.en : pair.fr;
     }
+  }
+
+  const serviceMatch = path.match(/^\/(?:en\/)?services\/([^/]+)$/);
+  if (serviceMatch) {
+    const slug = serviceMatch[1];
+    return target === "en" ? `/en/services/${slug}` : `/services/${slug}`;
+  }
+
+  const portfolioMatch = path.match(/^\/(?:en\/portfolio|realisations)\/([^/]+)$/);
+  if (portfolioMatch) {
+    const slug = portfolioMatch[1];
+    return target === "en" ? `/en/portfolio/${slug}` : `/realisations/${slug}`;
+  }
+
+  const trainingMatch = path.match(/^\/(?:en\/training|formations)\/([^/]+)$/);
+  if (trainingMatch) {
+    const slug = trainingMatch[1];
+    return target === "en" ? `/en/training/${slug}` : `/formations/${slug}`;
+  }
+
+  const blogMatch = path.match(/^\/(?:en\/)?blog\/([^/]+)$/);
+  if (blogMatch) {
+    const slug = blogMatch[1];
+    return target === "en" ? `/en/blog/${slug}` : `/blog/${slug}`;
   }
 
   return target === "en" ? "/en" : "/";

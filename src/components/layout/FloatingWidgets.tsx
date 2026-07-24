@@ -45,7 +45,7 @@ export function FloatingWidgets() {
   return (
     <>
       {threeCxActive ? <ThreeCxWidget pathname={pathname} now={now} /> : null}
-      {showAi ? <ChatWidget mode={aiMode} /> : null}
+      {showAi ? <ChatWidget mode={aiMode} locale={pathname.startsWith("/en") ? "en" : "fr"} /> : null}
       <ScrollToTop dodgeThreeCx={threeCxActive} />
       <WhatsAppFloat dodgeThreeCx={threeCxActive} />
     </>

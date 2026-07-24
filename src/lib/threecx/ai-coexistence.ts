@@ -60,12 +60,55 @@ export function resolveAiCommsMode(opts: {
   return "default";
 }
 
-export function getAiGreeting(mode: AiCommsMode): {
+export function getAiGreeting(
+  mode: AiCommsMode,
+  locale: "fr" | "en" = "fr",
+): {
   content: string;
   links: Array<{ label: string; href: string }>;
   /** CTA qui ouvre le widget 3CX (mode handoff). */
   openThreeCxLabel?: string;
 } {
+  if (locale === "en") {
+    if (mode === "handoff") {
+      return {
+        content:
+          "Hello! An SD CREATIV advisor is available now. " +
+          "You can open chat (or an audio call) with the team, " +
+          "or ask me a quick question about our services and quotes.",
+        links: [
+          { label: "AI solutions", href: "/en/solutions-ia" },
+          { label: "Online quote", href: "/en/devis" },
+        ],
+        openThreeCxLabel: "Open advisor chat",
+      };
+    }
+
+    if (mode === "after_hours") {
+      return {
+        content:
+          "Hello! Our advisors are available via Live Chat Monday to Friday, 8am–6pm (Abidjan). " +
+          "Meanwhile I can guide you — or book a call / message us on WhatsApp.",
+        links: [
+          { label: "Book a call", href: "/en/book" },
+          { label: "WhatsApp", href: whatsappUrl("Hello SD CREATIV, I would like to talk.") },
+          { label: "Online quote", href: "/en/devis" },
+        ],
+      };
+    }
+
+    return {
+      content:
+        "Hello! I am the SD CREATIV assistant. Ask about our services, quotes or timelines. " +
+        "To speak with an advisor, use the chat bottom-right on contact / quote pages (business hours), WhatsApp or booking.",
+      links: [
+        { label: "Book a call", href: "/en/book" },
+        { label: "Contact", href: "/en/contact" },
+        { label: "Online quote", href: "/en/devis" },
+      ],
+    };
+  }
+
   const recording = getThreeCxRecordingNoticeFr();
 
   if (mode === "handoff") {

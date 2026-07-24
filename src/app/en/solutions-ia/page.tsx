@@ -1,4 +1,3 @@
-import Link from "next/link";
 import { Bot, CheckCircle2 } from "lucide-react";
 import { PageHero } from "@/components/ui/PageHero";
 import { Button } from "@/components/ui/Button";
@@ -7,8 +6,8 @@ import { AnimatedSection, AnimatedCard } from "@/components/ui/AnimatedSection";
 import { SectionHeading } from "@/components/ui/SectionHeading";
 import { FaqJsonLd } from "@/components/seo/JsonLd";
 import { enSolutionsIa } from "@/i18n/en-content";
+import { solutionsIaEn } from "@/i18n/public-en";
 import { PRICE_ON_REQUEST_LABEL_EN } from "@/lib/format";
-import { getSolutionsIaContent } from "@/lib/solutions-ia-resolver";
 import { createMetadata } from "@/lib/metadata";
 import { cn } from "@/lib/utils";
 
@@ -20,12 +19,10 @@ export const metadata = createMetadata({
   locale: "en",
 });
 
-export default async function EnSolutionsIaPage() {
-  const content = await getSolutionsIaContent();
-
+export default function EnSolutionsIaPage() {
   return (
     <>
-      <FaqJsonLd items={content.faq} />
+      <FaqJsonLd items={solutionsIaEn.faq} />
       <PageHero
         eyebrow="AI"
         title={enSolutionsIa.title}
@@ -54,28 +51,30 @@ export default async function EnSolutionsIaPage() {
       <AnimatedSection className="bg-white py-20 md:py-28">
         <div className="container mx-auto px-4 md:px-6 lg:px-8">
           <SectionHeading
-            eyebrow={content.headings.useCases.eyebrow}
-            title={content.headings.useCases.title}
-            highlight={content.headings.useCases.highlight}
+            eyebrow="Use cases"
+            title={solutionsIaEn.useCasesTitle}
+            highlight={solutionsIaEn.useCasesHighlight}
             className="mb-14"
           />
           <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-            {content.useCases.map((useCase, i) => {
-              const Icon = useCase.icon;
-              return (
-                <AnimatedCard
-                  key={useCase.id}
-                  delay={i * 0.08}
-                  className="rounded-2xl border border-gray/60 bg-white p-6 shadow-sm"
-                >
-                  <div className="mb-4 flex h-11 w-11 items-center justify-center rounded-xl bg-primary-light text-primary">
-                    <Icon className="h-5 w-5" aria-hidden />
-                  </div>
-                  <h3 className="text-lg font-bold text-foreground">{useCase.title}</h3>
-                  <p className="mt-2 text-sm text-gray-text">{useCase.description}</p>
-                </AnimatedCard>
-              );
-            })}
+            {solutionsIaEn.useCases.map((useCase, i) => (
+              <AnimatedCard
+                key={useCase.id}
+                delay={i * 0.08}
+                className="rounded-2xl border border-gray/60 bg-white p-6 shadow-sm"
+              >
+                <h3 className="text-lg font-bold text-foreground">{useCase.title}</h3>
+                <p className="mt-2 text-sm text-gray-text">{useCase.description}</p>
+                <ul className="mt-4 space-y-2">
+                  {useCase.benefits.map((b) => (
+                    <li key={b} className="flex items-start gap-2 text-sm text-gray-text">
+                      <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-primary" aria-hidden />
+                      {b}
+                    </li>
+                  ))}
+                </ul>
+              </AnimatedCard>
+            ))}
           </div>
         </div>
       </AnimatedSection>
@@ -89,7 +88,7 @@ export default async function EnSolutionsIaPage() {
             className="mb-14"
           />
           <div className="grid gap-8 lg:grid-cols-3">
-            {content.packs.map((pack, i) => (
+            {solutionsIaEn.packs.map((pack, i) => (
               <AnimatedCard
                 key={pack.id}
                 delay={i * 0.1}
@@ -128,18 +127,13 @@ export default async function EnSolutionsIaPage() {
       <section className="border-t border-gray/40 bg-white py-16 md:py-20">
         <div className="container mx-auto max-w-3xl px-4 md:px-6 lg:px-8">
           <h2 className="mb-8 text-2xl font-bold text-foreground">{enSolutionsIa.faqTitle}</h2>
-          {content.faq.map((item) => (
+          {solutionsIaEn.faq.map((item) => (
             <AccordionItem
               key={item.question}
               question={item.question}
               answer={item.answer}
             />
           ))}
-          <p className="mt-10 text-center text-sm text-gray-text">
-            <Link href="/solutions-ia" className="font-semibold text-primary hover:underline">
-              {enSolutionsIa.viewFr}
-            </Link>
-          </p>
         </div>
       </section>
     </>

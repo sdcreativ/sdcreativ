@@ -9,35 +9,68 @@ import type { Realisation } from "@/content/realisations";
 import type { PortfolioPublicStat } from "@/lib/portfolio-public-stats";
 import { cn } from "@/lib/utils";
 
-const nextSteps = [
-  {
-    icon: Calculator,
-    title: "Estimer mon projet",
-    description:
-      "Configurateur en ligne — type de projet, options et demande de devis personnalisé.",
-    href: "/devis",
-    cta: "Configurer mon devis",
-    featured: true,
-  },
-  {
-    icon: Search,
-    title: "Audit gratuit",
-    description:
-      "Vous avez déjà un site ? Analyse performance, SEO et mobile, sans engagement.",
-    href: "/audit-gratuit",
-    cta: "Demander un audit",
-    featured: false,
-  },
-  {
-    icon: Inbox,
-    title: "Nous écrire",
-    description:
-      "Une question sur nos réalisations ou votre besoin ? Message direct à l'équipe.",
-    href: "/contact",
-    cta: "Envoyer un message",
-    featured: false,
-  },
-] as const;
+type Locale = "fr" | "en";
+
+const nextStepsByLocale = {
+  fr: [
+    {
+      icon: Calculator,
+      title: "Estimer mon projet",
+      description:
+        "Configurateur en ligne — type de projet, options et demande de devis personnalisé.",
+      href: "/devis",
+      cta: "Configurer mon devis",
+      featured: true,
+    },
+    {
+      icon: Search,
+      title: "Audit gratuit",
+      description:
+        "Vous avez déjà un site ? Analyse performance, SEO et mobile, sans engagement.",
+      href: "/audit-gratuit",
+      cta: "Demander un audit",
+      featured: false,
+    },
+    {
+      icon: Inbox,
+      title: "Nous écrire",
+      description:
+        "Une question sur nos réalisations ou votre besoin ? Message direct à l'équipe.",
+      href: "/contact",
+      cta: "Envoyer un message",
+      featured: false,
+    },
+  ],
+  en: [
+    {
+      icon: Calculator,
+      title: "Estimate my project",
+      description:
+        "Online configurator — project type, options and a free personalized quote.",
+      href: "/en/devis",
+      cta: "Configure my quote",
+      featured: true,
+    },
+    {
+      icon: Search,
+      title: "Free audit",
+      description:
+        "Already have a website? Performance, SEO and mobile review — no commitment.",
+      href: "/en/free-audit",
+      cta: "Request an audit",
+      featured: false,
+    },
+    {
+      icon: Inbox,
+      title: "Write to us",
+      description:
+        "A question about our work or your needs? Message the team directly.",
+      href: "/en/contact",
+      cta: "Send a message",
+      featured: false,
+    },
+  ],
+} as const;
 
 type CategoryFilterButtonProps = {
   label: string;
@@ -53,16 +86,13 @@ function CategoryFilterButton({ label, pressed, onSelect }: CategoryFilterButton
       : "bg-gray-light text-gray-text hover:bg-primary-light hover:text-primary",
   );
 
-  if (pressed) {
-    return (
-      <button type="button" onClick={onSelect} className={className} aria-pressed="true">
-        {label}
-      </button>
-    );
-  }
-
   return (
-    <button type="button" onClick={onSelect} className={className} aria-pressed="false">
+    <button
+      type="button"
+      onClick={onSelect}
+      className={className}
+      aria-pressed={pressed}
+    >
       {label}
     </button>
   );
@@ -71,35 +101,44 @@ function CategoryFilterButton({ label, pressed, onSelect }: CategoryFilterButton
 type Props = {
   items?: Realisation[];
   stats?: PortfolioPublicStat[];
+  locale?: Locale;
 };
 
-export function RealisationsGrid({ items = [], stats = [] }: Props) {
-  const [activeCategory, setActiveCategory] = useState<string>("Tous");
+export function RealisationsGrid({ items = [], stats = [], locale = "fr" }: Props) {
+  const isEn = locale === "en";
+  const allLabel = isEn ? "All" : "Tous";
+  const [activeCategory, setActiveCategory] = useState<string>(allLabel);
 
   const categories = [
-    "Tous",
+    allLabel,
     ...Array.from(
       new Set(items.map((p) => p.category?.trim()).filter((c): c is string => Boolean(c))),
     ),
   ];
 
   const filtered =
-    activeCategory === "Tous"
+    activeCategory === allLabel
       ? items
       : items.filter((p) => p.category === activeCategory);
 
-  const showFeatured = activeCategory === "Tous";
+  const showFeatured = activeCategory === allLabel;
   const featured = showFeatured ? filtered.filter((p) => p.featured) : [];
   const regular = showFeatured
     ? filtered.filter((p) => !p.featured)
     : filtered;
+
+  const nextSteps = nextStepsByLocale[locale];
 
   return (
     <>
       <PortfolioStats stats={stats} />
 
       {categories.length > 1 && (
-      <div className="mb-12 flex flex-wrap justify-center gap-2" role="group" aria-label="Filtrer par catégorie">
+      <div
+        className="mb-12 flex flex-wrap justify-center gap-2"
+        role="group"
+        aria-label={isEn ? "Filter by category" : "Filtrer par catégorie"}
+      >
         {categories.map((cat) => (
           <CategoryFilterButton
             key={cat}
@@ -114,7 +153,13 @@ export function RealisationsGrid({ items = [], stats = [] }: Props) {
       {featured.length > 0 && (
         <div className="mb-8 grid gap-8 md:grid-cols-2">
           {featured.map((project, i) => (
-            <RealisationCard key={project.id} project={project} index={i} large />
+            <RealisationCard
+              key={project.id}
+              project={project}
+              index={i}
+              large
+              locale={locale}
+            />
           ))}
         </div>
       )}
@@ -125,27 +170,31 @@ export function RealisationsGrid({ items = [], stats = [] }: Props) {
             key={project.id}
             project={project}
             index={i + featured.length}
+            locale={locale}
           />
         ))}
       </div>
 
       {filtered.length === 0 && (
         <p className="py-16 text-center text-gray-text">
-          Aucun projet dans cette catégorie pour le moment.
+          {isEn
+            ? "No projects in this category yet."
+            : "Aucun projet dans cette catégorie pour le moment."}
         </p>
       )}
 
       <section className="mt-16 rounded-3xl border border-gray/60 bg-gradient-to-br from-gray-light via-white to-primary-light/20 p-8 md:p-12">
         <div className="mx-auto max-w-2xl text-center">
           <p className="text-xs font-semibold uppercase tracking-[0.2em] text-primary">
-            Prochaine étape
+            {isEn ? "Next step" : "Prochaine étape"}
           </p>
           <h2 className="mt-3 text-2xl font-bold text-foreground md:text-3xl">
-            Inspiré par nos réalisations ?
+            {isEn ? "Inspired by our work?" : "Inspiré par nos réalisations ?"}
           </h2>
           <p className="mt-3 text-sm leading-relaxed text-gray-text md:text-base">
-            Choisissez le parcours adapté à votre situation — estimation, audit ou simple
-            message.
+            {isEn
+              ? "Choose the path that fits — quote, audit or a simple message."
+              : "Choisissez le parcours adapté à votre situation — estimation, audit ou simple message."}
           </p>
         </div>
 
