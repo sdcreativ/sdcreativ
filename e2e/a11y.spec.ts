@@ -15,7 +15,6 @@ const publicPages = [
   { name: "Services", path: "/services" },
   { name: "Mentions légales", path: "/mentions-legales" },
   { name: "Politique confidentialité", path: "/politique-confidentialite" },
-  { name: "Accueil EN", path: "/en" },
 ] as const;
 
 test.describe("Accessibilité — pages publiques (axe WCAG 2.x AA)", () => {

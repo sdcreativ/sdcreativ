@@ -7,17 +7,17 @@ test.describe("Site public — smoke", () => {
     await expect(page.locator("h1").first()).toBeVisible();
   });
 
-  test("switcher de langue visible", async ({ page }) => {
+  test("switcher de langue absent (EN désactivé)", async ({ page }) => {
     await page.goto("/");
-    await expect(page.getByRole("group", { name: /langue/i })).toBeVisible();
+    await expect(page.getByRole("group", { name: /langue/i })).toHaveCount(0);
   });
 
-  test("navigation FR → EN depuis le switcher", async ({ page }) => {
-    await page.goto("/");
-    const switcher = page.getByRole("group", { name: /langue/i }).first();
-    await switcher.getByRole("link", { name: "EN" }).click();
-    await expect(page).toHaveURL(/\/en\/?$/, { timeout: 10_000 });
-    await expect(page.locator("html")).toHaveAttribute("lang", "en", { timeout: 10_000 });
+  test("/en redirige vers l'accueil FR", async ({ page }) => {
+    await page.goto("/en");
+    await expect(page).toHaveURL((url) => new URL(url).pathname === "/", {
+      timeout: 10_000,
+    });
+    await expect(page.locator("html")).toHaveAttribute("lang", "fr");
   });
 
   test("page contact affiche le formulaire", async ({ page }) => {
