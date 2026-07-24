@@ -4,11 +4,11 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { WifiOff } from "lucide-react";
 import { Button } from "@/components/ui/Button";
-import { isEnglishPath } from "@/i18n/routes";
+import { isActiveEnglishPath } from "@/i18n/routes";
 
 export function OfflinePageContent() {
   const pathname = usePathname() ?? "/";
-  const en = isEnglishPath(pathname);
+  const en = isActiveEnglishPath(pathname);
 
   return (
     <div className="flex min-h-[60vh] flex-col items-center justify-center px-4 text-center">

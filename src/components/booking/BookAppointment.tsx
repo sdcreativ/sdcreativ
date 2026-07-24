@@ -9,6 +9,7 @@ import {
   isBookingConfigured,
 } from "@/lib/booking";
 import { cn } from "@/lib/utils";
+import { isActiveEnglishPath } from "@/i18n/routes";
 
 type BookAppointmentProps = {
   className?: string;
@@ -22,7 +23,7 @@ type BookAppointmentProps = {
 
 function useBookingLocale() {
   const pathname = usePathname() || "";
-  return pathname.startsWith("/en") ? ("en" as const) : ("fr" as const);
+  return isActiveEnglishPath(pathname) ? ("en" as const) : ("fr" as const);
 }
 
 function BookingCtaLink({

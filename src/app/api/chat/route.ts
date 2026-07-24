@@ -7,6 +7,7 @@ import {
   rateLimitExceededResponse,
 } from "@/lib/rate-limit";
 import { isHoneypotTripped } from "@/lib/spam-guard";
+import { isEnglishLocaleEnabled } from "@/i18n/config";
 import { chatSchema } from "@/lib/validations/chat";
 
 export async function POST(request: Request) {
@@ -30,7 +31,9 @@ export async function POST(request: Request) {
       );
     }
 
-    const response = await getChatResponse(parsed.data.message, parsed.data.locale);
+    const locale =
+      isEnglishLocaleEnabled() && parsed.data.locale === "en" ? "en" : "fr";
+    const response = await getChatResponse(parsed.data.message, locale);
 
     return NextResponse.json({
       answer: response.answer,

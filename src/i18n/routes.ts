@@ -94,3 +94,8 @@ export function getHreflangAlternates(
 export function isEnglishPath(pathname: string): boolean {
   return pathname === "/en" || pathname.startsWith("/en/");
 }
+
+/** True seulement si la locale EN est active et que le chemin est `/en/*`. */
+export function isActiveEnglishPath(pathname: string): boolean {
+  return isEnglishLocaleEnabled() && isEnglishPath(pathname);
+}

@@ -16,6 +16,9 @@ export default function robots(): MetadataRoute.Robots {
         "/promo/",
         "/verifier/",
         "/offline",
+        // Locale EN désactivée : ne pas indexer /en (redirection middleware → FR)
+        "/en",
+        "/en/",
       ],
     },
     sitemap: `${SITE.url}/sitemap.xml`,

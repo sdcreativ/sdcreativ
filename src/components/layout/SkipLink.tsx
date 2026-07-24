@@ -1,11 +1,13 @@
 "use client";
 
 import { usePathname } from "next/navigation";
-import { isEnglishPath } from "@/i18n/routes";
+import { isActiveEnglishPath } from "@/i18n/routes";
 
 export function SkipLink() {
   const pathname = usePathname() ?? "/";
-  const label = isEnglishPath(pathname) ? "Skip to main content" : "Aller au contenu principal";
+  const label = isActiveEnglishPath(pathname)
+    ? "Skip to main content"
+    : "Aller au contenu principal";
 
   return (
     <a

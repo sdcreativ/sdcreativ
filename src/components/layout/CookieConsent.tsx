@@ -5,7 +5,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { Cookie } from "lucide-react";
 import { Button } from "@/components/ui/Button";
-import { isEnglishPath } from "@/i18n/routes";
+import { isActiveEnglishPath } from "@/i18n/routes";
 
 const STORAGE_KEY = "sdcreativ-cookie-consent";
 
@@ -30,7 +30,7 @@ function subscribe(onChange: () => void) {
 
 export function CookieConsent() {
   const pathname = usePathname() ?? "/";
-  const isEn = isEnglishPath(pathname);
+  const isEn = isActiveEnglishPath(pathname);
   const consent = useSyncExternalStore(
     subscribe,
     getCookieConsent,

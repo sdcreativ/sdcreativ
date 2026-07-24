@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { usePathname } from "next/navigation";
 import { ArrowUp } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { isActiveEnglishPath } from "@/i18n/routes";
 
 const SCROLL_THRESHOLD = 400;
 
@@ -14,7 +15,7 @@ type Props = {
 
 export function ScrollToTop({ dodgeThreeCx = false }: Props) {
   const pathname = usePathname() ?? "";
-  const isEn = pathname.startsWith("/en");
+  const isEn = isActiveEnglishPath(pathname);
   const [visible, setVisible] = useState(false);
 
   useEffect(() => {

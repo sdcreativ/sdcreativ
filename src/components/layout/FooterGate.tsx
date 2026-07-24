@@ -2,7 +2,7 @@
 
 import { usePathname } from "next/navigation";
 import { Footer } from "@/components/layout/Footer";
-import { isEnglishPath } from "@/i18n/routes";
+import { isActiveEnglishPath } from "@/i18n/routes";
 import type { ResolvedSitePublic } from "@/lib/site-public-types";
 
 export function FooterGate({ sitePublic }: { sitePublic: ResolvedSitePublic }) {
@@ -14,5 +14,10 @@ export function FooterGate({ sitePublic }: { sitePublic: ResolvedSitePublic }) {
   ) {
     return null;
   }
-  return <Footer sitePublic={sitePublic} locale={isEnglishPath(pathname) ? "en" : "fr"} />;
+  return (
+    <Footer
+      sitePublic={sitePublic}
+      locale={isActiveEnglishPath(pathname) ? "en" : "fr"}
+    />
+  );
 }

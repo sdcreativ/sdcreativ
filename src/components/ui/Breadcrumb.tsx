@@ -4,6 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { ChevronRight } from "lucide-react";
 import { isEnglishPath } from "@/i18n/routes";
+import { isEnglishLocaleEnabled } from "@/i18n/config";
 import { cn } from "@/lib/utils";
 
 type Crumb = { label: string; href?: string };
@@ -23,7 +24,9 @@ export function Breadcrumb({
   locale,
 }: BreadcrumbProps) {
   const pathname = usePathname() ?? "/";
-  const isEn = locale === "en" || (locale == null && isEnglishPath(pathname));
+  const isEn =
+    isEnglishLocaleEnabled() &&
+    (locale === "en" || (locale == null && isEnglishPath(pathname)));
   const isLight = variant === "light";
 
   return (

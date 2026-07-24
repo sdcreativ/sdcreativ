@@ -8,14 +8,14 @@ import { Button } from "@/components/ui/Button";
 import { NavGlowLink, isNavLinkActive } from "@/components/ui/NavGlowLink";
 import { mainNav } from "@/content/navigation";
 import { enNav } from "@/i18n/en-content";
-import { LocaleSwitcher } from "@/components/i18n/LocaleSwitcher";
+import { isActiveEnglishPath } from "@/i18n/routes";
 import { useWhatsappUrl } from "@/components/site/SitePublicProvider";
 import { cn } from "@/lib/utils";
 
 export function Header() {
   const pathname = usePathname() ?? "/";
   const waUrl = useWhatsappUrl();
-  const isEn = pathname.startsWith("/en");
+  const isEn = isActiveEnglishPath(pathname);
   const isAdmin = pathname.startsWith("/admin");
   const nav = isEn ? enNav : mainNav;
   const devisHref = isEn ? "/en/devis" : "/devis";
@@ -161,7 +161,6 @@ export function Header() {
         </nav>
 
         <div className="ml-auto flex shrink-0 items-center gap-2 md:gap-2.5">
-          <LocaleSwitcher className="hidden sm:flex" />
           <div className="hidden items-center gap-2 md:flex">
             <Button
               href={devisHref}
@@ -286,9 +285,6 @@ export function Header() {
                     </div>
                   );
                 })}
-              </div>
-              <div className="mt-4 flex justify-center sm:hidden">
-                <LocaleSwitcher />
               </div>
               <div className="mt-5 flex flex-col gap-2.5">
                 <Button

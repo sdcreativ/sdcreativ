@@ -12,6 +12,7 @@ import {
   shouldMountThreeCxWidget,
   shouldShowAiAssistant,
 } from "@/lib/threecx/widget-config";
+import { isActiveEnglishPath } from "@/i18n/routes";
 
 export function FloatingWidgets() {
   const pathname = usePathname() ?? "";
@@ -41,11 +42,12 @@ export function FloatingWidgets() {
     threeCxActive,
   });
   const aiMode = resolveAiCommsMode({ date: now, threeCxActive });
+  const chatLocale = isActiveEnglishPath(pathname) ? "en" : "fr";
 
   return (
     <>
       {threeCxActive ? <ThreeCxWidget pathname={pathname} now={now} /> : null}
-      {showAi ? <ChatWidget mode={aiMode} locale={pathname.startsWith("/en") ? "en" : "fr"} /> : null}
+      {showAi ? <ChatWidget mode={aiMode} locale={chatLocale} /> : null}
       <ScrollToTop dodgeThreeCx={threeCxActive} />
       <WhatsAppFloat dodgeThreeCx={threeCxActive} />
     </>
