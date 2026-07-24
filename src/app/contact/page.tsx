@@ -1,22 +1,14 @@
 import Image from "next/image";
-import {
-  Phone,
-  Mail,
-  MapPin,
-  Clock,
-  MessageCircle,
-  CheckCircle2,
-} from "lucide-react";
+import { CheckCircle2 } from "lucide-react";
 import { SitePageHero } from "@/components/ui/SitePageHero";
 import { ContactForm } from "@/components/forms/ContactForm";
 import { ContactMap } from "@/components/contact/ContactMap";
+import { ContactDetailsCard } from "@/components/contact/ContactDetailsCard";
 import { BookAppointment } from "@/components/booking/BookAppointment";
-import { Button } from "@/components/ui/Button";
-import { getSitePublicSettings } from "@/lib/site-public-settings";
-import { buildWhatsappUrl } from "@/lib/site-public-resolver";
 import { createMetadata } from "@/lib/metadata";
 
-export const revalidate = 300;
+/** Toujours frais : évite un ISR /contact figé sur les placeholders de build. */
+export const dynamic = "force-dynamic";
 
 export const metadata = createMetadata({
   title: "Contact",
@@ -32,9 +24,7 @@ const benefits = [
   "WhatsApp pour un échange rapide",
 ] as const;
 
-export default async function ContactPage() {
-  const { contact } = await getSitePublicSettings();
-  const waUrl = buildWhatsappUrl(contact);
+export default function ContactPage() {
   return (
     <>
       <SitePageHero pageKey="contact" />
@@ -51,64 +41,7 @@ export default async function ContactPage() {
           <div className="lg:col-span-2">
             <div className="sticky top-28 space-y-6">
               <BookAppointment variant="card" />
-              <div className="overflow-hidden rounded-3xl bg-dark shadow-xl">
-                <div className="h-1 bg-gradient-to-r from-primary to-primary-light" />
-                <div className="p-8">
-                  <h3 className="text-lg font-bold text-white">Coordonnées</h3>
-                  <p className="mt-1 text-sm text-white/50">
-                    Nous sommes disponibles du lundi au vendredi.
-                  </p>
-                  <ul className="mt-6 space-y-4">
-                    <li>
-                      <a
-                        href={contact.phoneHref}
-                        className="group flex items-center gap-4 rounded-xl bg-white/5 p-4 transition-colors hover:bg-white/10"
-                      >
-                        <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-primary/20 text-primary-light transition-colors group-hover:bg-primary group-hover:text-white">
-                          <Phone className="h-4 w-4" aria-hidden />
-                        </span>
-                        <span className="text-sm text-white/80 group-hover:text-white">
-                          {contact.phone}
-                        </span>
-                      </a>
-                    </li>
-                    <li>
-                      <a
-                        href={`mailto:${contact.email}`}
-                        className="group flex items-center gap-4 rounded-xl bg-white/5 p-4 transition-colors hover:bg-white/10"
-                      >
-                        <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-primary/20 text-primary-light transition-colors group-hover:bg-primary group-hover:text-white">
-                          <Mail className="h-4 w-4" aria-hidden />
-                        </span>
-                        <span className="text-sm text-white/80 group-hover:text-white">
-                          {contact.email}
-                        </span>
-                      </a>
-                    </li>
-                    <li className="flex items-center gap-4 rounded-xl bg-white/5 p-4">
-                      <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-primary/20 text-primary-light">
-                        <MapPin className="h-4 w-4" aria-hidden />
-                      </span>
-                      <span className="text-sm text-white/80">{contact.address}</span>
-                    </li>
-                    <li className="flex items-center gap-4 rounded-xl bg-white/5 p-4">
-                      <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-primary/20 text-primary-light">
-                        <Clock className="h-4 w-4" aria-hidden />
-                      </span>
-                      <span className="text-sm text-white/80">{contact.hours}</span>
-                    </li>
-                  </ul>
-                  <Button
-                    href={waUrl}
-                    external
-                    variant="outline"
-                    className="mt-6 w-full justify-center border-white/20 hover:bg-white/5"
-                  >
-                    <MessageCircle className="h-4 w-4 text-green-400" aria-hidden />
-                    Parler sur WhatsApp
-                  </Button>
-                </div>
-              </div>
+              <ContactDetailsCard />
 
               <div className="overflow-hidden rounded-3xl border border-gray/60 bg-white shadow-sm">
                 <div className="grid sm:grid-cols-[1fr_auto] sm:items-center">
@@ -141,7 +74,6 @@ export default async function ContactPage() {
           </div>
         </div>
 
-        {/* Carte Google Maps */}
         <div className="container relative mx-auto mt-16 px-4 md:px-6 lg:px-8">
           <ContactMap />
         </div>
