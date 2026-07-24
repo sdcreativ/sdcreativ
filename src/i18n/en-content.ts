@@ -22,8 +22,6 @@ export const enNav = [
   { label: "Portfolio", href: "/en/portfolio" },
   { label: "Pricing", href: "/en/pricing" },
   { label: "Blog", href: "/en/blog" },
-  { label: "Free audit", href: "/en/free-audit" },
-  { label: "Book", href: "/en/book" },
   { label: "About", href: "/en/about" },
   { label: "Contact", href: "/en/contact" },
 ] as const;

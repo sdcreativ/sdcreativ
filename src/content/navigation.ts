@@ -22,8 +22,6 @@ export const mainNav = [
   { label: "Réalisations", href: "/realisations" },
   { label: "Tarifs", href: "/tarifs" },
   { label: "Blog", href: "/blog" },
-  { label: "Audit gratuit", href: "/audit-gratuit" },
-  { label: "Rendez-vous", href: "/rendez-vous" },
   { label: "À propos", href: "/a-propos" },
   { label: "Contact", href: "/contact" },
 ] as const;
