@@ -23,21 +23,41 @@ function toDataUrl(buffer: Buffer, mime: string): string {
   return `data:${mime};base64,${buffer.toString("base64")}`;
 }
 
+/**
+ * Lit uniquement sous public/ (scopé statiquement pour le file tracing Next/Turbopack).
+ * Refuse les chemins avec `..` ou absolus.
+ */
 async function readPublicAsset(relativeUrl: string): Promise<Buffer | null> {
   const clean = relativeUrl.split("?")[0]!.replace(/^\/+/, "");
-  const candidates = [
-    path.join(process.cwd(), "public", clean),
-    path.join(process.cwd(), clean),
-  ];
-  for (const filePath of candidates) {
-    try {
-      await access(filePath);
-      return await readFile(filePath);
-    } catch {
-      // next candidate
-    }
+  if (!clean || clean.includes("..") || path.isAbsolute(clean)) {
+    return null;
   }
-  return null;
+  // Segments statiques `public` + sous-dossier images|uploads uniquement.
+  const first = clean.split("/")[0];
+  if (first !== "images" && first !== "uploads") {
+    return null;
+  }
+
+  const filePath = path.join(
+    /*turbopackIgnore: true*/ process.cwd(),
+    "public",
+    clean,
+  );
+  // Garde-fou runtime : rester sous public/
+  const publicRoot = path.join(
+    /*turbopackIgnore: true*/ process.cwd(),
+    "public",
+  );
+  if (!filePath.startsWith(publicRoot + path.sep) && filePath !== publicRoot) {
+    return null;
+  }
+
+  try {
+    await access(filePath);
+    return await readFile(filePath);
+  } catch {
+    return null;
+  }
 }
 
 function urlToPublicRelative(logoUrl: string, siteUrl: string): string | null {

@@ -18,7 +18,13 @@ const nextConfig: NextConfig = {
   serverExternalPackages: ["playwright-core"],
   // Migrations SQL + Playwright (PDF) — aussi copiés explicitement dans le Dockerfile.
   outputFileTracingIncludes: {
-    "/*": ["./migrations/**/*", "./node_modules/playwright-core/**/*"],
+    "/*": [
+      "./migrations/**/*",
+      "./node_modules/playwright-core/**/*",
+      // Logos PDF (document-logo lit public/images sans tracer tout le repo)
+      "./public/images/logo.png",
+      "./public/images/logo_sd.svg",
+    ],
   },
   async headers() {
     return [
