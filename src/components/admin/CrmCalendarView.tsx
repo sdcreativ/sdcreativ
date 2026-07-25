@@ -19,7 +19,8 @@ import {
   startOfWeek,
   toDateKey,
 } from "@/content/calendar-labels";
-import { BOOKING, CONTACT } from "@/lib/constants";
+import { BOOKING } from "@/lib/constants";
+import { useSitePublic } from "@/components/site/SitePublicProvider";
 import type { CalendarItem } from "@/lib/calendar";
 import { formatCountdownToEvent } from "@/lib/calendar-reminders";
 import type { ParticipantInput } from "@/lib/calendar-participants";
@@ -756,6 +757,11 @@ function EventFormModal({
   onSaved: () => void;
 }) {
   const assignees = useCrmAssignees();
+  const { contact } = useSitePublic();
+  const whatsappDigits = String(contact.whatsapp ?? "").replace(/\D/g, "");
+  const whatsappDisplay = whatsappDigits
+    ? `+${whatsappDigits}`
+    : contact.phone?.trim() || null;
   const isEdit = modal?.mode === "edit";
   const item = isEdit ? modal.item : null;
   const defaultDate = modal?.mode === "create" ? modal.date : startsAtToDateInput(item!.startsAt);
@@ -939,7 +945,9 @@ function EventFormModal({
             {meetingPlatform === "whatsapp" && (
               <p className="mt-2 text-xs text-gray-text">
                 Les participants avec un numéro recevront aussi une notification WhatsApp.
-                Lien généré vers {CONTACT.whatsapp ? `+${CONTACT.whatsapp}` : "le numéro SD CREATIV"}.
+                {whatsappDisplay
+                  ? <> Lien généré vers <strong>{whatsappDisplay}</strong>.</>
+                  : " Configurez le numéro WhatsApp dans Paramètres → Site public."}
               </p>
             )}
             {(meetingPlatform === "google_meet" || meetingPlatform === "zoom") && (

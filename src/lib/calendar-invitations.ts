@@ -9,7 +9,7 @@ import { withDb } from "@/lib/db";
 import { escapeHtml } from "@/lib/email";
 import { sendEmail } from "@/lib/email";
 import { isWhatsAppConfigured, sendWhatsApp } from "@/lib/whatsapp";
-import { CONTACT } from "@/lib/constants";
+import { getSitePublicSettings } from "@/lib/site-public-settings";
 
 /** Remappe les participants équipe vers leur email personnel si disponible. */
 async function resolveParticipantsForNotify(
@@ -62,11 +62,14 @@ async function resolveParticipantsForNotify(
   });
 }
 
-function resolveMeetingUrl(event: CalendarEvent): string | null {
+async function resolveMeetingUrl(event: CalendarEvent): Promise<string | null> {
   if (event.meetingUrl) return event.meetingUrl;
-  if (event.meetingPlatform === "whatsapp" && CONTACT.whatsapp) {
+  if (event.meetingPlatform === "whatsapp") {
+    const { contact } = await getSitePublicSettings();
+    const digits = String(contact.whatsapp ?? "").replace(/\D/g, "");
+    if (!digits) return null;
     const text = `Réunion SD CREATIV — ${event.title} — ${formatCalendarDateTime(event.startsAt, event.allDay)}`;
-    return `https://wa.me/${CONTACT.whatsapp}?text=${encodeURIComponent(text)}`;
+    return `https://wa.me/${digits}?text=${encodeURIComponent(text)}`;
   }
   return null;
 }
@@ -120,7 +123,7 @@ export async function sendCalendarInvitationEmail(
 ): Promise<boolean> {
   const fromEmail = process.env.CONTACT_FROM_EMAIL ?? "contact@sdcreativ.com";
   const greeting = participant.name?.split(" ")[0] ?? participant.email.split("@")[0] ?? "Bonjour";
-  const meetingUrl = resolveMeetingUrl(event);
+  const meetingUrl = await resolveMeetingUrl(event);
   const ics = buildSingleEventIcs({
     id: event.id,
     title: event.title,
@@ -149,7 +152,7 @@ export async function sendCalendarInvitations(
   event: CalendarEvent,
   participants: ParticipantInput[],
 ): Promise<{ emails: number; whatsapp: number }> {
-  const meetingUrl = resolveMeetingUrl(event);
+  const meetingUrl = await resolveMeetingUrl(event);
   const resolved = await resolveParticipantsForNotify(participants);
   let emails = 0;
   let whatsapp = 0;
