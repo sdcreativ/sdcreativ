@@ -21,6 +21,7 @@ import {
 } from "@/content/calendar-labels";
 import { BOOKING } from "@/lib/constants";
 import { useSitePublic } from "@/components/site/SitePublicProvider";
+import { resolveWhatsappDigits } from "@/lib/site-public-resolver";
 import type { CalendarItem } from "@/lib/calendar";
 import { formatCountdownToEvent } from "@/lib/calendar-reminders";
 import type { ParticipantInput } from "@/lib/calendar-participants";
@@ -758,10 +759,8 @@ function EventFormModal({
 }) {
   const assignees = useCrmAssignees();
   const { contact } = useSitePublic();
-  const whatsappDigits = String(contact.whatsapp ?? "").replace(/\D/g, "");
-  const whatsappDisplay = whatsappDigits
-    ? `+${whatsappDigits}`
-    : contact.phone?.trim() || null;
+  const whatsappDigits = resolveWhatsappDigits(contact);
+  const whatsappDisplay = whatsappDigits ? `+${whatsappDigits}` : null;
   const isEdit = modal?.mode === "edit";
   const item = isEdit ? modal.item : null;
   const defaultDate = modal?.mode === "create" ? modal.date : startsAtToDateInput(item!.startsAt);

@@ -10,6 +10,7 @@ import { escapeHtml } from "@/lib/email";
 import { sendEmail } from "@/lib/email";
 import { isWhatsAppConfigured, sendWhatsApp } from "@/lib/whatsapp";
 import { getSitePublicSettings } from "@/lib/site-public-settings";
+import { resolveWhatsappDigits } from "@/lib/site-public-resolver";
 
 /** Remappe les participants équipe vers leur email personnel si disponible. */
 async function resolveParticipantsForNotify(
@@ -66,7 +67,7 @@ async function resolveMeetingUrl(event: CalendarEvent): Promise<string | null> {
   if (event.meetingUrl) return event.meetingUrl;
   if (event.meetingPlatform === "whatsapp") {
     const { contact } = await getSitePublicSettings();
-    const digits = String(contact.whatsapp ?? "").replace(/\D/g, "");
+    const digits = resolveWhatsappDigits(contact);
     if (!digits) return null;
     const text = `Réunion SD CREATIV — ${event.title} — ${formatCalendarDateTime(event.startsAt, event.allDay)}`;
     return `https://wa.me/${digits}?text=${encodeURIComponent(text)}`;

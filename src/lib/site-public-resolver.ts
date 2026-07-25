@@ -46,15 +46,44 @@ export function getEnvSitePublicDefaults(): SitePublicSettings {
   };
 }
 
+/** Numéros factices / placeholders (env défaut, anciennes configs). */
+const PLACEHOLDER_WHATSAPP_DIGITS = new Set([
+  "2250700000000",
+  "22500000000",
+  "0700000000",
+]);
+
+export function digitsOnlyPhone(value: string | null | undefined): string {
+  return String(value ?? "").replace(/\D/g, "");
+}
+
+export function isPlaceholderWhatsappDigits(digits: string): boolean {
+  if (!digits) return true;
+  if (PLACEHOLDER_WHATSAPP_DIGITS.has(digits)) return true;
+  return /^2250{6,}$/.test(digits);
+}
+
+/** WhatsApp réel : champ whatsapp CRM, sinon téléphone (ignore les placeholders). */
+export function resolveWhatsappDigits(contact: {
+  whatsapp?: string | null;
+  phone?: string | null;
+}): string {
+  const wa = digitsOnlyPhone(contact.whatsapp);
+  if (wa && !isPlaceholderWhatsappDigits(wa)) return wa;
+  const phone = digitsOnlyPhone(contact.phone);
+  if (phone && !isPlaceholderWhatsappDigits(phone)) return phone;
+  return wa || phone;
+}
+
 function buildContact(raw: SitePublicSettings): SiteContactInfo {
-  const phoneDigits = raw.phone.replace(/\D/g, "");
+  const phoneDigits = digitsOnlyPhone(raw.phone);
   return {
     phone: raw.phone,
     phoneHref: `tel:+${phoneDigits}`,
     email: raw.email,
     address: raw.address,
     hours: raw.hours,
-    whatsapp: raw.whatsapp,
+    whatsapp: resolveWhatsappDigits({ whatsapp: raw.whatsapp, phone: raw.phone }),
     whatsappMessage: raw.whatsappMessage,
   };
 }
@@ -99,7 +128,7 @@ export function buildWhatsappUrl(
   contact: SiteContactInfo,
   message = contact.whatsappMessage,
 ): string {
-  const digits = String(contact.whatsapp ?? "").replace(/\D/g, "");
+  const digits = resolveWhatsappDigits(contact);
   const encoded = encodeURIComponent(message || "Bonjour");
   return `https://wa.me/${digits || "22500000000"}?text=${encoded}`;
 }
