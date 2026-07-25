@@ -77,3 +77,6 @@ Thumbs.db
 
 # --- Docs (locales uniquement, non versionnées) ---
 /docs/
+
+# --- Key ---
+key.json
