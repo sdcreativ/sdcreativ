@@ -14,7 +14,11 @@ COMPOSE=(docker compose -f docker-compose.yml -f docker-compose.prod.yml --profi
 
 env_val() {
   local file=$1 key=$2
-  grep -E "^${key}=" "$file" 2>/dev/null | head -1 | cut -d= -f2- | sed 's/^["'\''"]//; s/["'\''"]$//'
+  # Ne pas faire échouer le script si la clé est absente (pipefail + grep).
+  local line
+  line="$(grep -E "^${key}=" "$file" 2>/dev/null | head -1 || true)"
+  [ -n "$line" ] || return 0
+  printf '%s' "${line#*=}" | sed 's/^["'\''"]//; s/["'\''"]$//'
 }
 
 echo "=== Bootstrap compte admin CRM ==="
@@ -36,10 +40,13 @@ if [ -z "${ADMIN_SECRET:-}" ]; then
 fi
 
 echo "→ Réparation schéma CRM (si nécessaire)…"
-"${COMPOSE[@]}" exec -T postgres psql -U sdcreativ -d sdcreativ -v ON_ERROR_STOP=1 \
-  < scripts/db-repair-crm-schema.sql >/dev/null
+if ! "${COMPOSE[@]}" exec -T postgres psql -U sdcreativ -d sdcreativ -v ON_ERROR_STOP=1 \
+  < scripts/db-repair-crm-schema.sql >/dev/null; then
+  echo "✗ Échec réparation schéma CRM"
+  exit 1
+fi
 
-COUNT="$("${COMPOSE[@]}" exec -T postgres psql -U sdcreativ -d sdcreativ -tAc "SELECT COUNT(*) FROM crm_users;" | tr -d '[:space:]')"
+COUNT="$("${COMPOSE[@]}" exec -T postgres psql -U sdcreativ -d sdcreativ -tAc "SELECT COUNT(*) FROM crm_users;" | tr -d '[:space:]' || true)"
 echo "→ Utilisateurs CRM en base : ${COUNT:-0}"
 
 if [ "${COUNT:-0}" != "0" ]; then
@@ -56,7 +63,7 @@ sleep 5
 # Déclenche ensureSchema via une requête HTTP
 "${COMPOSE[@]}" exec -T app wget -qO- http://127.0.0.1:3000/admin/login >/dev/null 2>&1 || true
 
-COUNT="$("${COMPOSE[@]}" exec -T postgres psql -U sdcreativ -d sdcreativ -tAc "SELECT COUNT(*) FROM crm_users;" | tr -d '[:space:]')"
+COUNT="$("${COMPOSE[@]}" exec -T postgres psql -U sdcreativ -d sdcreativ -tAc "SELECT COUNT(*) FROM crm_users;" | tr -d '[:space:]' || true)"
 
 if [ "${COUNT:-0}" = "0" ]; then
   echo "→ Tentative via API login…"
