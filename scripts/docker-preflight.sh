@@ -44,7 +44,7 @@ fi
 if [ -f .env.docker ]; then
   ok ".env.docker présent (secrets app)"
 else
-  fail ".env.docker manquant — cp .env.docker.example .env.docker puis complétez les secrets"
+  fail ".env.docker manquant — créez-le (Bitwarden / AWS Secrets Manager) ou ./scripts/pull-secrets-from-aws.sh"
 fi
 
 if [ -f docker/nginx/conf.d/sdcreativ.conf.template ]; then

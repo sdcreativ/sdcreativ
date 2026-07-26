@@ -19,7 +19,7 @@ if [ ! -f .env ]; then
 fi
 
 if [ ! -f .env.docker ]; then
-  echo "Créez .env.docker à partir de .env.docker.example"
+  echo "Créez .env.docker (hors Git) ou : ./scripts/pull-secrets-from-aws.sh"
   exit 1
 fi
 

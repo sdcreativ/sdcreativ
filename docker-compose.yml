@@ -1,7 +1,7 @@
 # SD CREATIV — stack Docker
 #
 # Développement local (app + PostgreSQL + Redis, port 3001) :
-#   cp .env.docker.example .env.docker   # secrets app
+#   .env.docker — secrets app (hors Git ; AWS Secrets Manager / Bitwarden)
 #   docker compose up -d --build          # charge aussi docker-compose.override.yml
 #
 # Production VPS (Nginx + Certbot SSL) :

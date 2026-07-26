@@ -24,16 +24,18 @@
 /out/
 /build
 
-# --- Environment & secrets (VPS : .env sur le serveur, jamais sur Git) ---
+# --- Environment & secrets (jamais sur Git — coffre AWS Secrets Manager / Bitwarden) ---
 .env
+.env.*
 .env.docker
+.env.docker.example
+.env.example
+.env.production.example
 .env.local
 .env.development.local
 .env.test.local
 .env.production.local
 .env*.local
-!.env.example
-!.env.production.example
 
 # --- Vercel (optionnel si déploiement cloud) ---
 .vercel
