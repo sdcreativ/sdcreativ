@@ -2,6 +2,14 @@ import { z } from "zod";
 import { withDb } from "@/lib/db";
 import type { CalendarItemType, EventType, MeetingPlatform } from "@/content/calendar-labels";
 import { EVENT_TYPES, MEETING_PLATFORMS } from "@/content/calendar-labels";
+import {
+  parseCalendarAttachment,
+  type CalendarEventAttachment,
+} from "@/lib/calendar-attachments";
+import { isHtmlEmpty } from "@/lib/blog-content";
+import { sanitizeMailHtml } from "@/lib/mail/sanitize-html";
+
+export type { CalendarEventAttachment };
 
 export type CalendarItem = {
   id: string;
@@ -30,6 +38,7 @@ export type CalendarEvent = {
   projectId: string | null;
   meetingPlatform: MeetingPlatform | null;
   meetingUrl: string | null;
+  attachment: CalendarEventAttachment | null;
   createdAt: string;
   updatedAt: string;
 };
@@ -81,14 +90,31 @@ function mapEvent(row: EventRow): CalendarEvent {
     projectId: row.project_id,
     meetingPlatform: meeting.meetingPlatform,
     meetingUrl: meeting.meetingUrl,
+    attachment: parseCalendarAttachment(row.metadata),
     createdAt: row.created_at.toISOString(),
     updatedAt: row.updated_at.toISOString(),
   };
 }
 
+const attachmentSchema = z
+  .object({
+    url: z.string().trim().min(1).max(2000),
+    name: z.string().trim().min(1).max(200),
+    mimeType: z.string().trim().min(1).max(120),
+    size: z.number().int().nonnegative().max(20 * 1024 * 1024),
+  })
+  .nullable();
+
+function normalizeEventDescription(input: string | null | undefined): string | null {
+  if (input == null) return null;
+  const trimmed = input.trim();
+  if (!trimmed || isHtmlEmpty(trimmed)) return null;
+  return sanitizeMailHtml(trimmed).slice(0, 20000);
+}
+
 export const createEventSchema = z.object({
   title: z.string().trim().min(2).max(200),
-  description: z.string().trim().max(5000).optional().nullable(),
+  description: z.string().trim().max(20000).optional().nullable(),
   type: z.enum(EVENT_TYPES).default("meeting"),
   startsAt: z.string().datetime({ offset: true }).or(z.string().regex(/^\d{4}-\d{2}-\d{2}/)),
   endsAt: z.string().datetime({ offset: true }).optional().nullable(),
@@ -98,6 +124,7 @@ export const createEventSchema = z.object({
   projectId: z.string().uuid().optional().nullable(),
   meetingPlatform: z.enum(MEETING_PLATFORMS).optional().nullable(),
   meetingUrl: z.string().trim().max(500).optional().nullable(),
+  attachment: attachmentSchema.optional(),
 });
 
 export const updateEventSchema = createEventSchema.partial();
@@ -267,10 +294,13 @@ export async function createCalendarEvent(
     const allDay = input.allDay ?? false;
     const startsAt = parseStartsAt(input.startsAt, allDay);
     const endsAt = input.endsAt ? new Date(input.endsAt) : null;
-    const metadata = {
+    const metadata: Record<string, unknown> = {
       meetingPlatform: input.meetingPlatform ?? "none",
       meetingUrl: input.meetingUrl ?? null,
     };
+    if (input.attachment !== undefined) {
+      metadata.attachment = input.attachment;
+    }
 
     const { rows } = await query<EventRow>(
       `INSERT INTO calendar_events (
@@ -280,7 +310,7 @@ export async function createCalendarEvent(
       RETURNING *`,
       [
         input.title,
-        input.description ?? null,
+        normalizeEventDescription(input.description),
         input.type ?? "meeting",
         startsAt,
         endsAt,
@@ -327,13 +357,20 @@ export async function updateCalendarEvent(
         : existing.ends_at;
 
     const existingMeta = existing.metadata ?? {};
-    const metadata = {
+    const metadata: Record<string, unknown> = {
       ...existingMeta,
       ...(input.meetingPlatform !== undefined
         ? { meetingPlatform: input.meetingPlatform ?? "none" }
         : {}),
       ...(input.meetingUrl !== undefined ? { meetingUrl: input.meetingUrl } : {}),
     };
+    if (input.attachment !== undefined) {
+      if (input.attachment === null) {
+        delete metadata.attachment;
+      } else {
+        metadata.attachment = input.attachment;
+      }
+    }
 
     const { rows } = await query<EventRow>(
       `UPDATE calendar_events SET
@@ -353,7 +390,9 @@ export async function updateCalendarEvent(
       [
         id,
         input.title ?? existing.title,
-        input.description !== undefined ? input.description : existing.description,
+        input.description !== undefined
+          ? normalizeEventDescription(input.description)
+          : existing.description,
         input.type ?? existing.type,
         startsAt,
         endsAt,

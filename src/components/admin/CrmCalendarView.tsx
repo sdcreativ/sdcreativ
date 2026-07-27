@@ -45,6 +45,9 @@ import { CalendarSyncPanel } from "@/components/admin/CalendarSyncPanel";
 import { CalendarWeekView } from "@/components/admin/CalendarWeekView";
 import { CALENDAR_EVENT_DRAG_MIME } from "@/components/admin/CalendarWeekView";
 import { useCrmAssignees } from "@/hooks/useCrmTeamMembers";
+import { MailRichEditor } from "@/components/admin/MailRichEditor";
+import type { CalendarEventAttachment } from "@/lib/calendar";
+import { stripHtml } from "@/lib/blog-content";
 import {
   CalendarDays,
   BellRing,
@@ -53,8 +56,10 @@ import {
   ChevronDown,
   Clock,
   ExternalLink,
+  FileUp,
   LayoutGrid,
   Loader2,
+  Paperclip,
   Pencil,
   Plus,
   Settings2,
@@ -638,6 +643,11 @@ export function CrmCalendarView() {
 
       {eventModal && (
         <EventFormModal
+          key={
+            eventModal.mode === "edit"
+              ? `edit-${eventModal.item.sourceId ?? eventModal.item.id}`
+              : `create-${eventModal.date}`
+          }
           modal={eventModal}
           onClose={() => setEventModal(null)}
           onSaved={() => {
@@ -708,7 +718,9 @@ function AgendaDayItem({
   const body = (
     <>
       <p className="mt-2 font-semibold leading-snug text-foreground">{item.title}</p>
-      {item.description && <p className="mt-0.5 text-xs text-gray-text">{item.description}</p>}
+      {item.description && (
+        <p className="mt-0.5 line-clamp-2 text-xs text-gray-text">{stripHtml(item.description)}</p>
+      )}
       <p className="mt-2 flex items-center gap-1 text-xs text-gray-text">
         <Clock className="h-3 w-3 shrink-0" aria-hidden />
         {formatCalendarDateTime(item.startsAt, item.allDay)}
@@ -775,14 +787,23 @@ function EventFormModal({
   const [allDay, setAllDay] = useState(item?.allDay ?? true);
   const [meetingPlatform, setMeetingPlatform] = useState<MeetingPlatform>("none");
   const [meetingUrl, setMeetingUrl] = useState("");
+  const [descriptionHtml, setDescriptionHtml] = useState(item?.description ?? "");
+  const [editorKey, setEditorKey] = useState(0);
+  const [attachment, setAttachment] = useState<CalendarEventAttachment | null>(null);
+  const [uploadingFile, setUploadingFile] = useState(false);
 
   useEffect(() => {
     if (!isEdit || !item?.sourceId) {
       setParticipants([]);
       setMeetingPlatform("none");
       setMeetingUrl("");
+      setDescriptionHtml("");
+      setAttachment(null);
+      setEditorKey((k) => k + 1);
       return;
     }
+    setDescriptionHtml(item.description ?? "");
+    setEditorKey((k) => k + 1);
     void fetchEventParticipants(item.sourceId)
       .then((rows) =>
         setParticipants(
@@ -792,12 +813,56 @@ function EventFormModal({
       .catch(() => setParticipants([]));
     void fetch(`/api/admin/calendar/events/${item.sourceId}`, { credentials: "include" })
       .then((res) => (res.ok ? res.json() : null))
-      .then((json: { event?: { meetingPlatform?: MeetingPlatform; meetingUrl?: string } } | null) => {
-        if (json?.event?.meetingPlatform) setMeetingPlatform(json.event.meetingPlatform);
-        if (json?.event?.meetingUrl) setMeetingUrl(json.event.meetingUrl);
-      })
+      .then(
+        (
+          json: {
+            event?: {
+              meetingPlatform?: MeetingPlatform;
+              meetingUrl?: string;
+              description?: string | null;
+              attachment?: CalendarEventAttachment | null;
+            };
+          } | null,
+        ) => {
+          if (json?.event?.meetingPlatform) setMeetingPlatform(json.event.meetingPlatform);
+          if (json?.event?.meetingUrl) setMeetingUrl(json.event.meetingUrl);
+          if (json?.event?.description != null) {
+            setDescriptionHtml(json.event.description);
+            setEditorKey((k) => k + 1);
+          }
+          setAttachment(json?.event?.attachment ?? null);
+        },
+      )
       .catch(() => undefined);
-  }, [isEdit, item?.sourceId]);
+  }, [isEdit, item?.sourceId, item?.description]);
+
+  async function handleFileChange(fileList: FileList | null) {
+    const file = fileList?.[0];
+    if (!file) return;
+    setUploadingFile(true);
+    setError("");
+    try {
+      const form = new FormData();
+      form.append("file", file);
+      const res = await fetch("/api/admin/calendar/attachments", {
+        method: "POST",
+        credentials: "include",
+        body: form,
+      });
+      const json = (await res.json()) as {
+        attachment?: CalendarEventAttachment;
+        error?: string;
+      };
+      if (!res.ok || !json.attachment) {
+        throw new Error(json.error ?? "Upload impossible.");
+      }
+      setAttachment(json.attachment);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Upload impossible.");
+    } finally {
+      setUploadingFile(false);
+    }
+  }
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -818,7 +883,7 @@ function EventFormModal({
 
     const payload = {
       title: String(data.get("title")),
-      description: String(data.get("description") || "") || null,
+      description: descriptionHtml.trim() || null,
       type: String(data.get("type")),
       startsAt,
       allDay: isAllDay,
@@ -830,6 +895,7 @@ function EventFormModal({
         meetingPlatform === "google_meet" || meetingPlatform === "zoom"
           ? meetingUrl.trim() || null
           : null,
+      attachment,
     };
 
     try {
@@ -865,13 +931,68 @@ function EventFormModal({
             defaultValue={item?.title ?? ""}
             className={fieldClass}
           />
-          <textarea
-            name="description"
-            placeholder="Description"
-            rows={2}
-            defaultValue={item?.description ?? ""}
-            className={fieldClass}
-          />
+          <div>
+            <label className="mb-1 block text-xs font-medium text-gray-text">Description</label>
+            <MailRichEditor
+              valueHtml={descriptionHtml}
+              onChange={(html) => setDescriptionHtml(html)}
+              disabled={loading}
+              placeholder="Description de l’événement…"
+              editorKey={editorKey}
+            />
+          </div>
+          <div>
+            <label className="mb-1 block text-xs font-medium text-gray-text">
+              Pièce jointe (facultatif)
+            </label>
+            <p className="mb-2 text-[11px] text-gray-text/80">
+              PDF, Word (.doc/.docx), Excel (.xls/.xlsx) ou image — max 10 Mo.
+            </p>
+            {attachment ? (
+              <div className="flex items-center gap-2 rounded-xl border border-gray/40 bg-gray-light/40 px-3 py-2 text-sm">
+                <Paperclip className="h-4 w-4 shrink-0 text-primary" aria-hidden />
+                <a
+                  href={attachment.url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="min-w-0 flex-1 truncate font-medium text-primary hover:underline"
+                >
+                  {attachment.name}
+                </a>
+                <button
+                  type="button"
+                  onClick={() => setAttachment(null)}
+                  className="rounded-lg px-2 py-1 text-xs text-gray-text hover:bg-white hover:text-accent"
+                >
+                  Retirer
+                </button>
+              </div>
+            ) : (
+              <label
+                className={cn(
+                  "flex cursor-pointer items-center justify-center gap-2 rounded-xl border border-dashed border-gray/50 px-3 py-3 text-sm text-gray-text transition-colors hover:border-primary hover:bg-primary/5",
+                  uploadingFile && "pointer-events-none opacity-60",
+                )}
+              >
+                {uploadingFile ? (
+                  <Loader2 className="h-4 w-4 animate-spin" aria-hidden />
+                ) : (
+                  <FileUp className="h-4 w-4" aria-hidden />
+                )}
+                {uploadingFile ? "Upload en cours…" : "Choisir un fichier"}
+                <input
+                  type="file"
+                  className="hidden"
+                  accept=".pdf,.doc,.docx,.xls,.xlsx,.jpg,.jpeg,.png,.webp,.gif,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document,application/vnd.ms-excel,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,image/*"
+                  disabled={loading || uploadingFile}
+                  onChange={(e) => {
+                    void handleFileChange(e.target.files);
+                    e.target.value = "";
+                  }}
+                />
+              </label>
+            )}
+          </div>
           <div className="grid gap-3 sm:grid-cols-2">
             <input
               name="date"
@@ -987,7 +1108,7 @@ function EventFormModal({
         {error && <p className="mt-3 text-sm text-accent">{error}</p>}
         <button
           type="submit"
-          disabled={loading}
+          disabled={loading || uploadingFile}
           className="mt-4 flex w-full items-center justify-center gap-2 rounded-xl bg-primary py-3 text-sm font-semibold text-white disabled:opacity-60"
         >
           {loading && <Loader2 className="h-4 w-4 animate-spin" aria-hidden />}

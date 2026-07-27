@@ -11,6 +11,8 @@ import { sendEmail } from "@/lib/email";
 import { isWhatsAppConfigured, sendWhatsApp } from "@/lib/whatsapp";
 import { getSitePublicSettings } from "@/lib/site-public-settings";
 import { resolveWhatsappDigits } from "@/lib/site-public-resolver";
+import { stripHtml } from "@/lib/blog-content";
+import { sanitizeMailHtml } from "@/lib/mail/sanitize-html";
 
 /** Remappe les participants équipe vers leur email personnel si disponible. */
 async function resolveParticipantsForNotify(
@@ -93,7 +95,12 @@ function buildInvitationHtml(
       <p style="margin:0 0 4px"><strong>Date :</strong> ${formatCalendarDateTime(event.startsAt, event.allDay)}</p>
       ${platformLabel && event.meetingPlatform !== "none" ? `<p style="margin:0 0 4px"><strong>Canal :</strong> ${escapeHtml(platformLabel)}</p>` : ""}
       ${meetingUrl ? `<p style="margin:8px 0 0"><a href="${escapeHtml(meetingUrl)}" style="color:#2563eb;font-weight:600">Rejoindre la réunion</a></p>` : ""}
-      ${event.description ? `<p style="margin:8px 0 0">${escapeHtml(event.description)}</p>` : ""}
+      ${event.description ? `<div style="margin:8px 0 0">${sanitizeMailHtml(event.description)}</div>` : ""}
+      ${
+        event.attachment
+          ? `<p style="margin:8px 0 0"><strong>Pièce jointe :</strong> <a href="${escapeHtml(event.attachment.url)}" style="color:#2563eb">${escapeHtml(event.attachment.name)}</a></p>`
+          : ""
+      }
     </div>
     <p>Un fichier calendrier (.ics) est joint pour ajouter l'événement à votre agenda.</p>
   </div>`;
@@ -114,7 +121,8 @@ function buildWhatsAppBody(
     lines.push(`Canal : ${MEETING_PLATFORM_LABELS[event.meetingPlatform]}`);
   }
   if (meetingUrl) lines.push(`Lien : ${meetingUrl}`);
-  if (event.description) lines.push("", event.description.slice(0, 400));
+  if (event.description) lines.push("", stripHtml(event.description).slice(0, 400));
+  if (event.attachment) lines.push(`Pièce jointe : ${event.attachment.url}`);
   return lines.join("\n");
 }
 
@@ -128,7 +136,7 @@ export async function sendCalendarInvitationEmail(
   const ics = buildSingleEventIcs({
     id: event.id,
     title: event.title,
-    description: event.description,
+    description: event.description ? stripHtml(event.description) : null,
     startsAt: event.startsAt,
     endsAt: event.endsAt,
     allDay: event.allDay,

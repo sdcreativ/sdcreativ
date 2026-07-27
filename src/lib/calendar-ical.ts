@@ -1,4 +1,5 @@
 import type { CalendarItem } from "@/lib/calendar";
+import { stripHtml } from "@/lib/blog-content";
 
 function formatIcalDate(date: Date, allDay: boolean): string {
   if (allDay) {
@@ -41,7 +42,7 @@ export function buildCalendarIcalFeed(items: CalendarItem[], siteName = "SD CREA
       lines.push(`DTEND:${formatIcalDate(end, false)}`);
     }
     lines.push(`SUMMARY:${escapeIcal(item.title)}`);
-    if (item.description) lines.push(`DESCRIPTION:${escapeIcal(item.description)}`);
+    if (item.description) lines.push(`DESCRIPTION:${escapeIcal(stripHtml(item.description))}`);
     lines.push(`CATEGORIES:${escapeIcal(item.type)}`);
     lines.push("END:VEVENT");
   }
@@ -68,7 +69,10 @@ export function buildSingleEventIcs(
     : new Date(start.getTime() + (event.allDay ? 24 * 60 * 60 * 1000 : 60 * 60 * 1000));
   const now = formatIcalDate(new Date(), false);
   const uid = `${event.id}@sdcreativ-crm`;
-  const description = [event.description, event.meetingUrl ? `Lien : ${event.meetingUrl}` : null]
+  const description = [
+    event.description ? stripHtml(event.description) : null,
+    event.meetingUrl ? `Lien : ${event.meetingUrl}` : null,
+  ]
     .filter(Boolean)
     .join("\n\n");
 
