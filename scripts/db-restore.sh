@@ -20,20 +20,33 @@ if [ -z "$DUMP_FILE" ] || [ ! -f "$DUMP_FILE" ]; then
   exit 1
 fi
 
-if [ -f .env ]; then
-  set -a
-  # shellcheck disable=SC1091
-  source .env
-  set +a
+# shellcheck disable=SC1091
+source "${ROOT_DIR}/scripts/lib/load-env-file.sh"
+
+# VPS : .env.docker prioritaire. .env hôte en secours (Compose local).
+load_env_file "${ROOT_DIR}/.env"
+load_env_file "${ROOT_DIR}/.env.docker"
+
+if [ -z "${POSTGRES_USER:-}" ] || [ -z "${POSTGRES_DB:-}" ]; then
+  if [ -n "${DATABASE_URL:-}" ]; then
+    _db_rest="${DATABASE_URL#*://}"
+    _db_user="${_db_rest%%:*}"
+    _db_path="${DATABASE_URL##*/}"
+    _db_name="${_db_path%%\?*}"
+    POSTGRES_USER="${POSTGRES_USER:-${_db_user}}"
+    POSTGRES_DB="${POSTGRES_DB:-${_db_name}}"
+  fi
 fi
 
 POSTGRES_USER="${POSTGRES_USER:-sdcreativ}"
 POSTGRES_DB="${POSTGRES_DB:-sdcreativ}"
-COMPOSE_FILES="${COMPOSE_FILES:--f docker-compose.yml}"
+COMPOSE_FILES="${COMPOSE_FILES:--f docker-compose.yml -f docker-compose.prod.yml}"
+COMPOSE_PROFILE="${COMPOSE_PROFILE:-prod}"
 
 COMPOSE=(docker compose)
 # shellcheck disable=SC2206
 COMPOSE+=($COMPOSE_FILES)
+COMPOSE+=(--profile "$COMPOSE_PROFILE")
 
 echo "=== Restauration PostgreSQL — SD CREATIV ==="
 echo "Fichier : ${DUMP_FILE}"

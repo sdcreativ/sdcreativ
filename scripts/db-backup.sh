@@ -17,9 +17,23 @@ cd "$ROOT_DIR"
 # shellcheck disable=SC1091
 source "${ROOT_DIR}/scripts/lib/load-env-file.sh"
 
-# Compose / Postgres : .env (hôte). AWS S3 : uniquement via backup_s3_load_env (.env.docker).
-# load_env_file évite les plantages « set -u » / syntaxe bash sur un .env cassé.
+# Source de vérité VPS / Docker : .env.docker (prioritaire).
+# .env hôte (Compose) en secours pour POSTGRES_* locaux — ne doit pas écraser .env.docker.
 load_env_file "${ROOT_DIR}/.env"
+load_env_file "${ROOT_DIR}/.env.docker"
+
+# Si seul DATABASE_URL est défini (cas typique .env.docker), en déduire user/db.
+if [ -z "${POSTGRES_USER:-}" ] || [ -z "${POSTGRES_DB:-}" ]; then
+  if [ -n "${DATABASE_URL:-}" ]; then
+    # postgresql://user:pass@host:port/db
+    _db_rest="${DATABASE_URL#*://}"
+    _db_user="${_db_rest%%:*}"
+    _db_path="${DATABASE_URL##*/}"
+    _db_name="${_db_path%%\?*}"
+    POSTGRES_USER="${POSTGRES_USER:-${_db_user}}"
+    POSTGRES_DB="${POSTGRES_DB:-${_db_name}}"
+  fi
+fi
 
 POSTGRES_USER="${POSTGRES_USER:-sdcreativ}"
 POSTGRES_DB="${POSTGRES_DB:-sdcreativ}"
