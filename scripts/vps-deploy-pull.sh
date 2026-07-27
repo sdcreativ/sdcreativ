@@ -34,6 +34,14 @@ fi
 echo "→ git pull"
 git pull --ff-only
 
+chmod +x \
+  scripts/run-db-backup.sh \
+  scripts/db-backup.sh \
+  scripts/backup-s3-upload.sh \
+  scripts/infra-status-export.sh \
+  scripts/install-backup-cron.sh \
+  2>/dev/null || true
+
 # Le pull peut mettre à jour ce script : re-exécuter pour charger la nouvelle version.
 if [ -z "${VPS_DEPLOY_REEXEC:-}" ]; then
   export VPS_DEPLOY_REEXEC=1

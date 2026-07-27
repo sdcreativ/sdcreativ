@@ -14,29 +14,42 @@ set -euo pipefail
 ROOT_DIR="$(cd "$(dirname "$0")/.." && pwd)"
 cd "$ROOT_DIR"
 
+# shellcheck disable=SC1091
+source "${ROOT_DIR}/scripts/lib/load-env-file.sh"
+
 # Compose / Postgres : .env (hôte). AWS S3 : uniquement via backup_s3_load_env (.env.docker).
-if [ -f .env ]; then
-  set -a
-  # shellcheck disable=SC1091
-  source .env
-  set +a
-fi
+# load_env_file évite les plantages « set -u » / syntaxe bash sur un .env cassé.
+load_env_file "${ROOT_DIR}/.env"
 
 POSTGRES_USER="${POSTGRES_USER:-sdcreativ}"
 POSTGRES_DB="${POSTGRES_DB:-sdcreativ}"
 BACKUP_DIR="${BACKUP_DIR:-${ROOT_DIR}/backups}"
 RETENTION_DAYS="${RETENTION_DAYS:-14}"
 TIMESTAMP="$(date +%Y%m%d-%H%M%S)"
-COMPOSE_FILES="${COMPOSE_FILES:--f docker-compose.yml}"
+COMPOSE_FILES="${COMPOSE_FILES:--f docker-compose.yml -f docker-compose.prod.yml}"
+COMPOSE_PROFILE="${COMPOSE_PROFILE:-prod}"
+export PATH="/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:${PATH:-}"
 
 mkdir -p "$BACKUP_DIR"
 
 COMPOSE=(docker compose)
 # shellcheck disable=SC2206
 COMPOSE+=($COMPOSE_FILES)
+COMPOSE+=(--profile "$COMPOSE_PROFILE")
 
-if ! "${COMPOSE[@]}" ps --status running postgres 2>/dev/null | grep -q postgres; then
-  echo "✗ Conteneur postgres non démarré. Lancez : ${COMPOSE[*]} up -d postgres"
+if ! command -v docker >/dev/null 2>&1; then
+  echo "✗ docker introuvable dans PATH=${PATH}"
+  exit 1
+fi
+
+postgres_cid="$("${COMPOSE[@]}" ps -q postgres 2>/dev/null | head -1 || true)"
+if [ -z "$postgres_cid" ]; then
+  echo "✗ Conteneur postgres introuvable. Lancez : ${COMPOSE[*]} up -d postgres"
+  exit 1
+fi
+postgres_state="$(docker inspect -f '{{.State.Status}}' "$postgres_cid" 2>/dev/null || echo unknown)"
+if [ "$postgres_state" != "running" ]; then
+  echo "✗ Conteneur postgres non démarré (état=${postgres_state}). Lancez : ${COMPOSE[*]} up -d postgres"
   exit 1
 fi
 
@@ -86,6 +99,8 @@ find "$BACKUP_DIR" -maxdepth 1 -type f \( -name 'sdcreativ-*.dump' -o -name 'sdc
 REMAINING="$(find "$BACKUP_DIR" -maxdepth 1 -type f -name 'sdcreativ-*.dump' | wc -l | tr -d ' ')"
 
 # --- Upload S3 (si configuré dans .env.docker) ---
+# Ne doit pas empêcher la sauvegarde locale ni l’export infra en cas d’échec IAM/réseau.
+S3_OK=1
 if [ -f scripts/backup-s3-common.sh ]; then
   # shellcheck disable=SC1091
   source scripts/backup-s3-common.sh
@@ -93,7 +108,10 @@ if [ -f scripts/backup-s3-common.sh ]; then
   if backup_s3_is_configured && [ "${#S3_UPLOAD_FILES[@]}" -gt 0 ]; then
     echo
     echo ">>> Envoi vers S3…"
-    "${ROOT_DIR}/scripts/backup-s3-upload.sh" "${S3_UPLOAD_FILES[@]}"
+    if ! "${ROOT_DIR}/scripts/backup-s3-upload.sh" "${S3_UPLOAD_FILES[@]}"; then
+      S3_OK=0
+      echo "⚠ Upload S3 échoué — dump local conservé : ${DUMP_FILE}"
+    fi
   elif ! backup_s3_is_configured; then
     echo
     echo "⚠ S3 non configuré — sauvegarde locale uniquement (voir .env.docker AWS_*)"
@@ -107,8 +125,13 @@ echo
 echo "Restauration :"
 echo "  ./scripts/db-restore.sh ${DUMP_FILE}"
 
-if [ -x "${ROOT_DIR}/scripts/infra-status-export.sh" ]; then
+if [ -x "${ROOT_DIR}/scripts/infra-status-export.sh" ] || [ -f "${ROOT_DIR}/scripts/infra-status-export.sh" ]; then
   echo
   echo ">>> Mise à jour statut infra CRM…"
-  BACKUP_DIR="$BACKUP_DIR" COMPOSE_FILES="$COMPOSE_FILES" "${ROOT_DIR}/scripts/infra-status-export.sh" || true
+  BACKUP_DIR="$BACKUP_DIR" COMPOSE_FILES="$COMPOSE_FILES" \
+    bash "${ROOT_DIR}/scripts/infra-status-export.sh" || true
+fi
+
+if [ "$S3_OK" -ne 1 ]; then
+  exit 2
 fi

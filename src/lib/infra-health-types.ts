@@ -55,7 +55,7 @@ export type InfraHostStatus = {
 
 export const INFRA_RESTORE_LATEST_CMD = `BACKUP_DIR=/var/backups/sdcreativ COMPOSE_FILES="-f docker-compose.yml -f docker-compose.prod.yml" ./scripts/backup-s3-restore.sh latest`;
 
-export const INFRA_BACKUP_NOW_CMD = `BACKUP_DIR=/var/backups/sdcreativ COMPOSE_FILES="-f docker-compose.yml -f docker-compose.prod.yml" ./scripts/db-backup.sh`;
+export const INFRA_BACKUP_NOW_CMD = `BACKUP_DIR=/var/backups/sdcreativ COMPOSE_FILES="-f docker-compose.yml -f docker-compose.prod.yml" ./scripts/run-db-backup.sh`;
 
 export const INFRA_LIST_BACKUPS_CMD = "./scripts/backup-s3-list.sh";
 

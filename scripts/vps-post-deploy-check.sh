@@ -141,7 +141,7 @@ else
   warn_msg "Aucune sauvegarde dans ${BACKUP_DIR} — lancez ./scripts/db-backup.sh et installez le cron"
 fi
 
-if crontab -u "$DEPLOY_USER" -l 2>/dev/null | grep -qF 'db-backup.sh'; then
+if crontab -u "$DEPLOY_USER" -l 2>/dev/null | grep -qE 'scripts/(run-db-backup|db-backup)\.sh'; then
   ok "Cron sauvegarde installé (${DEPLOY_USER}, 3h)"
 else
   warn_msg "Cron sauvegarde absent — ./scripts/install-backup-cron.sh"

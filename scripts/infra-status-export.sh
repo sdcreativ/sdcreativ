@@ -29,7 +29,7 @@ disk_used="$(df -P / | awk 'NR==2 {print $5}' | tr -d '%')"
 disk_free="$(df -P -BG / | awk 'NR==2 {print $4}' | tr -d 'G')"
 disk_total="$(df -P -BG / | awk 'NR==2 {print $2}' | tr -d 'G')"
 
-if crontab -u "$DEPLOY_USER" -l 2>/dev/null | grep -qF 'db-backup.sh'; then
+if crontab -u "$DEPLOY_USER" -l 2>/dev/null | grep -qE 'scripts/(run-db-backup|db-backup)\.sh'; then
   backup_cron="true"
 else
   backup_cron="false"

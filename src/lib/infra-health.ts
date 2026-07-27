@@ -482,11 +482,38 @@ function checkHostSnapshot(host: InfraHostStatus | null): InfraCheck[] {
   }
 
   if (typeof host.backupCronInstalled === "boolean") {
+    const localAt = host.latestLocalBackup
+      ? parseBackupTimestamp(host.latestLocalBackup)
+      : null;
+    const localAgeHours = localAt ? (Date.now() - localAt.getTime()) / 3_600_000 : null;
+
+    let cronStatus: InfraCheckStatus = host.backupCronInstalled ? "ok" : "error";
+    let cronDetail = host.backupCronInstalled ? "Planifié chaque nuit" : "Non installé";
+    let cronHint = host.backupCronInstalled
+      ? undefined
+      : "./scripts/install-backup-cron.sh";
+
+    if (host.backupCronInstalled && localAgeHours != null) {
+      if (localAgeHours > BACKUP_MAX_AGE_WARN_HOURS) {
+        cronStatus = "error";
+        cronDetail = `Cron présent mais dump local trop vieux (${formatAgeHours(localAgeHours)})`;
+        cronHint = "Vérifiez /var/log/sdcreativ-backup.log puis lancez ./scripts/run-db-backup.sh";
+      } else if (localAgeHours > BACKUP_MAX_AGE_OK_HOURS) {
+        cronStatus = "warning";
+        cronDetail = `Cron présent — dump local en retard (${formatAgeHours(localAgeHours)})`;
+        cronHint = "Vérifiez /var/log/sdcreativ-backup.log";
+      }
+    } else if (host.backupCronInstalled && !host.latestLocalBackup) {
+      cronStatus = "warning";
+      cronDetail = "Cron présent — aucun dump local";
+      cronHint = "Lancez ./scripts/run-db-backup.sh";
+    }
+
     checks.push({
       id: "backup-cron",
       label: "Cron sauvegarde",
-      status: host.backupCronInstalled ? "ok" : "error",
-      detail: host.backupCronInstalled ? "Planifié chaque nuit" : "Non installé",
+      status: cronStatus,
+      detail: cronDetail,
       metrics: [
         { label: "Fréquence", value: "3h00 (quotidien)" },
         {
@@ -494,7 +521,7 @@ function checkHostSnapshot(host: InfraHostStatus | null): InfraCheck[] {
           value: host.latestLocalBackup ?? "—",
         },
       ],
-      hint: host.backupCronInstalled ? undefined : "./scripts/install-backup-cron.sh",
+      hint: cronHint,
       actions: host.backupCronInstalled
         ? [
             {
@@ -508,7 +535,8 @@ function checkHostSnapshot(host: InfraHostStatus | null): InfraCheck[] {
             {
               id: "install-cron",
               label: "Installer les crons",
-              command: "sudo BACKUP_DIR=/var/backups/sdcreativ CRON_USER=deploy ./scripts/install-backup-cron.sh",
+              command:
+                "sudo BACKUP_DIR=/var/backups/sdcreativ CRON_USER=deploy ./scripts/install-backup-cron.sh",
               variant: "primary",
             },
           ],

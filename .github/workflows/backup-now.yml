@@ -1,0 +1,60 @@
+name: Backup now
+
+# Relance une sauvegarde PostgreSQL + S3 sur le VPS (runner self-hosted).
+# Actions → Backup now → Run workflow
+
+on:
+  workflow_dispatch:
+
+concurrency:
+  group: backup-production
+  cancel-in-progress: false
+
+jobs:
+  backup-vps:
+    name: Backup VPS (S3)
+    runs-on: [self-hosted, linux, sdcreativ-vps]
+    timeout-minutes: 30
+    steps:
+      - name: Diagnostiquer + sauvegarder
+        run: |
+          set -euo pipefail
+          ROOT=/var/www/sdcreativ
+          LOG=/var/log/sdcreativ-backup.log
+
+          run_as_deploy() {
+            if [ "$(id -un)" = "deploy" ]; then
+              bash -lc "$1"
+            else
+              sudo -n -u deploy bash -lc "$1"
+            fi
+          }
+
+          echo "=== git pull (scripts backup) ==="
+          run_as_deploy "cd ${ROOT} && git pull --ff-only"
+          run_as_deploy "cd ${ROOT} && chmod +x scripts/run-db-backup.sh scripts/db-backup.sh scripts/backup-s3-upload.sh scripts/infra-status-export.sh scripts/install-backup-cron.sh 2>/dev/null || true"
+
+          echo "=== Dernières lignes du log backup ==="
+          run_as_deploy "tail -40 ${LOG} 2>/dev/null || echo '(log vide)'"
+
+          echo "=== Cron deploy ==="
+          run_as_deploy "crontab -l | grep -E 'backup|infra' || true"
+
+          echo "=== Migration cron wrapper (si besoin) ==="
+          sudo -n BACKUP_DIR=/var/backups/sdcreativ CRON_USER=deploy bash "${ROOT}/scripts/install-backup-cron.sh" || true
+
+          echo "=== Sauvegarde maintenant ==="
+          run_as_deploy "cd ${ROOT} && BACKUP_DIR=/var/backups/sdcreativ COMPOSE_FILES='-f docker-compose.yml -f docker-compose.prod.yml' ./scripts/run-db-backup.sh"
+
+          echo "=== Derniers dumps locaux ==="
+          run_as_deploy "ls -lt /var/backups/sdcreativ/*.dump | head -3"
+
+      - name: Résumé
+        if: always()
+        run: |
+          {
+            echo "## Backup production"
+            echo ""
+            echo "Statut : ${{ job.status }}"
+            echo "Après succès, le widget CRM « Sauvegarde S3 » doit repasser au vert sous ~15 min (export infra)."
+          } >> "$GITHUB_STEP_SUMMARY"

@@ -30,13 +30,19 @@ chown "$CRON_USER:$CRON_USER" "$BACKUP_DIR" 2>/dev/null || true
 touch "$LOG_FILE" "$INFRA_LOG_FILE"
 chown "$CRON_USER:$CRON_USER" "$LOG_FILE" "$INFRA_LOG_FILE" 2>/dev/null || true
 
-BACKUP_CRON="0 ${CRON_HOUR} * * * cd ${ROOT_DIR} && BACKUP_DIR=${BACKUP_DIR} COMPOSE_FILES=\"-f docker-compose.yml -f docker-compose.prod.yml\" ./scripts/db-backup.sh >> ${LOG_FILE} 2>&1"
+BACKUP_CRON="0 ${CRON_HOUR} * * * cd ${ROOT_DIR} && BACKUP_DIR=${BACKUP_DIR} COMPOSE_FILES=\"-f docker-compose.yml -f docker-compose.prod.yml\" ./scripts/run-db-backup.sh >> ${LOG_FILE} 2>&1"
 INFRA_CRON="*/15 * * * * cd ${ROOT_DIR} && BACKUP_DIR=${BACKUP_DIR} COMPOSE_FILES=\"-f docker-compose.yml -f docker-compose.prod.yml\" ./scripts/infra-status-export.sh >> ${INFRA_LOG_FILE} 2>&1"
 
 CURRENT="$(crontab -u "$CRON_USER" -l 2>/dev/null || true)"
 NEXT="$CURRENT"
 
-if ! echo "$CURRENT" | grep -qF 'scripts/db-backup.sh'; then
+# Migrer l’ancienne ligne db-backup.sh directe vers le wrapper run-db-backup.sh
+if echo "$CURRENT" | grep -qF 'scripts/db-backup.sh' && ! echo "$CURRENT" | grep -qF 'scripts/run-db-backup.sh'; then
+  NEXT="$(echo "$CURRENT" | grep -vF 'scripts/db-backup.sh' || true)"
+  NEXT="${NEXT}
+${BACKUP_CRON}"
+  echo "✓ Cron backup migré vers run-db-backup.sh"
+elif ! echo "$CURRENT" | grep -qF 'scripts/run-db-backup.sh' && ! echo "$CURRENT" | grep -qF 'scripts/db-backup.sh'; then
   NEXT="${NEXT}
 ${BACKUP_CRON}"
   echo "✓ Cron backup ajouté"
@@ -56,11 +62,18 @@ if [ "$NEXT" != "$CURRENT" ]; then
   printf '%s\n' "$NEXT" | sed '/^$/d' | crontab -u "$CRON_USER" -
 fi
 
+chmod +x \
+  "${ROOT_DIR}/scripts/run-db-backup.sh" \
+  "${ROOT_DIR}/scripts/db-backup.sh" \
+  "${ROOT_DIR}/scripts/backup-s3-upload.sh" \
+  "${ROOT_DIR}/scripts/infra-status-export.sh" \
+  2>/dev/null || true
+
 echo
 echo "Sauvegardes : ${BACKUP_DIR}"
 echo "Logs backup : ${LOG_FILE}"
 echo "Logs infra  : ${INFRA_LOG_FILE}"
 echo
 echo "Test manuel :"
-echo "  BACKUP_DIR=${BACKUP_DIR} ./scripts/db-backup.sh"
+echo "  BACKUP_DIR=${BACKUP_DIR} ./scripts/run-db-backup.sh"
 echo "  BACKUP_DIR=${BACKUP_DIR} ./scripts/infra-status-export.sh"
