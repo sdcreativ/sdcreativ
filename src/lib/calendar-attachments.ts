@@ -4,8 +4,20 @@ import { GetObjectCommand, PutObjectCommand } from "@aws-sdk/client-s3";
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 import { getS3PublicUrl } from "@/lib/blog-media";
 import { downloadObjectBuffer, isS3Configured, sanitizeFilename } from "@/lib/s3";
+import {
+  MAX_CALENDAR_ATTACHMENT_BYTES,
+  MAX_CALENDAR_ATTACHMENTS,
+} from "@/lib/calendar-mail-limits";
 
-export const MAX_CALENDAR_ATTACHMENT_BYTES = 10 * 1024 * 1024;
+export {
+  MAX_CALENDAR_ATTACHMENT_BYTES,
+  MAX_CALENDAR_ATTACHMENTS,
+  MAX_CALENDAR_MAIL_ATTACHMENTS_BYTES,
+  formatBytesFr,
+  sumAttachmentBytes,
+  validateCalendarMailAttachments,
+} from "@/lib/calendar-mail-limits";
+
 /** Lien email : 7 jours (max typique IAM user pour URL signée). */
 const CALENDAR_ATTACHMENT_LINK_TTL_SECONDS = 7 * 24 * 60 * 60;
 
@@ -251,8 +263,6 @@ export async function loadCalendarAttachmentBuffer(
   }
   return null;
 }
-
-export const MAX_CALENDAR_ATTACHMENTS = 5;
 
 export function parseCalendarAttachment(
   metadata: Record<string, unknown> | null,

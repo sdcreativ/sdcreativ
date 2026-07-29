@@ -153,3 +153,33 @@ export async function listCalendarInvitationLogs(
     return rows.map(mapRow);
   });
 }
+
+export type RecentDeliveryIssue = CalendarInvitationLog & {
+  eventTitle: string;
+};
+
+/** Bounces / plaintes Resend depuis `since` (digest matinal). */
+export async function listRecentInvitationDeliveryIssues(
+  since: Date,
+): Promise<RecentDeliveryIssue[]> {
+  await ensureCalendarInvitationLogsTable();
+  return withDb(async (query) => {
+    const { rows } = await query<
+      LogRow & { event_title: string }
+    >(
+      `SELECT l.*, e.title AS event_title
+       FROM calendar_invitation_logs l
+       JOIN calendar_events e ON e.id = l.event_id
+       WHERE l.sent_at >= $1
+         AND l.status IN ('bounced', 'complained', 'failed')
+         AND l.channel = 'email'
+       ORDER BY l.sent_at DESC
+       LIMIT 200`,
+      [since.toISOString()],
+    );
+    return rows.map((row) => ({
+      ...mapRow(row),
+      eventTitle: row.event_title,
+    }));
+  });
+}

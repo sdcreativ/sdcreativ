@@ -123,6 +123,26 @@ export async function resendCalendarInvitationsApi(
   return json.invited;
 }
 
+/** Relance uniquement les participants encore pending. */
+export async function remindPendingRsvpApi(
+  eventId: string,
+): Promise<{ emails: number; whatsapp: number; errors?: string[]; pendingCount: number }> {
+  const res = await fetch(`/api/admin/calendar/events/${eventId}/rsvp-remind`, {
+    method: "POST",
+    credentials: "include",
+  });
+  const json = await parseJson<{
+    invited: { emails: number; whatsapp: number; errors?: string[] };
+    pendingCount: number;
+  }>(res);
+  return {
+    emails: json.invited.emails,
+    whatsapp: json.invited.whatsapp,
+    errors: json.invited.errors,
+    pendingCount: json.pendingCount,
+  };
+}
+
 export async function fetchCalendarInvitationLogsApi(
   eventId: string,
 ): Promise<import("@/lib/calendar-invitation-logs-shared").CalendarInvitationLog[]> {
