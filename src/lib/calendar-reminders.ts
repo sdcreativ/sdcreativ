@@ -8,10 +8,22 @@ export type ReminderRule =
 
 /** Règles de déclenchement par type d'événement (minutes avant ou heure fixe). */
 export const CALENDAR_REMINDER_RULES: Record<CalendarItemType, ReminderRule[]> = {
-  meeting: [{ kind: "minutes_before", minutes: 15 }],
-  call: [{ kind: "minutes_before", minutes: 10 }],
+  meeting: [
+    { kind: "at_time", hour: 9, minute: 0, dayOffset: -1 },
+    { kind: "minutes_before", minutes: 60 },
+    { kind: "minutes_before", minutes: 15 },
+  ],
+  call: [
+    { kind: "at_time", hour: 9, minute: 0, dayOffset: -1 },
+    { kind: "minutes_before", minutes: 60 },
+    { kind: "minutes_before", minutes: 10 },
+  ],
   reminder: [{ kind: "minutes_before", minutes: 0 }],
-  other: [{ kind: "minutes_before", minutes: 30 }],
+  other: [
+    { kind: "at_time", hour: 9, minute: 0, dayOffset: -1 },
+    { kind: "minutes_before", minutes: 60 },
+    { kind: "minutes_before", minutes: 30 },
+  ],
   project_deadline: [
     { kind: "at_time", hour: 9, minute: 0, dayOffset: -1 },
     { kind: "at_time", hour: 9, minute: 0, dayOffset: 0 },
@@ -31,10 +43,10 @@ export const CALENDAR_REMINDER_RULES: Record<CalendarItemType, ReminderRule[]> =
 };
 
 export const CALENDAR_REMINDER_LABELS: Record<CalendarItemType, string> = {
-  meeting: "Réunion — rappel 15 min avant",
-  call: "Appel — rappel 10 min avant",
+  meeting: "Réunion — veille 9 h, 1 h et 15 min avant",
+  call: "Appel — veille 9 h, 1 h et 10 min avant",
   reminder: "Rappel — à l'heure prévue",
-  other: "Événement — rappel 30 min avant",
+  other: "Événement — veille 9 h, 1 h et 30 min avant",
   project_deadline: "Deadline — veille et jour J à 9 h",
   task_due: "Tâche — veille 17 h et jour J à 8 h",
   quote_followup: "Devis — rappels 1 h et 15 min avant",
@@ -47,6 +59,7 @@ export type CalendarReminder = {
   itemType: CalendarItemType;
   title: string;
   description: string | null;
+  attachmentNames: string[];
   triggerAt: string;
   eventStartsAt: string;
   urgency: "high" | "normal";
@@ -127,6 +140,7 @@ export function buildRemindersForItems(
         itemType: item.type,
         title: item.title,
         description: item.description,
+        attachmentNames: item.attachmentNames ?? [],
         triggerAt: triggerAt.toISOString(),
         eventStartsAt: item.startsAt,
         urgency,

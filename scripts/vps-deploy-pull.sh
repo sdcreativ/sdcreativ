@@ -31,8 +31,37 @@ if [ ! -w "$ROOT_DIR/.git/objects" ]; then
   exit 1
 fi
 
-echo "→ git pull"
-git pull --ff-only
+echo "→ Préparation git"
+if [ -z "${VPS_DEPLOY_REEXEC:-}" ]; then
+  echo "→ git pull (avec stash auto si working tree sale)"
+  DIRTY="$(git status --porcelain 2>/dev/null || true)"
+  STASHED=0
+  if [ -n "$DIRTY" ]; then
+    echo "⚠ Modifications locales détectées — stash avant pull"
+    git status --short || true
+    if git stash push -u -m "vps-deploy-auto-$(date +%Y%m%d-%H%M%S)"; then
+      STASHED=1
+    else
+      echo "✗ Impossible de stasher — résolvez manuellement (git status)"
+      exit 1
+    fi
+  fi
+
+  if ! git pull --ff-only; then
+    if [ "$STASHED" -eq 1 ]; then
+      echo "→ Restauration du stash après échec du pull"
+      git stash pop || true
+    fi
+    exit 1
+  fi
+
+  if [ "$STASHED" -eq 1 ]; then
+    echo "→ Stash local abandonné (versions dépôt prioritaires) : git stash drop"
+    git stash drop || true
+  fi
+else
+  echo "→ Re-exécution post-pull (script à jour)"
+fi
 
 chmod +x \
   scripts/run-db-backup.sh \
@@ -64,6 +93,15 @@ if [ -f .env ]; then
   set -a
   load_env_file "$ROOT_DIR/.env"
   set +a
+fi
+
+# Migration légère : journal invitations calendrier (no-op si déjà présent)
+if [ -f scripts/migrate-calendar-invitation-logs.sql ]; then
+  echo "→ Migration calendar_invitation_logs (si besoin)"
+  "${COMPOSE[@]}" exec -T postgres \
+    psql -U "${POSTGRES_USER:-sdcreativ}" -d "${POSTGRES_DB:-sdcreativ}" \
+    < scripts/migrate-calendar-invitation-logs.sql \
+    >/dev/null 2>&1 || echo "⚠ Migration invitation-logs non appliquée (postgres indisponible ?)"
 fi
 
 DOMAIN="${DOMAIN:-sdcreativ.com}"

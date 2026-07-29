@@ -28,6 +28,7 @@ import type { ParticipantInput } from "@/lib/calendar-participants";
 import {
   createCalendarEventApi,
   deleteCalendarEventApi,
+  fetchCalendarInvitationLogsApi,
   fetchCalendarItems,
   fetchCalendarItemsRange,
   fetchEventParticipants,
@@ -35,6 +36,7 @@ import {
   resendCalendarInvitationsApi,
   updateCalendarEventApi,
 } from "@/lib/calendar-api";
+import type { CalendarInvitationLog } from "@/lib/calendar-invitation-logs";
 import { cn } from "@/lib/utils";
 import { useDialog } from "@/components/ui/DialogProvider";
 import type { EventType, MeetingPlatform } from "@/content/calendar-labels";
@@ -52,6 +54,7 @@ import { stripHtml } from "@/lib/blog-content";
 import {
   CalendarDays,
   BellRing,
+  CheckCircle2,
   ChevronLeft,
   ChevronRight,
   ChevronDown,
@@ -68,6 +71,7 @@ import {
   Sparkles,
   Trash2,
   X,
+  XCircle,
 } from "lucide-react";
 
 type ViewMode = "month" | "week" | "day";
@@ -728,17 +732,22 @@ function AgendaDayItem({
         {formatCalendarDateTime(item.startsAt, item.allDay)}
         {item.assignee && ` · ${item.assignee}`}
       </p>
-      {editable && item.sourceId && item.attachmentName && (
-        <a
-          href={`/api/admin/calendar/events/${item.sourceId}/attachment`}
-          target="_blank"
-          rel="noopener noreferrer"
-          onClick={(e) => e.stopPropagation()}
-          className="mt-2 inline-flex items-center gap-1 text-xs font-semibold text-primary hover:underline"
-        >
-          <Paperclip className="h-3 w-3" aria-hidden />
-          {item.attachmentName}
-        </a>
+      {editable && item.sourceId && (item.attachmentNames?.length ?? 0) > 0 && (
+        <div className="mt-2 flex flex-col gap-1">
+          {item.attachmentNames!.map((name, index) => (
+            <a
+              key={`${name}-${index}`}
+              href={`/api/admin/calendar/events/${item.sourceId}/attachment?index=${index}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              onClick={(e) => e.stopPropagation()}
+              className="inline-flex items-center gap-1 text-xs font-semibold text-primary hover:underline"
+            >
+              <Paperclip className="h-3 w-3" aria-hidden />
+              {name}
+            </a>
+          ))}
+        </div>
       )}
       {item.linkHref && (
         <Link
@@ -810,8 +819,15 @@ function EventFormModal({
   const [meetingUrl, setMeetingUrl] = useState("");
   const [descriptionHtml, setDescriptionHtml] = useState(item?.description ?? "");
   const [editorKey, setEditorKey] = useState(0);
-  const [attachment, setAttachment] = useState<CalendarEventAttachment | null>(null);
+  const [attachments, setAttachments] = useState<CalendarEventAttachment[]>([]);
   const [uploadingFile, setUploadingFile] = useState(false);
+  const [invitationLogs, setInvitationLogs] = useState<CalendarInvitationLog[]>([]);
+
+  function loadInvitationLogs(eventId: string) {
+    void fetchCalendarInvitationLogsApi(eventId)
+      .then(setInvitationLogs)
+      .catch(() => setInvitationLogs([]));
+  }
 
   useEffect(() => {
     if (!isEdit || !item?.sourceId) {
@@ -819,12 +835,14 @@ function EventFormModal({
       setMeetingPlatform("none");
       setMeetingUrl("");
       setDescriptionHtml("");
-      setAttachment(null);
+      setAttachments([]);
+      setInvitationLogs([]);
       setEditorKey((k) => k + 1);
       return;
     }
     setDescriptionHtml(item.description ?? "");
     setEditorKey((k) => k + 1);
+    loadInvitationLogs(item.sourceId);
     void fetchEventParticipants(item.sourceId)
       .then((rows) =>
         setParticipants(
@@ -842,6 +860,7 @@ function EventFormModal({
               meetingUrl?: string;
               description?: string | null;
               attachment?: CalendarEventAttachment | null;
+              attachments?: CalendarEventAttachment[];
             };
           } | null,
         ) => {
@@ -851,7 +870,13 @@ function EventFormModal({
             setDescriptionHtml(json.event.description);
             setEditorKey((k) => k + 1);
           }
-          setAttachment(json?.event?.attachment ?? null);
+          const files =
+            json?.event?.attachments?.length
+              ? json.event.attachments
+              : json?.event?.attachment
+                ? [json.event.attachment]
+                : [];
+          setAttachments(files);
         },
       )
       .catch(() => undefined);
@@ -860,6 +885,10 @@ function EventFormModal({
   async function handleFileChange(fileList: FileList | null) {
     const file = fileList?.[0];
     if (!file) return;
+    if (attachments.length >= 5) {
+      setError("Maximum 5 pièces jointes par événement.");
+      return;
+    }
     setUploadingFile(true);
     setError("");
     try {
@@ -877,7 +906,7 @@ function EventFormModal({
       if (!res.ok || !json.attachment) {
         throw new Error(json.error ?? "Upload impossible.");
       }
-      setAttachment(json.attachment);
+      setAttachments((prev) => [...prev, json.attachment!].slice(0, 5));
     } catch (err) {
       setError(err instanceof Error ? err.message : "Upload impossible.");
     } finally {
@@ -920,7 +949,8 @@ function EventFormModal({
         meetingPlatform === "google_meet" || meetingPlatform === "zoom"
           ? meetingUrl.trim() || null
           : null,
-      attachment,
+      attachments,
+      attachment: attachments[0] ?? null,
     };
 
     try {
@@ -930,6 +960,7 @@ function EventFormModal({
         : await createCalendarEventApi(payload);
 
       setSavedEventId(result.event.id);
+      loadInvitationLogs(result.event.id);
 
       const inviteErrors = result.invited?.errors?.filter(Boolean) ?? [];
       if (sendInvitations && participants.length > 0 && inviteErrors.length > 0) {
@@ -984,8 +1015,9 @@ function EventFormModal({
       setInviteSuccess(
         `${invited.emails} invitation(s) renvoyée(s)${
           invited.whatsapp ? ` · ${invited.whatsapp} WhatsApp` : ""
-        } (e-mail + .ics${attachment ? " + pièce jointe" : ""}).`,
+        } (e-mail + .ics${attachments.length ? ` + ${attachments.length} pièce(s) jointe(s)` : ""}).`,
       );
+      loadInvitationLogs(eventId);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Renvoi impossible.");
     } finally {
@@ -1025,35 +1057,45 @@ function EventFormModal({
           </div>
           <div>
             <label className="mb-1 block text-xs font-medium text-gray-text">
-              Pièce jointe (facultatif)
+              Pièces jointes (facultatif, max 5)
             </label>
             <p className="mb-2 text-[11px] text-gray-text/80">
-              PDF, Word (.doc/.docx), Excel (.xls/.xlsx) ou image — max 10 Mo.
+              PDF, Word (.doc/.docx), Excel (.xls/.xlsx) ou image — max 10 Mo chacune.
             </p>
-            {attachment ? (
-              <div className="flex items-center gap-2 rounded-xl border border-gray/40 bg-gray-light/40 px-3 py-2 text-sm">
-                <Paperclip className="h-4 w-4 shrink-0 text-primary" aria-hidden />
-                <a
-                  href={
-                    isEdit && item?.sourceId
-                      ? `/api/admin/calendar/events/${item.sourceId}/attachment`
-                      : attachment.url
-                  }
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="min-w-0 flex-1 truncate font-medium text-primary hover:underline"
-                >
-                  {attachment.name}
-                </a>
-                <button
-                  type="button"
-                  onClick={() => setAttachment(null)}
-                  className="rounded-lg px-2 py-1 text-xs text-gray-text hover:bg-white hover:text-accent"
-                >
-                  Retirer
-                </button>
-              </div>
-            ) : (
+            {attachments.length > 0 && (
+              <ul className="mb-2 space-y-2">
+                {attachments.map((file, index) => (
+                  <li
+                    key={`${file.key ?? file.url}-${index}`}
+                    className="flex items-center gap-2 rounded-xl border border-gray/40 bg-gray-light/40 px-3 py-2 text-sm"
+                  >
+                    <Paperclip className="h-4 w-4 shrink-0 text-primary" aria-hidden />
+                    <a
+                      href={
+                        isEdit && item?.sourceId
+                          ? `/api/admin/calendar/events/${item.sourceId}/attachment?index=${index}`
+                          : file.url
+                      }
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="min-w-0 flex-1 truncate font-medium text-primary hover:underline"
+                    >
+                      {file.name}
+                    </a>
+                    <button
+                      type="button"
+                      onClick={() =>
+                        setAttachments((prev) => prev.filter((_, i) => i !== index))
+                      }
+                      className="rounded-lg px-2 py-1 text-xs text-gray-text hover:bg-white hover:text-accent"
+                    >
+                      Retirer
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            )}
+            {attachments.length < 5 && (
               <label
                 className={cn(
                   "flex cursor-pointer items-center justify-center gap-2 rounded-xl border border-dashed border-gray/50 px-3 py-3 text-sm text-gray-text transition-colors hover:border-primary hover:bg-primary/5",
@@ -1065,7 +1107,11 @@ function EventFormModal({
                 ) : (
                   <FileUp className="h-4 w-4" aria-hidden />
                 )}
-                {uploadingFile ? "Upload en cours…" : "Choisir un fichier"}
+                {uploadingFile
+                  ? "Upload en cours…"
+                  : attachments.length > 0
+                    ? "Ajouter un fichier"
+                    : "Choisir un fichier"}
                 <input
                   type="file"
                   className="hidden"
@@ -1184,7 +1230,10 @@ function EventFormModal({
             <div className="space-y-2 rounded-xl border border-primary/20 bg-primary/5 p-3">
               <p className="text-xs text-gray-text">
                 Renvoie l’invitation à <strong>tous</strong> les participants sélectionnés
-                {attachment ? " avec la pièce jointe" : ""}.
+                {attachments.length > 0
+                  ? ` avec ${attachments.length} pièce(s) jointe(s)`
+                  : ""}
+                .
               </p>
               <button
                 type="button"
@@ -1222,6 +1271,45 @@ function EventFormModal({
             <p className="rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-900">
               {inviteWarning}
             </p>
+          )}
+          {(isEdit || savedEventId) && invitationLogs.length > 0 && (
+            <div className="rounded-xl border border-gray/40 bg-gray-light/30 p-3">
+              <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-gray-text">
+                Journal des invitations
+              </p>
+              <ul className="max-h-40 space-y-1.5 overflow-y-auto text-xs">
+                {invitationLogs.map((log) => (
+                  <li
+                    key={log.id}
+                    className="flex items-start gap-2 rounded-lg bg-white/80 px-2 py-1.5"
+                  >
+                    {log.status === "sent" ? (
+                      <CheckCircle2 className="mt-0.5 h-3.5 w-3.5 shrink-0 text-emerald-600" aria-hidden />
+                    ) : (
+                      <XCircle className="mt-0.5 h-3.5 w-3.5 shrink-0 text-accent" aria-hidden />
+                    )}
+                    <div className="min-w-0 flex-1">
+                      <p className="truncate font-medium text-foreground">
+                        {log.email}
+                        <span className="ml-1 font-normal text-gray-text">
+                          · {log.channel === "whatsapp" ? "WhatsApp" : "Email"}
+                        </span>
+                      </p>
+                      <p className="text-gray-text">
+                        {new Date(log.sentAt).toLocaleString("fr-FR", {
+                          day: "2-digit",
+                          month: "2-digit",
+                          year: "numeric",
+                          hour: "2-digit",
+                          minute: "2-digit",
+                        })}
+                        {log.status === "failed" && log.error ? ` — ${log.error}` : " — envoyé"}
+                      </p>
+                    </div>
+                  </li>
+                ))}
+              </ul>
+            </div>
           )}
           <label className="flex items-center gap-2 text-sm">
             <input

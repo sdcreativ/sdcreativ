@@ -1,5 +1,7 @@
 import { NextResponse } from "next/server";
-import { listCalendarItems } from "@/lib/calendar";
+import { stripHtml } from "@/lib/blog-content";
+import { listCalendarItems, getCalendarEventById } from "@/lib/calendar";
+import { loadCalendarAttachmentBuffer } from "@/lib/calendar-attachments";
 import { buildRemindersForItems } from "@/lib/calendar-reminders";
 import {
   listUsersWithCalendarEmailEnabled,
@@ -8,11 +10,25 @@ import {
   shouldSendSmsReminder,
 } from "@/lib/calendar-user-preferences";
 import { isDatabaseConfigured } from "@/lib/db";
+import { escapeHtml } from "@/lib/email";
 import { listFiredReminderKeysForChannel, markRemindersFired } from "@/lib/crm-reminders";
 import { sendEmail } from "@/lib/email";
 import { sendSms } from "@/lib/sms";
 
 const GRACE_MS = 10 * 60_000;
+
+function reminderDescriptionHtml(description: string | null): string {
+  if (!description?.trim()) return "";
+  const plain = stripHtml(description).trim().slice(0, 400);
+  if (!plain) return "";
+  return `<br/><em>${escapeHtml(plain)}</em>`;
+}
+
+function reminderAttachmentsHtml(names: string[]): string {
+  if (names.length === 0) return "";
+  const label = names.length > 1 ? "Pièces jointes" : "Pièce jointe";
+  return `<br/><span>${label} : ${escapeHtml(names.join(", "))}</span>`;
+}
 
 /** Cron externe (VPS) — envoie les rappels email et SMS selon préférences utilisateur. */
 export async function GET(request: Request) {
@@ -50,7 +66,12 @@ export async function GET(request: Request) {
       const users = await listUsersWithCalendarEmailEnabled();
 
       if (users.length === 0) {
-        const html = emailPending.map((r) => `<li><strong>${r.message}</strong></li>`).join("");
+        const html = emailPending
+          .map(
+            (r) =>
+              `<li><strong>${escapeHtml(r.message)}</strong>${reminderDescriptionHtml(r.description)}${reminderAttachmentsHtml(r.attachmentNames)}</li>`,
+          )
+          .join("");
         const ok = await sendEmail({
           subject: `[SD CREATIV CRM] ${emailPending.length} rappel(s) calendrier`,
           html: `<p>Rappels calendrier :</p><ul>${html}</ul><p><a href="${siteUrl}/admin/crm/calendrier">Ouvrir le calendrier</a></p>`,
@@ -67,17 +88,57 @@ export async function GET(request: Request) {
 
           if (userReminders.length === 0) continue;
 
+          const mailAttachments: Array<{ filename: string; content: Buffer }> = [];
+          const seenKeys = new Set<string>();
+
+          for (const reminder of userReminders) {
+            const item = items.find((i) => i.id === reminder.itemId);
+            if (!item || item.source !== "event" || !item.sourceId) continue;
+            if ((item.attachmentNames?.length ?? 0) === 0) continue;
+
+            const event = await getCalendarEventById(item.sourceId);
+            const files = event?.attachments?.length
+              ? event.attachments
+              : event?.attachment
+                ? [event.attachment]
+                : [];
+
+            for (const file of files) {
+              const dedupe = file.key || file.url;
+              if (seenKeys.has(dedupe)) continue;
+              seenKeys.add(dedupe);
+              const buffer = await loadCalendarAttachmentBuffer(file);
+              if (buffer && buffer.length > 0) {
+                mailAttachments.push({ filename: file.name, content: buffer });
+              }
+            }
+          }
+
           const html = userReminders
-            .map(
-              (r) =>
-                `<li><strong>${r.message}</strong>${r.description ? `<br/><em>${r.description}</em>` : ""}</li>`,
-            )
+            .map((r) => {
+              const item = items.find((i) => i.id === r.itemId);
+              const names = r.attachmentNames;
+              let attachmentLinks = "";
+              if (names.length > 0 && item?.source === "event" && item.sourceId) {
+                const links = names
+                  .map(
+                    (name, index) =>
+                      `<a href="${siteUrl}/api/admin/calendar/events/${item.sourceId}/attachment?index=${index}">${escapeHtml(name)}</a>`,
+                  )
+                  .join(", ");
+                attachmentLinks = `<br/><span>Pièce(s) jointe(s) : ${links} (également jointes à cet e-mail si disponibles)</span>`;
+              } else if (names.length > 0) {
+                attachmentLinks = reminderAttachmentsHtml(names);
+              }
+              return `<li><strong>${escapeHtml(r.message)}</strong>${reminderDescriptionHtml(r.description)}${attachmentLinks}</li>`;
+            })
             .join("");
 
           const ok = await sendEmail({
             to: user.email,
             subject: `[CRM] ${userReminders.length} rappel(s) calendrier`,
-            html: `<p>Bonjour ${user.name},</p><p>Vos rappels calendrier :</p><ul>${html}</ul><p><a href="${siteUrl}/admin/crm/calendrier">Ouvrir le calendrier</a></p>`,
+            html: `<p>Bonjour ${escapeHtml(user.name)},</p><p>Vos rappels calendrier :</p><ul>${html}</ul><p><a href="${siteUrl}/admin/crm/calendrier">Ouvrir le calendrier</a></p>`,
+            attachments: mailAttachments.length > 0 ? mailAttachments : undefined,
           });
 
           if (ok) emailsSent += userReminders.length;
@@ -108,7 +169,11 @@ export async function GET(request: Request) {
         });
 
         for (const reminder of userReminders) {
-          const ok = await sendSms(user.phone, `[CRM] ${reminder.message}`);
+          const pj =
+            reminder.attachmentNames.length > 0
+              ? ` · PJ: ${reminder.attachmentNames.join(", ")}`
+              : "";
+          const ok = await sendSms(user.phone, `[CRM] ${reminder.message}${pj}`.slice(0, 300));
           if (ok) smsSent += 1;
         }
       }

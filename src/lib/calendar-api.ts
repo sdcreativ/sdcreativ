@@ -123,6 +123,18 @@ export async function resendCalendarInvitationsApi(
   return json.invited;
 }
 
+export async function fetchCalendarInvitationLogsApi(
+  eventId: string,
+): Promise<import("@/lib/calendar-invitation-logs").CalendarInvitationLog[]> {
+  const res = await fetch(`/api/admin/calendar/events/${eventId}/invitation-logs`, {
+    credentials: "include",
+  });
+  const json = await parseJson<{
+    logs: import("@/lib/calendar-invitation-logs").CalendarInvitationLog[];
+  }>(res);
+  return json.logs;
+}
+
 export async function moveCalendarEventApi(
   sourceId: string,
   newDateKey: string,

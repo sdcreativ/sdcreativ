@@ -252,10 +252,15 @@ export async function loadCalendarAttachmentBuffer(
   return null;
 }
 
+export const MAX_CALENDAR_ATTACHMENTS = 5;
+
 export function parseCalendarAttachment(
   metadata: Record<string, unknown> | null,
 ): CalendarEventAttachment | null {
-  const raw = metadata?.attachment;
+  return parseCalendarAttachments(metadata)[0] ?? null;
+}
+
+function parseOneAttachment(raw: unknown): CalendarEventAttachment | null {
   if (!raw || typeof raw !== "object" || Array.isArray(raw)) return null;
   const obj = raw as Record<string, unknown>;
   const url = typeof obj.url === "string" ? obj.url.trim() : "";
@@ -271,4 +276,28 @@ export function parseCalendarAttachment(
     size,
     key,
   };
+}
+
+/** Lit `attachments[]` ou l’ancien champ unique `attachment`. */
+export function parseCalendarAttachments(
+  metadata: Record<string, unknown> | null,
+): CalendarEventAttachment[] {
+  if (!metadata) return [];
+  const list: CalendarEventAttachment[] = [];
+
+  const arr = metadata.attachments;
+  if (Array.isArray(arr)) {
+    for (const item of arr) {
+      const parsed = parseOneAttachment(item);
+      if (parsed) list.push(parsed);
+      if (list.length >= MAX_CALENDAR_ATTACHMENTS) break;
+    }
+  }
+
+  if (list.length === 0) {
+    const single = parseOneAttachment(metadata.attachment);
+    if (single) list.push(single);
+  }
+
+  return list;
 }

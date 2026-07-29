@@ -1,4 +1,4 @@
-import { parseCalendarAttachment } from "@/lib/calendar-attachments";
+import { parseCalendarAttachments } from "@/lib/calendar-attachments";
 import type { CalendarEvent } from "@/lib/calendar";
 import { MEETING_PLATFORMS, type MeetingPlatform } from "@/content/calendar-labels";
 import type { CalendarOAuthProvider } from "@/lib/calendar-oauth-config";
@@ -352,6 +352,7 @@ async function getEventWithMetadata(eventId: string): Promise<
     const meetingUrl =
       typeof meta.meetingUrl === "string" && meta.meetingUrl.trim() ? meta.meetingUrl.trim() : null;
 
+    const attachments = parseCalendarAttachments(row.metadata);
     return {
       id: row.id,
       title: row.title,
@@ -365,7 +366,8 @@ async function getEventWithMetadata(eventId: string): Promise<
       projectId: row.project_id,
       meetingPlatform,
       meetingUrl,
-      attachment: parseCalendarAttachment(row.metadata),
+      attachment: attachments[0] ?? null,
+      attachments,
       createdAt: row.created_at.toISOString(),
       updatedAt: row.updated_at.toISOString(),
       metadata: parseMetadata(row.metadata),

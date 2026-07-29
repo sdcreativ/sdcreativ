@@ -3,7 +3,8 @@ import { withDb } from "@/lib/db";
 import type { CalendarItemType, EventType, MeetingPlatform } from "@/content/calendar-labels";
 import { EVENT_TYPES, MEETING_PLATFORMS } from "@/content/calendar-labels";
 import {
-  parseCalendarAttachment,
+  MAX_CALENDAR_ATTACHMENTS,
+  parseCalendarAttachments,
   type CalendarEventAttachment,
 } from "@/lib/calendar-attachments";
 import { isHtmlEmpty } from "@/lib/blog-content";
@@ -23,8 +24,8 @@ export type CalendarItem = {
   allDay: boolean;
   assignee: string | null;
   linkHref: string | null;
-  /** Nom de la pièce jointe événement (si présente). */
-  attachmentName?: string | null;
+  /** Noms des pièces jointes (événements CRM). */
+  attachmentNames?: string[];
 };
 
 export type CalendarEvent = {
@@ -41,6 +42,7 @@ export type CalendarEvent = {
   meetingPlatform: MeetingPlatform | null;
   meetingUrl: string | null;
   attachment: CalendarEventAttachment | null;
+  attachments: CalendarEventAttachment[];
   createdAt: string;
   updatedAt: string;
 };
@@ -79,6 +81,7 @@ function readMeetingMeta(metadata: Record<string, unknown> | null): {
 
 function mapEvent(row: EventRow): CalendarEvent {
   const meeting = readMeetingMeta(row.metadata);
+  const attachments = parseCalendarAttachments(row.metadata);
   return {
     id: row.id,
     title: row.title,
@@ -92,21 +95,20 @@ function mapEvent(row: EventRow): CalendarEvent {
     projectId: row.project_id,
     meetingPlatform: meeting.meetingPlatform,
     meetingUrl: meeting.meetingUrl,
-    attachment: parseCalendarAttachment(row.metadata),
+    attachment: attachments[0] ?? null,
+    attachments,
     createdAt: row.created_at.toISOString(),
     updatedAt: row.updated_at.toISOString(),
   };
 }
 
-const attachmentSchema = z
-  .object({
-    url: z.string().trim().min(1).max(2000),
-    name: z.string().trim().min(1).max(200),
-    mimeType: z.string().trim().min(1).max(120),
-    size: z.number().int().nonnegative().max(20 * 1024 * 1024),
-    key: z.string().trim().min(1).max(500).optional().nullable(),
-  })
-  .nullable();
+const attachmentItemSchema = z.object({
+  url: z.string().trim().min(1).max(2000),
+  name: z.string().trim().min(1).max(200),
+  mimeType: z.string().trim().min(1).max(120),
+  size: z.number().int().nonnegative().max(20 * 1024 * 1024),
+  key: z.string().trim().min(1).max(500).optional().nullable(),
+});
 
 function normalizeEventDescription(input: string | null | undefined): string | null {
   if (input == null) return null;
@@ -127,10 +129,35 @@ export const createEventSchema = z.object({
   projectId: z.string().uuid().optional().nullable(),
   meetingPlatform: z.enum(MEETING_PLATFORMS).optional().nullable(),
   meetingUrl: z.string().trim().max(500).optional().nullable(),
-  attachment: attachmentSchema.optional(),
+  /** @deprecated préférer `attachments` */
+  attachment: attachmentItemSchema.nullable().optional(),
+  attachments: z.array(attachmentItemSchema).max(MAX_CALENDAR_ATTACHMENTS).optional(),
 });
 
 export const updateEventSchema = createEventSchema.partial();
+
+function resolveAttachmentsFromInput(
+  input: Pick<z.infer<typeof createEventSchema>, "attachment" | "attachments">,
+): CalendarEventAttachment[] | undefined {
+  if (input.attachments !== undefined) return input.attachments;
+  if (input.attachment !== undefined) {
+    return input.attachment ? [input.attachment] : [];
+  }
+  return undefined;
+}
+
+function writeAttachmentsMetadata(
+  metadata: Record<string, unknown>,
+  attachments: CalendarEventAttachment[],
+): void {
+  if (attachments.length === 0) {
+    delete metadata.attachment;
+    delete metadata.attachments;
+    return;
+  }
+  metadata.attachments = attachments;
+  metadata.attachment = attachments[0];
+}
 
 function parseStartsAt(input: string, allDay: boolean): Date {
   if (/^\d{4}-\d{2}-\d{2}$/.test(input)) {
@@ -151,7 +178,7 @@ export async function listCalendarItems(from: Date, to: Date): Promise<CalendarI
     );
 
     for (const row of events) {
-      const attachment = parseCalendarAttachment(row.metadata);
+      const attachments = parseCalendarAttachments(row.metadata);
       items.push({
         id: `event-${row.id}`,
         title: row.title,
@@ -164,7 +191,7 @@ export async function listCalendarItems(from: Date, to: Date): Promise<CalendarI
         allDay: row.all_day,
         assignee: row.assignee,
         linkHref: null,
-        attachmentName: attachment?.name ?? null,
+        attachmentNames: attachments.map((a) => a.name),
       });
     }
 
@@ -303,8 +330,9 @@ export async function createCalendarEvent(
       meetingPlatform: input.meetingPlatform ?? "none",
       meetingUrl: input.meetingUrl ?? null,
     };
-    if (input.attachment !== undefined) {
-      metadata.attachment = input.attachment;
+    const attachments = resolveAttachmentsFromInput(input);
+    if (attachments !== undefined) {
+      writeAttachmentsMetadata(metadata, attachments);
     }
 
     const { rows } = await query<EventRow>(
@@ -369,12 +397,9 @@ export async function updateCalendarEvent(
         : {}),
       ...(input.meetingUrl !== undefined ? { meetingUrl: input.meetingUrl } : {}),
     };
-    if (input.attachment !== undefined) {
-      if (input.attachment === null) {
-        delete metadata.attachment;
-      } else {
-        metadata.attachment = input.attachment;
-      }
+    const attachments = resolveAttachmentsFromInput(input);
+    if (attachments !== undefined) {
+      writeAttachmentsMetadata(metadata, attachments);
     }
 
     const { rows } = await query<EventRow>(

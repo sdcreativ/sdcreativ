@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   isAllowedCalendarAttachment,
   parseCalendarAttachment,
+  parseCalendarAttachments,
 } from "@/lib/calendar-attachments";
 
 describe("calendar-attachments", () => {
@@ -30,7 +31,7 @@ describe("calendar-attachments", () => {
     expect(isAllowedCalendarAttachment("archive.zip", "application/zip")).toBe(false);
   });
 
-  it("parse la métadonnée attachment", () => {
+  it("parse la métadonnée attachment (legacy)", () => {
     expect(
       parseCalendarAttachment({
         attachment: {
@@ -49,5 +50,47 @@ describe("calendar-attachments", () => {
       key: "/uploads/calendar/a.pdf",
     });
     expect(parseCalendarAttachment({})).toBeNull();
+  });
+
+  it("parse attachments[] avec rétrocompat", () => {
+    expect(
+      parseCalendarAttachments({
+        attachments: [
+          {
+            url: "/uploads/calendar/a.pdf",
+            name: "a.pdf",
+            mimeType: "application/pdf",
+            size: 12,
+            key: "/uploads/calendar/a.pdf",
+          },
+          {
+            url: "/uploads/calendar/b.xlsx",
+            name: "b.xlsx",
+            mimeType: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+            size: 20,
+            key: "/uploads/calendar/b.xlsx",
+          },
+        ],
+      }),
+    ).toHaveLength(2);
+
+    expect(
+      parseCalendarAttachments({
+        attachment: {
+          url: "/uploads/calendar/a.pdf",
+          name: "a.pdf",
+          mimeType: "application/pdf",
+          size: 12,
+        },
+      }),
+    ).toEqual([
+      {
+        url: "/uploads/calendar/a.pdf",
+        name: "a.pdf",
+        mimeType: "application/pdf",
+        size: 12,
+        key: null,
+      },
+    ]);
   });
 });

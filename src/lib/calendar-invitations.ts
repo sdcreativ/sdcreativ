@@ -15,7 +15,9 @@ import { sanitizeMailHtml } from "@/lib/mail/sanitize-html";
 import {
   createCalendarAttachmentAccessUrl,
   loadCalendarAttachmentBuffer,
+  type CalendarEventAttachment,
 } from "@/lib/calendar-attachments";
+import { logCalendarInvitation } from "@/lib/calendar-invitation-logs";
 
 /** Remappe les participants équipe vers leur email personnel si disponible. */
 async function resolveParticipantsForNotify(
@@ -80,16 +82,39 @@ async function resolveMeetingUrl(event: CalendarEvent): Promise<string | null> {
   return null;
 }
 
+function eventAttachments(event: CalendarEvent): CalendarEventAttachment[] {
+  if (event.attachments?.length) return event.attachments;
+  return event.attachment ? [event.attachment] : [];
+}
+
+function buildAttachmentsHtml(
+  files: CalendarEventAttachment[],
+  urls: Array<string | null>,
+): string {
+  if (files.length === 0) return "";
+  const items = files
+    .map((file, i) => {
+      const url = urls[i];
+      const label = escapeHtml(file.name);
+      return url
+        ? `<li><a href="${escapeHtml(url)}" style="color:#2563eb">${label}</a></li>`
+        : `<li>${label}</li>`;
+    })
+    .join("");
+  const title = files.length > 1 ? "Pièces jointes" : "Pièce jointe";
+  return `<div style="margin:8px 0 0"><strong>${title} :</strong> (également jointes à cet e-mail)<ul style="margin:4px 0 0;padding-left:18px">${items}</ul></div>`;
+}
+
 function buildInvitationHtml(
   event: CalendarEvent,
   participantName: string,
   meetingUrl: string | null,
-  attachmentUrl: string | null,
+  attachmentUrls: Array<string | null>,
 ): string {
   const platformLabel = event.meetingPlatform
     ? MEETING_PLATFORM_LABELS[event.meetingPlatform]
     : null;
-  const attachmentName = event.attachment?.name;
+  const files = eventAttachments(event);
 
   return `<div style="font-family:system-ui,sans-serif;line-height:1.6;color:#111827;max-width:640px">
     <p>Bonjour ${escapeHtml(participantName)},</p>
@@ -101,13 +126,7 @@ function buildInvitationHtml(
       ${platformLabel && event.meetingPlatform !== "none" ? `<p style="margin:0 0 4px"><strong>Canal :</strong> ${escapeHtml(platformLabel)}</p>` : ""}
       ${meetingUrl ? `<p style="margin:8px 0 0"><a href="${escapeHtml(meetingUrl)}" style="color:#2563eb;font-weight:600">Rejoindre la réunion</a></p>` : ""}
       ${event.description ? `<div style="margin:8px 0 0">${sanitizeMailHtml(event.description)}</div>` : ""}
-      ${
-        attachmentName
-          ? attachmentUrl
-            ? `<p style="margin:8px 0 0"><strong>Pièce jointe :</strong> <a href="${escapeHtml(attachmentUrl)}" style="color:#2563eb">${escapeHtml(attachmentName)}</a> (également jointe à cet e-mail)</p>`
-            : `<p style="margin:8px 0 0"><strong>Pièce jointe :</strong> ${escapeHtml(attachmentName)} (jointe à cet e-mail)</p>`
-          : ""
-      }
+      ${buildAttachmentsHtml(files, attachmentUrls)}
     </div>
     <p>Un fichier calendrier (.ics) est joint pour ajouter l'événement à votre agenda.</p>
   </div>`;
@@ -117,7 +136,7 @@ function buildWhatsAppBody(
   event: CalendarEvent,
   participantName: string,
   meetingUrl: string | null,
-  attachmentUrl: string | null,
+  attachmentUrls: Array<string | null>,
 ): string {
   const lines = [
     `Bonjour ${participantName.split(" ")[0] ?? participantName},`,
@@ -130,14 +149,38 @@ function buildWhatsAppBody(
   }
   if (meetingUrl) lines.push(`Lien : ${meetingUrl}`);
   if (event.description) lines.push("", stripHtml(event.description).slice(0, 400));
-  if (attachmentUrl) lines.push(`Pièce jointe : ${attachmentUrl}`);
-  else if (event.attachment) lines.push(`Pièce jointe : ${event.attachment.name}`);
+  const files = eventAttachments(event);
+  for (let i = 0; i < files.length; i++) {
+    const url = attachmentUrls[i];
+    lines.push(url ? `Pièce jointe : ${url}` : `Pièce jointe : ${files[i]!.name}`);
+  }
   return lines.join("\n");
+}
+
+async function prepareAttachmentPayload(event: CalendarEvent): Promise<{
+  urls: Array<string | null>;
+  mailFiles: Array<{ filename: string; content: Buffer }>;
+}> {
+  const files = eventAttachments(event);
+  const urls: Array<string | null> = [];
+  const mailFiles: Array<{ filename: string; content: Buffer }> = [];
+
+  for (const file of files) {
+    const url = await createCalendarAttachmentAccessUrl(file);
+    urls.push(url);
+    const buffer = await loadCalendarAttachmentBuffer(file);
+    if (buffer && buffer.length > 0) {
+      mailFiles.push({ filename: file.name, content: buffer });
+    }
+  }
+
+  return { urls, mailFiles };
 }
 
 export async function sendCalendarInvitationEmail(
   event: CalendarEvent,
   participant: ParticipantInput,
+  preparedAttachments?: Awaited<ReturnType<typeof prepareAttachmentPayload>>,
 ): Promise<{ ok: boolean; error?: string }> {
   const fromEmail = process.env.CONTACT_FROM_EMAIL ?? "contact@sdcreativ.com";
   const greeting = participant.name?.split(" ")[0] ?? participant.email.split("@")[0] ?? "Bonjour";
@@ -152,30 +195,22 @@ export async function sendCalendarInvitationEmail(
     meetingUrl,
   });
 
+  const { urls, mailFiles } =
+    preparedAttachments ?? (await prepareAttachmentPayload(event));
+
   const mailAttachments: Array<{ filename: string; content: Buffer }> = [
     {
       filename: "invitation-sdcreativ.ics",
       content: Buffer.from(ics, "utf-8"),
     },
+    ...mailFiles,
   ];
-
-  let attachmentUrl: string | null = null;
-  if (event.attachment) {
-    attachmentUrl = await createCalendarAttachmentAccessUrl(event.attachment);
-    const fileBuffer = await loadCalendarAttachmentBuffer(event.attachment);
-    if (fileBuffer && fileBuffer.length > 0) {
-      mailAttachments.push({
-        filename: event.attachment.name,
-        content: fileBuffer,
-      });
-    }
-  }
 
   const { sendEmailDetailed } = await import("@/lib/email");
   const result = await sendEmailDetailed({
     to: participant.email,
     subject: `Invitation — ${event.title}`,
-    html: buildInvitationHtml(event, greeting, meetingUrl, attachmentUrl),
+    html: buildInvitationHtml(event, greeting, meetingUrl, urls),
     replyTo: fromEmail,
     attachments: mailAttachments,
   });
@@ -195,20 +230,37 @@ export async function sendCalendarInvitations(
   participants: ParticipantInput[],
 ): Promise<{ emails: number; whatsapp: number; errors: string[] }> {
   const meetingUrl = await resolveMeetingUrl(event);
-  const attachmentUrl = event.attachment
-    ? await createCalendarAttachmentAccessUrl(event.attachment)
-    : null;
+  const preparedAttachments = await prepareAttachmentPayload(event);
   const resolved = await resolveParticipantsForNotify(participants);
   let emails = 0;
   let whatsapp = 0;
   const errors: string[] = [];
 
   for (const participant of resolved) {
-    const result = await sendCalendarInvitationEmail(event, participant);
+    const result = await sendCalendarInvitationEmail(
+      event,
+      participant,
+      preparedAttachments,
+    );
     if (result.ok) {
       emails += 1;
-    } else if (result.error) {
-      errors.push(`${participant.email}: ${result.error}`);
+      await logCalendarInvitation({
+        eventId: event.id,
+        email: participant.email,
+        channel: "email",
+        status: "sent",
+      }).catch((err) => console.error("[calendar-invitations] log sent", err));
+    } else {
+      if (result.error) {
+        errors.push(`${participant.email}: ${result.error}`);
+      }
+      await logCalendarInvitation({
+        eventId: event.id,
+        email: participant.email,
+        channel: "email",
+        status: "failed",
+        error: result.error ?? "Échec envoi",
+      }).catch((err) => console.error("[calendar-invitations] log failed", err));
     }
 
     const shouldWhatsApp =
@@ -220,9 +272,25 @@ export async function sendCalendarInvitations(
       const name = participant.name ?? participant.email;
       const sent = await sendWhatsApp(
         participant.phone,
-        buildWhatsAppBody(event, name, meetingUrl, attachmentUrl),
+        buildWhatsAppBody(event, name, meetingUrl, preparedAttachments.urls),
       );
-      if (sent) whatsapp += 1;
+      if (sent) {
+        whatsapp += 1;
+        await logCalendarInvitation({
+          eventId: event.id,
+          email: participant.email,
+          channel: "whatsapp",
+          status: "sent",
+        }).catch((err) => console.error("[calendar-invitations] log wa sent", err));
+      } else {
+        await logCalendarInvitation({
+          eventId: event.id,
+          email: participant.email,
+          channel: "whatsapp",
+          status: "failed",
+          error: "WhatsApp non envoyé",
+        }).catch((err) => console.error("[calendar-invitations] log wa failed", err));
+      }
     }
   }
 
