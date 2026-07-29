@@ -102,6 +102,14 @@ export async function updateCalendarEventApi(
   }>(res);
 }
 
+export async function deleteCalendarEventApi(id: string): Promise<void> {
+  const res = await fetch(`/api/admin/calendar/events/${id}`, {
+    method: "DELETE",
+    credentials: "include",
+  });
+  await parseJson<{ success: boolean }>(res);
+}
+
 export async function resendCalendarInvitationsApi(
   eventId: string,
 ): Promise<{ emails: number; whatsapp: number; errors?: string[] }> {
