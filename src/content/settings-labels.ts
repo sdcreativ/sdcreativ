@@ -58,4 +58,20 @@ export const EMAIL_TEMPLATES: EmailTemplateInfo[] = [
     subjectPattern: "[SD CREATIV] Nouvelle inscription newsletter",
     description: "Notification à chaque nouvel abonné.",
   },
+  {
+    id: "calendar_invitation",
+    label: "Invitation calendrier",
+    route: "/api/admin/calendar",
+    subjectPattern: "Invitation — {{title}}",
+    description:
+      "E-mail d’invitation à un événement (RSVP, Meet, .ics). Variables : logo, logoUrl, name, title, type, date, platform, meetingUrl, meetingLink, description, attachments, rsvpButtons, rsvpUrl, agencyName.",
+  },
+  {
+    id: "calendar_invitation_whatsapp",
+    label: "Invitation WhatsApp",
+    route: "/api/admin/calendar",
+    subjectPattern: "Invitation — {{title}}",
+    description:
+      "Message WhatsApp (texte brut dans le corps). Variables : name, title, type, date, platform, meetingUrl, description, attachments, rsvpUrl, agencyName.",
+  },
 ];

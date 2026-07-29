@@ -18,15 +18,50 @@ type SettingsRow = {
   updated_at: Date | null;
 };
 
+const DEFAULT_CALENDAR_INVITATION_HTML = `<div style="font-family:system-ui,sans-serif;line-height:1.6;color:#111827;max-width:640px">
+  <div style="margin:0 0 16px">{{logo}}</div>
+  <p>Bonjour {{name}},</p>
+  <p>Vous êtes invité(e) à l'événement suivant :</p>
+  <div style="margin:24px 0;padding:16px;background:#f8fafc;border-radius:12px;border:1px solid #e5e7eb">
+    <p style="margin:0 0 8px;font-size:16px;font-weight:700">{{title}}</p>
+    <p style="margin:0 0 4px"><strong>Type :</strong> {{type}}</p>
+    <p style="margin:0 0 4px"><strong>Date :</strong> {{date}}</p>
+    {{platformBlock}}
+    {{meetingLink}}
+    {{description}}
+    {{attachments}}
+  </div>
+  {{rsvpButtons}}
+  <p style="margin-top:16px">Un fichier calendrier (.ics) est joint pour ajouter l'événement à votre agenda.</p>
+  <p style="margin-top:8px;font-size:12px;color:#6b7280">— {{agencyName}}</p>
+</div>`;
+
+const DEFAULT_CALENDAR_WHATSAPP_BODY = `Bonjour {{name}},
+
+Invitation {{agencyName}} : {{title}}
+Date : {{date}}
+{{platformLine}}
+{{meetingUrlLine}}
+{{descriptionText}}
+{{attachmentsText}}
+
+Répondre (RSVP) : {{rsvpUrl}}`;
+
 function defaultEmailTemplates(): Record<string, CrmEmailTemplate> {
   const map: Record<string, CrmEmailTemplate> = {};
   for (const tpl of EMAIL_TEMPLATES) {
+    let htmlBody = `<p>Bonjour {{name}},</p><p>${tpl.description}</p><p>— {{agencyName}}</p>`;
+    if (tpl.id === "calendar_invitation") {
+      htmlBody = DEFAULT_CALENDAR_INVITATION_HTML;
+    } else if (tpl.id === "calendar_invitation_whatsapp") {
+      htmlBody = DEFAULT_CALENDAR_WHATSAPP_BODY;
+    }
     map[tpl.id] = {
       id: tpl.id,
       label: tpl.label,
       description: tpl.description,
       subject: tpl.subjectPattern,
-      htmlBody: `<p>Bonjour {{name}},</p><p>${tpl.description}</p><p>— {{agencyName}}</p>`,
+      htmlBody,
     };
   }
   return map;
@@ -184,11 +219,6 @@ export function renderEmailTemplate(
 ): { subject: string; html: string } {
   const allVars = {
     agencyName: branding.agencyName,
-    name: "Jean Dupont",
-    service: "Site vitrine",
-    projet: "Refonte site web",
-    poste: "Développeur web",
-    email: "test@example.com",
     ...vars,
   };
 

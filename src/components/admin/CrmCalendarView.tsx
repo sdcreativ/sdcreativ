@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import {
   CALENDAR_ITEM_COLORS,
@@ -34,11 +34,18 @@ import {
   fetchCalendarItemsRange,
   fetchEventParticipants,
   moveCalendarEventApi,
+  remindPendingRsvpApi,
   resendCalendarInvitationsApi,
   updateCalendarEventApi,
 } from "@/lib/calendar-api";
 import type { CalendarInvitationLog } from "@/lib/calendar-invitation-logs-shared";
 import { INVITATION_LOG_STATUS_LABELS } from "@/lib/calendar-invitation-logs-shared";
+import {
+  formatBytesFr,
+  MAX_CALENDAR_ATTACHMENTS,
+  MAX_CALENDAR_MAIL_ATTACHMENTS_BYTES,
+  validateCalendarMailAttachments,
+} from "@/lib/calendar-mail-limits";
 import { cn } from "@/lib/utils";
 import { useDialog } from "@/components/ui/DialogProvider";
 import type { EventType, MeetingPlatform } from "@/content/calendar-labels";
@@ -807,6 +814,7 @@ function EventFormModal({
 
   const [loading, setLoading] = useState(false);
   const [resending, setResending] = useState(false);
+  const [remindingPending, setRemindingPending] = useState(false);
   const [error, setError] = useState("");
   const [inviteWarning, setInviteWarning] = useState("");
   const [inviteSuccess, setInviteSuccess] = useState("");
@@ -827,12 +835,118 @@ function EventFormModal({
   const [generatingMeet, setGeneratingMeet] = useState(false);
   const [showInvitePreview, setShowInvitePreview] = useState(false);
   const [invitationLogs, setInvitationLogs] = useState<CalendarInvitationLog[]>([]);
+  const autoMeetAttemptedRef = useRef(false);
 
   function loadInvitationLogs(eventId: string) {
     void fetchCalendarInvitationLogsApi(eventId)
       .then(setInvitationLogs)
       .catch(() => setInvitationLogs([]));
   }
+
+  async function generateMeetingLink(force = false) {
+    if (
+      meetingPlatform !== "google_meet" &&
+      meetingPlatform !== "teams" &&
+      meetingPlatform !== "zoom"
+    ) {
+      return;
+    }
+    if (
+      !force &&
+      (meetingPlatform === "google_meet" ||
+        meetingPlatform === "teams" ||
+        meetingPlatform === "zoom") &&
+      meetingUrl.trim()
+    ) {
+      return;
+    }
+    setGeneratingMeet(true);
+    setError("");
+    setInviteWarning("");
+    try {
+      const titleEl = document.querySelector(
+        'input[name="title"]',
+      ) as HTMLInputElement | null;
+      const dateEl = document.querySelector(
+        'input[name="date"]',
+      ) as HTMLInputElement | null;
+      const timeEl = document.querySelector(
+        'input[name="time"]',
+      ) as HTMLInputElement | null;
+      let startsAt: string | undefined;
+      if (dateEl?.value) {
+        if (allDay) {
+          startsAt = dateEl.value;
+        } else {
+          const [h, m] = (timeEl?.value || "09:00").split(":").map(Number);
+          const d = parseDateKey(dateEl.value);
+          d.setHours(h, m ?? 0, 0, 0);
+          startsAt = d.toISOString();
+        }
+      }
+      const res = await fetch("/api/admin/calendar/meeting-link", {
+        method: "POST",
+        credentials: "include",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          platform: meetingPlatform,
+          title: titleEl?.value,
+          startsAt,
+        }),
+      });
+      const json = (await res.json()) as {
+        url?: string | null;
+        openUrl?: string | null;
+        hint?: string | null;
+        error?: string;
+        needsGoogleConnect?: boolean;
+        needsMicrosoftConnect?: boolean;
+        needsZoomConfig?: boolean;
+      };
+      if (json.url) {
+        setMeetingUrl(json.url);
+        setInviteSuccess(
+          meetingPlatform === "teams"
+            ? "Lien Microsoft Teams généré."
+            : meetingPlatform === "zoom"
+              ? "Lien Zoom généré."
+              : "Lien Google Meet généré.",
+        );
+        return;
+      }
+      const msg =
+        json.hint ||
+        json.error ||
+        (meetingPlatform === "teams"
+          ? "Génération Teams impossible. Connectez Outlook (Sync) ou désignez un compte agence."
+          : meetingPlatform === "zoom"
+            ? "Génération Zoom impossible. Configurez Zoom agence dans .env.docker."
+            : "Génération Meet impossible. Connectez Google Agenda (Sync) ou désignez un compte agence.");
+      setInviteWarning(msg);
+      if (json.needsGoogleConnect || json.needsMicrosoftConnect || json.needsZoomConfig) {
+        setError(msg);
+      }
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Génération impossible.");
+    } finally {
+      setGeneratingMeet(false);
+    }
+  }
+
+  useEffect(() => {
+    if (
+      meetingPlatform !== "google_meet" &&
+      meetingPlatform !== "teams" &&
+      meetingPlatform !== "zoom"
+    ) {
+      autoMeetAttemptedRef.current = false;
+      return;
+    }
+    if (meetingUrl.trim() || autoMeetAttemptedRef.current || generatingMeet) return;
+    autoMeetAttemptedRef.current = true;
+    void generateMeetingLink();
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- auto une fois au choix plateforme
+  }, [meetingPlatform]);
 
   useEffect(() => {
     if (!isEdit || !item?.sourceId) {
@@ -895,8 +1009,14 @@ function EventFormModal({
   async function handleFileChange(fileList: FileList | null) {
     const file = fileList?.[0];
     if (!file) return;
-    if (attachments.length >= 5) {
-      setError("Maximum 5 pièces jointes par événement.");
+    if (attachments.length >= MAX_CALENDAR_ATTACHMENTS) {
+      setError(`Maximum ${MAX_CALENDAR_ATTACHMENTS} pièces jointes par événement.`);
+      return;
+    }
+    const projected = [...attachments, { name: file.name, size: file.size }];
+    const sizeCheck = validateCalendarMailAttachments(projected);
+    if (!sizeCheck.ok) {
+      setError(sizeCheck.error);
       return;
     }
     setUploadingFile(true);
@@ -916,7 +1036,7 @@ function EventFormModal({
       if (!res.ok || !json.attachment) {
         throw new Error(json.error ?? "Upload impossible.");
       }
-      setAttachments((prev) => [...prev, json.attachment!].slice(0, 5));
+      setAttachments((prev) => [...prev, json.attachment!].slice(0, MAX_CALENDAR_ATTACHMENTS));
     } catch (err) {
       setError(err instanceof Error ? err.message : "Upload impossible.");
     } finally {
@@ -928,6 +1048,12 @@ function EventFormModal({
     e.preventDefault();
     setLoading(true);
     setError("");
+    const mailCheck = validateCalendarMailAttachments(attachments);
+    if (!mailCheck.ok) {
+      setError(mailCheck.error);
+      setLoading(false);
+      return;
+    }
     const data = new FormData(e.currentTarget);
     const date = String(data.get("date"));
     const time = String(data.get("time") || "09:00");
@@ -956,7 +1082,9 @@ function EventFormModal({
         : {}),
       meetingPlatform,
       meetingUrl:
-        meetingPlatform === "google_meet" || meetingPlatform === "zoom"
+        meetingPlatform === "google_meet" ||
+        meetingPlatform === "teams" ||
+        meetingPlatform === "zoom"
           ? meetingUrl.trim() || null
           : null,
       attachments,
@@ -970,6 +1098,8 @@ function EventFormModal({
         : await createCalendarEventApi(payload);
 
       setSavedEventId(result.event.id);
+      if (result.event.meetingUrl) setMeetingUrl(result.event.meetingUrl);
+      if (result.event.meetingPlatform) setMeetingPlatform(result.event.meetingPlatform);
       loadInvitationLogs(result.event.id);
       void fetchEventParticipants(result.event.id)
         .then((rows) => {
@@ -1046,8 +1176,49 @@ function EventFormModal({
     }
   }
 
+  async function handleRemindPending() {
+    const eventId = savedEventId ?? item?.sourceId;
+    if (!eventId) {
+      setError("Enregistrez d’abord l’événement.");
+      return;
+    }
+    const pendingCount = participantDetails.filter((p) => p.status === "pending").length;
+    if (pendingCount === 0) {
+      setError("Aucun participant en attente.");
+      return;
+    }
+    setRemindingPending(true);
+    setError("");
+    setInviteWarning("");
+    setInviteSuccess("");
+    try {
+      const invited = await remindPendingRsvpApi(eventId);
+      const inviteErrors = invited.errors?.filter(Boolean) ?? [];
+      if (inviteErrors.length > 0) {
+        setInviteWarning(`${inviteErrors.length} relance(s) ont échoué.`);
+        setError(inviteErrors[0]!);
+        return;
+      }
+      setInviteSuccess(
+        `${invited.emails} relance(s) RSVP envoyée(s) aux participants en attente.`,
+      );
+      loadInvitationLogs(eventId);
+      void fetchEventParticipants(eventId)
+        .then(setParticipantDetails)
+        .catch(() => undefined);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Relance impossible.");
+    } finally {
+      setRemindingPending(false);
+    }
+  }
+
   const defaultType = isEdit && item ? (item.type as EventType) : "meeting";
   const canResend = Boolean(savedEventId ?? item?.sourceId) && participants.length > 0;
+  const pendingRsvpCount = participantDetails.filter((p) => p.status === "pending").length;
+  const attachmentsTotalBytes = attachments.reduce((s, a) => s + (a.size || 0), 0);
+  const attachmentsNearLimit =
+    attachmentsTotalBytes > MAX_CALENDAR_MAIL_ATTACHMENTS_BYTES * 0.8;
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4 backdrop-blur-sm">
@@ -1078,11 +1249,21 @@ function EventFormModal({
           </div>
           <div>
             <label className="mb-1 block text-xs font-medium text-gray-text">
-              Pièces jointes (facultatif, max 5)
+              Pièces jointes (facultatif, max {MAX_CALENDAR_ATTACHMENTS})
             </label>
             <p className="mb-2 text-[11px] text-gray-text/80">
-              PDF, Word (.doc/.docx), Excel (.xls/.xlsx) ou image — max 10 Mo chacune.
+              PDF, Word, Excel ou image — max 10 Mo chacune,{" "}
+              {formatBytesFr(MAX_CALENDAR_MAIL_ATTACHMENTS_BYTES)} au total pour l’e-mail.
+              {attachments.length > 0
+                ? ` Actuellement ${formatBytesFr(attachmentsTotalBytes)}.`
+                : ""}
             </p>
+            {attachmentsNearLimit && (
+              <p className="mb-2 rounded-lg bg-amber-50 px-2 py-1.5 text-[11px] text-amber-900">
+                Attention : vous approchez la limite d’envoi e-mail (
+                {formatBytesFr(MAX_CALENDAR_MAIL_ATTACHMENTS_BYTES)}).
+              </p>
+            )}
             {attachments.length > 0 && (
               <ul className="mb-2 space-y-2">
                 {attachments.map((file, index) => (
@@ -1116,7 +1297,7 @@ function EventFormModal({
                 ))}
               </ul>
             )}
-            {attachments.length < 5 && (
+            {attachments.length < MAX_CALENDAR_ATTACHMENTS && (
               <label
                 className={cn(
                   "flex cursor-pointer items-center justify-center gap-2 rounded-xl border border-dashed border-gray/50 px-3 py-3 text-sm text-gray-text transition-colors hover:border-primary hover:bg-primary/5",
@@ -1223,65 +1404,72 @@ function EventFormModal({
                   : " Configurez le numéro WhatsApp dans Paramètres → Site public."}
               </p>
             )}
-            {(meetingPlatform === "google_meet" || meetingPlatform === "zoom") && (
+            {(meetingPlatform === "google_meet" ||
+              meetingPlatform === "teams" ||
+              meetingPlatform === "zoom") && (
               <div className="mt-2 space-y-2">
                 <div className="flex gap-2">
                   <input
                     type="url"
                     value={meetingUrl}
                     onChange={(e) => setMeetingUrl(e.target.value)}
+                    readOnly={
+                      (meetingPlatform === "google_meet" ||
+                        meetingPlatform === "teams" ||
+                        meetingPlatform === "zoom") &&
+                      Boolean(meetingUrl) &&
+                      !generatingMeet
+                    }
                     placeholder={
                       meetingPlatform === "google_meet"
-                        ? "https://meet.google.com/xxx-xxxx-xxx"
-                        : "https://zoom.us/j/123456789"
+                        ? "Généré automatiquement (Google Agenda)"
+                        : meetingPlatform === "teams"
+                          ? "Généré automatiquement (Microsoft 365)"
+                          : "Généré automatiquement (Zoom agence)"
                     }
-                    className={`${fieldClass} flex-1`}
+                    className={`${fieldClass} flex-1 ${
+                      (meetingPlatform === "google_meet" ||
+                        meetingPlatform === "teams" ||
+                        meetingPlatform === "zoom") &&
+                      meetingUrl
+                        ? "bg-gray-light/40"
+                        : ""
+                    }`}
                   />
                   <button
                     type="button"
                     disabled={loading || generatingMeet}
-                    onClick={() => {
-                      void (async () => {
-                        setGeneratingMeet(true);
-                        setError("");
-                        try {
-                          const res = await fetch("/api/admin/calendar/meeting-link", {
-                            method: "POST",
-                            credentials: "include",
-                            headers: { "Content-Type": "application/json" },
-                            body: JSON.stringify({
-                              platform: meetingPlatform,
-                              title: (document.querySelector('input[name="title"]') as HTMLInputElement | null)?.value,
-                            }),
-                          });
-                          const json = (await res.json()) as {
-                            url?: string | null;
-                            openUrl?: string | null;
-                            hint?: string | null;
-                            error?: string;
-                          };
-                          if (!res.ok && !json.openUrl) {
-                            throw new Error(json.error ?? "Génération impossible.");
-                          }
-                          if (json.url) setMeetingUrl(json.url);
-                          if (json.openUrl) window.open(json.openUrl, "_blank", "noopener,noreferrer");
-                          if (json.hint && !json.url) setInviteWarning(json.hint);
-                        } catch (err) {
-                          setError(err instanceof Error ? err.message : "Génération impossible.");
-                        } finally {
-                          setGeneratingMeet(false);
-                        }
-                      })();
-                    }}
+                    onClick={() => void generateMeetingLink(true)}
                     className="shrink-0 rounded-xl border border-primary/30 bg-primary/5 px-3 py-2 text-xs font-semibold text-primary hover:bg-primary/10 disabled:opacity-50"
                   >
-                    {generatingMeet ? "…" : "Générer"}
+                    {generatingMeet
+                      ? "…"
+                      : (meetingPlatform === "google_meet" ||
+                            meetingPlatform === "teams" ||
+                            meetingPlatform === "zoom") &&
+                          meetingUrl
+                        ? "Régénérer"
+                        : "Générer"}
                   </button>
                 </div>
+                {(meetingPlatform === "google_meet" ||
+                  meetingPlatform === "teams" ||
+                  meetingPlatform === "zoom") &&
+                meetingUrl ? (
+                  <button
+                    type="button"
+                    className="text-[11px] font-medium text-primary hover:underline"
+                    onClick={() => setMeetingUrl("")}
+                  >
+                    Effacer pour saisir un autre lien
+                  </button>
+                ) : null}
                 <p className="text-[11px] text-gray-text/80">
                   {meetingPlatform === "google_meet"
-                    ? "Google Meet : lien auto si Agenda Google connecté, sinon ouverture de Meet."
-                    : "Zoom : ouvre la planification Zoom — collez ensuite le lien Join."}
+                    ? "Google Meet : compte agence (Sync) ou Agenda Google connecté — aucun collage manuel."
+                    : meetingPlatform === "teams"
+                      ? "Teams : compte agence Microsoft ou Outlook connecté — lien Join généré automatiquement."
+                      : "Zoom : API agence (ZOOM_* dans .env.docker) — lien Join généré automatiquement."}
                 </p>
               </div>
             )}
@@ -1394,7 +1582,7 @@ function EventFormModal({
                   </p>
                 );
               })()}
-              <ul className="max-h-36 space-y-1.5 overflow-y-auto text-xs">
+              <ul className="mb-2 max-h-36 space-y-1.5 overflow-y-auto text-xs">
                 {participantDetails.map((p) => (
                   <li
                     key={p.id}
@@ -1417,6 +1605,23 @@ function EventFormModal({
                   </li>
                 ))}
               </ul>
+              {pendingRsvpCount > 0 && (
+                <button
+                  type="button"
+                  disabled={remindingPending || loading || resending}
+                  onClick={() => void handleRemindPending()}
+                  className="flex w-full items-center justify-center gap-2 rounded-xl border border-amber-300 bg-amber-50 px-3 py-2 text-xs font-semibold text-amber-950 transition-colors hover:bg-amber-100 disabled:opacity-50"
+                >
+                  {remindingPending ? (
+                    <Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden />
+                  ) : (
+                    <Mail className="h-3.5 w-3.5" aria-hidden />
+                  )}
+                  {remindingPending
+                    ? "Relance en cours…"
+                    : `Relancer les pending (${pendingRsvpCount})`}
+                </button>
+              )}
             </div>
           )}
           {(isEdit || savedEventId) && invitationLogs.length > 0 && (

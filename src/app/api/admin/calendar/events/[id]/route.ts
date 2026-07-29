@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
-import { getAdminSession, requireAdminAuth } from "@/lib/admin-auth";
+import { getAdminSession } from "@/lib/admin-auth";
 import { crmApiAuth } from "@/lib/crm-api-auth";
 import { isDatabaseConfigured } from "@/lib/db";
 import {
@@ -65,12 +65,32 @@ export async function PATCH(request: Request, { params }: Props) {
     }
 
     const { participants, sendInvitations, resendInvitations, ...eventInput } = parsed.data;
+    const session = await getAdminSession();
+
+    const existing = await getCalendarEventById(id);
+    if (!existing) {
+      return NextResponse.json({ error: "Événement introuvable." }, { status: 404 });
+    }
+
+    const { maybeAutoGenerateMeetUrl } = await import("@/lib/calendar-meet");
+    const platform = eventInput.meetingPlatform ?? existing.meetingPlatform;
+    const url = eventInput.meetingUrl !== undefined ? eventInput.meetingUrl : existing.meetingUrl;
+    const autoMeetUrl = await maybeAutoGenerateMeetUrl({
+      userId: session?.userId,
+      meetingPlatform: platform,
+      meetingUrl: url,
+      title: eventInput.title ?? existing.title,
+      startsAt: eventInput.startsAt ?? existing.startsAt,
+    });
+    if (autoMeetUrl) {
+      eventInput.meetingUrl = autoMeetUrl;
+    }
+
     const event = await updateCalendarEvent(id, eventInput);
     if (!event) {
       return NextResponse.json({ error: "Événement introuvable." }, { status: 404 });
     }
 
-    const session = await getAdminSession();
     if (session?.userId && session.userId !== "legacy") {
       void pushCalendarEventToOAuthProviders(session.userId, event.id).catch(console.error);
     }

@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
-import { getAdminSession, requireAdminAuth } from "@/lib/admin-auth";
+import { getAdminSession } from "@/lib/admin-auth";
 import { crmApiAuth } from "@/lib/crm-api-auth";
 import { isDatabaseConfigured } from "@/lib/db";
 import { createCalendarEvent, createEventSchema } from "@/lib/calendar";
@@ -31,9 +31,22 @@ export async function POST(request: Request) {
     }
 
     const { participants, sendInvitations, ...eventInput } = parsed.data;
+    const session = await getAdminSession();
+
+    const { maybeAutoGenerateMeetUrl } = await import("@/lib/calendar-meet");
+    const autoMeetUrl = await maybeAutoGenerateMeetUrl({
+      userId: session?.userId,
+      meetingPlatform: eventInput.meetingPlatform,
+      meetingUrl: eventInput.meetingUrl,
+      title: eventInput.title,
+      startsAt: eventInput.startsAt,
+    });
+    if (autoMeetUrl) {
+      eventInput.meetingUrl = autoMeetUrl;
+    }
+
     const event = await createCalendarEvent(eventInput);
 
-    const session = await getAdminSession();
     if (session?.userId && session.userId !== "legacy") {
       void pushCalendarEventToOAuthProviders(session.userId, event.id).catch(console.error);
     }

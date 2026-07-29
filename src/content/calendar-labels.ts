@@ -2,13 +2,14 @@ export const EVENT_TYPES = ["meeting", "call", "reminder", "other"] as const;
 
 export type EventType = (typeof EVENT_TYPES)[number];
 
-export const MEETING_PLATFORMS = ["none", "whatsapp", "google_meet", "zoom"] as const;
+export const MEETING_PLATFORMS = ["none", "whatsapp", "google_meet", "teams", "zoom"] as const;
 export type MeetingPlatform = (typeof MEETING_PLATFORMS)[number];
 
 export const MEETING_PLATFORM_LABELS: Record<MeetingPlatform, string> = {
   none: "Sur place / sans visio",
   whatsapp: "WhatsApp",
   google_meet: "Google Meet",
+  teams: "Microsoft Teams",
   zoom: "Zoom",
 };
 

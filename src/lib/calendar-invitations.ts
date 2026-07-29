@@ -160,6 +160,135 @@ function buildInvitationHtml(
   </div>`;
 }
 
+function invitationTemplateVars(
+  event: CalendarEvent,
+  participantName: string,
+  meetingUrl: string | null,
+  attachmentUrls: Array<string | null>,
+  rsvpUrl: string,
+): Record<string, string> {
+  const platformLabel =
+    event.meetingPlatform && event.meetingPlatform !== "none"
+      ? MEETING_PLATFORM_LABELS[event.meetingPlatform]
+      : "";
+  const files = eventAttachments(event);
+  const greeting = participantName.split(" ")[0] ?? participantName;
+
+  return {
+    name: escapeHtml(greeting),
+    title: escapeHtml(event.title),
+    type: escapeHtml(EVENT_TYPE_LABELS[event.type]),
+    date: escapeHtml(formatCalendarDateTime(event.startsAt, event.allDay)),
+    platform: escapeHtml(platformLabel),
+    platformBlock: platformLabel
+      ? `<p style="margin:0 0 4px"><strong>Canal :</strong> ${escapeHtml(platformLabel)}</p>`
+      : "",
+    platformLine: platformLabel ? `Canal : ${platformLabel}` : "",
+    meetingUrl: meetingUrl ? escapeHtml(meetingUrl) : "",
+    meetingUrlLine: meetingUrl ? `Lien : ${meetingUrl}` : "",
+    meetingLink: meetingUrl
+      ? `<p style="margin:8px 0 0"><a href="${escapeHtml(meetingUrl)}" style="color:#2563eb;font-weight:600">Rejoindre la réunion</a></p>`
+      : "",
+    description: event.description
+      ? `<div style="margin:8px 0 0">${sanitizeMailHtml(event.description)}</div>`
+      : "",
+    descriptionText: event.description ? stripHtml(event.description).slice(0, 400) : "",
+    attachments: buildAttachmentsHtml(files, attachmentUrls),
+    attachmentsText: files
+      .map((file, i) => {
+        const url = attachmentUrls[i];
+        return url ? `Pièce jointe : ${url}` : `Pièce jointe : ${file.name}`;
+      })
+      .join("\n"),
+    rsvpButtons: buildRsvpButtonsHtml(rsvpUrl),
+    rsvpUrl,
+  };
+}
+
+async function renderInvitationEmail(
+  event: CalendarEvent,
+  participantName: string,
+  meetingUrl: string | null,
+  attachmentUrls: Array<string | null>,
+  rsvpUrl: string,
+): Promise<{
+  subject: string;
+  html: string;
+  logoAttachment: { filename: string; content: Buffer; contentId: string } | null;
+}> {
+  const vars = invitationTemplateVars(
+    event,
+    participantName,
+    meetingUrl,
+    attachmentUrls,
+    rsvpUrl,
+  );
+  try {
+    const { getCrmSettings, renderEmailTemplate } = await import("@/lib/crm-settings");
+    const { getEmailLogoTemplateVars } = await import("@/lib/email-logo");
+    const [settings, logoVars] = await Promise.all([
+      getCrmSettings(),
+      getEmailLogoTemplateVars(),
+    ]);
+    const template = settings.emailTemplates.calendar_invitation;
+    if (template?.htmlBody) {
+      const rendered = renderEmailTemplate(template, settings.branding, {
+        ...vars,
+        logo: logoVars.logo,
+        logoUrl: logoVars.logoUrl,
+      });
+      return {
+        ...rendered,
+        logoAttachment: logoVars.logoAttachment,
+      };
+    }
+  } catch (error) {
+    console.error("[calendar-invitations] template render fallback", error);
+  }
+  return {
+    subject: `Invitation — ${event.title}`,
+    html: buildInvitationHtml(event, participantName, meetingUrl, attachmentUrls, rsvpUrl),
+    logoAttachment: null,
+  };
+}
+
+async function renderInvitationWhatsApp(
+  event: CalendarEvent,
+  participantName: string,
+  meetingUrl: string | null,
+  attachmentUrls: Array<string | null>,
+  rsvpUrl: string,
+): Promise<string> {
+  const vars = invitationTemplateVars(
+    event,
+    participantName,
+    meetingUrl,
+    attachmentUrls,
+    rsvpUrl,
+  );
+  // WhatsApp : pas d’HTML échappé dans le texte
+  const plainVars: Record<string, string> = {
+    ...vars,
+    name: participantName.split(" ")[0] ?? participantName,
+    title: event.title,
+    type: EVENT_TYPE_LABELS[event.type],
+    date: formatCalendarDateTime(event.startsAt, event.allDay),
+    meetingUrl: meetingUrl ?? "",
+  };
+  try {
+    const { getCrmSettings, renderEmailTemplate } = await import("@/lib/crm-settings");
+    const settings = await getCrmSettings();
+    const template = settings.emailTemplates.calendar_invitation_whatsapp;
+    if (template?.htmlBody) {
+      const { html } = renderEmailTemplate(template, settings.branding, plainVars);
+      return html.replace(/<[^>]+>/g, "").trim() || html.trim();
+    }
+  } catch (error) {
+    console.error("[calendar-invitations] whatsapp template fallback", error);
+  }
+  return buildWhatsAppBody(event, participantName, meetingUrl, attachmentUrls, rsvpUrl);
+}
+
 function buildWhatsAppBody(
   event: CalendarEvent,
   participantName: string,
@@ -240,6 +369,14 @@ export async function sendCalendarInvitationEmail(
   const { urls, mailFiles } =
     preparedAttachments ?? (await prepareAttachmentPayload(event));
 
+  const { validateCalendarMailAttachments } = await import("@/lib/calendar-mail-limits");
+  const sizeCheck = validateCalendarMailAttachments(
+    mailFiles.map((f) => ({ name: f.filename, size: f.content.byteLength })),
+  );
+  if (!sizeCheck.ok) {
+    return { ok: false, error: sizeCheck.error };
+  }
+
   const mailAttachments: Array<{ filename: string; content: Buffer }> = [
     {
       filename: "invitation-sdcreativ.ics",
@@ -249,12 +386,30 @@ export async function sendCalendarInvitationEmail(
   ];
 
   const { sendEmailDetailed } = await import("@/lib/email");
+  const rendered = await renderInvitationEmail(
+    event,
+    greeting,
+    meetingUrl,
+    urls,
+    rsvpUrl,
+  );
   const result = await sendEmailDetailed({
     to: notifyEmail,
-    subject: `Invitation — ${event.title}`,
-    html: buildInvitationHtml(event, greeting, meetingUrl, urls, rsvpUrl),
+    subject: rendered.subject,
+    html: rendered.html,
     replyTo: fromEmail,
-    attachments: mailAttachments,
+    attachments: [
+      ...(rendered.logoAttachment
+        ? [
+            {
+              filename: rendered.logoAttachment.filename,
+              content: rendered.logoAttachment.content,
+              contentId: rendered.logoAttachment.contentId,
+            },
+          ]
+        : []),
+      ...mailAttachments,
+    ],
   });
 
   if (!result.ok) {
@@ -314,16 +469,14 @@ export async function sendCalendarInvitations(
     if (shouldWhatsApp && participant.phone) {
       const name = participant.name ?? participant.notifyEmail;
       const rsvpUrl = buildCalendarRsvpUrl(event.id, participant.email);
-      const sent = await sendWhatsApp(
-        participant.phone,
-        buildWhatsAppBody(
-          event,
-          name,
-          meetingUrl,
-          preparedAttachments.urls,
-          rsvpUrl,
-        ),
+      const body = await renderInvitationWhatsApp(
+        event,
+        name,
+        meetingUrl,
+        preparedAttachments.urls,
+        rsvpUrl,
       );
+      const sent = await sendWhatsApp(participant.phone, body);
       if (sent) {
         whatsapp += 1;
         await logCalendarInvitation({
