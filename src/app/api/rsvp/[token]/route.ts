@@ -105,6 +105,13 @@ export async function POST(request: Request, { params }: Props) {
       return NextResponse.json({ error: "Participant introuvable." }, { status: 404 });
     }
 
+    const { notifyOrganizerOfRsvp } = await import("@/lib/calendar-rsvp-notify");
+    void notifyOrganizerOfRsvp({
+      event: ctx.event,
+      participant: updated,
+      status: parsed.data,
+    }).catch((err) => console.error("[api/rsvp] notify", err));
+
     return NextResponse.json({
       ok: true,
       participant: {

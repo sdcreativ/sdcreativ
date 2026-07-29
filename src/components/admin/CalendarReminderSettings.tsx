@@ -118,19 +118,65 @@ export function CalendarReminderSettings() {
                 aria-label="Numéro SMS"
               />
             </label>
-            <label className="flex items-center gap-2 text-sm">
-              <span className="text-gray-text">Défaut (min avant)</span>
-              <input
-                type="number"
-                min={0}
-                max={1440}
-                value={prefs.defaultLeadMinutes}
-                onChange={(e) => setPrefs({ ...prefs, defaultLeadMinutes: Number(e.target.value) })}
-                onBlur={() => void save({ defaultLeadMinutes: prefs.defaultLeadMinutes })}
-                className={`${fieldClass} w-20`}
-                aria-label="Minutes avant rappel par défaut"
-              />
-            </label>
+          </div>
+
+          <div className="mt-4 rounded-xl border border-gray/20 bg-white/70 px-3 py-3">
+            <p className="text-xs font-semibold uppercase tracking-wide text-gray-text">
+              Créneaux (réunions / appels)
+            </p>
+            <div className="mt-2 flex flex-wrap gap-3 text-sm">
+              <label className="flex items-center gap-2">
+                <input
+                  type="checkbox"
+                  checked={prefs.offsets.dayBefore}
+                  onChange={(e) =>
+                    void save({ offsets: { ...prefs.offsets, dayBefore: e.target.checked } })
+                  }
+                  disabled={saving}
+                  className="rounded border-gray/60"
+                />
+                J−1 (veille 9 h)
+              </label>
+              <label className="flex items-center gap-2">
+                <input
+                  type="checkbox"
+                  checked={prefs.offsets.hourBefore}
+                  onChange={(e) =>
+                    void save({ offsets: { ...prefs.offsets, hourBefore: e.target.checked } })
+                  }
+                  disabled={saving}
+                  className="rounded border-gray/60"
+                />
+                H−1 (1 h avant)
+              </label>
+              <label className="flex items-center gap-2">
+                <input
+                  type="checkbox"
+                  checked={prefs.offsets.shortBefore}
+                  onChange={(e) =>
+                    void save({ offsets: { ...prefs.offsets, shortBefore: e.target.checked } })
+                  }
+                  disabled={saving}
+                  className="rounded border-gray/60"
+                />
+                Rappel court
+              </label>
+              <label className="flex items-center gap-2">
+                <span className="text-gray-text">Court (min)</span>
+                <input
+                  type="number"
+                  min={0}
+                  max={1440}
+                  value={prefs.defaultLeadMinutes}
+                  onChange={(e) =>
+                    setPrefs({ ...prefs, defaultLeadMinutes: Number(e.target.value) })
+                  }
+                  onBlur={() => void save({ defaultLeadMinutes: prefs.defaultLeadMinutes })}
+                  className={`${fieldClass} w-20`}
+                  aria-label="Minutes du rappel court"
+                />
+              </label>
+            </div>
           </div>
 
           <ul className="mt-4 grid gap-2 sm:grid-cols-2">

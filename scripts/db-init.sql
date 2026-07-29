@@ -414,11 +414,16 @@ CREATE TABLE IF NOT EXISTS calendar_invitation_logs (
   channel VARCHAR(20) NOT NULL DEFAULT 'email',
   status VARCHAR(20) NOT NULL,
   error TEXT,
+  provider_message_id VARCHAR(120),
   sent_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
 CREATE INDEX IF NOT EXISTS idx_calendar_invitation_logs_event
   ON calendar_invitation_logs (event_id, sent_at DESC);
+
+CREATE INDEX IF NOT EXISTS idx_calendar_invitation_logs_provider_msg
+  ON calendar_invitation_logs (provider_message_id)
+  WHERE provider_message_id IS NOT NULL;
 
 CREATE TABLE IF NOT EXISTS crm_reminder_logs (
   reminder_key VARCHAR(160) PRIMARY KEY,

@@ -1,26 +1,15 @@
 import { z } from "zod";
 import { withDb } from "@/lib/db";
+import type { CalendarParticipant, ParticipantInput, RsvpStatus } from "@/lib/calendar-participants-shared";
 
-export const RSVP_STATUSES = ["pending", "accepted", "declined", "tentative"] as const;
-export type RsvpStatus = (typeof RSVP_STATUSES)[number];
-
-export const RSVP_STATUS_LABELS: Record<RsvpStatus, string> = {
-  pending: "En attente",
-  accepted: "Accepté",
-  declined: "Refusé",
-  tentative: "Peut-être",
-};
-
-export type CalendarParticipant = {
-  id: string;
-  eventId: string;
-  email: string;
-  name: string | null;
-  phone: string | null;
-  status: RsvpStatus;
-  invitedAt: string;
-  respondedAt: string | null;
-};
+export {
+  RSVP_STATUSES,
+  RSVP_STATUS_LABELS,
+  summarizeRsvp,
+  type CalendarParticipant,
+  type ParticipantInput,
+  type RsvpStatus,
+} from "@/lib/calendar-participants-shared";
 
 type ParticipantRow = {
   id: string;
@@ -58,8 +47,6 @@ export const participantSchema = z.object({
   name: z.string().trim().max(160).optional().nullable(),
   phone: z.string().trim().max(32).optional().nullable(),
 });
-
-export type ParticipantInput = z.infer<typeof participantSchema>;
 
 export const rsvpStatusSchema = z.enum(["accepted", "declined", "tentative"]);
 
@@ -171,17 +158,4 @@ export async function syncEventParticipants(
     const list = await listEventParticipants(eventId);
     return { participants: list, newParticipants };
   });
-}
-
-export function summarizeRsvp(participants: CalendarParticipant[]): Record<RsvpStatus, number> {
-  const summary: Record<RsvpStatus, number> = {
-    pending: 0,
-    accepted: 0,
-    declined: 0,
-    tentative: 0,
-  };
-  for (const p of participants) {
-    summary[p.status] += 1;
-  }
-  return summary;
 }

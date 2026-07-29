@@ -211,7 +211,7 @@ export async function sendCalendarInvitationEmail(
   event: CalendarEvent,
   participant: ResolvedParticipant | ParticipantInput,
   preparedAttachments?: Awaited<ReturnType<typeof prepareAttachmentPayload>>,
-): Promise<{ ok: boolean; error?: string }> {
+): Promise<{ ok: boolean; error?: string; providerMessageId?: string | null }> {
   const fromEmail = process.env.CONTACT_FROM_EMAIL ?? "contact@sdcreativ.com";
   const dbEmail = participant.email.toLowerCase();
   const notifyEmail =
@@ -264,7 +264,7 @@ export async function sendCalendarInvitationEmail(
     });
     return { ok: false, error: result.error };
   }
-  return { ok: true };
+  return { ok: true, providerMessageId: result.id ?? null };
 }
 
 export async function sendCalendarInvitations(
@@ -291,6 +291,7 @@ export async function sendCalendarInvitations(
         email: participant.notifyEmail,
         channel: "email",
         status: "sent",
+        providerMessageId: result.providerMessageId,
       }).catch((err) => console.error("[calendar-invitations] log sent", err));
     } else {
       if (result.error) {

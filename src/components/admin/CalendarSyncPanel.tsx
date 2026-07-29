@@ -220,6 +220,13 @@ export function CalendarSyncPanel() {
                   <strong>Outlook :</strong> Ajouter un calendrier → Abonnement Internet.
                 </span>
               </li>
+              <li className="flex items-start gap-2">
+                <Link2 className="mt-0.5 h-3.5 w-3.5 shrink-0 text-primary" aria-hidden />
+                <span>
+                  <strong>Pièces jointes :</strong> les fichiers restent dans le CRM et les e-mails
+                  d’invitation — Google / Outlook ne synchronisent pas les PJ d’événements CRM.
+                </span>
+              </li>
             </ul>
           </div>
         </div>

@@ -1,5 +1,5 @@
 import { stripHtml } from "@/lib/blog-content";
-import type { RsvpStatus } from "@/lib/calendar-participants";
+import type { RsvpStatus } from "@/lib/calendar-participants-shared";
 
 function formatIcalDate(date: Date, allDay: boolean): string {
   if (allDay) {

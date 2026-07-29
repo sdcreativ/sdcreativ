@@ -50,22 +50,29 @@ export async function GET(request: Request) {
     to.setDate(to.getDate() + 7);
 
     const items = await listCalendarItems(from, to);
-    const due = buildRemindersForItems(items, now, GRACE_MS);
     const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? "https://sdcreativ.com";
-
-    const emailFired = await listFiredReminderKeysForChannel(due.map((r) => r.key), "email");
-    const emailPending = due.filter((r) => !emailFired.has(r.key));
-
-    const smsFired = await listFiredReminderKeysForChannel(due.map((r) => r.key), "sms");
-    const smsPending = due.filter((r) => !smsFired.has(r.key));
 
     let emailsSent = 0;
     let smsSent = 0;
+    const firedEmailKeys: string[] = [];
+    const firedSmsKeys: Array<{
+      key: string;
+      itemId: string;
+      itemType: string;
+      title: string;
+      triggerAt: string;
+    }> = [];
 
-    if (emailPending.length > 0) {
-      const users = await listUsersWithCalendarEmailEnabled();
+    const emailUsers = await listUsersWithCalendarEmailEnabled();
 
-      if (users.length === 0) {
+    if (emailUsers.length === 0) {
+      const due = buildRemindersForItems(items, now, GRACE_MS);
+      const emailFired = await listFiredReminderKeysForChannel(
+        due.map((r) => r.key),
+        "email",
+      );
+      const emailPending = due.filter((r) => !emailFired.has(r.key));
+      if (emailPending.length > 0) {
         const html = emailPending
           .map(
             (r) =>
@@ -76,127 +83,161 @@ export async function GET(request: Request) {
           subject: `[SD CREATIV CRM] ${emailPending.length} rappel(s) calendrier`,
           html: `<p>Rappels calendrier :</p><ul>${html}</ul><p><a href="${siteUrl}/admin/crm/calendrier">Ouvrir le calendrier</a></p>`,
         });
-        if (ok) emailsSent = emailPending.length;
-      } else {
-        for (const user of users) {
-          const userReminders = emailPending.filter((r) => {
-            if (!shouldSendEmailReminder(user.preferences, r.itemType)) return false;
-            const item = items.find((i) => i.id === r.itemId);
-            if (!item?.assignee) return true;
-            return item.assignee === user.name;
-          });
-
-          if (userReminders.length === 0) continue;
-
-          const mailAttachments: Array<{ filename: string; content: Buffer }> = [];
-          const seenKeys = new Set<string>();
-
-          for (const reminder of userReminders) {
-            const item = items.find((i) => i.id === reminder.itemId);
-            if (!item || item.source !== "event" || !item.sourceId) continue;
-            if ((item.attachmentNames?.length ?? 0) === 0) continue;
-
-            const event = await getCalendarEventById(item.sourceId);
-            const files = event?.attachments?.length
-              ? event.attachments
-              : event?.attachment
-                ? [event.attachment]
-                : [];
-
-            for (const file of files) {
-              const dedupe = file.key || file.url;
-              if (seenKeys.has(dedupe)) continue;
-              seenKeys.add(dedupe);
-              const buffer = await loadCalendarAttachmentBuffer(file);
-              if (buffer && buffer.length > 0) {
-                mailAttachments.push({ filename: file.name, content: buffer });
-              }
-            }
-          }
-
-          const html = userReminders
-            .map((r) => {
-              const item = items.find((i) => i.id === r.itemId);
-              const names = r.attachmentNames;
-              let attachmentLinks = "";
-              if (names.length > 0 && item?.source === "event" && item.sourceId) {
-                const links = names
-                  .map(
-                    (name, index) =>
-                      `<a href="${siteUrl}/api/admin/calendar/events/${item.sourceId}/attachment?index=${index}">${escapeHtml(name)}</a>`,
-                  )
-                  .join(", ");
-                attachmentLinks = `<br/><span>Pièce(s) jointe(s) : ${links} (également jointes à cet e-mail si disponibles)</span>`;
-              } else if (names.length > 0) {
-                attachmentLinks = reminderAttachmentsHtml(names);
-              }
-              return `<li><strong>${escapeHtml(r.message)}</strong>${reminderDescriptionHtml(r.description)}${attachmentLinks}</li>`;
-            })
-            .join("");
-
-          const ok = await sendEmail({
-            to: user.email,
-            subject: `[CRM] ${userReminders.length} rappel(s) calendrier`,
-            html: `<p>Bonjour ${escapeHtml(user.name)},</p><p>Vos rappels calendrier :</p><ul>${html}</ul><p><a href="${siteUrl}/admin/crm/calendrier">Ouvrir le calendrier</a></p>`,
-            attachments: mailAttachments.length > 0 ? mailAttachments : undefined,
-          });
-
-          if (ok) emailsSent += userReminders.length;
+        if (ok) {
+          emailsSent = emailPending.length;
+          firedEmailKeys.push(...emailPending.map((r) => r.key));
+          await markRemindersFired(
+            emailPending.map((r) => ({
+              key: r.key,
+              itemId: r.itemId,
+              itemType: r.itemType,
+              title: r.title,
+              triggerAt: r.triggerAt,
+              channels: ["email"],
+            })),
+          );
         }
       }
+    } else {
+      for (const user of emailUsers) {
+        const due = buildRemindersForItems(items, now, GRACE_MS, {
+          shortMinutes: user.preferences.defaultLeadMinutes,
+          offsets: user.preferences.offsets,
+        });
+        const emailFired = await listFiredReminderKeysForChannel(
+          due.map((r) => r.key),
+          "email",
+        );
 
-      await markRemindersFired(
-        emailPending.map((r) => ({
-          key: r.key,
-          itemId: r.itemId,
-          itemType: r.itemType,
-          title: r.title,
-          triggerAt: r.triggerAt,
-          channels: ["email"],
-        })),
-      );
-    }
-
-    if (smsPending.length > 0) {
-      const smsUsers = await listUsersWithCalendarSmsEnabled();
-
-      for (const user of smsUsers) {
-        const userReminders = smsPending.filter((r) => {
-          if (!shouldSendSmsReminder(user.preferences, r.itemType)) return false;
+        const userReminders = due.filter((r) => {
+          if (emailFired.has(r.key)) return false;
+          if (!shouldSendEmailReminder(user.preferences, r.itemType)) return false;
           const item = items.find((i) => i.id === r.itemId);
           if (!item?.assignee) return true;
           return item.assignee === user.name;
         });
 
+        if (userReminders.length === 0) continue;
+
+        const mailAttachments: Array<{ filename: string; content: Buffer }> = [];
+        const seenKeys = new Set<string>();
+
         for (const reminder of userReminders) {
-          const pj =
-            reminder.attachmentNames.length > 0
-              ? ` · PJ: ${reminder.attachmentNames.join(", ")}`
-              : "";
-          const ok = await sendSms(user.phone, `[CRM] ${reminder.message}${pj}`.slice(0, 300));
-          if (ok) smsSent += 1;
+          const item = items.find((i) => i.id === reminder.itemId);
+          if (!item || item.source !== "event" || !item.sourceId) continue;
+          if ((item.attachmentNames?.length ?? 0) === 0) continue;
+
+          const event = await getCalendarEventById(item.sourceId);
+          const files = event?.attachments?.length
+            ? event.attachments
+            : event?.attachment
+              ? [event.attachment]
+              : [];
+
+          for (const file of files) {
+            const dedupe = file.key || file.url;
+            if (seenKeys.has(dedupe)) continue;
+            seenKeys.add(dedupe);
+            const buffer = await loadCalendarAttachmentBuffer(file);
+            if (buffer && buffer.length > 0) {
+              mailAttachments.push({ filename: file.name, content: buffer });
+            }
+          }
+        }
+
+        const html = userReminders
+          .map((r) => {
+            const item = items.find((i) => i.id === r.itemId);
+            const names = r.attachmentNames;
+            let attachmentLinks = "";
+            if (names.length > 0 && item?.source === "event" && item.sourceId) {
+              const links = names
+                .map(
+                  (name, index) =>
+                    `<a href="${siteUrl}/api/admin/calendar/events/${item.sourceId}/attachment?index=${index}">${escapeHtml(name)}</a>`,
+                )
+                .join(", ");
+              attachmentLinks = `<br/><span>Pièce(s) jointe(s) : ${links} (également jointes à cet e-mail si disponibles)</span>`;
+            } else if (names.length > 0) {
+              attachmentLinks = reminderAttachmentsHtml(names);
+            }
+            return `<li><strong>${escapeHtml(r.message)}</strong>${reminderDescriptionHtml(r.description)}${attachmentLinks}</li>`;
+          })
+          .join("");
+
+        const ok = await sendEmail({
+          to: user.email,
+          subject: `[CRM] ${userReminders.length} rappel(s) calendrier`,
+          html: `<p>Bonjour ${escapeHtml(user.name)},</p><p>Vos rappels calendrier :</p><ul>${html}</ul><p><a href="${siteUrl}/admin/crm/calendrier">Ouvrir le calendrier</a></p>`,
+          attachments: mailAttachments.length > 0 ? mailAttachments : undefined,
+        });
+
+        if (ok) {
+          emailsSent += userReminders.length;
+          await markRemindersFired(
+            userReminders.map((r) => ({
+              key: r.key,
+              itemId: r.itemId,
+              itemType: r.itemType,
+              title: r.title,
+              triggerAt: r.triggerAt,
+              channels: ["email"],
+            })),
+          );
         }
       }
+    }
 
-      if (smsSent > 0) {
-        await markRemindersFired(
-          smsPending.map((r) => ({
-            key: r.key,
-            itemId: r.itemId,
-            itemType: r.itemType,
-            title: r.title,
-            triggerAt: r.triggerAt,
-            channels: ["sms"],
-          })),
-        );
+    const smsUsers = await listUsersWithCalendarSmsEnabled();
+    for (const user of smsUsers) {
+      const due = buildRemindersForItems(items, now, GRACE_MS, {
+        shortMinutes: user.preferences.defaultLeadMinutes,
+        offsets: user.preferences.offsets,
+      });
+      const smsFired = await listFiredReminderKeysForChannel(
+        due.map((r) => r.key),
+        "sms",
+      );
+
+      const userReminders = due.filter((r) => {
+        if (smsFired.has(r.key)) return false;
+        if (!shouldSendSmsReminder(user.preferences, r.itemType)) return false;
+        const item = items.find((i) => i.id === r.itemId);
+        if (!item?.assignee) return true;
+        return item.assignee === user.name;
+      });
+
+      for (const reminder of userReminders) {
+        const pj =
+          reminder.attachmentNames.length > 0
+            ? ` · PJ: ${reminder.attachmentNames.join(", ")}`
+            : "";
+        const ok = await sendSms(user.phone, `[CRM] ${reminder.message}${pj}`.slice(0, 300));
+        if (ok) {
+          smsSent += 1;
+          firedSmsKeys.push({
+            key: reminder.key,
+            itemId: reminder.itemId,
+            itemType: reminder.itemType,
+            title: reminder.title,
+            triggerAt: reminder.triggerAt,
+          });
+        }
       }
+    }
+
+    if (firedSmsKeys.length > 0) {
+      await markRemindersFired(
+        firedSmsKeys.map((r) => ({
+          ...r,
+          channels: ["sms"],
+        })),
+      );
     }
 
     return NextResponse.json({
       emailsSent,
       smsSent,
-      emailPending: emailPending.length,
-      smsPending: smsPending.length,
     });
   } catch (error) {
     console.error("[api/cron/calendar-reminders] GET", error);

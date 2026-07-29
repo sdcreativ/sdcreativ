@@ -113,6 +113,15 @@ if [ -f scripts/migrate-calendar-rsvp.sql ]; then
     >/dev/null 2>&1 || echo "⚠ Migration RSVP non appliquée (postgres indisponible ?)"
 fi
 
+# Migration légère : delivery Resend sur journal invitations
+if [ -f scripts/migrate-calendar-invitation-delivery.sql ]; then
+  echo "→ Migration invitation delivery (si besoin)"
+  "${COMPOSE[@]}" exec -T postgres \
+    psql -U "${POSTGRES_USER:-sdcreativ}" -d "${POSTGRES_DB:-sdcreativ}" \
+    < scripts/migrate-calendar-invitation-delivery.sql \
+    >/dev/null 2>&1 || echo "⚠ Migration invitation-delivery non appliquée"
+fi
+
 DOMAIN="${DOMAIN:-sdcreativ.com}"
 NGINX_CONF="docker/nginx/conf.d/sdcreativ.conf"
 NGINX_TEMPLATE="docker/nginx/conf.d/sdcreativ.conf.template"

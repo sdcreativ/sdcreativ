@@ -9,7 +9,7 @@ type SendEmailParams = {
 };
 
 export type SendEmailResult =
-  | { ok: true }
+  | { ok: true; id?: string }
   | { ok: false; error: string; status?: number };
 
 function escapeHtml(text: string): string {
@@ -85,7 +85,7 @@ export async function sendEmailDetailed({
       attachments: attachments?.map((a) => ({ filename: a.filename, bytes: a.content.byteLength })),
       html: finalHtml,
     });
-    return { ok: true };
+    return { ok: true, id: `dev-${Date.now()}` };
   }
 
   if (recipients.length === 0) {
@@ -130,7 +130,15 @@ export async function sendEmailDetailed({
     return { ok: false, error: message, status: res.status };
   }
 
-  return { ok: true };
+  let id: string | undefined;
+  try {
+    const parsed = (await res.json()) as { id?: string };
+    if (typeof parsed.id === "string" && parsed.id.trim()) id = parsed.id.trim();
+  } catch {
+    /* ignore */
+  }
+
+  return { ok: true, id };
 }
 
 export async function sendEmail(params: SendEmailParams): Promise<boolean> {

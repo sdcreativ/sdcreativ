@@ -5,7 +5,7 @@ import { Loader2, Search } from "lucide-react";
 import type { CalendarInvitee } from "@/lib/calendar-invitees-types";
 import { inviteeKey } from "@/lib/calendar-invitees-types";
 import { fetchCalendarInvitees } from "@/lib/calendar-api";
-import type { ParticipantInput } from "@/lib/calendar-participants";
+import type { ParticipantInput } from "@/lib/calendar-participants-shared";
 import { cn } from "@/lib/utils";
 
 const fieldClass =

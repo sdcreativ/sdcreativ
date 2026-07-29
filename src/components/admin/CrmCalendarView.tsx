@@ -24,8 +24,8 @@ import { useSitePublic } from "@/components/site/SitePublicProvider";
 import { resolveWhatsappDigits } from "@/lib/site-public-resolver";
 import type { CalendarItem } from "@/lib/calendar";
 import { formatCountdownToEvent } from "@/lib/calendar-reminders";
-import type { ParticipantInput, CalendarParticipant } from "@/lib/calendar-participants";
-import { RSVP_STATUS_LABELS, summarizeRsvp } from "@/lib/calendar-participants";
+import type { ParticipantInput, CalendarParticipant } from "@/lib/calendar-participants-shared";
+import { RSVP_STATUS_LABELS, summarizeRsvp } from "@/lib/calendar-participants-shared";
 import {
   createCalendarEventApi,
   deleteCalendarEventApi,
@@ -37,7 +37,8 @@ import {
   resendCalendarInvitationsApi,
   updateCalendarEventApi,
 } from "@/lib/calendar-api";
-import type { CalendarInvitationLog } from "@/lib/calendar-invitation-logs";
+import type { CalendarInvitationLog } from "@/lib/calendar-invitation-logs-shared";
+import { INVITATION_LOG_STATUS_LABELS } from "@/lib/calendar-invitation-logs-shared";
 import { cn } from "@/lib/utils";
 import { useDialog } from "@/components/ui/DialogProvider";
 import type { EventType, MeetingPlatform } from "@/content/calendar-labels";
@@ -823,6 +824,8 @@ function EventFormModal({
   const [editorKey, setEditorKey] = useState(0);
   const [attachments, setAttachments] = useState<CalendarEventAttachment[]>([]);
   const [uploadingFile, setUploadingFile] = useState(false);
+  const [generatingMeet, setGeneratingMeet] = useState(false);
+  const [showInvitePreview, setShowInvitePreview] = useState(false);
   const [invitationLogs, setInvitationLogs] = useState<CalendarInvitationLog[]>([]);
 
   function loadInvitationLogs(eventId: string) {
@@ -1221,17 +1224,66 @@ function EventFormModal({
               </p>
             )}
             {(meetingPlatform === "google_meet" || meetingPlatform === "zoom") && (
-              <input
-                type="url"
-                value={meetingUrl}
-                onChange={(e) => setMeetingUrl(e.target.value)}
-                placeholder={
-                  meetingPlatform === "google_meet"
-                    ? "https://meet.google.com/xxx-xxxx-xxx"
-                    : "https://zoom.us/j/123456789"
-                }
-                className={`${fieldClass} mt-2`}
-              />
+              <div className="mt-2 space-y-2">
+                <div className="flex gap-2">
+                  <input
+                    type="url"
+                    value={meetingUrl}
+                    onChange={(e) => setMeetingUrl(e.target.value)}
+                    placeholder={
+                      meetingPlatform === "google_meet"
+                        ? "https://meet.google.com/xxx-xxxx-xxx"
+                        : "https://zoom.us/j/123456789"
+                    }
+                    className={`${fieldClass} flex-1`}
+                  />
+                  <button
+                    type="button"
+                    disabled={loading || generatingMeet}
+                    onClick={() => {
+                      void (async () => {
+                        setGeneratingMeet(true);
+                        setError("");
+                        try {
+                          const res = await fetch("/api/admin/calendar/meeting-link", {
+                            method: "POST",
+                            credentials: "include",
+                            headers: { "Content-Type": "application/json" },
+                            body: JSON.stringify({
+                              platform: meetingPlatform,
+                              title: (document.querySelector('input[name="title"]') as HTMLInputElement | null)?.value,
+                            }),
+                          });
+                          const json = (await res.json()) as {
+                            url?: string | null;
+                            openUrl?: string | null;
+                            hint?: string | null;
+                            error?: string;
+                          };
+                          if (!res.ok && !json.openUrl) {
+                            throw new Error(json.error ?? "Génération impossible.");
+                          }
+                          if (json.url) setMeetingUrl(json.url);
+                          if (json.openUrl) window.open(json.openUrl, "_blank", "noopener,noreferrer");
+                          if (json.hint && !json.url) setInviteWarning(json.hint);
+                        } catch (err) {
+                          setError(err instanceof Error ? err.message : "Génération impossible.");
+                        } finally {
+                          setGeneratingMeet(false);
+                        }
+                      })();
+                    }}
+                    className="shrink-0 rounded-xl border border-primary/30 bg-primary/5 px-3 py-2 text-xs font-semibold text-primary hover:bg-primary/10 disabled:opacity-50"
+                  >
+                    {generatingMeet ? "…" : "Générer"}
+                  </button>
+                </div>
+                <p className="text-[11px] text-gray-text/80">
+                  {meetingPlatform === "google_meet"
+                    ? "Google Meet : lien auto si Agenda Google connecté, sinon ouverture de Meet."
+                    : "Zoom : ouvre la planification Zoom — collez ensuite le lien Join."}
+                </p>
+              </div>
             )}
           </div>
 
@@ -1244,6 +1296,44 @@ function EventFormModal({
             />
             Envoyer les invitations à la création / nouveaux participants (email + .ics)
           </label>
+          {participants.length > 0 && (
+            <button
+              type="button"
+              onClick={() => setShowInvitePreview(true)}
+              className="text-left text-xs font-semibold text-primary hover:underline"
+            >
+              Prévisualiser le mail d’invitation
+            </button>
+          )}
+          {showInvitePreview && (
+            <div className="rounded-xl border border-gray/40 bg-gray-light/40 p-3 text-sm">
+              <div className="mb-2 flex items-center justify-between gap-2">
+                <p className="text-xs font-semibold uppercase tracking-wide text-gray-text">
+                  Aperçu invitation
+                </p>
+                <button
+                  type="button"
+                  onClick={() => setShowInvitePreview(false)}
+                  className="text-xs text-gray-text hover:text-foreground"
+                >
+                  Fermer
+                </button>
+              </div>
+              <div className="space-y-2 rounded-lg bg-white p-3 text-xs leading-relaxed text-foreground">
+                <p className="font-bold text-sm">{item?.title || "Titre de l’événement"}</p>
+                <p>Date : selon le formulaire</p>
+                {meetingUrl ? <p>Lien réunion : {meetingUrl}</p> : null}
+                {attachments.length > 0 ? (
+                  <p>Pièces jointes : {attachments.map((a) => a.name).join(", ")}</p>
+                ) : null}
+                <p className="pt-1 font-semibold">Votre réponse :</p>
+                <p>Accepter · Peut-être · Refuser (+ fichier .ics joint)</p>
+                <p className="text-gray-text">
+                  Destinataires : {participants.map((p) => p.email).join(", ")}
+                </p>
+              </div>
+            </div>
+          )}
           {(isEdit || savedEventId) && (
             <div className="space-y-2 rounded-xl border border-primary/20 bg-primary/5 p-3">
               <p className="text-xs text-gray-text">
@@ -1340,10 +1430,10 @@ function EventFormModal({
                     key={log.id}
                     className="flex items-start gap-2 rounded-lg bg-white/80 px-2 py-1.5"
                   >
-                    {log.status === "sent" ? (
-                      <CheckCircle2 className="mt-0.5 h-3.5 w-3.5 shrink-0 text-emerald-600" aria-hidden />
-                    ) : (
+                    {log.status === "failed" || log.status === "bounced" || log.status === "complained" ? (
                       <XCircle className="mt-0.5 h-3.5 w-3.5 shrink-0 text-accent" aria-hidden />
+                    ) : (
+                      <CheckCircle2 className="mt-0.5 h-3.5 w-3.5 shrink-0 text-emerald-600" aria-hidden />
                     )}
                     <div className="min-w-0 flex-1">
                       <p className="truncate font-medium text-foreground">
@@ -1360,7 +1450,9 @@ function EventFormModal({
                           hour: "2-digit",
                           minute: "2-digit",
                         })}
-                        {log.status === "failed" && log.error ? ` — ${log.error}` : " — envoyé"}
+                        {" — "}
+                        {INVITATION_LOG_STATUS_LABELS[log.status]}
+                        {log.error ? ` (${log.error})` : ""}
                       </p>
                     </div>
                   </li>

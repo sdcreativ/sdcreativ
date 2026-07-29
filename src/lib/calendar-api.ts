@@ -1,6 +1,6 @@
 import { parseDateKey } from "@/content/calendar-labels";
 import type { CalendarEvent, CalendarItem } from "@/lib/calendar";
-import type { CalendarParticipant } from "@/lib/calendar-participants";
+import type { CalendarParticipant } from "@/lib/calendar-participants-shared";
 import type { CalendarReminderPreferences } from "@/lib/calendar-user-preferences";
 import type { CalendarOAuthProvider } from "@/lib/calendar-oauth-config";
 import type { CalendarOAuthConnection } from "@/lib/calendar-oauth";
@@ -125,12 +125,12 @@ export async function resendCalendarInvitationsApi(
 
 export async function fetchCalendarInvitationLogsApi(
   eventId: string,
-): Promise<import("@/lib/calendar-invitation-logs").CalendarInvitationLog[]> {
+): Promise<import("@/lib/calendar-invitation-logs-shared").CalendarInvitationLog[]> {
   const res = await fetch(`/api/admin/calendar/events/${eventId}/invitation-logs`, {
     credentials: "include",
   });
   const json = await parseJson<{
-    logs: import("@/lib/calendar-invitation-logs").CalendarInvitationLog[];
+    logs: import("@/lib/calendar-invitation-logs-shared").CalendarInvitationLog[];
   }>(res);
   return json.logs;
 }

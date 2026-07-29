@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { buildSingleEventIcs } from "@/lib/calendar-ical";
-import { summarizeRsvp, type CalendarParticipant } from "@/lib/calendar-participants";
+import { summarizeRsvp, type CalendarParticipant } from "@/lib/calendar-participants-shared";
 
 describe("calendar-ical RSVP", () => {
   it("inclut ORGANIZER et ATTENDEE avec PARTSTAT", () => {
