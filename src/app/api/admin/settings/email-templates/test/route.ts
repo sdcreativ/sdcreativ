@@ -31,14 +31,35 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Modèle introuvable." }, { status: 404 });
     }
 
-    const { subject, html } = renderEmailTemplate(template, settings.branding, {
-      name: "Test CRM",
-    });
+    const session = await getAdminSession();
+    const vars: Record<string, string> = {};
+    if (session?.name?.trim()) {
+      vars.name = session.name.trim().split(/\s+/)[0] ?? session.name.trim();
+    }
+    if (session?.email?.trim()) {
+      vars.email = session.email.trim();
+    }
+
+    const { getEmailLogoTemplateVars } = await import("@/lib/email-logo");
+    const logoVars = await getEmailLogoTemplateVars();
+    vars.logo = logoVars.logo;
+    vars.logoUrl = logoVars.logoUrl;
+
+    const { subject, html } = renderEmailTemplate(template, settings.branding, vars);
 
     const result = await sendEmailDetailed({
       subject: `[TEST CRM] ${subject}`,
       html: `<p><em>Envoi test depuis les paramètres CRM.</em></p>${html}`,
       to: parsed.data.to,
+      attachments: logoVars.logoAttachment
+        ? [
+            {
+              filename: logoVars.logoAttachment.filename,
+              content: logoVars.logoAttachment.content,
+              contentId: logoVars.logoAttachment.contentId,
+            },
+          ]
+        : undefined,
     });
 
     if (!result.ok) {
@@ -48,7 +69,6 @@ export async function POST(request: Request) {
       );
     }
 
-    const session = await getAdminSession();
     if (session) {
       await logCrmAudit({
         actor: {

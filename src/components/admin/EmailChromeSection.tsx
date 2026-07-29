@@ -5,7 +5,7 @@ import type { CrmEmailChrome, CrmSettingsPayload } from "@/lib/crm-settings-type
 import { DEFAULT_CRM_EMAIL_CHROME } from "@/lib/crm-settings-types";
 import { fetchCrmSettings, updateCrmEmailChromeApi } from "@/lib/crm-settings-api";
 import { wrapEmailHtml } from "@/lib/email-chrome";
-import { LOGO } from "@/lib/constants";
+import { LOGO_FOOTER } from "@/lib/constants";
 import { cn } from "@/lib/utils";
 import { Loader2, Mail } from "lucide-react";
 
@@ -14,8 +14,10 @@ const fieldClass =
 
 function previewLogoUrl(logoUrl: string | null | undefined, siteUrl: string): string {
   const base = siteUrl.replace(/\/$/, "");
-  if (!logoUrl?.trim()) return `${base}${LOGO.src}`;
-  const trimmed = logoUrl.trim();
+  const trimmed = logoUrl?.trim() ?? "";
+  if (!trimmed || trimmed.includes("logo_sd.svg") || /\.svg(\?|$)/i.test(trimmed)) {
+    return `${base}${LOGO_FOOTER.src}`;
+  }
   if (trimmed.startsWith("http://") || trimmed.startsWith("https://") || trimmed.startsWith("data:")) {
     return trimmed;
   }

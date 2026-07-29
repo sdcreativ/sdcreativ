@@ -25,11 +25,16 @@ export function resolveDocumentLogoUrl(
   siteUrl: string,
 ): string {
   const base = siteUrl.replace(/\/$/, "");
-  // Documents : PNG par défaut (le SVG marketing est trop lourd pour PDF / emails)
-  if (!logoUrl?.trim() || logoUrl.trim() === LOGO.src) {
+  const trimmed = logoUrl?.trim() ?? "";
+  // Documents / emails : PNG (le SVG marketing est souvent bloqué ou trop lourd)
+  if (
+    !trimmed ||
+    trimmed === LOGO.src ||
+    trimmed.endsWith(LOGO.src) ||
+    trimmed.includes("logo_sd.svg")
+  ) {
     return `${base}${LOGO_FOOTER.src}`;
   }
-  const trimmed = logoUrl.trim();
   if (
     trimmed.startsWith("http://") ||
     trimmed.startsWith("https://") ||

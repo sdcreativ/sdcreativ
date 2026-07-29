@@ -3,7 +3,12 @@ type SendEmailParams = {
   html: string;
   replyTo?: string;
   to?: string | string[];
-  attachments?: Array<{ filename: string; content: Buffer }>;
+  attachments?: Array<{
+    filename: string;
+    content: Buffer;
+    /** Content-ID pour image inline (`cid:…` dans le HTML). */
+    contentId?: string;
+  }>;
   /** false = ne pas envelopper avec logo / pied société (défaut: true). */
   chrome?: boolean;
 };
@@ -67,9 +72,18 @@ export async function sendEmailDetailed({
     : [process.env.CONTACT_TO_EMAIL ?? "contact@sdcreativ.com"];
 
   let finalHtml = html;
+  const inlineAttachments: NonNullable<SendEmailParams["attachments"]> = [];
   if (chrome) {
     const { applyEmailChrome } = await import("@/lib/email-chrome-apply");
-    finalHtml = await applyEmailChrome(html);
+    const wrapped = await applyEmailChrome(html);
+    finalHtml = wrapped.html;
+    for (const file of wrapped.inlineAttachments) {
+      inlineAttachments.push({
+        filename: file.filename,
+        content: file.content,
+        contentId: file.contentId,
+      });
+    }
   }
 
   if (!apiKey) {
@@ -82,7 +96,18 @@ export async function sendEmailDetailed({
       subject,
       replyTo,
       to: recipients,
-      attachments: attachments?.map((a) => ({ filename: a.filename, bytes: a.content.byteLength })),
+      attachments: [
+        ...inlineAttachments.map((a) => ({
+          filename: a.filename,
+          bytes: a.content.byteLength,
+          contentId: a.contentId,
+        })),
+        ...(attachments?.map((a) => ({
+          filename: a.filename,
+          bytes: a.content.byteLength,
+          contentId: a.contentId,
+        })) ?? []),
+      ],
       html: finalHtml,
     });
     return { ok: true, id: `dev-${Date.now()}` };
@@ -101,10 +126,21 @@ export async function sendEmailDetailed({
       text: htmlToPlainText(finalHtml),
     };
 
-  if (attachments && attachments.length > 0) {
-    payload.attachments = attachments.map((file) => ({
+  const allAttachments = [...inlineAttachments, ...(attachments ?? [])];
+  if (allAttachments.length > 0) {
+    const seen = new Set<string>();
+    const unique = allAttachments.filter((file) => {
+      const key = file.contentId
+        ? `cid:${file.contentId}`
+        : `file:${file.filename}:${file.content.byteLength}`;
+      if (seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    });
+    payload.attachments = unique.map((file) => ({
       filename: file.filename,
       content: file.content.toString("base64"),
+      ...(file.contentId ? { content_id: file.contentId } : {}),
     }));
   }
 

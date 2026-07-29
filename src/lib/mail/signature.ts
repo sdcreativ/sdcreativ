@@ -1,6 +1,7 @@
 import { getInvoiceDocumentCompany } from "@/lib/billing/document-company";
 import { DEFAULT_CRM_BRANDING } from "@/lib/crm-settings-types";
 import { MAIL_V1_SHARED_MAILBOX } from "@/lib/mail/config";
+import { toEmailSafeLogoUrl } from "@/lib/email-logo";
 
 export type MailSignature = {
   text: string;
@@ -36,7 +37,7 @@ export async function buildMailSignature(): Promise<MailSignature> {
     email = company.email?.trim() || email;
     phone = company.phone?.trim() || "";
     address = company.address?.trim() || "";
-    logoUrl = company.logoUrl || "";
+    logoUrl = toEmailSafeLogoUrl(company.logoUrl, website);
   } catch {
     // fallback defaults
   }
