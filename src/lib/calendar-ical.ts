@@ -1,5 +1,5 @@
-import type { CalendarItem } from "@/lib/calendar";
 import { stripHtml } from "@/lib/blog-content";
+import type { RsvpStatus } from "@/lib/calendar-participants";
 
 function formatIcalDate(date: Date, allDay: boolean): string {
   if (allDay) {
@@ -15,7 +15,23 @@ function escapeIcal(text: string): string {
   return text.replace(/\\/g, "\\\\").replace(/;/g, "\\;").replace(/,/g, "\\,").replace(/\n/g, "\\n");
 }
 
-export function buildCalendarIcalFeed(items: CalendarItem[], siteName = "SD CREATIV CRM"): string {
+function partstatFromRsvp(status?: RsvpStatus | null): string {
+  switch (status) {
+    case "accepted":
+      return "ACCEPTED";
+    case "declined":
+      return "DECLINED";
+    case "tentative":
+      return "TENTATIVE";
+    default:
+      return "NEEDS-ACTION";
+  }
+}
+
+export function buildCalendarIcalFeed(
+  items: import("@/lib/calendar").CalendarItem[],
+  siteName = "SD CREATIV CRM",
+): string {
   const now = formatIcalDate(new Date(), false);
   const lines = [
     "BEGIN:VCALENDAR",
@@ -60,6 +76,12 @@ export function buildSingleEventIcs(
     endsAt: string | null;
     allDay: boolean;
     meetingUrl?: string | null;
+    organizerEmail?: string | null;
+    attendee?: {
+      email: string;
+      name?: string | null;
+      status?: RsvpStatus | null;
+    } | null;
   },
   siteName = "SD CREATIV",
 ): string {
@@ -75,6 +97,11 @@ export function buildSingleEventIcs(
   ]
     .filter(Boolean)
     .join("\n\n");
+
+  const organizerEmail =
+    event.organizerEmail?.trim() ||
+    process.env.CONTACT_FROM_EMAIL?.trim() ||
+    "contact@sdcreativ.com";
 
   const lines = [
     "BEGIN:VCALENDAR",
@@ -99,6 +126,18 @@ export function buildSingleEventIcs(
   lines.push(`SUMMARY:${escapeIcal(event.title)}`);
   if (description) lines.push(`DESCRIPTION:${escapeIcal(description)}`);
   if (event.meetingUrl) lines.push(`LOCATION:${escapeIcal(event.meetingUrl)}`);
+  lines.push(`ORGANIZER;CN=${escapeIcal(siteName)}:mailto:${organizerEmail}`);
+
+  if (event.attendee?.email) {
+    const cn = event.attendee.name?.trim()
+      ? `;CN=${escapeIcal(event.attendee.name.trim())}`
+      : "";
+    const partstat = partstatFromRsvp(event.attendee.status);
+    lines.push(
+      `ATTENDEE${cn};RSVP=TRUE;PARTSTAT=${partstat};ROLE=REQ-PARTICIPANT:mailto:${event.attendee.email.trim().toLowerCase()}`,
+    );
+  }
+
   lines.push("END:VEVENT", "END:VCALENDAR");
   return lines.join("\r\n");
 }

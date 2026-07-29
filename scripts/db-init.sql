@@ -399,8 +399,10 @@ CREATE TABLE IF NOT EXISTS calendar_event_participants (
   event_id UUID NOT NULL REFERENCES calendar_events(id) ON DELETE CASCADE,
   email VARCHAR(255) NOT NULL,
   name VARCHAR(160),
+  phone VARCHAR(32),
   status VARCHAR(20) NOT NULL DEFAULT 'pending',
-  invited_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+  invited_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  responded_at TIMESTAMPTZ
 );
 
 CREATE INDEX IF NOT EXISTS idx_calendar_participants_event ON calendar_event_participants (event_id);

@@ -24,7 +24,8 @@ import { useSitePublic } from "@/components/site/SitePublicProvider";
 import { resolveWhatsappDigits } from "@/lib/site-public-resolver";
 import type { CalendarItem } from "@/lib/calendar";
 import { formatCountdownToEvent } from "@/lib/calendar-reminders";
-import type { ParticipantInput } from "@/lib/calendar-participants";
+import type { ParticipantInput, CalendarParticipant } from "@/lib/calendar-participants";
+import { RSVP_STATUS_LABELS, summarizeRsvp } from "@/lib/calendar-participants";
 import {
   createCalendarEventApi,
   deleteCalendarEventApi,
@@ -809,6 +810,7 @@ function EventFormModal({
   const [inviteWarning, setInviteWarning] = useState("");
   const [inviteSuccess, setInviteSuccess] = useState("");
   const [participants, setParticipants] = useState<ParticipantInput[]>([]);
+  const [participantDetails, setParticipantDetails] = useState<CalendarParticipant[]>([]);
   const [sendInvitations, setSendInvitations] = useState(true);
   const [resendInvitations, setResendInvitations] = useState(false);
   const [savedEventId, setSavedEventId] = useState<string | null>(
@@ -832,6 +834,7 @@ function EventFormModal({
   useEffect(() => {
     if (!isEdit || !item?.sourceId) {
       setParticipants([]);
+      setParticipantDetails([]);
       setMeetingPlatform("none");
       setMeetingUrl("");
       setDescriptionHtml("");
@@ -844,12 +847,16 @@ function EventFormModal({
     setEditorKey((k) => k + 1);
     loadInvitationLogs(item.sourceId);
     void fetchEventParticipants(item.sourceId)
-      .then((rows) =>
+      .then((rows) => {
+        setParticipantDetails(rows);
         setParticipants(
           rows.map((p) => ({ email: p.email, name: p.name, phone: p.phone })),
-        ),
-      )
-      .catch(() => setParticipants([]));
+        );
+      })
+      .catch(() => {
+        setParticipants([]);
+        setParticipantDetails([]);
+      });
     void fetch(`/api/admin/calendar/events/${item.sourceId}`, { credentials: "include" })
       .then((res) => (res.ok ? res.json() : null))
       .then(
@@ -961,6 +968,14 @@ function EventFormModal({
 
       setSavedEventId(result.event.id);
       loadInvitationLogs(result.event.id);
+      void fetchEventParticipants(result.event.id)
+        .then((rows) => {
+          setParticipantDetails(rows);
+          setParticipants(
+            rows.map((p) => ({ email: p.email, name: p.name, phone: p.phone })),
+          );
+        })
+        .catch(() => undefined);
 
       const inviteErrors = result.invited?.errors?.filter(Boolean) ?? [];
       if (sendInvitations && participants.length > 0 && inviteErrors.length > 0) {
@@ -1018,6 +1033,9 @@ function EventFormModal({
         } (e-mail + .ics${attachments.length ? ` + ${attachments.length} pièce(s) jointe(s)` : ""}).`,
       );
       loadInvitationLogs(eventId);
+      void fetchEventParticipants(eventId)
+        .then(setParticipantDetails)
+        .catch(() => undefined);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Renvoi impossible.");
     } finally {
@@ -1271,6 +1289,45 @@ function EventFormModal({
             <p className="rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-900">
               {inviteWarning}
             </p>
+          )}
+          {(isEdit || savedEventId) && participantDetails.length > 0 && (
+            <div className="rounded-xl border border-gray/40 bg-gray-light/30 p-3">
+              <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-gray-text">
+                Réponses RSVP
+              </p>
+              {(() => {
+                const summary = summarizeRsvp(participantDetails);
+                return (
+                  <p className="mb-2 text-xs text-gray-text">
+                    {summary.accepted} accepté(s) · {summary.tentative} peut-être ·{" "}
+                    {summary.declined} refusé(s) · {summary.pending} en attente
+                  </p>
+                );
+              })()}
+              <ul className="max-h-36 space-y-1.5 overflow-y-auto text-xs">
+                {participantDetails.map((p) => (
+                  <li
+                    key={p.id}
+                    className="flex items-center justify-between gap-2 rounded-lg bg-white/80 px-2 py-1.5"
+                  >
+                    <span className="min-w-0 truncate font-medium text-foreground">
+                      {p.name || p.email}
+                    </span>
+                    <span
+                      className={cn(
+                        "shrink-0 rounded-full px-2 py-0.5 text-[10px] font-semibold",
+                        p.status === "accepted" && "bg-emerald-100 text-emerald-800",
+                        p.status === "declined" && "bg-red-100 text-red-800",
+                        p.status === "tentative" && "bg-amber-100 text-amber-900",
+                        p.status === "pending" && "bg-gray-100 text-gray-600",
+                      )}
+                    >
+                      {RSVP_STATUS_LABELS[p.status]}
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            </div>
           )}
           {(isEdit || savedEventId) && invitationLogs.length > 0 && (
             <div className="rounded-xl border border-gray/40 bg-gray-light/30 p-3">
