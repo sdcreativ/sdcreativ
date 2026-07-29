@@ -38,6 +38,7 @@ describe("calendar-attachments", () => {
           name: "a.pdf",
           mimeType: "application/pdf",
           size: 12,
+          key: "/uploads/calendar/a.pdf",
         },
       }),
     ).toEqual({
@@ -45,6 +46,7 @@ describe("calendar-attachments", () => {
       name: "a.pdf",
       mimeType: "application/pdf",
       size: 12,
+      key: "/uploads/calendar/a.pdf",
     });
     expect(parseCalendarAttachment({})).toBeNull();
   });

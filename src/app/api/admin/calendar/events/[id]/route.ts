@@ -19,6 +19,8 @@ import {
 const patchBodySchema = updateEventSchema.extend({
   participants: z.array(participantSchema).optional(),
   sendInvitations: z.boolean().optional(),
+  /** Renvoie les invitations à tous les participants (pas seulement les nouveaux). */
+  resendInvitations: z.boolean().optional(),
 });
 
 type Props = { params: Promise<{ id: string }> };
@@ -62,7 +64,7 @@ export async function PATCH(request: Request, { params }: Props) {
       return NextResponse.json({ error: firstError }, { status: 400 });
     }
 
-    const { participants, sendInvitations, ...eventInput } = parsed.data;
+    const { participants, sendInvitations, resendInvitations, ...eventInput } = parsed.data;
     const event = await updateCalendarEvent(id, eventInput);
     if (!event) {
       return NextResponse.json({ error: "Événement introuvable." }, { status: 404 });
@@ -73,11 +75,26 @@ export async function PATCH(request: Request, { params }: Props) {
       void pushCalendarEventToOAuthProviders(session.userId, event.id).catch(console.error);
     }
 
-    let invited = { emails: 0, whatsapp: 0 };
+    let invited = { emails: 0, whatsapp: 0, errors: [] as string[] };
     if (participants) {
-      const { newParticipants } = await syncEventParticipants(id, participants);
-      if (sendInvitations !== false && newParticipants.length > 0) {
-        invited = await sendCalendarInvitations(event, newParticipants);
+      const { newParticipants, participants: synced } = await syncEventParticipants(
+        id,
+        participants,
+      );
+      const toInvite = resendInvitations
+        ? synced.map((p) => ({ email: p.email, name: p.name, phone: p.phone }))
+        : newParticipants;
+      if (sendInvitations !== false && toInvite.length > 0) {
+        invited = await sendCalendarInvitations(event, toInvite);
+      }
+    } else if (resendInvitations && sendInvitations !== false) {
+      const { listEventParticipants } = await import("@/lib/calendar-participants");
+      const existing = await listEventParticipants(id);
+      if (existing.length > 0) {
+        invited = await sendCalendarInvitations(
+          event,
+          existing.map((p) => ({ email: p.email, name: p.name, phone: p.phone })),
+        );
       }
     }
 

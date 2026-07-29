@@ -73,29 +73,33 @@ export async function fetchEventParticipants(eventId: string): Promise<CalendarP
 
 export async function createCalendarEventApi(
   input: Record<string, unknown>,
-): Promise<CalendarEvent> {
+): Promise<{ event: CalendarEvent; invited?: { emails: number; whatsapp: number; errors?: string[] } }> {
   const res = await fetch("/api/admin/calendar/events", {
     method: "POST",
     credentials: "include",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(input),
   });
-  const json = await parseJson<{ event: CalendarEvent }>(res);
-  return json.event;
+  return parseJson<{
+    event: CalendarEvent;
+    invited?: { emails: number; whatsapp: number; errors?: string[] };
+  }>(res);
 }
 
 export async function updateCalendarEventApi(
   id: string,
   input: Record<string, unknown>,
-): Promise<CalendarEvent> {
+): Promise<{ event: CalendarEvent; invited?: { emails: number; whatsapp: number; errors?: string[] } }> {
   const res = await fetch(`/api/admin/calendar/events/${id}`, {
     method: "PATCH",
     credentials: "include",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(input),
   });
-  const json = await parseJson<{ event: CalendarEvent }>(res);
-  return json.event;
+  return parseJson<{
+    event: CalendarEvent;
+    invited?: { emails: number; whatsapp: number; errors?: string[] };
+  }>(res);
 }
 
 export async function deleteCalendarEventApi(id: string): Promise<void> {
@@ -120,7 +124,8 @@ export async function moveCalendarEventApi(
         return d.toISOString();
       })();
 
-  return updateCalendarEventApi(sourceId, { startsAt, allDay });
+  const { event } = await updateCalendarEventApi(sourceId, { startsAt, allDay });
+  return event;
 }
 
 export async function fetchCalendarOAuthStatus(): Promise<{

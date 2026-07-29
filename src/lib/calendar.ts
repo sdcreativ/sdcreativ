@@ -102,6 +102,7 @@ const attachmentSchema = z
     name: z.string().trim().min(1).max(200),
     mimeType: z.string().trim().min(1).max(120),
     size: z.number().int().nonnegative().max(20 * 1024 * 1024),
+    key: z.string().trim().min(1).max(500).optional().nullable(),
   })
   .nullable();
 

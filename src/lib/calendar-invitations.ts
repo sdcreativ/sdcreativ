@@ -7,12 +7,15 @@ import { formatCalendarDateTime } from "@/content/calendar-labels";
 import { EVENT_TYPE_LABELS } from "@/content/calendar-labels";
 import { withDb } from "@/lib/db";
 import { escapeHtml } from "@/lib/email";
-import { sendEmail } from "@/lib/email";
 import { isWhatsAppConfigured, sendWhatsApp } from "@/lib/whatsapp";
 import { getSitePublicSettings } from "@/lib/site-public-settings";
 import { resolveWhatsappDigits } from "@/lib/site-public-resolver";
 import { stripHtml } from "@/lib/blog-content";
 import { sanitizeMailHtml } from "@/lib/mail/sanitize-html";
+import {
+  createCalendarAttachmentAccessUrl,
+  loadCalendarAttachmentBuffer,
+} from "@/lib/calendar-attachments";
 
 /** Remappe les participants équipe vers leur email personnel si disponible. */
 async function resolveParticipantsForNotify(
@@ -81,10 +84,12 @@ function buildInvitationHtml(
   event: CalendarEvent,
   participantName: string,
   meetingUrl: string | null,
+  attachmentUrl: string | null,
 ): string {
   const platformLabel = event.meetingPlatform
     ? MEETING_PLATFORM_LABELS[event.meetingPlatform]
     : null;
+  const attachmentName = event.attachment?.name;
 
   return `<div style="font-family:system-ui,sans-serif;line-height:1.6;color:#111827;max-width:640px">
     <p>Bonjour ${escapeHtml(participantName)},</p>
@@ -97,8 +102,10 @@ function buildInvitationHtml(
       ${meetingUrl ? `<p style="margin:8px 0 0"><a href="${escapeHtml(meetingUrl)}" style="color:#2563eb;font-weight:600">Rejoindre la réunion</a></p>` : ""}
       ${event.description ? `<div style="margin:8px 0 0">${sanitizeMailHtml(event.description)}</div>` : ""}
       ${
-        event.attachment
-          ? `<p style="margin:8px 0 0"><strong>Pièce jointe :</strong> <a href="${escapeHtml(event.attachment.url)}" style="color:#2563eb">${escapeHtml(event.attachment.name)}</a></p>`
+        attachmentName
+          ? attachmentUrl
+            ? `<p style="margin:8px 0 0"><strong>Pièce jointe :</strong> <a href="${escapeHtml(attachmentUrl)}" style="color:#2563eb">${escapeHtml(attachmentName)}</a> (également jointe à cet e-mail)</p>`
+            : `<p style="margin:8px 0 0"><strong>Pièce jointe :</strong> ${escapeHtml(attachmentName)} (jointe à cet e-mail)</p>`
           : ""
       }
     </div>
@@ -110,6 +117,7 @@ function buildWhatsAppBody(
   event: CalendarEvent,
   participantName: string,
   meetingUrl: string | null,
+  attachmentUrl: string | null,
 ): string {
   const lines = [
     `Bonjour ${participantName.split(" ")[0] ?? participantName},`,
@@ -122,14 +130,15 @@ function buildWhatsAppBody(
   }
   if (meetingUrl) lines.push(`Lien : ${meetingUrl}`);
   if (event.description) lines.push("", stripHtml(event.description).slice(0, 400));
-  if (event.attachment) lines.push(`Pièce jointe : ${event.attachment.url}`);
+  if (attachmentUrl) lines.push(`Pièce jointe : ${attachmentUrl}`);
+  else if (event.attachment) lines.push(`Pièce jointe : ${event.attachment.name}`);
   return lines.join("\n");
 }
 
 export async function sendCalendarInvitationEmail(
   event: CalendarEvent,
   participant: ParticipantInput,
-): Promise<boolean> {
+): Promise<{ ok: boolean; error?: string }> {
   const fromEmail = process.env.CONTACT_FROM_EMAIL ?? "contact@sdcreativ.com";
   const greeting = participant.name?.split(" ")[0] ?? participant.email.split("@")[0] ?? "Bonjour";
   const meetingUrl = await resolveMeetingUrl(event);
@@ -143,32 +152,64 @@ export async function sendCalendarInvitationEmail(
     meetingUrl,
   });
 
-  return sendEmail({
+  const mailAttachments: Array<{ filename: string; content: Buffer }> = [
+    {
+      filename: "invitation-sdcreativ.ics",
+      content: Buffer.from(ics, "utf-8"),
+    },
+  ];
+
+  let attachmentUrl: string | null = null;
+  if (event.attachment) {
+    attachmentUrl = await createCalendarAttachmentAccessUrl(event.attachment);
+    const fileBuffer = await loadCalendarAttachmentBuffer(event.attachment);
+    if (fileBuffer && fileBuffer.length > 0) {
+      mailAttachments.push({
+        filename: event.attachment.name,
+        content: fileBuffer,
+      });
+    }
+  }
+
+  const { sendEmailDetailed } = await import("@/lib/email");
+  const result = await sendEmailDetailed({
     to: participant.email,
     subject: `Invitation — ${event.title}`,
-    html: buildInvitationHtml(event, greeting, meetingUrl),
+    html: buildInvitationHtml(event, greeting, meetingUrl, attachmentUrl),
     replyTo: fromEmail,
-    attachments: [
-      {
-        filename: "invitation-sdcreativ.ics",
-        content: Buffer.from(ics, "utf-8"),
-      },
-    ],
+    attachments: mailAttachments,
   });
+
+  if (!result.ok) {
+    console.error("[calendar-invitations] envoi échoué", {
+      to: participant.email,
+      error: result.error,
+    });
+    return { ok: false, error: result.error };
+  }
+  return { ok: true };
 }
 
 export async function sendCalendarInvitations(
   event: CalendarEvent,
   participants: ParticipantInput[],
-): Promise<{ emails: number; whatsapp: number }> {
+): Promise<{ emails: number; whatsapp: number; errors: string[] }> {
   const meetingUrl = await resolveMeetingUrl(event);
+  const attachmentUrl = event.attachment
+    ? await createCalendarAttachmentAccessUrl(event.attachment)
+    : null;
   const resolved = await resolveParticipantsForNotify(participants);
   let emails = 0;
   let whatsapp = 0;
+  const errors: string[] = [];
 
   for (const participant of resolved) {
-    const ok = await sendCalendarInvitationEmail(event, participant);
-    if (ok) emails += 1;
+    const result = await sendCalendarInvitationEmail(event, participant);
+    if (result.ok) {
+      emails += 1;
+    } else if (result.error) {
+      errors.push(`${participant.email}: ${result.error}`);
+    }
 
     const shouldWhatsApp =
       participant.phone &&
@@ -179,11 +220,11 @@ export async function sendCalendarInvitations(
       const name = participant.name ?? participant.email;
       const sent = await sendWhatsApp(
         participant.phone,
-        buildWhatsAppBody(event, name, meetingUrl),
+        buildWhatsAppBody(event, name, meetingUrl, attachmentUrl),
       );
       if (sent) whatsapp += 1;
     }
   }
 
-  return { emails, whatsapp };
+  return { emails, whatsapp, errors };
 }

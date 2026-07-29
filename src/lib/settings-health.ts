@@ -125,6 +125,7 @@ function checkResend(): IntegrationHealth {
   const hasKey = Boolean(process.env.RESEND_API_KEY);
   const hasFrom = Boolean(process.env.CONTACT_FROM_EMAIL);
   const hasTo = Boolean(process.env.CONTACT_TO_EMAIL);
+  const fromEmail = process.env.CONTACT_FROM_EMAIL ?? "";
 
   if (!hasKey) {
     return {
@@ -147,11 +148,13 @@ function checkResend(): IntegrationHealth {
     };
   }
 
+  const domain = fromEmail.includes("@") ? fromEmail.split("@")[1]! : "sdcreativ.com";
   return {
     id: "resend",
     name: "Resend (emails)",
     status: "ok",
-    detail: `Envoi depuis ${process.env.CONTACT_FROM_EMAIL}`,
+    detail: `Envoi depuis ${fromEmail}`,
+    hint: `Le domaine ${domain} doit être vérifié sur https://resend.com/domains (sinon Resend renvoie 403).`,
     envVars,
   };
 }

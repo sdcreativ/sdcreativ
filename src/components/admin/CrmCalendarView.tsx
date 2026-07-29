@@ -782,8 +782,13 @@ function EventFormModal({
 
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const [inviteWarning, setInviteWarning] = useState("");
   const [participants, setParticipants] = useState<ParticipantInput[]>([]);
   const [sendInvitations, setSendInvitations] = useState(true);
+  const [resendInvitations, setResendInvitations] = useState(false);
+  const [savedEventId, setSavedEventId] = useState<string | null>(
+    isEdit ? item?.sourceId ?? null : null,
+  );
   const [allDay, setAllDay] = useState(item?.allDay ?? true);
   const [meetingPlatform, setMeetingPlatform] = useState<MeetingPlatform>("none");
   const [meetingUrl, setMeetingUrl] = useState("");
@@ -881,6 +886,7 @@ function EventFormModal({
       startsAt = d.toISOString();
     }
 
+    const existingId = savedEventId ?? (isEdit ? item?.sourceId : null) ?? null;
     const payload = {
       title: String(data.get("title")),
       description: descriptionHtml.trim() || null,
@@ -890,6 +896,9 @@ function EventFormModal({
       assignee: String(data.get("assignee") || "") || null,
       participants,
       sendInvitations,
+      ...(existingId && (resendInvitations || Boolean(inviteWarning))
+        ? { resendInvitations: true }
+        : {}),
       meetingPlatform,
       meetingUrl:
         meetingPlatform === "google_meet" || meetingPlatform === "zoom"
@@ -899,11 +908,27 @@ function EventFormModal({
     };
 
     try {
-      if (isEdit && item?.sourceId) {
-        await updateCalendarEventApi(item.sourceId, payload);
-      } else {
-        await createCalendarEventApi(payload);
+      setInviteWarning("");
+      const result = existingId
+        ? await updateCalendarEventApi(existingId, payload)
+        : await createCalendarEventApi(payload);
+
+      setSavedEventId(result.event.id);
+
+      const inviteErrors = result.invited?.errors?.filter(Boolean) ?? [];
+      if (sendInvitations && participants.length > 0 && inviteErrors.length > 0) {
+        const first = inviteErrors[0]!;
+        const domainHint = /domain is not verified/i.test(first)
+          ? " Vérifiez le domaine sdcreativ.com sur https://resend.com/domains (DNS), puis réenregistrez avec « Renvoyer les invitations »."
+          : "";
+        setInviteWarning(
+          `Événement enregistré, mais ${inviteErrors.length} invitation(s) e-mail ont échoué.${domainHint}`,
+        );
+        setResendInvitations(true);
+        setError(first);
+        return;
       }
+
       onSaved();
     } catch (err) {
       setError(err instanceof Error ? err.message : "Enregistrement impossible.");
@@ -952,7 +977,11 @@ function EventFormModal({
               <div className="flex items-center gap-2 rounded-xl border border-gray/40 bg-gray-light/40 px-3 py-2 text-sm">
                 <Paperclip className="h-4 w-4 shrink-0 text-primary" aria-hidden />
                 <a
-                  href={attachment.url}
+                  href={
+                    isEdit && item?.sourceId
+                      ? `/api/admin/calendar/events/${item.sourceId}/attachment`
+                      : attachment.url
+                  }
                   target="_blank"
                   rel="noopener noreferrer"
                   className="min-w-0 flex-1 truncate font-medium text-primary hover:underline"
@@ -1094,6 +1123,23 @@ function EventFormModal({
             />
             Envoyer les invitations (email + fichier calendrier .ics)
           </label>
+          {(isEdit || savedEventId) && (
+            <label className="flex items-center gap-2 text-sm">
+              <input
+                type="checkbox"
+                checked={resendInvitations}
+                onChange={(e) => setResendInvitations(e.target.checked)}
+                disabled={!sendInvitations}
+                className="rounded border-gray/60"
+              />
+              Renvoyer les invitations à tous les participants
+            </label>
+          )}
+          {inviteWarning && (
+            <p className="rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-900">
+              {inviteWarning}
+            </p>
+          )}
           <label className="flex items-center gap-2 text-sm">
             <input
               name="allDay"
