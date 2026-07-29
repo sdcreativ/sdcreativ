@@ -23,6 +23,8 @@ export type CalendarItem = {
   allDay: boolean;
   assignee: string | null;
   linkHref: string | null;
+  /** Nom de la pièce jointe événement (si présente). */
+  attachmentName?: string | null;
 };
 
 export type CalendarEvent = {
@@ -149,6 +151,7 @@ export async function listCalendarItems(from: Date, to: Date): Promise<CalendarI
     );
 
     for (const row of events) {
+      const attachment = parseCalendarAttachment(row.metadata);
       items.push({
         id: `event-${row.id}`,
         title: row.title,
@@ -161,6 +164,7 @@ export async function listCalendarItems(from: Date, to: Date): Promise<CalendarI
         allDay: row.all_day,
         assignee: row.assignee,
         linkHref: null,
+        attachmentName: attachment?.name ?? null,
       });
     }
 

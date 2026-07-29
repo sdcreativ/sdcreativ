@@ -546,17 +546,64 @@ function checkHostSnapshot(host: InfraHostStatus | null): InfraCheck[] {
   return checks;
 }
 
+async function checkResendEmail(): Promise<InfraCheck> {
+  const fromEmail = process.env.CONTACT_FROM_EMAIL?.trim() ?? "";
+  const hasKey = Boolean(process.env.RESEND_API_KEY?.trim());
+
+  if (!hasKey) {
+    return {
+      id: "resend-email",
+      label: "Emails Resend",
+      status: "warning",
+      detail: "RESEND_API_KEY absente",
+      hint: "Ajoutez la clé dans .env.docker — sans elle les invitations ne partent pas.",
+    };
+  }
+
+  const { fetchResendDomainStatus } = await import("@/lib/resend-domain");
+  const domainStatus = await fetchResendDomainStatus();
+  const domain = domainStatus?.domain ?? (fromEmail.includes("@") ? fromEmail.split("@")[1]! : "—");
+
+  if (domainStatus?.status === "verified") {
+    return {
+      id: "resend-email",
+      label: "Emails Resend",
+      status: "ok",
+      detail: `Domaine ${domain} vérifié`,
+      metrics: [
+        { label: "Expéditeur", value: fromEmail || "—" },
+        { label: "Statut domaine", value: "verified" },
+      ],
+    };
+  }
+
+  const statusLabel = domainStatus?.rawStatus ?? domainStatus?.status ?? "inconnu";
+  return {
+    id: "resend-email",
+    label: "Emails Resend",
+    status: "error",
+    detail: `Domaine ${domain} : ${statusLabel}`,
+    metrics: [
+      { label: "Expéditeur", value: fromEmail || "—" },
+      { label: "Statut domaine", value: statusLabel },
+    ],
+    hint: "Les invitations calendrier échouent tant que le domaine n’est pas verified sur https://resend.com/domains (DNS Hostinger).",
+  };
+}
+
 export async function getInfraHealth(): Promise<InfraHealth> {
   const host = await readHostStatus();
   const dockerServices = buildDockerServices(host);
-  const [database, s3Backup] = await Promise.all([
+  const [database, s3Backup, resendEmail] = await Promise.all([
     checkDatabase(host),
     checkS3Backup(host),
+    checkResendEmail(),
   ]);
 
   const checks: InfraCheck[] = [
     database,
     s3Backup,
+    resendEmail,
     ...checkHostSnapshot(host),
     dockerCheck(dockerServices),
   ];

@@ -120,7 +120,7 @@ async function checkS3(): Promise<IntegrationHealth> {
   }
 }
 
-function checkResend(): IntegrationHealth {
+async function checkResend(): Promise<IntegrationHealth> {
   const envVars = ["RESEND_API_KEY", "CONTACT_FROM_EMAIL", "CONTACT_TO_EMAIL"];
   const hasKey = Boolean(process.env.RESEND_API_KEY);
   const hasFrom = Boolean(process.env.CONTACT_FROM_EMAIL);
@@ -133,7 +133,7 @@ function checkResend(): IntegrationHealth {
       name: "Resend (emails)",
       status: "degraded",
       detail: "Mode console — emails logués, non envoyés",
-      hint: "Ajoutez RESEND_API_KEY pour l'envoi réel des notifications.",
+      hint: "Ajoutez RESEND_API_KEY dans .env.docker pour l'envoi réel.",
       envVars,
     };
   }
@@ -148,13 +148,50 @@ function checkResend(): IntegrationHealth {
     };
   }
 
-  const domain = fromEmail.includes("@") ? fromEmail.split("@")[1]! : "sdcreativ.com";
+  const { fetchResendDomainStatus } = await import("@/lib/resend-domain");
+  const domainStatus = await fetchResendDomainStatus();
+  const domain =
+    domainStatus?.domain ??
+    (fromEmail.includes("@") ? fromEmail.split("@")[1]! : "sdcreativ.com");
+
+  if (!domainStatus || domainStatus.status === "unknown") {
+    return {
+      id: "resend",
+      name: "Resend (emails)",
+      status: "configured",
+      detail: `Envoi depuis ${fromEmail} — statut domaine inconnu`,
+      hint: `Vérifiez ${domain} sur https://resend.com/domains`,
+      envVars,
+    };
+  }
+
+  if (domainStatus.status === "verified") {
+    return {
+      id: "resend",
+      name: "Resend (emails)",
+      status: "ok",
+      detail: `Envoi depuis ${fromEmail} — domaine ${domain} vérifié`,
+      envVars,
+    };
+  }
+
+  if (domainStatus.status === "pending") {
+    return {
+      id: "resend",
+      name: "Resend (emails)",
+      status: "degraded",
+      detail: `Domaine ${domain} en attente de vérification DNS`,
+      hint: "Attendez la propagation DNS puis relancez la vérif sur resend.com/domains",
+      envVars,
+    };
+  }
+
   return {
     id: "resend",
     name: "Resend (emails)",
-    status: "ok",
-    detail: `Envoi depuis ${fromEmail}`,
-    hint: `Le domaine ${domain} doit être vérifié sur https://resend.com/domains (sinon Resend renvoie 403).`,
+    status: "degraded",
+    detail: `Domaine ${domain} non vérifié (${domainStatus.rawStatus ?? domainStatus.status})`,
+    hint: "Corrigez les DNS DKIM / MX send / TXT send sur Hostinger, puis Verify sur Resend. Sinon les invitations calendrier échouent en 403.",
     envVars,
   };
 }
@@ -411,17 +448,18 @@ export async function getSettingsHealth(session?: {
   role: CrmRole;
   roleLabel?: string;
 } | null): Promise<SettingsHealth> {
-  const [database, s3, mail] = await Promise.all([
+  const [database, s3, mail, resend] = await Promise.all([
     checkDatabase(),
     checkS3(),
     checkMailMessagerie(),
+    checkResend(),
   ]);
 
   const integrations = [
     checkAdmin(),
     database,
     s3,
-    checkResend(),
+    resend,
     checkCinetPay(),
     mail,
     checkBooking(),

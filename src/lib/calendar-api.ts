@@ -102,12 +102,17 @@ export async function updateCalendarEventApi(
   }>(res);
 }
 
-export async function deleteCalendarEventApi(id: string): Promise<void> {
-  const res = await fetch(`/api/admin/calendar/events/${id}`, {
-    method: "DELETE",
+export async function resendCalendarInvitationsApi(
+  eventId: string,
+): Promise<{ emails: number; whatsapp: number; errors?: string[] }> {
+  const res = await fetch(`/api/admin/calendar/events/${eventId}/invitations`, {
+    method: "POST",
     credentials: "include",
   });
-  await parseJson<{ success: boolean }>(res);
+  const json = await parseJson<{
+    invited: { emails: number; whatsapp: number; errors?: string[] };
+  }>(res);
+  return json.invited;
 }
 
 export async function moveCalendarEventApi(

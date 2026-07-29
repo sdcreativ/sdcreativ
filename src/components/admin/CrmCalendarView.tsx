@@ -32,6 +32,7 @@ import {
   fetchCalendarItemsRange,
   fetchEventParticipants,
   moveCalendarEventApi,
+  resendCalendarInvitationsApi,
   updateCalendarEventApi,
 } from "@/lib/calendar-api";
 import { cn } from "@/lib/utils";
@@ -59,6 +60,7 @@ import {
   FileUp,
   LayoutGrid,
   Loader2,
+  Mail,
   Paperclip,
   Pencil,
   Plus,
@@ -726,6 +728,18 @@ function AgendaDayItem({
         {formatCalendarDateTime(item.startsAt, item.allDay)}
         {item.assignee && ` · ${item.assignee}`}
       </p>
+      {editable && item.sourceId && item.attachmentName && (
+        <a
+          href={`/api/admin/calendar/events/${item.sourceId}/attachment`}
+          target="_blank"
+          rel="noopener noreferrer"
+          onClick={(e) => e.stopPropagation()}
+          className="mt-2 inline-flex items-center gap-1 text-xs font-semibold text-primary hover:underline"
+        >
+          <Paperclip className="h-3 w-3" aria-hidden />
+          {item.attachmentName}
+        </a>
+      )}
       {item.linkHref && (
         <Link
           href={item.linkHref}
@@ -781,8 +795,10 @@ function EventFormModal({
     : "09:00";
 
   const [loading, setLoading] = useState(false);
+  const [resending, setResending] = useState(false);
   const [error, setError] = useState("");
   const [inviteWarning, setInviteWarning] = useState("");
+  const [inviteSuccess, setInviteSuccess] = useState("");
   const [participants, setParticipants] = useState<ParticipantInput[]>([]);
   const [sendInvitations, setSendInvitations] = useState(true);
   const [resendInvitations, setResendInvitations] = useState(false);
@@ -937,7 +953,48 @@ function EventFormModal({
     }
   }
 
+  async function handleResendInvitations() {
+    const eventId = savedEventId ?? item?.sourceId;
+    if (!eventId) {
+      setError("Enregistrez d’abord l’événement avant de renvoyer les invitations.");
+      return;
+    }
+    if (participants.length === 0) {
+      setError("Aucun participant sélectionné.");
+      return;
+    }
+    setResending(true);
+    setError("");
+    setInviteWarning("");
+    setInviteSuccess("");
+    try {
+      const invited = await resendCalendarInvitationsApi(eventId);
+      const inviteErrors = invited.errors?.filter(Boolean) ?? [];
+      if (inviteErrors.length > 0) {
+        const first = inviteErrors[0]!;
+        const domainHint = /domain is not verified/i.test(first)
+          ? " Vérifiez le domaine sur https://resend.com/domains."
+          : "";
+        setInviteWarning(
+          `${inviteErrors.length} invitation(s) ont échoué.${domainHint}`,
+        );
+        setError(first);
+        return;
+      }
+      setInviteSuccess(
+        `${invited.emails} invitation(s) renvoyée(s)${
+          invited.whatsapp ? ` · ${invited.whatsapp} WhatsApp` : ""
+        } (e-mail + .ics${attachment ? " + pièce jointe" : ""}).`,
+      );
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Renvoi impossible.");
+    } finally {
+      setResending(false);
+    }
+  }
+
   const defaultType = isEdit && item ? (item.type as EventType) : "meeting";
+  const canResend = Boolean(savedEventId ?? item?.sourceId) && participants.length > 0;
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4 backdrop-blur-sm">
@@ -1121,19 +1178,45 @@ function EventFormModal({
               onChange={(e) => setSendInvitations(e.target.checked)}
               className="rounded border-gray/60"
             />
-            Envoyer les invitations (email + fichier calendrier .ics)
+            Envoyer les invitations à la création / nouveaux participants (email + .ics)
           </label>
           {(isEdit || savedEventId) && (
-            <label className="flex items-center gap-2 text-sm">
-              <input
-                type="checkbox"
-                checked={resendInvitations}
-                onChange={(e) => setResendInvitations(e.target.checked)}
-                disabled={!sendInvitations}
-                className="rounded border-gray/60"
-              />
-              Renvoyer les invitations à tous les participants
-            </label>
+            <div className="space-y-2 rounded-xl border border-primary/20 bg-primary/5 p-3">
+              <p className="text-xs text-gray-text">
+                Renvoie l’invitation à <strong>tous</strong> les participants sélectionnés
+                {attachment ? " avec la pièce jointe" : ""}.
+              </p>
+              <button
+                type="button"
+                disabled={!canResend || resending || loading}
+                onClick={() => void handleResendInvitations()}
+                className="flex w-full items-center justify-center gap-2 rounded-xl border border-primary bg-white px-3 py-2.5 text-sm font-semibold text-primary transition-colors hover:bg-primary hover:text-white disabled:opacity-50"
+              >
+                {resending ? (
+                  <Loader2 className="h-4 w-4 animate-spin" aria-hidden />
+                ) : (
+                  <Mail className="h-4 w-4" aria-hidden />
+                )}
+                {resending
+                  ? "Envoi en cours…"
+                  : "Renvoyer les invitations (+ pièce jointe)"}
+              </button>
+              <label className="flex items-center gap-2 text-xs text-gray-text">
+                <input
+                  type="checkbox"
+                  checked={resendInvitations}
+                  onChange={(e) => setResendInvitations(e.target.checked)}
+                  disabled={!sendInvitations}
+                  className="rounded border-gray/60"
+                />
+                Aussi renvoyer à l’enregistrement (Mettre à jour)
+              </label>
+            </div>
+          )}
+          {inviteSuccess && (
+            <p className="rounded-xl border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm text-emerald-900">
+              {inviteSuccess}
+            </p>
           )}
           {inviteWarning && (
             <p className="rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-900">
