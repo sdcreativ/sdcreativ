@@ -68,6 +68,7 @@ export const CRM_WIDGET_PERMISSIONS: Record<
   tasks: "tasks.read",
   projects: "projects.read",
   activity: ["leads.read", "projects.read", "quotes.read", "tasks.read"],
+  calendar: "calendar.read",
 };
 
 /** Permissions de lecture utilisées pour la recherche globale. */

@@ -13,6 +13,10 @@ import {
   type DashboardPipelineColumn,
 } from "@/lib/dashboard-utils";
 import type { ReportsSummary } from "@/lib/reports";
+import type {
+  PendingRsvpEventSummary,
+  TodayMeetingRow,
+} from "@/lib/calendar-participants";
 
 export type DashboardSnapshot = {
   kpis: DashboardKpi[];
@@ -28,6 +32,8 @@ export type DashboardSnapshot = {
     href: string;
   }>;
   activities: DashboardActivity[];
+  todayMeetings: TodayMeetingRow[];
+  pendingRsvpEvents: PendingRsvpEventSummary[];
 };
 
 type DashboardFilters = {
@@ -81,6 +87,7 @@ export async function getDashboardSnapshot(
     includeTasks?: boolean;
     includeProjects?: boolean;
     includeActivities?: boolean;
+    includeCalendar?: boolean;
   },
 ): Promise<DashboardSnapshot> {
   const includeReports = options?.includeReports ?? true;
@@ -88,6 +95,7 @@ export async function getDashboardSnapshot(
   const includeTasks = options?.includeTasks ?? true;
   const includeProjects = options?.includeProjects ?? true;
   const includeActivities = options?.includeActivities ?? true;
+  const includeCalendar = options?.includeCalendar ?? true;
 
   const reports = includeReports
     ? await getReportsSummary(period, {
@@ -102,6 +110,19 @@ export async function getDashboardSnapshot(
         periodLabel: reports.period.label,
       })
     : [];
+
+  let todayMeetings: TodayMeetingRow[] = [];
+  let pendingRsvpEvents: PendingRsvpEventSummary[] = [];
+  if (includeCalendar) {
+    const {
+      listTodayMeetings,
+      listUpcomingEventsWithPendingRsvp,
+    } = await import("@/lib/calendar-participants");
+    [todayMeetings, pendingRsvpEvents] = await Promise.all([
+      listTodayMeetings({ assignee: filters.assignee, limit: 12 }),
+      listUpcomingEventsWithPendingRsvp(10),
+    ]);
+  }
 
   return withDb(async (query) => {
     let pipeline: DashboardPipelineColumn[] = [];
@@ -370,6 +391,8 @@ export async function getDashboardSnapshot(
       openTasks,
       recentProjects,
       activities,
+      todayMeetings,
+      pendingRsvpEvents,
     };
   });
 }

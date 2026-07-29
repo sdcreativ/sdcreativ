@@ -3,6 +3,7 @@ import type { CrmRole, SystemCrmRole } from "@/content/crm-roles";
 export const DASHBOARD_WIDGETS = [
   "infra",
   "kpis",
+  "calendar",
   "communications",
   "charts",
   "pipeline",
@@ -16,6 +17,7 @@ export type DashboardWidgetId = (typeof DASHBOARD_WIDGETS)[number];
 export const DASHBOARD_WIDGET_LABELS: Record<DashboardWidgetId, string> = {
   infra: "Santé infra VPS",
   kpis: "Indicateurs clés",
+  calendar: "Réunions & RSVP",
   communications: "Communications 3CX",
   charts: "Graphiques",
   pipeline: "Pipeline commercial",
@@ -26,11 +28,30 @@ export const DASHBOARD_WIDGET_LABELS: Record<DashboardWidgetId, string> = {
 
 /** Widgets visibles par défaut selon le rôle système. */
 export const ROLE_DASHBOARD_WIDGETS: Record<SystemCrmRole, DashboardWidgetId[]> = {
-  admin: ["infra", "kpis", "communications", "charts", "pipeline", "tasks", "projects", "activity"],
-  sales_director: ["kpis", "communications", "charts", "pipeline", "tasks", "projects", "activity"],
-  commercial: ["kpis", "communications", "pipeline", "charts", "activity"],
-  project_manager: ["kpis", "tasks", "projects", "charts"],
-  readonly: ["kpis", "communications", "charts", "pipeline", "projects", "activity"],
+  admin: [
+    "infra",
+    "kpis",
+    "calendar",
+    "communications",
+    "charts",
+    "pipeline",
+    "tasks",
+    "projects",
+    "activity",
+  ],
+  sales_director: [
+    "kpis",
+    "calendar",
+    "communications",
+    "charts",
+    "pipeline",
+    "tasks",
+    "projects",
+    "activity",
+  ],
+  commercial: ["kpis", "calendar", "communications", "pipeline", "charts", "activity"],
+  project_manager: ["kpis", "calendar", "tasks", "projects", "charts"],
+  readonly: ["kpis", "calendar", "communications", "charts", "pipeline", "projects", "activity"],
 };
 
 export type DashboardLayout = {

@@ -38,6 +38,7 @@ export async function GET(request: Request) {
     const canTasks = hasCrmPermission(permissions, "tasks.read");
     const canProjects = hasCrmPermission(permissions, "projects.read");
     const canQuotes = hasCrmPermission(permissions, "quotes.read");
+    const canCalendar = hasCrmPermission(permissions, "calendar.read");
 
     const snapshot = await getDashboardSnapshot(
       period,
@@ -48,6 +49,7 @@ export async function GET(request: Request) {
         includeTasks: canTasks,
         includeProjects: canProjects,
         includeActivities: canLeads || canProjects || canQuotes || canTasks,
+        includeCalendar: canCalendar,
       },
     );
 
@@ -58,6 +60,8 @@ export async function GET(request: Request) {
       openTasks: snapshot.openTasks,
       recentProjects: snapshot.recentProjects,
       activities: filterDashboardActivities(snapshot.activities, permissions),
+      todayMeetings: canCalendar ? snapshot.todayMeetings : [],
+      pendingRsvpEvents: canCalendar ? snapshot.pendingRsvpEvents : [],
     });
   } catch (error) {
     console.error("[api/admin/dashboard] GET", error);

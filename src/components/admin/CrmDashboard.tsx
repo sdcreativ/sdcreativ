@@ -58,6 +58,11 @@ import type {
   DashboardKpi,
   DashboardPipelineColumn,
 } from "@/lib/dashboard-utils";
+import type {
+  PendingRsvpEventSummary,
+  TodayMeetingRow,
+} from "@/lib/calendar-participants";
+import { formatCalendarDateTime, EVENT_TYPE_LABELS } from "@/content/calendar-labels";
 import { cn } from "@/lib/utils";
 
 const statusStyles = {
@@ -95,6 +100,8 @@ export function CrmDashboard() {
   const [tasks, setTasks] = useState<OpenTask[]>([]);
   const [projects, setProjects] = useState<RecentProject[]>([]);
   const [activities, setActivities] = useState<DashboardActivity[]>([]);
+  const [todayMeetings, setTodayMeetings] = useState<TodayMeetingRow[]>([]);
+  const [pendingRsvpEvents, setPendingRsvpEvents] = useState<PendingRsvpEventSummary[]>([]);
   const [togglingTask, setTogglingTask] = useState<string | null>(null);
   const [period, setPeriod] = useState<DashboardPeriod>("month");
   const [reports, setReports] = useState<ReportsSummary | null>(null);
@@ -160,6 +167,8 @@ export function CrmDashboard() {
       setTasks(snapshot.openTasks);
       setProjects(snapshot.recentProjects);
       setActivities(snapshot.activities);
+      setTodayMeetings(snapshot.todayMeetings ?? []);
+      setPendingRsvpEvents(snapshot.pendingRsvpEvents ?? []);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Impossible de charger le tableau de bord.");
     } finally {
@@ -227,6 +236,83 @@ export function CrmDashboard() {
             ))}
           </div>
         );
+
+      case "calendar":
+        return canShowDashboardWidget("calendar", permissions) ? (
+          <section
+            key="calendar"
+            className="rounded-2xl border border-gray/40 bg-white p-5 shadow-sm"
+          >
+            <div className="mb-4 flex items-center justify-between gap-2">
+              <h2 className="font-bold text-foreground">Réunions & RSVP</h2>
+              <Link
+                href="/admin/crm/calendrier"
+                className="text-sm font-medium text-primary hover:underline"
+              >
+                Calendrier
+              </Link>
+            </div>
+            <div className="grid gap-5 lg:grid-cols-2">
+              <div>
+                <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-gray-text">
+                  Aujourd’hui
+                </p>
+                {todayMeetings.length === 0 ? (
+                  <p className="py-4 text-sm text-gray-text">Aucune réunion ou appel aujourd’hui.</p>
+                ) : (
+                  <ul className="space-y-2">
+                    {todayMeetings.map((m) => (
+                      <li key={m.eventId}>
+                        <Link
+                          href={`/admin/crm/calendrier?event=${m.eventId}`}
+                          className="block rounded-xl border border-gray/20 px-3 py-2.5 transition-colors hover:border-primary/30 hover:bg-primary/5"
+                        >
+                          <p className="text-sm font-medium text-foreground">{m.title}</p>
+                          <p className="mt-0.5 text-xs text-gray-text">
+                            {EVENT_TYPE_LABELS[m.type as keyof typeof EVENT_TYPE_LABELS] ?? m.type}
+                            {" · "}
+                            {formatCalendarDateTime(m.startsAt, m.allDay)}
+                            {m.pendingCount > 0
+                              ? ` · ${m.pendingCount} en attente`
+                              : m.totalParticipants > 0
+                                ? " · confirmé"
+                                : ""}
+                          </p>
+                        </Link>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </div>
+              <div>
+                <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-gray-text">
+                  À confirmer (RSVP)
+                </p>
+                {pendingRsvpEvents.length === 0 ? (
+                  <p className="py-4 text-sm text-gray-text">Aucun participant en attente.</p>
+                ) : (
+                  <ul className="space-y-2">
+                    {pendingRsvpEvents.map((e) => (
+                      <li key={e.eventId}>
+                        <Link
+                          href={`/admin/crm/calendrier?event=${e.eventId}`}
+                          className="block rounded-xl border border-amber-200/80 bg-amber-50/50 px-3 py-2.5 transition-colors hover:border-amber-300"
+                        >
+                          <p className="text-sm font-medium text-foreground">{e.title}</p>
+                          <p className="mt-0.5 text-xs text-amber-800">
+                            {e.pendingCount}/{e.totalParticipants} sans réponse
+                            {" · "}
+                            {formatCalendarDateTime(e.startsAt, e.allDay)}
+                          </p>
+                        </Link>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </div>
+            </div>
+          </section>
+        ) : null;
 
       case "communications":
         return canShowDashboardWidget("communications", permissions) ? (

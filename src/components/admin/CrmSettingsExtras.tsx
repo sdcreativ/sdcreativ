@@ -13,10 +13,11 @@ import {
 import { LOGO } from "@/lib/constants";
 import { resolveImageDisplayUrl } from "@/lib/image-url";
 import { cn } from "@/lib/utils";
-import { Loader2, Palette, Send } from "lucide-react";
+import { Loader2, Code2, Pencil, Palette, Send } from "lucide-react";
 import { Logo, LOGO_IMAGE_SIZES } from "@/components/ui/Logo";
 import { SiteLogoUploadField } from "@/components/admin/SiteLogoUploadField";
 import { useCrmBranding } from "@/components/admin/CrmBrandingProvider";
+import { MailRichEditor } from "@/components/admin/MailRichEditor";
 
 const fieldClass =
   "w-full rounded-xl border border-gray/60 bg-white px-3 py-2.5 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20";
@@ -212,6 +213,8 @@ export function EmailTemplatesSection() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState("");
+  const [sourceMode, setSourceMode] = useState(false);
+  const [editorKey, setEditorKey] = useState(0);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -225,6 +228,7 @@ export function EmailTemplatesSection() {
           const tpl = data.emailTemplates[id] ?? data.emailTemplates[first]!;
           setSubject(tpl.subject);
           setHtmlBody(tpl.htmlBody);
+          setEditorKey((k) => k + 1);
           return id;
         });
       }
@@ -241,8 +245,13 @@ export function EmailTemplatesSection() {
     setSelectedId(tpl.id);
     setSubject(tpl.subject);
     setHtmlBody(tpl.htmlBody);
+    setEditorKey((k) => k + 1);
     setMessage("");
+    setSourceMode(tpl.id === "calendar_invitation_whatsapp");
   }
+
+  const isWhatsAppTemplate = selectedId === "calendar_invitation_whatsapp";
+  const useWysiwyg = !isWhatsAppTemplate && !sourceMode;
 
   async function handleSave() {
     if (!selectedId) return;
@@ -287,10 +296,25 @@ export function EmailTemplatesSection() {
   return (
     <div className="space-y-4">
       <p className="text-sm text-gray-text">
-        Variables disponibles : <code className="rounded bg-gray-light px-1">{`{{name}}`}</code>,{" "}
+        Variables communes : <code className="rounded bg-gray-light px-1">{`{{name}}`}</code>,{" "}
         <code className="rounded bg-gray-light px-1">{`{{agencyName}}`}</code>,{" "}
+        <code className="rounded bg-gray-light px-1">{`{{logo}}`}</code> (balise image),{" "}
+        <code className="rounded bg-gray-light px-1">{`{{logoUrl}}`}</code>,{" "}
         <code className="rounded bg-gray-light px-1">{`{{service}}`}</code>,{" "}
         <code className="rounded bg-gray-light px-1">{`{{projet}}`}</code>.
+        {selectedId?.startsWith("calendar_invitation") ? (
+          <>
+            {" "}
+            Invitation : <code className="rounded bg-gray-light px-1">{`{{title}}`}</code>,{" "}
+            <code className="rounded bg-gray-light px-1">{`{{date}}`}</code>,{" "}
+            <code className="rounded bg-gray-light px-1">{`{{type}}`}</code>,{" "}
+            <code className="rounded bg-gray-light px-1">{`{{meetingLink}}`}</code>,{" "}
+            <code className="rounded bg-gray-light px-1">{`{{rsvpButtons}}`}</code>,{" "}
+            <code className="rounded bg-gray-light px-1">{`{{rsvpUrl}}`}</code>,{" "}
+            <code className="rounded bg-gray-light px-1">{`{{attachments}}`}</code>,{" "}
+            <code className="rounded bg-gray-light px-1">{`{{description}}`}</code>.
+          </>
+        ) : null}
       </p>
       <div className="flex flex-wrap gap-2">
         {templates.map((tpl) => (
@@ -315,16 +339,58 @@ export function EmailTemplatesSection() {
             <span className="mb-1 block text-xs font-medium text-gray-text">Objet</span>
             <input value={subject} onChange={(e) => setSubject(e.target.value)} className={fieldClass} aria-label="Objet de l'email" />
           </label>
-          <label className="block">
-            <span className="mb-1 block text-xs font-medium text-gray-text">Corps HTML</span>
-            <textarea
-              value={htmlBody}
-              onChange={(e) => setHtmlBody(e.target.value)}
-              rows={8}
-              className={fieldClass}
-              aria-label="Corps HTML de l'email"
-            />
-          </label>
+          <div className="block">
+            <div className="mb-1 flex flex-wrap items-center justify-between gap-2">
+              <span className="text-xs font-medium text-gray-text">
+                {isWhatsAppTemplate ? "Corps (texte)" : "Corps HTML"}
+              </span>
+              {!isWhatsAppTemplate && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setSourceMode((v) => !v);
+                    setEditorKey((k) => k + 1);
+                  }}
+                  className="inline-flex items-center gap-1 rounded-lg border border-gray/40 px-2 py-1 text-[11px] font-medium text-gray-text hover:bg-white"
+                >
+                  {sourceMode ? (
+                    <>
+                      <Pencil className="h-3 w-3" aria-hidden />
+                      Éditeur visuel
+                    </>
+                  ) : (
+                    <>
+                      <Code2 className="h-3 w-3" aria-hidden />
+                      Code source
+                    </>
+                  )}
+                </button>
+              )}
+            </div>
+            {useWysiwyg ? (
+              <MailRichEditor
+                key={editorKey}
+                editorKey={editorKey}
+                valueHtml={htmlBody}
+                onChange={(html) => setHtmlBody(html)}
+                placeholder="Rédigez le modèle… Conservez les variables {{name}}, {{logo}}, etc."
+              />
+            ) : (
+              <textarea
+                value={htmlBody}
+                onChange={(e) => setHtmlBody(e.target.value)}
+                rows={isWhatsAppTemplate ? 10 : 12}
+                className={`${fieldClass} font-mono text-xs`}
+                aria-label={isWhatsAppTemplate ? "Corps texte WhatsApp" : "Corps HTML source"}
+              />
+            )}
+            {!isWhatsAppTemplate && (
+              <p className="mt-1.5 text-[11px] text-gray-text/80">
+                Les placeholders du type {"{{rsvpButtons}}"} ou {"{{logo}}"} restent en texte dans
+                l’éditeur — ne les reformatez pas.
+              </p>
+            )}
+          </div>
           <div className="flex flex-wrap items-end gap-2">
             <label className="block flex-1 min-w-[200px]">
               <span className="mb-1 block text-xs font-medium text-gray-text">Email test</span>
