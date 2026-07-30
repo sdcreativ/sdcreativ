@@ -356,3 +356,20 @@ body {
 .blog-rich-editor .ProseMirror:focus {
   outline: none;
 }
+
+/* Article blog — rythme éditorial */
+.blog-content > p:first-of-type {
+  font-size: 1.2rem;
+  line-height: 1.75;
+  color: color-mix(in srgb, var(--foreground) 72%, var(--gray-text));
+}
+
+.blog-content > h2:first-child,
+.blog-content > h3:first-child {
+  margin-top: 0;
+}
+
+.blog-content img {
+  width: 100%;
+  height: auto;
+}

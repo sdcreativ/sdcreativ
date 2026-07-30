@@ -13,6 +13,7 @@ export type BlogPost = {
   metaTitle?: string;
   metaDescription?: string;
   tags?: string[];
+  authorName?: string;
 };
 
 export const blogPosts: BlogPost[] = [

@@ -129,6 +129,7 @@ export function toPublicBlogPost(record: BlogPostRecord): BlogPost {
     metaTitle: record.metaTitle ?? undefined,
     metaDescription: record.metaDescription ?? record.excerpt,
     tags: record.tags.length > 0 ? record.tags : undefined,
+    authorName: record.authorName ?? undefined,
   };
 }
 
