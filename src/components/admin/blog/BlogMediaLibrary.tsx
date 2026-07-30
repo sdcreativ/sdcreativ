@@ -78,7 +78,9 @@ export function BlogMediaLibrary({ open, onClose, onSelect, title = "Bibliothèq
             </p>
           ) : (
             <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4">
-              {media.map((item) => (
+              {media.map((item) => {
+                const displaySrc = resolveImageDisplayUrl(item.url);
+                return (
                 <button
                   key={item.id}
                   type="button"
@@ -93,16 +95,19 @@ export function BlogMediaLibrary({ open, onClose, onSelect, title = "Bibliothèq
                 >
                   <div className="relative aspect-square">
                     <Image
-                      src={item.url}
+                      src={displaySrc}
                       alt=""
                       fill
-                      unoptimized
+                      unoptimized={
+                        isProxiedMediaUrl(displaySrc) || displaySrc.startsWith("http")
+                      }
                       className="object-cover transition-transform group-hover:scale-105"
                     />
                   </div>
                   <p className="truncate px-2 py-1.5 text-[11px] text-gray-text">{item.filename}</p>
                 </button>
-              ))}
+                );
+              })}
             </div>
           )}
         </div>
