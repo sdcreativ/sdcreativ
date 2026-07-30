@@ -193,8 +193,3 @@ export const enLegal = {
   privacyIntro:
     "We protect your personal data in line with GDPR principles and Ivorian law 2013-450.",
 } as const;
-
-export const localeSwitcher = {
-  fr: { label: "FR", ariaLabel: "Français" },
-  en: { label: "EN", ariaLabel: "English" },
-} as const;
