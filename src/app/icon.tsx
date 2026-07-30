@@ -1,5 +1,9 @@
 import { ImageResponse } from "next/og";
-import { FALLBACK_MARK, loadSiteFaviconBytes } from "@/lib/site-favicon";
+import {
+  FALLBACK_MARK,
+  faviconToDataUrl,
+  loadSiteFaviconBytes,
+} from "@/lib/site-favicon";
 
 export const size = { width: 32, height: 32 };
 export const contentType = "image/png";
@@ -62,7 +66,5 @@ function rasterIcon(dataUrl: string) {
 export default async function Icon() {
   const payload = await loadSiteFaviconBytes({ preferRaster: true });
   if (!payload) return fallbackIcon();
-
-  const base64 = Buffer.from(payload.body).toString("base64");
-  return rasterIcon(`data:${payload.contentType};base64,${base64}`);
+  return rasterIcon(faviconToDataUrl(payload));
 }

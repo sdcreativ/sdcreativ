@@ -1,5 +1,9 @@
 import { ImageResponse } from "next/og";
-import { FALLBACK_MARK, loadSiteFaviconBytes } from "@/lib/site-favicon";
+import {
+  FALLBACK_MARK,
+  faviconToDataUrl,
+  loadSiteFaviconBytes,
+} from "@/lib/site-favicon";
 
 export const size = { width: 180, height: 180 };
 export const contentType = "image/png";
@@ -37,8 +41,7 @@ export default async function AppleIcon() {
     return fallbackIcon();
   }
 
-  const base64 = Buffer.from(payload.body).toString("base64");
-  const dataUrl = `data:${payload.contentType};base64,${base64}`;
+  const dataUrl = faviconToDataUrl(payload);
 
   return new ImageResponse(
     (

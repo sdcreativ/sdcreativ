@@ -5,9 +5,14 @@ import { isS3ImageUrl, resolveImageDisplayUrl } from "@/lib/image-url";
 import { getSitePublicSettings } from "@/lib/site-public-settings";
 
 export type FaviconPayload = {
-  body: ArrayBuffer | Buffer;
+  body: Buffer;
   contentType: string;
 };
+
+/** Data URL base64 pour ImageResponse (Satori). */
+export function faviconToDataUrl(payload: FaviconPayload): string {
+  return `data:${payload.contentType};base64,${payload.body.toString("base64")}`;
+}
 
 const FALLBACK_MARK = {
   background: "#0072B5",
