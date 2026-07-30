@@ -4,6 +4,7 @@ import { useCallback, useEffect, useState } from "react";
 import Image from "next/image";
 import { fetchBlogMediaApi } from "@/lib/blog-posts-api";
 import type { BlogMediaRecord } from "@/lib/blog-media-library";
+import { isProxiedMediaUrl, resolveImageDisplayUrl } from "@/lib/image-url";
 import { cn } from "@/lib/utils";
 import { Images, Loader2, X } from "lucide-react";
 
