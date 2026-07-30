@@ -9,7 +9,6 @@ import { BlogPreviewBanner } from "@/components/blog/BlogPreviewBanner";
 import { Breadcrumb } from "@/components/ui/Breadcrumb";
 import { BlogArticleJsonLd } from "@/components/seo/BlogArticleJsonLd";
 import { BreadcrumbJsonLd } from "@/components/seo/JsonLd";
-import { getBlogPosts } from "@/lib/cms";
 import { getBlogPostOrRedirect } from "@/lib/blog-load";
 import { createMetadata } from "@/lib/metadata";
 
@@ -18,14 +17,8 @@ type Props = {
   searchParams: Promise<{ preview?: string }>;
 };
 
-/** Contenu CMS / preview dynamique → éviter DYNAMIC_SERVER_USAGE en prod. */
-export const revalidate = 300;
-
-
-export async function generateStaticParams() {
-  const posts = await getBlogPosts();
-  return posts.map((post) => ({ slug: post.slug }));
-}
+/** Preview (?preview=) + lecture CMS en DB → rendu dynamique (évite DYNAMIC_SERVER_USAGE). */
+export const dynamic = "force-dynamic";
 
 export async function generateMetadata({ params, searchParams }: Props) {
   const { slug } = await params;
