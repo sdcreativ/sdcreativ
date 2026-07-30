@@ -29,6 +29,33 @@ disk_used="$(df -P / | awk 'NR==2 {print $5}' | tr -d '%')"
 disk_free="$(df -P -BG / | awk 'NR==2 {print $4}' | tr -d 'G')"
 disk_total="$(df -P -BG / | awk 'NR==2 {print $2}' | tr -d 'G')"
 
+# CPU : moyenne load1 / nproc * 100 (cap 100)
+ncpu="$(nproc 2>/dev/null || echo 1)"
+load1="$(awk '{print $1}' /proc/loadavg 2>/dev/null || echo 0)"
+cpu_percent="$(awk -v load="$load1" -v n="$ncpu" 'BEGIN {
+  if (n < 1) n = 1;
+  p = (load / n) * 100;
+  if (p < 0) p = 0;
+  if (p > 100) p = 100;
+  printf "%.0f", p
+}')"
+
+# Mémoire : MemAvailable vs MemTotal
+mem_total_kb="$(awk '/MemTotal:/ {print $2}' /proc/meminfo 2>/dev/null || echo 0)"
+mem_avail_kb="$(awk '/MemAvailable:/ {print $2}' /proc/meminfo 2>/dev/null || echo 0)"
+mem_total_mb=0
+mem_used_percent=0
+if [ "${mem_total_kb}" -gt 0 ] 2>/dev/null; then
+  mem_total_mb=$((mem_total_kb / 1024))
+  mem_used_percent="$(awk -v t="$mem_total_kb" -v a="$mem_avail_kb" 'BEGIN {
+    if (t <= 0) { print 0; exit }
+    u = ((t - a) / t) * 100;
+    if (u < 0) u = 0;
+    if (u > 100) u = 100;
+    printf "%.0f", u
+  }')"
+fi
+
 if crontab -u "$DEPLOY_USER" -l 2>/dev/null | grep -qE 'scripts/(run-db-backup|db-backup)\.sh'; then
   backup_cron="true"
 else
@@ -86,6 +113,9 @@ cat > "$OUT" <<EOF
   "diskUsedPercent": ${disk_used},
   "diskFreeGb": ${disk_free},
   "diskTotalGb": ${disk_total},
+  "cpuPercent": ${cpu_percent},
+  "memUsedPercent": ${mem_used_percent},
+  "memTotalMb": ${mem_total_mb},
   "backupCronInstalled": ${backup_cron},
   "infraCronInstalled": ${infra_cron},
   "lastBackupLogAt": ${last_log_at},

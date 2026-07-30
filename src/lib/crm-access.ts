@@ -60,6 +60,7 @@ export const CRM_WIDGET_PERMISSIONS: Record<
   DashboardWidgetId,
   CrmPermission | CrmPermission[] | null
 > = {
+  devops: "infra.view",
   infra: "infra.view",
   kpis: null,
   communications: ["reports.view", "communications.read"],

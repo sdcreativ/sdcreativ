@@ -24,6 +24,7 @@ import {
   Lock,
   Pencil,
   Plus,
+  Server,
   Shield,
   Trash2,
   UserCog,
@@ -55,6 +56,12 @@ const ROLE_STYLE: Record<
     ring: "ring-emerald-200/60",
     icon: <UserCog className="h-5 w-5" aria-hidden />,
     label: "Projets & livraison",
+  },
+  devops: {
+    gradient: "from-cyan-500/12 via-cyan-400/5 to-white",
+    ring: "ring-cyan-200/60",
+    icon: <Server className="h-5 w-5" aria-hidden />,
+    label: "CI/CD & infra",
   },
   readonly: {
     gradient: "from-slate-400/10 via-slate-300/5 to-white",

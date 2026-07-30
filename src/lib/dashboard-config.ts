@@ -1,6 +1,7 @@
 import type { CrmRole, SystemCrmRole } from "@/content/crm-roles";
 
 export const DASHBOARD_WIDGETS = [
+  "devops",
   "infra",
   "kpis",
   "calendar",
@@ -15,6 +16,7 @@ export const DASHBOARD_WIDGETS = [
 export type DashboardWidgetId = (typeof DASHBOARD_WIDGETS)[number];
 
 export const DASHBOARD_WIDGET_LABELS: Record<DashboardWidgetId, string> = {
+  devops: "DevOps (CI/CD & infra)",
   infra: "Santé infra VPS",
   kpis: "Indicateurs clés",
   calendar: "Réunions & RSVP",
@@ -29,6 +31,7 @@ export const DASHBOARD_WIDGET_LABELS: Record<DashboardWidgetId, string> = {
 /** Widgets visibles par défaut selon le rôle système. */
 export const ROLE_DASHBOARD_WIDGETS: Record<SystemCrmRole, DashboardWidgetId[]> = {
   admin: [
+    "devops",
     "infra",
     "kpis",
     "calendar",
@@ -51,6 +54,7 @@ export const ROLE_DASHBOARD_WIDGETS: Record<SystemCrmRole, DashboardWidgetId[]> 
   ],
   commercial: ["kpis", "calendar", "communications", "pipeline", "charts", "activity"],
   project_manager: ["kpis", "calendar", "tasks", "projects", "charts"],
+  devops: ["devops", "infra", "tasks", "activity"],
   readonly: ["kpis", "calendar", "communications", "charts", "pipeline", "projects", "activity"],
 };
 

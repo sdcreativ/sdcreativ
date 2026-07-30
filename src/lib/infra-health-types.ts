@@ -36,6 +36,13 @@ export type InfraHealth = {
   hostUpdatedAt?: string;
   dockerServices: InfraDockerService[];
   checks: InfraCheck[];
+  /** Métriques host (export VPS) — absentes si fichier non à jour. */
+  resources?: {
+    cpuPercent: number | null;
+    memUsedPercent: number | null;
+    memTotalMb: number | null;
+    diskUsedPercent: number | null;
+  };
 };
 
 export type InfraHostStatus = {
@@ -44,6 +51,9 @@ export type InfraHostStatus = {
   diskUsedPercent?: number;
   diskFreeGb?: number;
   diskTotalGb?: number;
+  cpuPercent?: number;
+  memUsedPercent?: number;
+  memTotalMb?: number;
   backupCronInstalled?: boolean;
   infraCronInstalled?: boolean;
   lastBackupLogAt?: string | null;

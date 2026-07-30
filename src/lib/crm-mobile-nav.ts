@@ -35,6 +35,7 @@ export const ROLE_MOBILE_PRIMARY_IDS: Record<SystemCrmRole, string[]> = {
   sales_director: ["dashboard", "leads", "clients", "calendar", "quotes"],
   commercial: ["dashboard", "leads", "clients", "calendar", "tasks"],
   project_manager: ["dashboard", "tasks", "projects", "calendar", "tickets"],
+  devops: ["dashboard", "projects", "tickets", "documentation", "tasks"],
   readonly: ["dashboard", "clients", "calendar", "quotes", "invoices"],
 };
 

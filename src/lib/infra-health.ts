@@ -620,5 +620,11 @@ export async function getInfraHealth(): Promise<InfraHealth> {
     hostUpdatedAt: host?.updatedAt,
     dockerServices,
     checks,
+    resources: {
+      cpuPercent: typeof host?.cpuPercent === "number" ? host.cpuPercent : null,
+      memUsedPercent: typeof host?.memUsedPercent === "number" ? host.memUsedPercent : null,
+      memTotalMb: typeof host?.memTotalMb === "number" ? host.memTotalMb : null,
+      diskUsedPercent: typeof host?.diskUsedPercent === "number" ? host.diskUsedPercent : null,
+    },
   };
 }

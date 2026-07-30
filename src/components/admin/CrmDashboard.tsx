@@ -27,6 +27,7 @@ import {
   CrmRevenueChart,
 } from "@/components/admin/CrmReportCharts";
 import { CrmInfraHealthWidget } from "@/components/admin/CrmInfraHealthWidget";
+import { CrmDevopsDashboardWidget } from "@/components/admin/CrmDevopsDashboardWidget";
 import { CrmCommunicationsStatsPanel } from "@/components/admin/CrmCommunicationsStatsPanel";
 import { fetchCrmClients } from "@/lib/clients-api";
 import type { Client } from "@/lib/clients";
@@ -47,7 +48,9 @@ import {
   hasCrmPermission,
 } from "@/lib/crm-access";
 import { fetchInfraHealth } from "@/lib/infra-api";
+import { fetchDevopsSnapshot } from "@/lib/devops-api";
 import type { InfraHealth } from "@/lib/infra-health-types";
+import type { DevopsGithubSnapshot } from "@/lib/devops-github";
 import { getReportsExportUrl } from "@/lib/reports-api";
 import type { ReportsSummary } from "@/lib/reports";
 import { updateTaskApi } from "@/lib/tasks-api";
@@ -114,6 +117,9 @@ export function CrmDashboard() {
   const [infraHealth, setInfraHealth] = useState<InfraHealth | null>(null);
   const [infraLoading, setInfraLoading] = useState(false);
   const [infraError, setInfraError] = useState("");
+  const [devops, setDevops] = useState<DevopsGithubSnapshot | null>(null);
+  const [devopsLoading, setDevopsLoading] = useState(false);
+  const [devopsError, setDevopsError] = useState("");
 
   useEffect(() => {
     void fetchCrmSession()
@@ -155,10 +161,28 @@ export function CrmDashboard() {
     }
   }, [canInfra]);
 
+  const loadDevops = useCallback(async () => {
+    if (!canInfra) return;
+    setDevopsLoading(true);
+    setDevopsError("");
+    try {
+      setDevops(await fetchDevopsSnapshot());
+    } catch (err) {
+      setDevopsError(err instanceof Error ? err.message : "Impossible de charger DevOps.");
+      setDevops(null);
+    } finally {
+      setDevopsLoading(false);
+    }
+  }, [canInfra]);
+
+  const loadOps = useCallback(async () => {
+    await Promise.all([loadInfra(), loadDevops()]);
+  }, [loadInfra, loadDevops]);
+
   const load = useCallback(async () => {
     setLoading(true);
     setError("");
-    void loadInfra();
+    void loadOps();
     try {
       const snapshot = await fetchDashboardSnapshot(period, apiFilters);
       setReports(snapshot.reports);
@@ -174,7 +198,7 @@ export function CrmDashboard() {
     } finally {
       setLoading(false);
     }
-  }, [period, apiFilters, loadInfra]);
+  }, [period, apiFilters, loadOps]);
 
   useEffect(() => {
     void load();
@@ -210,15 +234,29 @@ export function CrmDashboard() {
 
   function renderWidget(id: DashboardWidgetId) {
     switch (id) {
+      case "devops":
+        return canInfra ? (
+          <CrmDevopsDashboardWidget
+            key="devops"
+            devops={devops}
+            devopsLoading={devopsLoading}
+            devopsError={devopsError}
+            health={infraHealth}
+            infraLoading={infraLoading}
+            onRefresh={() => void loadOps()}
+          />
+        ) : null;
+
       case "infra":
         return canInfra ? (
-          <CrmInfraHealthWidget
-            key="infra"
-            health={infraHealth}
-            loading={infraLoading}
-            error={infraError}
-            onRefresh={() => void loadInfra()}
-          />
+          <div key="infra" data-infra-widget>
+            <CrmInfraHealthWidget
+              health={infraHealth}
+              loading={infraLoading}
+              error={infraError}
+              onRefresh={() => void loadInfra()}
+            />
+          </div>
         ) : null;
 
       case "kpis":

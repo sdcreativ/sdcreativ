@@ -1,5 +1,12 @@
 /** Rôles système livrés par défaut (non supprimables). */
-export const SYSTEM_CRM_ROLES = ["admin", "sales_director", "commercial", "project_manager", "readonly"] as const;
+export const SYSTEM_CRM_ROLES = [
+  "admin",
+  "sales_director",
+  "commercial",
+  "project_manager",
+  "devops",
+  "readonly",
+] as const;
 
 export type SystemCrmRole = (typeof SYSTEM_CRM_ROLES)[number];
 
@@ -14,6 +21,7 @@ export const CRM_ROLE_LABELS: Record<SystemCrmRole, string> = {
   sales_director: "Directeur commercial",
   commercial: "Commercial",
   project_manager: "Chef de projet",
+  devops: "DevOps",
   readonly: "Lecture seule",
 };
 
