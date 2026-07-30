@@ -16,6 +16,7 @@ import { slugifyBlogTitle, normalizeBlogTags } from "@/lib/blog-posts-types";
 import { randomBytes } from "node:crypto";
 import { revalidateBlogPaths } from "@/lib/blog-revalidate";
 import { withDb, isDatabaseConfigured } from "@/lib/db";
+import { resolveImageDisplayUrl, rewriteS3MediaUrlsInHtml } from "@/lib/image-url";
 
 export type { BlogPostRecord } from "@/lib/blog-posts-types";
 export {
@@ -110,6 +111,7 @@ function mapRow(row: BlogPostRow): BlogPostRecord {
 
 export function toPublicBlogPost(record: BlogPostRecord): BlogPost {
   const contentHtml = resolveContentHtml(record);
+  const html = contentHtml ? rewriteS3MediaUrlsInHtml(contentHtml) : contentHtml;
   return {
     slug: record.slug,
     title: record.title,
@@ -117,10 +119,12 @@ export function toPublicBlogPost(record: BlogPostRecord): BlogPost {
     category: record.category,
     date: record.date,
     readTime: record.readTime,
-    content: record.content.length > 0 ? record.content : htmlToParagraphs(contentHtml),
-    contentHtml,
-    coverImage: record.coverImage ?? undefined,
-    ogImage: record.ogImage ?? undefined,
+    content: record.content.length > 0 ? record.content : htmlToParagraphs(html ?? ""),
+    contentHtml: html,
+    coverImage: record.coverImage
+      ? resolveImageDisplayUrl(record.coverImage)
+      : undefined,
+    ogImage: record.ogImage ? resolveImageDisplayUrl(record.ogImage) : undefined,
     featuredOrder: record.featuredOrder ?? undefined,
     metaTitle: record.metaTitle ?? undefined,
     metaDescription: record.metaDescription ?? record.excerpt,

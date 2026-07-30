@@ -128,3 +128,16 @@ export function resolveImageDisplayUrl(url: string): string {
 export function isProxiedMediaUrl(resolvedUrl: string): boolean {
   return resolvedUrl.startsWith("/api/media");
 }
+
+/** Réécrit les `src` S3 privés en `/api/media?url=…` dans du HTML (corps d’article). */
+export function rewriteS3MediaUrlsInHtml(html: string): string {
+  if (!html.trim()) return html;
+  if (!/amazonaws\.com|s3[.-]/i.test(html)) return html;
+  return html.replace(
+    /(src=["'])(https?:\/\/[^"']+)(["'])/gi,
+    (_match, pre: string, url: string, post: string) => {
+      if (!isS3ImageUrl(url)) return `${pre}${url}${post}`;
+      return `${pre}${resolveImageDisplayUrl(url)}${post}`;
+    },
+  );
+}
