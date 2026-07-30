@@ -10,6 +10,7 @@ import { TrackCtaListener } from "@/components/analytics/TrackCtaListener";
 import { DocumentLang } from "@/components/i18n/DocumentLang";
 import { OrganizationJsonLd, LocalBusinessJsonLd, WebSiteJsonLd } from "@/components/seo/JsonLd";
 import { SITE } from "@/lib/constants";
+import { getSiteIconHref } from "@/lib/site-favicon";
 import { getSitePublicSettings } from "@/lib/site-public-settings";
 import { createMetadata } from "@/lib/metadata";
 import "./globals.css";
@@ -21,10 +22,14 @@ const poppins = Poppins({
   display: "swap",
 });
 
-export const metadata = createMetadata({
-  title: SITE.name,
-  description: SITE.description,
-});
+export async function generateMetadata() {
+  const iconHref = await getSiteIconHref();
+  return createMetadata({
+    title: SITE.name,
+    description: SITE.description,
+    iconHref,
+  });
+}
 
 export default async function RootLayout({
   children,

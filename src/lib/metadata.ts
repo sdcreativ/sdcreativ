@@ -11,6 +11,8 @@ type PageMeta = {
   noIndex?: boolean;
   image?: string;
   locale?: "fr" | "en";
+  /** Favicon / apple-touch — logo site CRM si fourni. */
+  iconHref?: string;
 };
 
 export function createMetadata({
@@ -20,10 +22,13 @@ export function createMetadata({
   noIndex = false,
   image = DEFAULT_OG_IMAGE,
   locale = "fr",
+  iconHref,
 }: PageMeta): Metadata {
   const url = `${SITE.url}${path}`;
   const imageUrl = image.startsWith("http") ? image : `${SITE.url}${image}`;
   const hreflang = getHreflangAlternates(path, SITE.url);
+  const icon = iconHref?.trim() || LOGO.src;
+  const iconIsSvg = /\.svg(\?|$)/i.test(icon) || icon.includes("image/svg");
 
   return {
     title:
@@ -37,8 +42,18 @@ export function createMetadata({
       ...(hreflang ? { languages: hreflang } : {}),
     },
     icons: {
-      icon: [{ url: LOGO.src, type: "image/svg+xml" }],
-      apple: [{ url: LOGO.src, type: "image/svg+xml" }],
+      icon: [
+        { url: "/icon", type: "image/png", sizes: "32x32" },
+        {
+          url: icon,
+          type: iconIsSvg ? "image/svg+xml" : undefined,
+        },
+      ],
+      apple: [
+        { url: "/apple-icon", type: "image/png", sizes: "180x180" },
+        { url: icon },
+      ],
+      shortcut: [{ url: "/icon", type: "image/png" }],
     },
     openGraph: {
       title,

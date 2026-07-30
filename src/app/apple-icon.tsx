@@ -1,7 +1,7 @@
 import { ImageResponse } from "next/og";
 import { FALLBACK_MARK, loadSiteFaviconBytes } from "@/lib/site-favicon";
 
-export const size = { width: 32, height: 32 };
+export const size = { width: 180, height: 180 };
 export const contentType = "image/png";
 export const runtime = "nodejs";
 export const revalidate = 300;
@@ -17,9 +17,9 @@ function fallbackIcon() {
           alignItems: "center",
           justifyContent: "center",
           background: FALLBACK_MARK.background,
-          borderRadius: 8,
+          borderRadius: 36,
           color: "white",
-          fontSize: 14,
+          fontSize: 72,
           fontWeight: 700,
           fontFamily: "system-ui, sans-serif",
         }}
@@ -31,7 +31,15 @@ function fallbackIcon() {
   );
 }
 
-function rasterIcon(dataUrl: string) {
+export default async function AppleIcon() {
+  const payload = await loadSiteFaviconBytes({ preferRaster: true });
+  if (!payload) {
+    return fallbackIcon();
+  }
+
+  const base64 = Buffer.from(payload.body).toString("base64");
+  const dataUrl = `data:${payload.contentType};base64,${base64}`;
+
   return new ImageResponse(
     (
       <div
@@ -42,14 +50,14 @@ function rasterIcon(dataUrl: string) {
           alignItems: "center",
           justifyContent: "center",
           background: "#0a1628",
-          borderRadius: 6,
+          borderRadius: 36,
         }}
       >
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img
           src={dataUrl}
-          width={26}
-          height={26}
+          width={140}
+          height={140}
           style={{ objectFit: "contain" }}
           alt=""
         />
@@ -57,12 +65,4 @@ function rasterIcon(dataUrl: string) {
     ),
     { ...size },
   );
-}
-
-export default async function Icon() {
-  const payload = await loadSiteFaviconBytes({ preferRaster: true });
-  if (!payload) return fallbackIcon();
-
-  const base64 = Buffer.from(payload.body).toString("base64");
-  return rasterIcon(`data:${payload.contentType};base64,${base64}`);
 }

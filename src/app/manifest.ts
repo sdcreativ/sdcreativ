@@ -1,7 +1,12 @@
 import type { MetadataRoute } from "next";
 import { SITE, LOGO } from "@/lib/constants";
+import { getSiteIconHref } from "@/lib/site-favicon";
 
-export default function manifest(): MetadataRoute.Manifest {
+export const revalidate = 300;
+
+export default async function manifest(): Promise<MetadataRoute.Manifest> {
+  const icon = await getSiteIconHref().catch(() => LOGO.src);
+
   return {
     name: `${SITE.name} — ${SITE.tagline}`,
     short_name: SITE.name,
@@ -15,15 +20,27 @@ export default function manifest(): MetadataRoute.Manifest {
     categories: ["business", "productivity"],
     icons: [
       {
-        src: LOGO.src,
-        sizes: "any",
-        type: "image/svg+xml",
+        src: "/icon",
+        sizes: "32x32",
+        type: "image/png",
         purpose: "any",
       },
       {
-        src: LOGO.src,
+        src: "/apple-icon",
+        sizes: "180x180",
+        type: "image/png",
+        purpose: "any",
+      },
+      {
+        src: icon,
         sizes: "any",
-        type: "image/svg+xml",
+        type: icon.toLowerCase().includes(".svg") ? "image/svg+xml" : "image/png",
+        purpose: "any",
+      },
+      {
+        src: icon,
+        sizes: "any",
+        type: icon.toLowerCase().includes(".svg") ? "image/svg+xml" : "image/png",
         purpose: "maskable",
       },
     ],
