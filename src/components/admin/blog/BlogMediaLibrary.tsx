@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import Image from "next/image";
 import {
   deleteBlogMediaApi,
@@ -174,10 +175,15 @@ export function BlogMediaLibrary({
     onClose();
   }
 
-  if (!open) return null;
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
-  return (
-    <div className="fixed inset-0 z-[100] flex items-end justify-center p-4 sm:items-center">
+  if (!open || !mounted) return null;
+
+  return createPortal(
+    <div className="fixed inset-0 z-[60] flex items-end justify-center p-4 sm:items-center">
       <button
         type="button"
         aria-label="Fermer"
@@ -395,6 +401,7 @@ export function BlogMediaLibrary({
           </div>
         </footer>
       </div>
-    </div>
+    </div>,
+    document.body,
   );
 }
