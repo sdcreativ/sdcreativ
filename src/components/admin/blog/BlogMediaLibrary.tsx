@@ -107,7 +107,7 @@ export function BlogMediaLibrary({
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
-    let list = q
+    const list = q
       ? media.filter((m) => m.filename.toLowerCase().includes(q))
       : [...media];
 
