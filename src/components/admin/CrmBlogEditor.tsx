@@ -26,7 +26,7 @@ import {
 } from "@/lib/blog-posts-api";
 import { fetchBlogCategoriesApi } from "@/lib/blog-categories-api";
 import { cn } from "@/lib/utils";
-import { ArrowLeft, Clock, ExternalLink, Eye, Loader2, MousePointerClick, Save } from "lucide-react";
+import { ArrowLeft, Clock, ExternalLink, Eye, Loader2, MousePointerClick, Plus, Save } from "lucide-react";
 
 const DRAFT_STORAGE_KEY = "sdcreativ-crm-blog-draft";
 const AUTOSAVE_MS = 30_000;
@@ -413,6 +413,15 @@ export function CrmBlogEditor({ postId }: Props) {
           )}
           {isNew && draftRestored && (
             <span className="text-xs text-amber-700">Brouillon local restauré</span>
+          )}
+          {!isNew && (
+            <Link
+              href="/admin/crm/blog/nouveau"
+              className="inline-flex items-center gap-1.5 rounded-lg border border-primary/30 bg-primary/5 px-3 py-2 text-sm font-semibold text-primary hover:bg-primary/10"
+            >
+              <Plus className="h-3.5 w-3.5" aria-hidden />
+              Ajouter un article
+            </Link>
           )}
           {!isNew && (
             <button

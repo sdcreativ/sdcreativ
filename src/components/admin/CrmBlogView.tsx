@@ -261,7 +261,7 @@ export function CrmBlogView() {
               className="inline-flex items-center justify-center gap-2 rounded-xl bg-primary px-4 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-primary-dark"
             >
               <Plus className="h-4 w-4" aria-hidden />
-              Nouvel article
+              Ajouter un article
             </Link>
             <Link
               href="/admin/crm/blog/categories"
@@ -472,7 +472,7 @@ export function CrmBlogView() {
                 className="mt-6 inline-flex items-center gap-2 text-sm font-semibold text-primary hover:underline"
               >
                 <Plus className="h-4 w-4" aria-hidden />
-                Nouvel article
+                Ajouter un article
               </Link>
             </>
           )}
