@@ -13,7 +13,7 @@ export async function GET(request: Request) {
 
   try {
     const { searchParams } = new URL(request.url);
-    const limit = Number(searchParams.get("limit") ?? "48");
+    const limit = Number(searchParams.get("limit") ?? "96");
     const media = await listBlogMedia(limit);
     return NextResponse.json({ media });
   } catch (error) {

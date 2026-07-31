@@ -135,6 +135,7 @@ export function BlogImageUpload({ value, onChange, compact = false }: Props) {
         open={libraryOpen}
         onClose={() => setLibraryOpen(false)}
         onSelect={onChange}
+        currentUrl={value}
         title="Choisir une image de couverture"
       />
     </div>

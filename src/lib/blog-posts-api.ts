@@ -162,12 +162,20 @@ export type BlogMediaItem = {
   createdAt: string;
 };
 
-export async function fetchBlogMediaApi(limit = 48): Promise<BlogMediaItem[]> {
+export async function fetchBlogMediaApi(limit = 96): Promise<BlogMediaItem[]> {
   const res = await fetch(`/api/admin/blog-posts/media?limit=${limit}`, {
     credentials: "include",
   });
   const json = await parseFetchJson<{ media: BlogMediaItem[] }>(res);
   return json.media;
+}
+
+export async function deleteBlogMediaApi(id: string): Promise<void> {
+  const res = await fetch(`/api/admin/blog-posts/media/${encodeURIComponent(id)}`, {
+    method: "DELETE",
+    credentials: "include",
+  });
+  await parseFetchJson<{ ok: boolean }>(res);
 }
 
 export type BlogRevisionItem = {
