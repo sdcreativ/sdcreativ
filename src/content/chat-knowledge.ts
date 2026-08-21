@@ -53,7 +53,7 @@ export const chatKnowledge: ChatKnowledgeEntry[] = [
       "vitrine", "e-commerce", "ecommerce", "boutique", "refonte", "seo", "identité",
     ],
     answer:
-      "SD CREATIV propose 12 services : site vitrine, e-commerce, refonte web, identité visuelle, SEO local, maintenance, agents IA, automatisation, DevOps, cloud, applications mobiles et développement sur mesure. Basés à Abidjan, nous accompagnons les PME ivoiriennes.",
+      "SD CREATIV aide les PME à Abidjan avec le marketing digital et le digital : sites web, e-commerce, SEO local, agents IA (réponses clients & leads), automatisation commerciale, et si besoin applications, cloud ou projets sur mesure.",
     links: [
       { label: "Nos services", href: "/services" },
       { label: "Solutions IA", href: "/solutions-ia" },
@@ -63,10 +63,10 @@ export const chatKnowledge: ChatKnowledgeEntry[] = [
     id: "ia",
     keywords: [
       "ia", "intelligence", "artificielle", "agent", "chatbot", "bot", "openai", "claude",
-      "llm", "automatisation", "assistant", "whatsapp",
+      "llm", "automatisation", "assistant", "whatsapp", "lead", "leads", "marketing",
     ],
     answer:
-      "Nous concevons des agents IA sur mesure : chatbots site web, assistants WhatsApp, qualification de leads et automatisation métier. Stack : OpenAI, Claude, n8n, intégrations CRM. Devis personnalisé gratuit. Ce chatbot est d'ailleurs une démo de notre savoir-faire !",
+      "Nous créons 12 types d’agents IA : accueil, commercial, support, FAQ documentaire, prise de RDV, devis, e-commerce, relance, CRM, administratif, RH et finance. Ils répondent, qualifient et automatisent — avec passage à un humain si besoin. Devis gratuit. Ce chatbot est une démo !",
     links: [
       { label: "Solutions IA", href: "/solutions-ia" },
       { label: "Devis agents IA", href: "/devis?type=agents-ia" },

@@ -16,34 +16,34 @@ export type SiteWhyUsSettings = {
 
 export const defaultSiteWhyUsSettings: SiteWhyUsSettings = {
   eyebrow: "Pourquoi choisir SD CREATIV ?",
-  title: "Bien plus",
-  highlight: "qu'un site web.",
+  title: "Du marketing",
+  highlight: "qui travaille pour vous.",
   intro:
-    "Chez SD CREATIV, nous ne livrons pas seulement un site web. Nous construisons avec vous un outil de croissance, pensé pour votre activité, votre audience et vos objectifs business.",
+    "Chez SD CREATIV, nous ne livrons pas seulement un site. Nous mettons en place des leviers concrets — présence en ligne, agents IA et automatisations — pour générer des leads, mieux répondre à vos clients et faire gagner du temps à vos équipes.",
   items: [
     {
       icon: "Accessibility",
-      title: "Accessibilité",
+      title: "Pensé pour les PME",
       description:
-        "Des solutions adaptées aux PME et entrepreneurs, avec des formules claires et un budget maîtrisé.",
+        "Des offres claires, un budget maîtrisé et des priorités business : visibilité, conversion et suivi commercial.",
     },
     {
       icon: "Award",
-      title: "Qualité professionnelle",
+      title: "Résultats mesurables",
       description:
-        "Des sites modernes, rapides et sécurisés, conçus avec les standards du web professionnel.",
+        "Sites qui convertissent, agents qui qualifient les demandes, campagnes et contenus orientés performance.",
     },
     {
       icon: "Handshake",
-      title: "Accompagnement",
+      title: "Accompagnement humain",
       description:
-        "Un suivi humain avant, pendant et après la mise en ligne pour garantir votre réussite.",
+        "Un suivi avant, pendant et après : stratégie, déploiement, formation de vos équipes et ajustements.",
     },
     {
       icon: "TrendingUp",
-      title: "Performance",
+      title: "Croissance continue",
       description:
-        "Des expériences digitales pensées pour convertir vos visiteurs en clients.",
+        "SEO local, WhatsApp, CRM et agents IA pour transformer vos visiteurs en clients — et vos clients en fidèles.",
     },
   ],
 };

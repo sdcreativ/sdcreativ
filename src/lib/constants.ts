@@ -2,9 +2,9 @@ import { normalizeBookingUrl } from "@/lib/booking";
 
 export const SITE = {
   name: "SD CREATIV",
-  tagline: "Création de sites web & solutions digitales",
+  tagline: "Marketing digital & agents IA pour PME",
   description:
-    "Agence web à Abidjan : sites vitrines, e-commerce, agents IA, automatisation, DevOps, cloud, SEO local et identité visuelle pour PME et entrepreneurs.",
+    "Agence à Abidjan : sites web, marketing digital et agents IA pour PME — plus de leads, réponses clients 24/7, automatisation commerciale et SEO local.",
   url: process.env.NEXT_PUBLIC_SITE_URL ?? "https://sdcreativ.com",
   locale: "fr_CI",
 } as const;

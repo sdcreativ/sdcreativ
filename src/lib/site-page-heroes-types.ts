@@ -110,11 +110,11 @@ export const defaultSitePageHeroesSettings: SitePageHeroesSettings = {
     breadcrumb: [{ label: "Accueil", href: "/" }, { label: "Services" }],
   },
   "solutions-ia": {
-    eyebrow: "Intelligence artificielle",
-    title: "Solutions IA",
-    highlight: "sur mesure",
+    eyebrow: "Agents IA pour PME",
+    title: "Des agents qui",
+    highlight: "vendent et servent",
     description:
-      "Support client, qualification de leads, automatisation métier — nous concevons et déployons des agents intelligents adaptés au contexte ivoirien.",
+      "Réponses clients, qualification de leads, WhatsApp et relances — des agents IA conçus pour le marketing et le quotidien des PME, pas pour la tech pour la tech.",
     breadcrumb: [{ label: "Accueil", href: "/" }, { label: "Solutions IA" }],
   },
   formations: {

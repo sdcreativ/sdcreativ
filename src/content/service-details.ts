@@ -418,28 +418,28 @@ export const serviceDetails: ServiceDetail[] = [
   {
     id: "automatisation",
     metaDescription:
-      "Automatisation métier : workflows n8n, Make, Zapier, intégrations API et synchronisation de données. Gagnez du temps. Devis personnalisé gratuit.",
+      "Automatisation commerciale pour PME : relances, notifications, synchronisation CRM et WhatsApp. Gagnez du temps. Devis personnalisé gratuit.",
     heroDescription:
-      "Connectez vos outils et automatisez les tâches répétitives — leads, emails, factures, stocks — pour gagner du temps et réduire les erreurs humaines.",
+      "Moins de saisie manuelle, plus de suivi : relances, alertes et connexion entre vos outils pour ne plus perdre de leads.",
     startingFrom: "Gagnez du temps : automatisez l’essentiel",
     delay: "2 à 5 semaines",
     problem: {
       title: "Vos équipes perdent des heures en tâches manuelles",
-      text: "Copier-coller entre Excel et WhatsApp, relances oubliées, données éparpillées : les processus manuels ralentissent votre activité et créent des erreurs coûteuses.",
+      text: "Copier-coller entre Excel et WhatsApp, relances oubliées, données éparpillées : les processus manuels ralentissent votre activité commerciale et créent des erreurs coûteuses.",
     },
     solution: {
-      title: "Des workflows fiables entre vos applications",
-      text: "Nous cartographions vos processus, concevons des automatisations sur mesure (n8n, Make, Zapier ou API) et mettons en place des alertes pour que l'information circule sans intervention manuelle.",
+      title: "Des automatisations au service de vos ventes",
+      text: "Nous cartographions vos process marketing et commerciaux, mettons en place des relances et synchronisations entre vos outils, et configurons des alertes pour que chaque demande soit traitée à temps.",
     },
     deliverables: [
-      "Cartographie de vos processus actuels",
-      "Workflows automatisés (1 à 5 scénarios)",
-      "Intégrations API, webhooks et CRM",
-      "Synchronisation de données entre outils",
-      "Notifications email, Slack ou WhatsApp",
-      "Tableau de bord de suivi des flux",
-      "Documentation des automatisations",
-      "Formation à la maintenance des scénarios",
+      "Cartographie de vos process commerciaux actuels",
+      "1 à 5 scénarios d’automatisation prioritaires",
+      "Connexion site, CRM, email et/ou WhatsApp",
+      "Synchronisation des contacts et demandes",
+      "Notifications quand un lead nécessite une suite",
+      "Vue simple pour suivre les flux",
+      "Documentation claire pour votre équipe",
+      "Formation à l’utilisation au quotidien",
     ],
     process: [
       {
@@ -450,17 +450,17 @@ export const serviceDetails: ServiceDetail[] = [
       {
         step: "02",
         title: "Conception des flux",
-        description: "Schéma des workflows, points de contrôle et règles métier à automatiser.",
+        description: "Scénarios de relance, points de contrôle et règles métier à automatiser.",
       },
       {
         step: "03",
-        title: "Développement & tests",
-        description: "Mise en place des intégrations, tests en conditions réelles et corrections.",
+        title: "Mise en place & tests",
+        description: "Connexions entre outils, essais en conditions réelles et corrections.",
       },
       {
         step: "04",
-        title: "Déploiement & formation",
-        description: "Activation en production, documentation et formation de votre équipe.",
+        title: "Lancement & formation",
+        description: "Activation, documentation et prise en main par votre équipe.",
       },
     ],
     idealFor: [
@@ -473,17 +473,17 @@ export const serviceDetails: ServiceDetail[] = [
       {
         question: "Quels outils pouvez-vous connecter ?",
         answer:
-          "Google Sheets, Notion, HubSpot, Pipedrive, WooCommerce, Stripe, WhatsApp Business API, email, Slack et la plupart des services disposant d'une API ou d'un connecteur.",
+          "Tableurs, Notion, CRM (HubSpot, Pipedrive…), boutiques en ligne, paiement, WhatsApp Business, email et la plupart des services connectables — nous partons de votre stack actuelle.",
       },
       {
-        question: "n8n, Make ou Zapier — lequel choisir ?",
+        question: "Faut-il être technique pour en profiter ?",
         answer:
-          "Zapier et Make conviennent aux besoins standards. n8n (auto-hébergé) est idéal pour plus de contrôle, de volume ou de données sensibles. Nous recommandons selon votre contexte.",
+          "Non. Nous concevons et maintenons les automatisations. Votre équipe voit surtout le résultat : moins de tâches manuelles, meilleurs suivis.",
       },
       {
-        question: "Que se passe-t-il si un workflow échoue ?",
+        question: "Que se passe-t-il si un scénario échoue ?",
         answer:
-          "Nous configurons des alertes en cas d'erreur et des scénarios de repli. Un monitoring peut être ajouté via notre offre maintenance.",
+          "Nous configurons des alertes en cas d’erreur et des scénarios de repli. Un monitoring peut être ajouté via notre offre maintenance.",
       },
       {
         question: "Puis-je faire évoluer les automatisations ?",
@@ -496,18 +496,18 @@ export const serviceDetails: ServiceDetail[] = [
   {
     id: "devops",
     metaDescription:
-      "DevOps : pipelines CI/CD, Docker, monitoring et Infrastructure as Code. Livrez plus vite et en sécurité. Devis personnalisé gratuit.",
+      "Mises en ligne fiables pour PME et équipes produit : déploiements automatisés, monitoring et sécurité. Devis personnalisé gratuit.",
     heroDescription:
-      "Industrialisez vos déploiements avec des pipelines CI/CD, de la conteneurisation et un monitoring fiable — pour livrer plus souvent, sans stress.",
+      "Faites évoluer votre site ou application sans stress : mises en ligne répétables, environnements de test et surveillance pour rester serein.",
     startingFrom: "Infrastructure fiable, déploiements sereins",
     delay: "3 à 6 semaines",
     problem: {
-      title: "Des déploiements manuels = risques et lenteur",
-      text: "Mises en production stressantes, environnements incohérents, absence de tests automatisés : votre équipe perd du temps et chaque release devient un pari.",
+      title: "Des mises en ligne stressantes freinent votre croissance",
+      text: "Chaque publication devient un risque : bugs en prod, retours en arrière difficiles, manque de visibilité. Votre équipe perd du temps au lieu d’avancer sur le produit.",
     },
     solution: {
-      title: "Une chaîne DevOps robuste et reproductible",
-      text: "Nous mettons en place des pipelines CI/CD, conteneurisons vos applications, automatisons les tests et configurons monitoring et alertes pour que chaque déploiement soit prévisible.",
+      title: "Des mises en ligne prévisibles et maîtrisées",
+      text: "Nous mettons en place des déploiements automatisés, des environnements de test, du monitoring et des alertes — pour que chaque évolution soit plus rapide et plus sûre.",
     },
     deliverables: [
       "Audit de l'existant (infra, déploiements, outils)",

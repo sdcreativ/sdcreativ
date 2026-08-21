@@ -44,6 +44,40 @@ export const services: Service[] = [
     imageAlt: "Exemple de site vitrine professionnel sur ordinateur et mobile",
   },
   {
+    id: "agents-ia",
+    icon: Bot,
+    title: "Agents IA",
+    description:
+      "Des assistants qui répondent à vos clients, qualifient vos leads et relancent vos prospects — sur votre site et WhatsApp, 24h/24.",
+    features: [
+      "Accueil, commercial, support et FAQ documentaire",
+      "Devis, RDV, e-commerce et relances",
+      "CRM, admin, RH et finance / facturation",
+      "Escalade vers un humain quand c’est nécessaire",
+      "Combinables selon vos priorités métier",
+    ],
+    image: "/images/services/agents-ia.png",
+    imageAlt: "Interface de configuration d'agents IA et assistants conversationnels",
+    detailHref: "/solutions-ia",
+    detailLabel: "Voir les cas d’usage marketing",
+  },
+  {
+    id: "automatisation",
+    icon: Zap,
+    title: "Automatisation",
+    description:
+      "Moins de copier-coller, plus de suivi : relances, notifications et synchronisation entre vos outils pour gagner du temps chaque semaine.",
+    features: [
+      "Relances et rappels automatiques",
+      "Connexion site, CRM, email et WhatsApp",
+      "Synchronisation des contacts et demandes",
+      "Alertes quand un lead est chaud",
+      "Tableaux de bord simples pour piloter",
+    ],
+    image: "/images/services/automatisation.png",
+    imageAlt: "Schéma de workflows automatisés connectant plusieurs applications",
+  },
+  {
     id: "e-commerce",
     icon: ShoppingCart,
     title: "E-commerce",
@@ -126,51 +160,17 @@ export const services: Service[] = [
     detailLabel: "Formules maintenance & SLA",
   },
   {
-    id: "agents-ia",
-    icon: Bot,
-    title: "Agents IA",
-    description:
-      "Nous concevons et déployons des agents intelligents pour automatiser vos interactions, votre support client et vos processus métier.",
-    features: [
-      "Chatbots & assistants conversationnels",
-      "Intégration LLM (OpenAI, Claude, etc.)",
-      "Agents métier sur mesure",
-      "Connexion à vos outils (CRM, email, WhatsApp)",
-      "Analyse, supervision & amélioration continue",
-    ],
-    image: "/images/services/agents-ia.png",
-    imageAlt: "Interface de configuration d'agents IA et assistants conversationnels",
-    detailHref: "/solutions-ia",
-    detailLabel: "Découvrir nos solutions IA",
-  },
-  {
-    id: "automatisation",
-    icon: Zap,
-    title: "Automatisation",
-    description:
-      "Automatisez vos tâches répétitives et connectez vos applications pour gagner du temps et fiabiliser vos opérations.",
-    features: [
-      "Workflows automatisés (n8n, Make, Zapier)",
-      "Intégrations API & webhooks",
-      "Synchronisation de données",
-      "Notifications & alertes intelligentes",
-      "Tableaux de bord & suivi des flux",
-    ],
-    image: "/images/services/automatisation.png",
-    imageAlt: "Schéma de workflows automatisés connectant plusieurs applications",
-  },
-  {
     id: "devops",
     icon: GitBranch,
     title: "DevOps",
     description:
-      "Industrialisez vos déploiements et sécurisez votre chaîne de développement pour livrer plus vite, en toute confiance.",
+      "Des mises en ligne fiables et régulières : votre site ou application évolue sans stress, avec monitoring et bonnes pratiques de sécurité.",
     features: [
-      "Pipelines CI/CD (GitHub Actions, GitLab)",
-      "Conteneurisation Docker",
-      "Monitoring, logs & alertes",
-      "Infrastructure as Code (Terraform, Ansible)",
-      "Bonnes pratiques sécurité & revue de code",
+      "Déploiements automatisés et reproductibles",
+      "Environnements de test avant la prod",
+      "Surveillance, alertes et journaux",
+      "Infrastructure maîtrisée et documentée",
+      "Sécurité et revue des changements",
     ],
     image: "/images/services/devops.png",
     imageAlt: "Tableau de bord DevOps avec pipelines CI/CD et monitoring",
@@ -180,13 +180,13 @@ export const services: Service[] = [
     icon: Cloud,
     title: "Cloud",
     description:
-      "Hébergement, migration et optimisation cloud pour des applications scalables, disponibles et performantes.",
+      "Un hébergement solide pour rester en ligne, charger vite et grandir sans surprise — avec sauvegardes et coûts sous contrôle.",
     features: [
-      "AWS, Google Cloud, Azure & Vercel",
-      "Migration vers le cloud",
-      "Architecture haute disponibilité",
-      "Optimisation des coûts cloud",
-      "Sauvegardes & reprise après incident",
+      "Hébergement performant et disponible",
+      "Migration sans interruption inutile",
+      "Sauvegardes et reprise après incident",
+      "Optimisation des coûts d’infrastructure",
+      "Accompagnement pour évoluer en douceur",
     ],
     image: "/images/services/cloud.png",
     imageAlt: "Architecture cloud scalable avec serveurs et métriques de performance",
@@ -226,16 +226,16 @@ export const services: Service[] = [
 ];
 
 export const heroFeatures = [
-  "Sites vitrines",
-  "E-commerce",
-  "Refonte web",
+  "Agents IA",
+  "Sites & e-commerce",
+  "Leads & WhatsApp",
   "SEO local",
-  "Maintenance",
+  "Automatisation",
 ] as const;
 
 export const heroHighlights = [
-  { label: "100% Responsive", description: "Adapté à tous les écrans" },
-  { label: "SEO Optimisé", description: "Visible sur Google" },
-  { label: "Livraison Accompagnée", description: "De A à Z avec vous" },
-  { label: "Support Après mise en ligne", description: "On reste à vos côtés" },
+  { label: "Plus de leads", description: "Visibilité et conversion" },
+  { label: "Réponses 24/7", description: "Agents sur site & WhatsApp" },
+  { label: "Temps gagné", description: "Moins de tâches manuelles" },
+  { label: "Accompagnement", description: "De la stratégie à la mise en ligne" },
 ] as const;

@@ -1,9 +1,9 @@
 /** Proposition de valeur affichée à la place des prix sur le site public. */
 export const SITE_VALUE_PROP =
-  "Une qualité internationale à un prix accessible aux entreprises";
+  "Des résultats marketing accessibles aux PME — pas seulement de la technique";
 
 export const SITE_VALUE_PROP_EN =
-  "International quality at a price accessible to businesses";
+  "Marketing results accessible to SMEs — not just technology";
 
 /** Détecte un libellé « tarif » (FCFA, montants) pour le remplacer côté UI. */
 export function looksLikePriceLabel(text: string | null | undefined): boolean {

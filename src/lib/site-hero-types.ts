@@ -19,22 +19,22 @@ export type SiteHeroSettings = {
 };
 
 export const defaultSiteHeroSettings: SiteHeroSettings = {
-  eyebrow: "Agence web & solutions digitales",
-  titleBefore: "Votre image,",
-  titleHighlight: "votre site",
-  titleAfter: ", votre impact.",
+  eyebrow: "Marketing digital & agents IA pour PME",
+  titleBefore: "Plus de clients,",
+  titleHighlight: "moins de tâches",
+  titleAfter: " répétitives.",
   description:
-    "SD CREATIV accompagne les PME, entrepreneurs, commerces et organisations dans la création de sites web modernes, accessibles et performants.",
-  features: ["Sites vitrines", "E-commerce", "Refonte web", "SEO local", "Maintenance"],
+    "SD CREATIV aide les PME, commerces et équipes commerciales à attirer des prospects, convertir et gagner du temps — sites web, marketing digital et agents IA qui répondent, qualifient et relancent pour vous.",
+  features: ["Agents IA", "Sites & e-commerce", "Leads & WhatsApp", "SEO local", "Automatisation"],
   highlights: [
-    { label: "100% Responsive", description: "Adapté à tous les écrans" },
-    { label: "SEO Optimisé", description: "Visible sur Google" },
-    { label: "Livraison Accompagnée", description: "De A à Z avec vous" },
-    { label: "Support Après mise en ligne", description: "On reste à vos côtés" },
+    { label: "Plus de leads", description: "Visibilité et conversion" },
+    { label: "Réponses 24/7", description: "Agents sur site & WhatsApp" },
+    { label: "Temps gagné", description: "Moins de tâches manuelles" },
+    { label: "Accompagnement", description: "De la stratégie à la mise en ligne" },
   ],
   ctaPrimaryLabel: "Obtenir mon devis",
   ctaPrimaryHref: "/devis",
-  ctaSecondaryLabel: "Découvrir nos services",
-  ctaSecondaryHref: "/services",
+  ctaSecondaryLabel: "Découvrir les agents IA",
+  ctaSecondaryHref: "/solutions-ia",
   backgroundImage: "/images/services/services-hero-bg.png",
 };

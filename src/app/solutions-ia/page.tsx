@@ -12,9 +12,9 @@ import { createMetadata } from "@/lib/metadata";
 import { cn } from "@/lib/utils";
 
 export const metadata = createMetadata({
-  title: "Solutions IA",
+  title: "Agents IA pour PME",
   description:
-    "Agents IA, chatbots, assistants WhatsApp et automatisation métier pour PME en Côte d'Ivoire. Cas d'usage, stack technique et processus SD CREATIV.",
+    "12 types d’agents IA : accueil, commercial, support, FAQ, RDV, devis, e-commerce, relance, CRM, admin, RH et finance. Pour PME en Côte d’Ivoire — SD CREATIV.",
   path: "/solutions-ia",
 });
 
@@ -47,16 +47,17 @@ export default async function SolutionsIaPage() {
             eyebrow={content.headings.useCases.eyebrow}
             title={content.headings.useCases.title}
             highlight={content.headings.useCases.highlight}
+            description={content.headings.useCases.description}
             className="mb-14"
           />
-          <div className="grid gap-8 lg:grid-cols-3">
+          <div className="grid gap-6 sm:grid-cols-2 xl:grid-cols-3">
             {content.useCases.map((useCase, i) => {
               const Icon = useCase.icon;
               return (
                 <AnimatedCard
                   key={useCase.id}
-                  delay={i * 0.08}
-                  className="rounded-2xl border border-gray/60 bg-white p-8 shadow-sm"
+                  delay={Math.min(i, 8) * 0.05}
+                  className="rounded-2xl border border-gray/60 bg-white p-6 shadow-sm md:p-8"
                 >
                   <div className="mb-5 flex h-14 w-14 items-center justify-center rounded-2xl bg-primary-light">
                     <Icon className="h-7 w-7 text-primary" aria-hidden />

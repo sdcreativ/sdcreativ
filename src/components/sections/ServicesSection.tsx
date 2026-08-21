@@ -38,8 +38,8 @@ export async function ServicesSection({ locale = "fr" }: Props) {
       <div className="container mx-auto px-4 md:px-6 lg:px-8">
         <SectionHeading
           eyebrow={isEn ? "Our services" : "Nos services"}
-          title={isEn ? "Digital solutions" : "Des solutions digitales"}
-          highlight={isEn ? "for your business" : "adaptées à votre activité"}
+          title={isEn ? "Marketing & growth" : "Marketing, sites"}
+          highlight={isEn ? "for your business" : "& agents IA"}
           className="mb-14"
         />
 
