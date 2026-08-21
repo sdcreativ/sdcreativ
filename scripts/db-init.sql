@@ -567,6 +567,24 @@ CREATE INDEX IF NOT EXISTS idx_blog_posts_scheduled ON blog_posts (scheduled_at)
 ALTER TABLE blog_posts ADD COLUMN IF NOT EXISTS deleted_at TIMESTAMPTZ;
 CREATE INDEX IF NOT EXISTS idx_blog_posts_deleted ON blog_posts (deleted_at)
   WHERE deleted_at IS NOT NULL;
+ALTER TABLE blog_posts ADD COLUMN IF NOT EXISTS facebook_post_id VARCHAR(128);
+ALTER TABLE blog_posts ADD COLUMN IF NOT EXISTS facebook_published_at TIMESTAMPTZ;
+
+CREATE TABLE IF NOT EXISTS facebook_page_connection (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  page_id VARCHAR(64) NOT NULL,
+  page_name VARCHAR(255) NOT NULL,
+  page_access_token_enc TEXT NOT NULL,
+  user_token_enc TEXT,
+  token_expires_at TIMESTAMPTZ,
+  available_pages JSONB NOT NULL DEFAULT '[]',
+  connected_by UUID REFERENCES crm_users(id) ON DELETE SET NULL,
+  connected_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE UNIQUE INDEX IF NOT EXISTS idx_facebook_page_connection_singleton
+  ON facebook_page_connection ((true));
 
 CREATE TABLE IF NOT EXISTS public_team_members (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),

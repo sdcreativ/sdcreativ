@@ -50,6 +50,8 @@ type BlogPostRow = {
   preview_token: string | null;
   view_count: number;
   click_count: number;
+  facebook_post_id: string | null;
+  facebook_published_at: Date | null;
   created_at: Date;
   updated_at: Date;
 };
@@ -104,6 +106,8 @@ function mapRow(row: BlogPostRow): BlogPostRecord {
     previewToken: row.preview_token,
     viewCount: row.view_count ?? 0,
     clickCount: row.click_count ?? 0,
+    facebookPostId: row.facebook_post_id ?? null,
+    facebookPublishedAt: row.facebook_published_at?.toISOString() ?? null,
     createdAt: row.created_at.toISOString(),
     updatedAt: row.updated_at.toISOString(),
   };
@@ -898,6 +902,24 @@ export async function importStaticBlogPosts(): Promise<{ imported: number; skipp
   }
 
   return { imported, skipped };
+}
+
+export async function markBlogFacebookPublished(
+  id: string,
+  facebookPostId: string,
+): Promise<BlogPostRecord | null> {
+  return withDb(async (query) => {
+    const { rows } = await query<BlogPostRow>(
+      `UPDATE blog_posts
+       SET facebook_post_id = $2,
+           facebook_published_at = NOW(),
+           updated_at = NOW()
+       WHERE id = $1 AND deleted_at IS NULL
+       RETURNING *`,
+      [id, facebookPostId],
+    );
+    return rows[0] ? mapRow(rows[0]) : null;
+  });
 }
 
 export function isBlogCategory(value: string): boolean {

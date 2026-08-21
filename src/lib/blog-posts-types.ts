@@ -24,6 +24,8 @@ export type BlogPostRecord = {
   previewToken: string | null;
   viewCount: number;
   clickCount: number;
+  facebookPostId: string | null;
+  facebookPublishedAt: string | null;
   createdAt: string;
   updatedAt: string;
 };

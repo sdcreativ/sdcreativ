@@ -10,6 +10,7 @@ import {
   type BlogPostStatus,
 } from "@/content/blog-labels";
 import { BlogImageUpload } from "@/components/admin/blog/BlogImageUpload";
+import { BlogFacebookPublishPanel } from "@/components/admin/blog/BlogFacebookPublishPanel";
 import { BlogRevisionHistory } from "@/components/admin/blog/BlogRevisionHistory";
 import { BlogRichEditor } from "@/components/admin/blog/BlogRichEditor";
 import { BlogSeoPreview, CharCounter } from "@/components/admin/blog/BlogSeoPreview";
@@ -141,6 +142,8 @@ export function CrmBlogEditor({ postId }: Props) {
   const [tags, setTags] = useState<string[]>([]);
   const [previewToken, setPreviewToken] = useState<string | null>(null);
   const [publishedSlug, setPublishedSlug] = useState<string | null>(null);
+  const [facebookPostId, setFacebookPostId] = useState<string | null>(null);
+  const [facebookPublishedAt, setFacebookPublishedAt] = useState<string | null>(null);
   const [autosaving, setAutosaving] = useState(false);
   const [lastAutosavedAt, setLastAutosavedAt] = useState<Date | null>(null);
   const [draftRestored, setDraftRestored] = useState(false);
@@ -199,6 +202,8 @@ export function CrmBlogEditor({ postId }: Props) {
     setMetaDescription(post.metaDescription ?? "");
     setTags(post.tags ?? []);
     setPreviewToken(post.previewToken);
+    setFacebookPostId(post.facebookPostId ?? null);
+    setFacebookPublishedAt(post.facebookPublishedAt ?? null);
     if (post.status === "published") setPublishedSlug(post.slug);
   }
 
@@ -706,6 +711,25 @@ export function CrmBlogEditor({ postId }: Props) {
                 </div>
               </FormPanel>
             )}
+
+            {!isNew && postId && status === "published" ? (
+              <FormPanel title="Réseaux sociaux">
+                <BlogFacebookPublishPanel
+                  postId={postId}
+                  slug={slug}
+                  title={title}
+                  excerpt={excerpt}
+                  tags={tags}
+                  status={status}
+                  facebookPostId={facebookPostId}
+                  facebookPublishedAt={facebookPublishedAt}
+                  onFacebookPublished={(data) => {
+                    setFacebookPostId(data.facebookPostId);
+                    setFacebookPublishedAt(data.facebookPublishedAt);
+                  }}
+                />
+              </FormPanel>
+            ) : null}
 
             <FormPanel title="Image de couverture">
               <BlogImageUpload value={coverImage} onChange={setCoverImage} compact />

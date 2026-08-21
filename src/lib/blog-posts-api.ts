@@ -178,6 +178,23 @@ export async function deleteBlogMediaApi(id: string): Promise<void> {
   await parseFetchJson<{ ok: boolean }>(res);
 }
 
+export async function publishBlogToFacebookApi(
+  id: string,
+  input: { message: string; force?: boolean },
+): Promise<{
+  post: BlogPostRecord;
+  facebookPostId: string;
+  permalink: string | null;
+}> {
+  const res = await fetch(`/api/admin/blog-posts/${encodeURIComponent(id)}/publish-facebook`, {
+    method: "POST",
+    credentials: "include",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(input),
+  });
+  return parseFetchJson(res);
+}
+
 export type BlogRevisionItem = {
   id: string;
   postId: string;

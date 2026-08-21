@@ -22,6 +22,7 @@ import { EmailChromeSection } from "@/components/admin/EmailChromeSection";
 import { CrmRolesSection, PermissionsMatrix } from "@/components/admin/CrmRolesSection";
 import { CrmSecuritySection } from "@/components/admin/CrmSecuritySection";
 import { SitePublicSection } from "@/components/admin/CrmSitePublicSection";
+import { FacebookPageSettingsSection } from "@/components/admin/FacebookPageSettingsSection";
 import { PaymentSettingsSection } from "@/components/admin/PaymentSettingsSection";
 import { CrmOperationsSettingsSection } from "@/components/admin/CrmOperationsSettingsSection";
 import { CrmApiKeysSection } from "@/components/admin/CrmApiKeysSection";
@@ -55,6 +56,7 @@ import {
   Mail,
   Palette,
   RefreshCw,
+  Share2,
   Shield,
   UserPlus,
   Users,
@@ -106,6 +108,24 @@ export function CrmSettingsView() {
   useEffect(() => {
     void load();
   }, [load]);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const params = new URLSearchParams(window.location.search);
+    const tabParam = params.get("tab");
+    if (
+      tabParam === "overview" ||
+      tabParam === "site" ||
+      tabParam === "payments" ||
+      tabParam === "team" ||
+      tabParam === "emails" ||
+      tabParam === "security" ||
+      tabParam === "appearance" ||
+      tabParam === "operations"
+    ) {
+      setTab(tabParam);
+    }
+  }, []);
 
   useEffect(() => {
     if (tab !== "team") return;
@@ -252,13 +272,22 @@ export function CrmSettingsView() {
           )}
 
           {tab === "site" && (
-            <Section
-              title="Identité & contact — site public"
-              description="Coordonnées, réseaux sociaux et mentions légales affichés sur le site vitrine."
-              icon={<Globe className="h-5 w-5 text-emerald-600" aria-hidden />}
-            >
-              <SitePublicSection />
-            </Section>
+            <div className="space-y-5">
+              <Section
+                title="Identité & contact — site public"
+                description="Coordonnées, réseaux sociaux et mentions légales affichés sur le site vitrine."
+                icon={<Globe className="h-5 w-5 text-emerald-600" aria-hidden />}
+              >
+                <SitePublicSection />
+              </Section>
+              <Section
+                title="Page Facebook"
+                description="Connexion OAuth pour publier les articles blog sur la Page SD CREATIV."
+                icon={<Share2 className="h-5 w-5 text-[#1877F2]" aria-hidden />}
+              >
+                <FacebookPageSettingsSection />
+              </Section>
+            </div>
           )}
 
           {tab === "payments" && (
