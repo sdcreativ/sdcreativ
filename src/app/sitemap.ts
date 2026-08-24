@@ -4,18 +4,22 @@ import { localSeoPages, localSeoPagesEn } from "@/content/local-seo";
 import { blogPostsEn } from "@/content/blog-en";
 import { isEnglishLocaleEnabled } from "@/i18n/config";
 import { LOCALE_ROUTE_PAIRS } from "@/i18n/routes";
-import { getFormationCategorySlugs } from "@/lib/formations-resolver";
-import { getServiceDetailSlugs } from "@/lib/public-services-resolver";
-import { getBlogPosts, getRealisations } from "@/lib/cms";
+import { getBlogPosts } from "@/lib/cms";
+import {
+  getFormationSitemapDates,
+  getRealisationSitemapDates,
+  getServiceSitemapDates,
+} from "@/lib/sitemap-content-dates";
 
 const EXTRA_STATIC_FR = ["/carrieres"] as const;
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const enEnabled = isEnglishLocaleEnabled();
-  const [blogPosts, realisations, formationSlugs] = await Promise.all([
+  const [blogPosts, realisationDates, serviceDates, formationDates] = await Promise.all([
     getBlogPosts(),
-    getRealisations(),
-    getFormationCategorySlugs(),
+    getRealisationSitemapDates(),
+    getServiceSitemapDates(),
+    getFormationSitemapDates(),
   ]);
 
   const pairPaths = LOCALE_ROUTE_PAIRS.flatMap((pair) => {
@@ -34,10 +38,10 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     priority: 0.6,
   }));
 
-  const realisationEntries = realisations.flatMap((r) => {
+  const realisationEntries = realisationDates.flatMap(({ slug, lastModified }) => {
     const fr = {
-      url: `${SITE.url}/realisations/${r.id}`,
-      lastModified: new Date(),
+      url: `${SITE.url}/realisations/${slug}`,
+      lastModified,
       changeFrequency: "monthly" as const,
       priority: 0.7,
     };
@@ -45,18 +49,18 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     return [
       fr,
       {
-        url: `${SITE.url}/en/portfolio/${r.id}`,
-        lastModified: new Date(),
+        url: `${SITE.url}/en/portfolio/${slug}`,
+        lastModified,
         changeFrequency: "monthly" as const,
         priority: 0.7,
       },
     ];
   });
 
-  const serviceDetailEntries = (await getServiceDetailSlugs()).flatMap((slug) => {
+  const serviceDetailEntries = serviceDates.flatMap(({ slug, lastModified }) => {
     const fr = {
       url: `${SITE.url}/services/${slug}`,
-      lastModified: new Date(),
+      lastModified,
       changeFrequency: "monthly" as const,
       priority: 0.85,
     };
@@ -65,17 +69,17 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       fr,
       {
         url: `${SITE.url}/en/services/${slug}`,
-        lastModified: new Date(),
+        lastModified,
         changeFrequency: "monthly" as const,
         priority: 0.85,
       },
     ];
   });
 
-  const formationDetailEntries = formationSlugs.flatMap((slug) => {
+  const formationDetailEntries = formationDates.flatMap(({ slug, lastModified }) => {
     const fr = {
       url: `${SITE.url}/formations/${slug}`,
-      lastModified: new Date(),
+      lastModified,
       changeFrequency: "monthly" as const,
       priority: 0.8,
     };
@@ -84,7 +88,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       fr,
       {
         url: `${SITE.url}/en/training/${slug}`,
-        lastModified: new Date(),
+        lastModified,
         changeFrequency: "monthly" as const,
         priority: 0.8,
       },

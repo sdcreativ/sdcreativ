@@ -38,6 +38,16 @@ const nextConfig: NextConfig = {
     // Les navigateurs demandent encore /favicon.ico (ex-fichier Next par défaut).
     return [{ source: "/favicon.ico", destination: "/icon" }];
   },
+  async redirects() {
+    return [
+      {
+        source: "/blog/:slug",
+        has: [{ type: "query", key: "preview" }],
+        destination: "/blog/apercu/:slug",
+        permanent: false,
+      },
+    ];
+  },
 };
 
 export default withSentryConfig(nextConfig, {

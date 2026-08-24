@@ -224,3 +224,19 @@ export async function updateSiteFormationsSettings(
 export async function resetSiteFormationsSettings() {
   return updateSiteFormationsSettings(defaultSiteFormationsSettings);
 }
+
+export async function getSiteFormationsSettingsUpdatedAt(): Promise<Date | null> {
+  if (!isDatabaseConfigured()) return null;
+
+  try {
+    return await withDb(async (query) => {
+      const { rows } = await query<{ updated_at: Date | null }>(
+        `SELECT updated_at FROM crm_settings WHERE id = 1`,
+      );
+      return rows[0]?.updated_at ?? null;
+    });
+  } catch (error) {
+    console.error("[site-formations] updated_at:", error);
+    return null;
+  }
+}

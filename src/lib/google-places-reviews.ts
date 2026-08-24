@@ -12,7 +12,7 @@ export type GooglePlaceReviewsPayload = {
   rating: number;
   reviewCount: number;
   reviews: GooglePlaceReview[];
-  source: "google" | "unavailable";
+  source: "google" | "manual" | "unavailable";
 };
 
 type PlacesDetailsResponse = {
@@ -31,12 +31,33 @@ type PlacesDetailsResponse = {
   error_message?: string;
 };
 
+function readManualPlaceRating(): Pick<GooglePlaceReviewsPayload, "rating" | "reviewCount"> | null {
+  const rating = Number(process.env.GOOGLE_PLACE_RATING?.trim());
+  const reviewCount = Number(process.env.GOOGLE_PLACE_REVIEW_COUNT?.trim());
+  if (!Number.isFinite(rating) || !Number.isFinite(reviewCount)) return null;
+  if (rating <= 0 || reviewCount <= 0) return null;
+  return {
+    rating: Math.min(5, Math.max(1, rating)),
+    reviewCount: Math.max(1, Math.floor(reviewCount)),
+  };
+}
+
+function manualPlaceReviewsPayload(): GooglePlaceReviewsPayload | null {
+  const manual = readManualPlaceRating();
+  if (!manual) return null;
+  return {
+    ...manual,
+    reviews: [],
+    source: "manual",
+  };
+}
+
 async function fetchGooglePlaceReviewsUncached(): Promise<GooglePlaceReviewsPayload> {
   const apiKey = process.env.GOOGLE_PLACES_API_KEY?.trim();
   const placeId = process.env.GOOGLE_PLACE_ID?.trim();
 
   if (!apiKey || !placeId) {
-    return { rating: 0, reviewCount: 0, reviews: [], source: "unavailable" };
+    return manualPlaceReviewsPayload() ?? { rating: 0, reviewCount: 0, reviews: [], source: "unavailable" };
   }
 
   const url = new URL("https://maps.googleapis.com/maps/api/place/details/json");
@@ -49,13 +70,13 @@ async function fetchGooglePlaceReviewsUncached(): Promise<GooglePlaceReviewsPayl
   const res = await fetch(url.toString(), { next: { revalidate: 21_600 } });
   if (!res.ok) {
     console.error("[google-places] HTTP", res.status);
-    return { rating: 0, reviewCount: 0, reviews: [], source: "unavailable" };
+    return manualPlaceReviewsPayload() ?? { rating: 0, reviewCount: 0, reviews: [], source: "unavailable" };
   }
 
   const data = (await res.json()) as PlacesDetailsResponse;
   if (data.status && data.status !== "OK" && data.status !== "ZERO_RESULTS") {
     console.error("[google-places] status", data.status, data.error_message);
-    return { rating: 0, reviewCount: 0, reviews: [], source: "unavailable" };
+    return manualPlaceReviewsPayload() ?? { rating: 0, reviewCount: 0, reviews: [], source: "unavailable" };
   }
 
   const reviews = (data.result?.reviews ?? [])
@@ -71,9 +92,23 @@ async function fetchGooglePlaceReviewsUncached(): Promise<GooglePlaceReviewsPayl
       text: r.text!.trim(),
     }));
 
+  const rating = Number(data.result?.rating ?? 0);
+  const reviewCount = Number(data.result?.user_ratings_total ?? reviews.length);
+
+  if (rating <= 0 || reviewCount <= 0) {
+    return (
+      manualPlaceReviewsPayload() ?? {
+        rating: 0,
+        reviewCount: 0,
+        reviews: [],
+        source: "unavailable",
+      }
+    );
+  }
+
   return {
-    rating: Number(data.result?.rating ?? 0),
-    reviewCount: Number(data.result?.user_ratings_total ?? reviews.length),
+    rating,
+    reviewCount,
     reviews,
     source: "google",
   };
@@ -89,6 +124,10 @@ export function isGooglePlacesConfigured(): boolean {
   return Boolean(
     process.env.GOOGLE_PLACES_API_KEY?.trim() && process.env.GOOGLE_PLACE_ID?.trim(),
   );
+}
+
+export function isGooglePlaceRatingConfigured(): boolean {
+  return isGooglePlacesConfigured() || readManualPlaceRating() !== null;
 }
 
 /** URL Google Maps pour schema.org `hasMap` (place_id ou adresse postale). */

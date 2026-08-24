@@ -62,7 +62,7 @@ export default function ContactPage() {
                   <div className="relative hidden h-full w-36 shrink-0 sm:block">
                     <Image
                       src="/images/contact/contact-support.png"
-                      alt=""
+                      alt="Illustration — support client SD CREATIV"
                       fill
                       className="object-contain object-bottom p-4"
                       aria-hidden

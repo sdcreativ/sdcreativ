@@ -88,7 +88,30 @@ export function getHreflangAlternates(
     }
   }
 
-  return undefined;
+  const isDynamicPath =
+    /^\/(?:en\/)?services\/[^/]+$/.test(normalized) ||
+    /^\/(?:en\/portfolio|realisations)\/[^/]+$/.test(normalized) ||
+    /^\/(?:en\/training|formations)\/[^/]+$/.test(normalized) ||
+    /^\/(?:en\/)?blog\/[^/]+$/.test(normalized);
+
+  if (!isDynamicPath) return undefined;
+
+  const frPath = getAlternatePath(normalized, "fr");
+  const frUrl = frPath === "/" ? siteUrl : `${siteUrl}${frPath}`;
+
+  if (!isEnglishLocaleEnabled()) {
+    return {
+      fr: frUrl,
+      "x-default": frUrl,
+    };
+  }
+
+  const enPath = getAlternatePath(normalized, "en");
+  return {
+    fr: frUrl,
+    en: `${siteUrl}${enPath}`,
+    "x-default": frUrl,
+  };
 }
 
 export function isEnglishPath(pathname: string): boolean {

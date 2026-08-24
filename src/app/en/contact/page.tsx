@@ -66,7 +66,7 @@ export default function EnContactPage() {
                   <div className="relative hidden h-full w-36 shrink-0 sm:block">
                     <Image
                       src="/images/contact/contact-support.png"
-                      alt=""
+                      alt="Illustration — SD CREATIV customer support"
                       fill
                       className="object-contain object-bottom p-4"
                       aria-hidden

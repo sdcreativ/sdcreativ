@@ -3,21 +3,20 @@ import { Star, ExternalLink } from "lucide-react";
 import { AnimatedSection, AnimatedCard } from "@/components/ui/AnimatedSection";
 import { SectionHeading } from "@/components/ui/SectionHeading";
 import { Button } from "@/components/ui/Button";
-import { getGooglePlaceReviews, isGooglePlacesConfigured } from "@/lib/google-places-reviews";
+import { getGooglePlaceReviews, isGooglePlaceRatingConfigured } from "@/lib/google-places-reviews";
 
 const reviewUrl = process.env.NEXT_PUBLIC_GOOGLE_REVIEW_URL;
 
 type Props = { locale?: "fr" | "en" };
 
 export async function GoogleReviewsSection({ locale = "fr" }: Props) {
-  if (!reviewUrl && !isGooglePlacesConfigured()) return null;
+  if (!reviewUrl && !isGooglePlaceRatingConfigured()) return null;
 
-  const payload = isGooglePlacesConfigured()
-    ? await getGooglePlaceReviews()
-    : { rating: 0, reviewCount: 0, reviews: [], source: "unavailable" as const };
+  const payload = await getGooglePlaceReviews();
 
   const hasReviews = payload.source === "google" && payload.reviews.length > 0;
-  const hasRating = payload.source === "google" && payload.rating > 0;
+  const hasRating =
+    (payload.source === "google" || payload.source === "manual") && payload.rating > 0;
 
   if (!hasReviews && !reviewUrl) return null;
 

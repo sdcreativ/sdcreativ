@@ -263,7 +263,7 @@ export function CrmBlogEditor({ postId }: Props) {
     try {
       const token = previewToken ?? (await fetchBlogPreviewTokenApi(postId));
       setPreviewToken(token);
-      window.open(`/blog/${currentSlug}?preview=${token}`, "_blank", "noopener,noreferrer");
+      window.open(`/blog/apercu/${currentSlug}?preview=${token}`, "_blank", "noopener,noreferrer");
     } catch (err) {
       setError(err instanceof Error ? err.message : "Aperçu impossible.");
     }

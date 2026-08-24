@@ -47,7 +47,7 @@ export async function LocalBusinessJsonLd() {
   const mapsUrl = getGoogleMapsUrl(contact.address);
 
   const aggregateRating =
-    googleReviews.source === "google" &&
+    (googleReviews.source === "google" || googleReviews.source === "manual") &&
     googleReviews.rating > 0 &&
     googleReviews.reviewCount > 0
       ? {
@@ -131,6 +131,7 @@ export async function LocalBusinessJsonLd() {
 
 export function WebSiteJsonLd() {
   const enEnabled = isEnglishLocaleEnabled();
+  const searchTarget = `${SITE.url}/recherche?q={search_term_string}`;
   const schema = {
     "@context": "https://schema.org",
     "@type": "WebSite",
@@ -139,6 +140,14 @@ export function WebSiteJsonLd() {
     description: SITE.description,
     inLanguage: enEnabled ? ["fr-CI", "en"] : "fr-CI",
     publisher: { "@id": `${SITE.url}/#localbusiness` },
+    potentialAction: {
+      "@type": "SearchAction",
+      target: {
+        "@type": "EntryPoint",
+        urlTemplate: searchTarget,
+      },
+      "query-input": "required name=search_term_string",
+    },
   };
 
   return (

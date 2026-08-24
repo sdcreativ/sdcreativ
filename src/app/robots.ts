@@ -15,6 +15,7 @@ export default function robots(): MetadataRoute.Robots {
         "/presentation/",
         "/promo/",
         "/verifier/",
+        "/blog/apercu/",
         "/offline",
         // Locale EN désactivée : ne pas indexer /en (redirection middleware → FR)
         "/en",
