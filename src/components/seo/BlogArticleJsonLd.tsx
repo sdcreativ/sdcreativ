@@ -44,6 +44,7 @@ export function BlogArticleJsonLd({ post, locale = "fr" }: Props) {
     },
     url,
     articleSection: post.category,
+    inLanguage: locale === "en" ? "en" : "fr-CI",
     ...(post.tags?.length ? { keywords: post.tags.join(", ") } : {}),
   };
 

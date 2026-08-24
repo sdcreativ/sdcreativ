@@ -11,7 +11,9 @@ import { PricingSection } from "@/components/sections/PricingSection";
 import { GoogleReviewsSection } from "@/components/sections/GoogleReviewsSection";
 import { TestimonialsSection } from "@/components/sections/TestimonialsSection";
 import { FaqSection } from "@/components/sections/FaqSection";
+import { FaqJsonLd } from "@/components/seo/JsonLd";
 import { createMetadata } from "@/lib/metadata";
+import { getFaqItems } from "@/lib/public-faq-resolver";
 
 export const metadata = createMetadata({
   title: "Web agency Abidjan",
@@ -21,9 +23,12 @@ export const metadata = createMetadata({
   locale: "en",
 });
 
-export default function EnHomePage() {
+export default async function EnHomePage() {
+  const faqItems = await getFaqItems("en");
+
   return (
     <>
+      {faqItems.length > 0 && <FaqJsonLd items={faqItems} />}
       <HeroSection locale="en" />
       <ValuePropBanner locale="en" />
       <DiscoveryBanner locale="en" />
@@ -36,7 +41,7 @@ export default function EnHomePage() {
       <PricingSection locale="en" />
       <GoogleReviewsSection locale="en" />
       <TestimonialsSection locale="en" />
-      <FaqSection locale="en" />
+      <FaqSection items={faqItems} locale="en" />
     </>
   );
 }

@@ -90,3 +90,16 @@ export function isGooglePlacesConfigured(): boolean {
     process.env.GOOGLE_PLACES_API_KEY?.trim() && process.env.GOOGLE_PLACE_ID?.trim(),
   );
 }
+
+/** URL Google Maps pour schema.org `hasMap` (place_id ou adresse postale). */
+export function getGoogleMapsUrl(address?: string): string | undefined {
+  const placeId = process.env.GOOGLE_PLACE_ID?.trim();
+  if (placeId) {
+    return `https://www.google.com/maps/place/?q=place_id:${encodeURIComponent(placeId)}`;
+  }
+  const query = address?.trim();
+  if (query) {
+    return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(query)}`;
+  }
+  return undefined;
+}

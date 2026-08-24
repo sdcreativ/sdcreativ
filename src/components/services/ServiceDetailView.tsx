@@ -13,7 +13,7 @@ import { AccordionItem } from "@/components/ui/Accordion";
 import { Button } from "@/components/ui/Button";
 import { PageHero } from "@/components/ui/PageHero";
 import { RealisationCard } from "@/components/realisations/RealisationCard";
-import { FaqJsonLd } from "@/components/seo/JsonLd";
+import { FaqJsonLd, ServiceJsonLd } from "@/components/seo/JsonLd";
 import type { ServiceDetail } from "@/content/service-details";
 import { getRealisation } from "@/lib/cms";
 import type { ResolvedService } from "@/lib/public-services-types";
@@ -106,8 +106,16 @@ export async function ServiceDetailView({ service, detail, locale = "fr" }: Prop
         contactHref: "/contact",
       };
 
+  const servicePath = isEn ? `/en/services/${detail.id}` : `/services/${detail.id}`;
+
   return (
     <>
+      <ServiceJsonLd
+        service={service}
+        detail={detail}
+        path={servicePath}
+        locale={locale}
+      />
       {faq.length > 0 && <FaqJsonLd items={faq} />}
       <PageHero
         eyebrow={copy.eyebrow}

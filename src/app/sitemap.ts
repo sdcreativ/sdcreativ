@@ -29,7 +29,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
 
   const blogEntries = blogPosts.map((post) => ({
     url: `${SITE.url}/blog/${post.slug}`,
-    lastModified: new Date(post.date),
+    lastModified: new Date(post.updatedAt ?? post.date),
     changeFrequency: "monthly" as const,
     priority: 0.6,
   }));
@@ -111,7 +111,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const blogEnEntries = enEnabled
     ? blogPostsEn.map((post) => ({
         url: `${SITE.url}/en/blog/${post.slug}`,
-        lastModified: new Date(post.date),
+        lastModified: new Date(post.updatedAt ?? post.date),
         changeFrequency: "monthly" as const,
         priority: 0.6,
       }))

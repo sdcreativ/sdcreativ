@@ -1,6 +1,9 @@
+import { ensureBlogHtmlImageAlts } from "@/lib/blog-content";
+
 type Props = {
   html?: string;
   paragraphs: string[];
+  imageAltFallback?: string;
 };
 
 const proseClass =
@@ -21,12 +24,15 @@ const proseClass =
   "prose-th:border prose-th:border-gray/60 prose-th:bg-gray-light prose-th:px-3 prose-th:py-2 " +
   "prose-td:border prose-td:border-gray/60 prose-td:px-3 prose-td:py-2";
 
-export function BlogPostBody({ html, paragraphs }: Props) {
+export function BlogPostBody({ html, paragraphs, imageAltFallback }: Props) {
   if (html?.trim()) {
+    const safeHtml = imageAltFallback
+      ? ensureBlogHtmlImageAlts(html, imageAltFallback)
+      : html;
     return (
       <div
         className={proseClass}
-        dangerouslySetInnerHTML={{ __html: html }}
+        dangerouslySetInnerHTML={{ __html: safeHtml }}
       />
     );
   }

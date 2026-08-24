@@ -15,6 +15,16 @@ function absoluteUrl(path: string): string {
   return `${SITE.url}${path.startsWith("/") ? path : `/${path}`}`;
 }
 
+function imageMimeType(url: string): string {
+  const path = url.split("?")[0]?.split("#")[0]?.toLowerCase() ?? "";
+  if (path.endsWith(".png")) return "image/png";
+  if (path.endsWith(".webp")) return "image/webp";
+  if (path.endsWith(".gif")) return "image/gif";
+  if (path.endsWith(".svg")) return "image/svg+xml";
+  if (path.endsWith(".avif")) return "image/avif";
+  return "image/jpeg";
+}
+
 export function buildBlogRssFeed(posts: BlogPost[], contactEmail: string): string {
   const items = posts
     .map((post) => {
@@ -33,7 +43,7 @@ export function buildBlogRssFeed(posts: BlogPost[], contactEmail: string): strin
       <description>${description}</description>
       <pubDate>${pubDate}</pubDate>
       <category>${escapeXml(post.category)}</category>
-      ${image ? `<enclosure url="${escapeXml(absoluteUrl(image))}" type="image/jpeg" />` : ""}
+      ${image ? `<enclosure url="${escapeXml(absoluteUrl(image))}" type="${imageMimeType(image)}" />` : ""}
       <content:encoded>${content}</content:encoded>
     </item>`;
     })

@@ -190,6 +190,7 @@ export function BlogArticleView({
               <BlogPostBody
                 html={contentHtml || undefined}
                 paragraphs={post.content}
+                imageAltFallback={post.title}
               />
 
               <div className="mt-12 border-t border-gray/50 pt-8 lg:hidden">

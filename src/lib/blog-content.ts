@@ -57,3 +57,17 @@ export function resolveContentHtml(record: {
   if (record.contentHtml?.trim()) return record.contentHtml;
   return paragraphsToHtml(record.content);
 }
+
+/** Complète les `<img>` sans alt (ou alt vide) dans le HTML CMS. */
+export function ensureBlogHtmlImageAlts(html: string, fallbackAlt: string): string {
+  const alt = escapeHtml(fallbackAlt.trim() || "Illustration");
+
+  return html.replace(/<img\b([^>]*?)>/gi, (match, attrs: string) => {
+    const altMatch = attrs.match(/\balt\s*=\s*(["'])(.*?)\1/i);
+    if (altMatch && altMatch[2].trim()) return match;
+    if (altMatch) {
+      return `<img${attrs.replace(/\balt\s*=\s*(["'])(.*?)\1/i, `alt="${alt}"`)}>`;
+    }
+    return `<img${attrs} alt="${alt}">`;
+  });
+}

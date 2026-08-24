@@ -4,7 +4,7 @@ import { isDatabaseConfigured } from "@/lib/db";
 import { getBlogPosts } from "@/lib/cms";
 import { getSitePublicSettings } from "@/lib/site-public-settings";
 
-export const dynamic = "force-dynamic";
+export const revalidate = 300;
 
 export async function GET() {
   let posts;
@@ -21,7 +21,7 @@ export async function GET() {
   return new Response(xml, {
     headers: {
       "Content-Type": "application/rss+xml; charset=utf-8",
-      "Cache-Control": "public, s-maxage=3600, stale-while-revalidate=86400",
+      "Cache-Control": "public, s-maxage=300, stale-while-revalidate=86400",
     },
   });
 }

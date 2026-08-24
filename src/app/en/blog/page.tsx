@@ -42,7 +42,7 @@ function PostCard({
         >
           <Image
             src={post.coverImage}
-            alt=""
+            alt={post.title}
             fill
             unoptimized
             sizes={large ? "(max-width: 768px) 100vw, 600px" : "(max-width: 768px) 100vw, 400px"}

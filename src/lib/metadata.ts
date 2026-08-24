@@ -1,8 +1,16 @@
 import type { Metadata } from "next";
-import { SITE, LOGO } from "@/lib/constants";
+import { SITE, LOGO, SOCIAL } from "@/lib/constants";
 import { getHreflangAlternates } from "@/i18n/routes";
 
 const DEFAULT_OG_IMAGE = "/opengraph-image";
+
+function resolveTwitterHandle(): string | undefined {
+  const raw = SOCIAL.twitter.trim();
+  if (!raw) return undefined;
+  const fromUrl = raw.match(/(?:twitter\.com|x\.com)\/(@?[\w]+)/i)?.[1];
+  const handle = (fromUrl ?? raw).replace(/^@/, "").trim();
+  return handle || undefined;
+}
 
 type PageMeta = {
   title: string;
@@ -35,6 +43,7 @@ export function createMetadata({
   const hreflang = getHreflangAlternates(path, SITE.url);
   const icon = iconHref?.trim() || LOGO.src;
   const iconIsSvg = /\.svg(\?|$)/i.test(icon) || icon.includes("image/svg");
+  const twitterHandle = resolveTwitterHandle();
 
   return {
     title:
@@ -84,6 +93,9 @@ export function createMetadata({
       title,
       description,
       images: [imageUrl],
+      ...(twitterHandle
+        ? { site: `@${twitterHandle}`, creator: `@${twitterHandle}` }
+        : {}),
     },
     robots: noIndex
       ? { index: false, follow: false }

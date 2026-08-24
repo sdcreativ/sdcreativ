@@ -50,6 +50,7 @@ export const SOCIAL = {
     "https://instagram.com/sdcreativ",
   youtube:
     process.env.NEXT_PUBLIC_SOCIAL_YOUTUBE ?? "https://youtube.com/@sdcreativ",
+  twitter: process.env.NEXT_PUBLIC_SOCIAL_TWITTER?.trim() ?? "",
 } as const;
 
 export const ANALYTICS = {

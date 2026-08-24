@@ -16,7 +16,7 @@ import { AccordionItem } from "@/components/ui/Accordion";
 import { Button } from "@/components/ui/Button";
 import { PageHero } from "@/components/ui/PageHero";
 import { AnimatedCard, AnimatedSection } from "@/components/ui/AnimatedSection";
-import { FaqJsonLd } from "@/components/seo/JsonLd";
+import { CourseJsonLd, FaqJsonLd } from "@/components/seo/JsonLd";
 import { type ResolvedFormationCategory } from "@/lib/formations-resolver";
 import { PRICE_ON_REQUEST_LABEL } from "@/lib/format";
 import { isProxiedMediaUrl, resolveImageDisplayUrl } from "@/lib/image-url";
@@ -46,6 +46,7 @@ export async function FormationDetailView({ category, related }: Props) {
 
   return (
     <>
+      <CourseJsonLd category={category} path={`/formations/${category.id}`} />
       <FaqJsonLd items={faqItems} />
       <PageHero
         eyebrow={category.isServices ? "Accompagnement" : "Formation"}
