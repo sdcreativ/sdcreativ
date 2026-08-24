@@ -13,6 +13,9 @@ type PageMeta = {
   locale?: "fr" | "en";
   /** Favicon / apple-touch — logo site CRM si fourni. */
   iconHref?: string;
+  openGraphType?: "website" | "article";
+  publishedTime?: string;
+  modifiedTime?: string;
 };
 
 export function createMetadata({
@@ -23,6 +26,9 @@ export function createMetadata({
   image = DEFAULT_OG_IMAGE,
   locale = "fr",
   iconHref,
+  openGraphType = "website",
+  publishedTime,
+  modifiedTime,
 }: PageMeta): Metadata {
   const url = `${SITE.url}${path}`;
   const imageUrl = image.startsWith("http") ? image : `${SITE.url}${image}`;
@@ -61,13 +67,15 @@ export function createMetadata({
       url,
       siteName: SITE.name,
       locale: locale === "en" ? "en_US" : "fr_CI",
-      type: "website",
+      type: openGraphType,
+      ...(publishedTime ? { publishedTime } : {}),
+      ...(modifiedTime ? { modifiedTime } : {}),
       images: [
         {
           url: imageUrl,
           width: 1200,
           height: 630,
-          alt: `${SITE.name} — ${SITE.tagline}`,
+          alt: title,
         },
       ],
     },

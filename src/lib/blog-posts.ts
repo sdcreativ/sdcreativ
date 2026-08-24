@@ -134,6 +134,7 @@ export function toPublicBlogPost(record: BlogPostRecord): BlogPost {
     metaDescription: record.metaDescription ?? record.excerpt,
     tags: record.tags.length > 0 ? record.tags : undefined,
     authorName: record.authorName ?? undefined,
+    updatedAt: record.updatedAt.slice(0, 10),
   };
 }
 

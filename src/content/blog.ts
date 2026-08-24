@@ -14,6 +14,8 @@ export type BlogPost = {
   metaDescription?: string;
   tags?: string[];
   authorName?: string;
+  /** ISO date (YYYY-MM-DD ou ISO complet) — dernière modification CMS. */
+  updatedAt?: string;
 };
 
 export const blogPosts: BlogPost[] = [

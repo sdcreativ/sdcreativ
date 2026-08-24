@@ -1,4 +1,5 @@
 import { SITE, LOGO } from "@/lib/constants";
+import { getGooglePlaceReviews } from "@/lib/google-places-reviews";
 import { getSitePublicSettings } from "@/lib/site-public-settings";
 
 export async function OrganizationJsonLd() {
@@ -29,8 +30,24 @@ export async function OrganizationJsonLd() {
 }
 
 export async function LocalBusinessJsonLd() {
-  const { contact, social } = await getSitePublicSettings();
+  const [{ contact, social }, googleReviews] = await Promise.all([
+    getSitePublicSettings(),
+    getGooglePlaceReviews(),
+  ]);
   const reviewUrl = process.env.NEXT_PUBLIC_GOOGLE_REVIEW_URL;
+
+  const aggregateRating =
+    googleReviews.source === "google" &&
+    googleReviews.rating > 0 &&
+    googleReviews.reviewCount > 0
+      ? {
+          "@type": "AggregateRating" as const,
+          ratingValue: googleReviews.rating,
+          reviewCount: googleReviews.reviewCount,
+          bestRating: 5,
+          worstRating: 1,
+        }
+      : undefined;
 
   const schema = {
     "@context": "https://schema.org",
@@ -69,6 +86,7 @@ export async function LocalBusinessJsonLd() {
     ],
     sameAs: [social.facebook, social.linkedin, social.instagram, social.youtube],
     ...(reviewUrl ? { hasMap: reviewUrl } : {}),
+    ...(aggregateRating ? { aggregateRating } : {}),
   };
 
   return (

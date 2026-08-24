@@ -92,7 +92,7 @@ export function BlogArticleView({
           <>
             <Image
               src={coverSrc}
-              alt=""
+              alt={post.title}
               fill
               priority
               unoptimized={isProxiedMediaUrl(coverSrc) || coverSrc.startsWith("http")}
@@ -275,7 +275,7 @@ export function BlogArticleView({
                           {thumb && (
                             <Image
                               src={thumb}
-                              alt=""
+                              alt={item.title}
                               fill
                               unoptimized={
                                 isProxiedMediaUrl(thumb) || thumb.startsWith("http")

@@ -26,6 +26,9 @@ export async function generateMetadata({ params }: Props) {
     path: `/en/blog/${slug}`,
     locale: "en",
     image: post.ogImage ?? post.coverImage,
+    openGraphType: "article",
+    publishedTime: post.date,
+    modifiedTime: post.updatedAt ?? post.date,
   });
 }
 

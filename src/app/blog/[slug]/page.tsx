@@ -13,8 +13,8 @@ type Props = {
   searchParams: Promise<{ preview?: string }>;
 };
 
-/** Preview (?preview=) + lecture CMS en DB → rendu dynamique (évite DYNAMIC_SERVER_USAGE). */
-export const dynamic = "force-dynamic";
+/** ISR 5 min ; ?preview= force le rendu dynamique (searchParams). */
+export const revalidate = 300;
 
 export async function generateMetadata({ params, searchParams }: Props) {
   const { slug } = await params;
@@ -28,6 +28,9 @@ export async function generateMetadata({ params, searchParams }: Props) {
     path: `/blog/${slug}`,
     noIndex: Boolean(preview),
     image: post.ogImage ?? post.coverImage,
+    openGraphType: "article",
+    publishedTime: post.date,
+    modifiedTime: post.updatedAt ?? post.date,
   });
 }
 

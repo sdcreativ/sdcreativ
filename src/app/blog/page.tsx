@@ -8,6 +8,8 @@ import { getBlogPosts } from "@/lib/cms";
 import { createMetadata } from "@/lib/metadata";
 import { cn } from "@/lib/utils";
 
+export const revalidate = 300;
+
 export const metadata = createMetadata({
   title: "Blog & Conseils",
   description:
@@ -41,7 +43,7 @@ function PostCard({
         >
           <Image
             src={post.coverImage}
-            alt=""
+            alt={post.title}
             fill
             unoptimized
             sizes={large ? "(max-width: 768px) 100vw, 600px" : "(max-width: 768px) 100vw, 400px"}
