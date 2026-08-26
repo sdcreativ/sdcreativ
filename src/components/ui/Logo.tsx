@@ -3,7 +3,7 @@
 import { useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
-import { LOGO, LOGO_FOOTER, SITE } from "@/lib/constants";
+import { LOGO, LOGO_DISPLAY, LOGO_FOOTER, SITE } from "@/lib/constants";
 import { resolveImageDisplayUrl, isProxiedMediaUrl } from "@/lib/image-url";
 import { useSitePublic } from "@/components/site/SitePublicProvider";
 import { cn } from "@/lib/utils";
@@ -59,11 +59,16 @@ export function Logo({
   const proxied = isProxiedMediaUrl(imageSrc);
   const showCustom = usesCustomLogo && !customFailed;
 
+  const displaySize =
+    imageSize === "footer" ? LOGO_DISPLAY.footer : LOGO_DISPLAY.header;
+
   const image = showCustom ? (
     // eslint-disable-next-line @next/next/no-img-element
     <img
       src={imageSrc}
       alt={variant === "footer" ? `${altName} — ${tagline}` : altName}
+      width={displaySize.width}
+      height={displaySize.height}
       className={cn(
         LOGO_IMAGE_SIZES[imageSize],
         href !== null && "transition-opacity group-hover:opacity-90",
@@ -74,8 +79,8 @@ export function Logo({
     <Image
       src={defaultAsset.src}
       alt={variant === "footer" ? `${altName} — ${tagline}` : altName}
-      width={defaultAsset.width}
-      height={defaultAsset.height}
+      width={displaySize.width}
+      height={displaySize.height}
       className={cn(
         LOGO_IMAGE_SIZES[imageSize],
         href !== null && "transition-opacity group-hover:opacity-90",

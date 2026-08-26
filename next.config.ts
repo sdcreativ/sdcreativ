@@ -13,6 +13,9 @@ const securityHeaders = [
 ];
 
 const nextConfig: NextConfig = {
+  experimental: {
+    optimizePackageImports: ["lucide-react", "framer-motion"],
+  },
   output: "standalone",
   // Évite le tracing partiel (ex. browsers.json manquant) qui casse le PDF en prod.
   serverExternalPackages: ["playwright-core"],

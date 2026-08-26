@@ -80,7 +80,7 @@ export function Header() {
       )}
     >
       <div className="container mx-auto flex h-[4.5rem] items-center gap-4 px-4 md:h-[4.75rem] md:px-6 lg:px-8">
-        <Logo className="shrink-0" />
+        <Logo className="shrink-0" priority />
 
         <nav
           className="hidden flex-1 justify-center lg:flex"

@@ -16,6 +16,12 @@ export const LOGO = {
   height: 675,
 } as const;
 
+/** Dimensions d’affichage (ratio logo 1200×675) — évite CLS Lighthouse. */
+export const LOGO_DISPLAY = {
+  header: { width: 86, height: 48 },
+  footer: { width: 280, height: 56 },
+} as const;
+
 /** Logo PNG coloré — footer sur fond sombre. */
 export const LOGO_FOOTER = {
   src: "/images/logo.png",

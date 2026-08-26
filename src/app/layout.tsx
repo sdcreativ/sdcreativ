@@ -1,7 +1,7 @@
 import { Poppins } from "next/font/google";
 import { HeaderGate } from "@/components/layout/HeaderGate";
 import { FooterGate } from "@/components/layout/FooterGate";
-import { FloatingWidgets } from "@/components/layout/FloatingWidgets";
+import { DeferredFloatingWidgets } from "@/components/layout/DeferredFloatingWidgets";
 import { SkipLink } from "@/components/layout/SkipLink";
 import { CookieConsent } from "@/components/layout/CookieConsent";
 import { AppProviders } from "@/components/layout/AppProviders";
@@ -17,7 +17,7 @@ import "./globals.css";
 
 const poppins = Poppins({
   subsets: ["latin"],
-  weight: ["400", "500", "600", "700"],
+  weight: ["400", "600", "700"],
   variable: "--font-poppins",
   display: "swap",
 });
@@ -57,7 +57,7 @@ export default async function RootLayout({
             {children}
           </main>
           <FooterGate sitePublic={sitePublic} />
-          <FloatingWidgets />
+          <DeferredFloatingWidgets />
           <CookieConsent />
           <Analytics />
           <TrackCtaListener />

@@ -1,22 +1,40 @@
 "use client";
 
-import { motion, useReducedMotion, type Variants } from "framer-motion";
+import { useEffect, useRef, useState, type CSSProperties, type ReactNode } from "react";
 import { cn } from "@/lib/utils";
 
-const fadeUpVariants: Variants = {
-  // Opacity reste à 1 : si IntersectionObserver ne se déclenche pas (Safari iOS),
-  // le contenu reste visible au lieu d'un écran blanc.
-  hidden: { opacity: 1, y: 32 },
-  visible: { opacity: 1, y: 0 },
-};
+function useRevealOnView<T extends HTMLElement>() {
+  const ref = useRef<T | null>(null);
+  const [visible, setVisible] = useState(false);
 
-const noMotionVariants: Variants = {
-  hidden: { opacity: 1, y: 0 },
-  visible: { opacity: 1, y: 0 },
-};
+  useEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+
+    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
+      setVisible(true);
+      return;
+    }
+
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (entry?.isIntersecting) {
+          setVisible(true);
+          observer.disconnect();
+        }
+      },
+      { threshold: 0.12, rootMargin: "0px 0px -5% 0px" },
+    );
+
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, []);
+
+  return { ref, visible };
+}
 
 type AnimatedSectionProps = {
-  children: React.ReactNode;
+  children: ReactNode;
   className?: string;
   id?: string;
   delay?: number;
@@ -28,45 +46,36 @@ export function AnimatedSection({
   id,
   delay = 0,
 }: AnimatedSectionProps) {
-  const reduceMotion = useReducedMotion();
-  const variants = reduceMotion ? noMotionVariants : fadeUpVariants;
+  const { ref, visible } = useRevealOnView<HTMLElement>();
 
   return (
-    <motion.section
+    <section
+      ref={ref}
       id={id}
-      className={cn(className)}
-      initial={reduceMotion ? false : "hidden"}
-      whileInView={reduceMotion ? undefined : "visible"}
-      viewport={{ once: true, amount: 0.12, margin: "0px 0px -5% 0px" }}
-      transition={{ duration: 0.55, delay, ease: [0.22, 1, 0.36, 1] }}
-      variants={variants}
+      className={cn("reveal-section", visible && "is-visible", className)}
+      style={{ "--reveal-delay": `${delay}s` } as CSSProperties}
     >
       {children}
-    </motion.section>
+    </section>
   );
 }
 
 type AnimatedCardProps = {
-  children: React.ReactNode;
+  children: ReactNode;
   className?: string;
   delay?: number;
 };
 
 export function AnimatedCard({ children, className, delay = 0 }: AnimatedCardProps) {
-  const reduceMotion = useReducedMotion();
-  const variants = reduceMotion ? noMotionVariants : fadeUpVariants;
+  const { ref, visible } = useRevealOnView<HTMLDivElement>();
 
   return (
-    <motion.div
-      className={cn(className)}
-      initial={reduceMotion ? false : "hidden"}
-      whileInView={reduceMotion ? undefined : "visible"}
-      viewport={{ once: true, amount: 0.12, margin: "0px 0px -5% 0px" }}
-      transition={{ duration: 0.45, delay, ease: [0.22, 1, 0.36, 1] }}
-      variants={variants}
-      whileHover={reduceMotion ? undefined : { y: -4, transition: { duration: 0.2 } }}
+    <div
+      ref={ref}
+      className={cn("reveal-card", visible && "is-visible", className)}
+      style={{ "--reveal-delay": `${delay}s` } as CSSProperties}
     >
       {children}
-    </motion.div>
+    </div>
   );
 }

@@ -43,7 +43,8 @@ export async function HeroSection({ locale = "fr" }: { locale?: "fr" | "en" }) {
         priority
         unoptimized={isProxiedMediaUrl(backgroundSrc)}
         className="object-cover object-[center_40%]"
-        sizes="100vw"
+        sizes="(max-width: 768px) 100vw, 1400px"
+        quality={75}
       />
       <div className="absolute inset-0 bg-[#0a1628]/62" />
       <div className="absolute inset-0 bg-gradient-to-r from-[#0a1628]/82 via-[#0a1628]/55 to-[#0a1628]/25" />
