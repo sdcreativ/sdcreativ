@@ -180,7 +180,7 @@ export const createQuoteSchema = z.object({
   subtotal: z.number().int().min(0),
   estimateMin: z.number().int().min(0).optional().nullable(),
   estimateMax: z.number().int().min(0).optional().nullable(),
-  budget: z.string().trim().max(50).optional().nullable(),
+  budget: z.string().trim().max(80).optional().nullable(),
   timeline: z.string().trim().max(50).optional().nullable(),
   message: z.string().trim().max(5000).optional().nullable(),
   status: z.enum(QUOTE_STATUSES).default("sent"),

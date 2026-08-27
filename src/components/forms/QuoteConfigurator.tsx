@@ -16,11 +16,9 @@ import { HoneypotField } from "@/components/forms/HoneypotField";
 import { TurnstileWidget } from "@/components/forms/TurnstileWidget";
 import { useFormTurnstile } from "@/components/forms/useFormTurnstile";
 import {
-  budgetOptions,
   timelineOptions,
 } from "@/content/contact-options";
 import {
-  budgetOptionsEn,
   quoteFormCopy,
   timelineOptionsEn,
   type FormLocale,
@@ -61,7 +59,6 @@ export function QuoteConfigurator({
   locale = "fr",
 }: Props) {
   const t = quoteFormCopy[locale];
-  const budgetOpts = locale === "en" ? budgetOptionsEn : budgetOptions;
   const timelineOpts = locale === "en" ? timelineOptionsEn : timelineOptions;
   const labelProject = (id: string, fallback: string) =>
     locale === "en" ? labelEn(quoteLabelsEn.projectTypes, id, fallback) : fallback;
@@ -364,12 +361,17 @@ export function QuoteConfigurator({
               <label htmlFor="budget" className="mb-1.5 block text-xs font-semibold uppercase tracking-wider text-gray-text">
                 {t.budget}
               </label>
-              <select id="budget" name="budget" required className={cn(fieldClass, "cursor-pointer")}>
-                <option value="">{t.choose}</option>
-                {budgetOpts.map((o) => (
-                  <option key={o.value} value={o.value}>{o.label}</option>
-                ))}
-              </select>
+              <input
+                id="budget"
+                name="budget"
+                type="text"
+                required
+                autoComplete="off"
+                maxLength={80}
+                className={fieldClass}
+                placeholder={t.budgetPh}
+              />
+              <p className="mt-1.5 text-xs text-gray-text">{t.budgetHint}</p>
             </div>
             <div>
               <label htmlFor="timeline" className="mb-1.5 block text-xs font-semibold uppercase tracking-wider text-gray-text">

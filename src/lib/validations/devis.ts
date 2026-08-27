@@ -1,8 +1,7 @@
 import { z } from "zod";
-import { budgetOptions, timelineOptions } from "@/content/contact-options";
+import { timelineOptions } from "@/content/contact-options";
 import type { SiteQuoteConfigSettings } from "@/lib/site-quote-config-types";
 
-const budgetValues = budgetOptions.map((o) => o.value) as [string, ...string[]];
 const timelineValues = timelineOptions.map((o) => o.value) as [string, ...string[]];
 
 export function createDevisSchema(config: Pick<SiteQuoteConfigSettings, "projectTypes" | "pageTiers" | "addons">) {
@@ -25,7 +24,11 @@ export function createDevisSchema(config: Pick<SiteQuoteConfigSettings, "project
       .array(z.string())
       .default([])
       .refine((ids) => ids.every((id) => addonIds.has(id)), { message: "Option invalide." }),
-    budget: z.enum(budgetValues, { message: "Veuillez indiquer un budget." }),
+    budget: z
+      .string()
+      .trim()
+      .min(1, "Veuillez indiquer un budget.")
+      .max(80, "Le budget est trop long."),
     timeline: z.enum(timelineValues, { message: "Veuillez indiquer un délai." }),
     message: z.string().optional(),
   }).superRefine((data, ctx) => {
