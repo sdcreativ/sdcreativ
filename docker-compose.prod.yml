@@ -9,3 +9,10 @@ services:
   app:
     volumes:
       - /var/backups/sdcreativ:/app/data/backups:ro
+    environment:
+      CLAMAV_ENABLED: ${CLAMAV_ENABLED:-1}
+      CLAMAV_HOST: ${CLAMAV_HOST:-clamav}
+      CLAMAV_PORT: ${CLAMAV_PORT:-3310}
+    depends_on:
+      clamav:
+        condition: service_started

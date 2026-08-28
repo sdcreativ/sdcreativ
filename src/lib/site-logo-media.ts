@@ -3,6 +3,7 @@ import path from "node:path";
 import { PutObjectCommand, S3Client } from "@aws-sdk/client-s3";
 import { getS3PublicUrl } from "@/lib/blog-media";
 import { isS3Configured, sanitizeFilename } from "@/lib/s3";
+import { assertCleanUpload } from "@/lib/clamav";
 
 const ALLOWED_LOGO_TYPES = new Set([
   "image/jpeg",
@@ -70,6 +71,7 @@ export async function uploadSiteLogo(
   if (buffer.length > MAX_LOGO_BYTES) {
     throw new Error("Logo trop volumineux (max 2 Mo).");
   }
+  await assertCleanUpload(buffer);
 
   if (isS3Configured()) {
     const url = await uploadSiteLogoToS3(buffer, filename, contentType);

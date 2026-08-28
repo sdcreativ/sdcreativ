@@ -3,6 +3,7 @@ import path from "node:path";
 import { PutObjectCommand, S3Client } from "@aws-sdk/client-s3";
 import { isAllowedBlogImageType, getS3PublicUrl } from "@/lib/blog-media";
 import { isS3Configured, sanitizeFilename } from "@/lib/s3";
+import { assertCleanUpload } from "@/lib/clamav";
 
 const MAX_AVATAR_BYTES = 2 * 1024 * 1024;
 
@@ -64,6 +65,7 @@ export async function uploadCrmAvatar(
   if (buffer.length > MAX_AVATAR_BYTES) {
     throw new Error("Image trop volumineuse (max 2 Mo).");
   }
+  await assertCleanUpload(buffer);
 
   if (isS3Configured()) {
     const url = await uploadCrmAvatarToS3(userId, buffer, filename, contentType);

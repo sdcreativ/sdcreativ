@@ -4,6 +4,7 @@ import { GetObjectCommand, PutObjectCommand } from "@aws-sdk/client-s3";
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 import { getS3PublicUrl } from "@/lib/blog-media";
 import { downloadObjectBuffer, isS3Configured, sanitizeFilename } from "@/lib/s3";
+import { assertCleanUpload } from "@/lib/clamav";
 import {
   MAX_CALENDAR_ATTACHMENT_BYTES,
   MAX_CALENDAR_ATTACHMENTS,
@@ -138,6 +139,8 @@ export async function uploadCalendarAttachment(
     contentType && contentType !== "application/octet-stream"
       ? contentType
       : mimeFromExtension(extensionOf(filename));
+
+  await assertCleanUpload(buffer);
 
   const stored = isS3Configured()
     ? await uploadToS3(buffer, filename, mimeType)

@@ -331,7 +331,7 @@ export async function archiveProjectDossier(input: {
     "archive",
     `manifeste-${project.id.slice(0, 8)}.json`,
   );
-  await uploadObjectBuffer(manifestKey, manifestJson, "application/json");
+  await uploadObjectBuffer(manifestKey, manifestJson, "application/json", { scan: false });
 
   const pdfHtml = buildArchiveManifestPdfHtml({
     project,
@@ -347,7 +347,7 @@ export async function archiveProjectDossier(input: {
     "archive",
     `manifeste-${project.id.slice(0, 8)}.${rendered.extension}`,
   );
-  await uploadObjectBuffer(pdfKey, rendered.buffer, rendered.mimeType);
+  await uploadObjectBuffer(pdfKey, rendered.buffer, rendered.mimeType, { scan: false });
 
   const bundle = await withDb(async (query) => {
     await query(

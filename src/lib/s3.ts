@@ -6,6 +6,7 @@ import {
   S3Client,
 } from "@aws-sdk/client-s3";
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
+import { assertCleanUpload } from "@/lib/clamav";
 
 const PRESIGN_UPLOAD_TTL_SECONDS = 15 * 60;
 const PRESIGN_DOWNLOAD_TTL_SECONDS = 15 * 60;
@@ -211,6 +212,7 @@ export async function createPresignedUploadUrl(
   key: string,
   contentType: string,
 ): Promise<{ uploadUrl: string; expiresIn: number }> {
+  // Pas de scan ClamAV ici : le fichier part directement vers S3 (hors process Node).
   const command = new PutObjectCommand({
     Bucket: getBucket(),
     Key: key,
@@ -281,7 +283,11 @@ export async function uploadObjectBuffer(
   key: string,
   body: Buffer,
   contentType: string,
+  options?: { scan?: boolean },
 ): Promise<void> {
+  if (options?.scan !== false) {
+    await assertCleanUpload(body);
+  }
   await getClient().send(
     new PutObjectCommand({
       Bucket: getBucket(),

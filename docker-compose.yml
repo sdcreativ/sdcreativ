@@ -131,6 +131,27 @@ services:
     networks:
       - sdcreativ
 
+  # Antivirus (prod uniquement) — scan des uploads / PJ avant S3. ~1,5 Go RAM.
+  clamav:
+    profiles: ["prod"]
+    image: clamav/clamav:1.4
+    restart: unless-stopped
+    environment:
+      CLAMD_CONF_MaxFileSize: 25M
+      CLAMD_CONF_StreamMaxLength: 25M
+      CLAMD_CONF_MaxScanSize: 50M
+    volumes:
+      - clamav_data:/var/lib/clamav
+    healthcheck:
+      test: ["CMD", "/usr/local/bin/clamdcheck.sh"]
+      interval: 60s
+      timeout: 10s
+      retries: 3
+      start_period: 300s
+    mem_limit: 1536m
+    networks:
+      - sdcreativ
+
 networks:
   sdcreativ:
     driver: bridge
@@ -141,3 +162,4 @@ volumes:
   certbot_www:
   certbot_certs:
   uploads_data:
+  clamav_data:

@@ -2,6 +2,7 @@ import { mkdir, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { PutObjectCommand } from "@aws-sdk/client-s3";
 import { createPresignedUploadUrl, isS3Configured, sanitizeFilename } from "@/lib/s3";
+import { assertCleanUpload } from "@/lib/clamav";
 
 const ALLOWED_IMAGE_TYPES = new Set([
   "image/jpeg",
@@ -84,6 +85,7 @@ export async function uploadBlogImage(
   if (!isAllowedBlogImageType(contentType)) {
     throw new Error("Format non supporté (JPEG, PNG, WebP, GIF).");
   }
+  await assertCleanUpload(buffer);
 
   if (isS3Configured()) {
     const url = await uploadBlogImageToS3(buffer, filename, contentType);

@@ -122,7 +122,7 @@ export async function archiveEmployeeContractToS3(input: {
   const s3Key = buildEmployeeContractDocumentKey(input.contract, variant, ext);
   const documentName = s3Key.split("/").pop() ?? `${input.contract.reference}.${ext}`;
 
-  await uploadObjectBuffer(s3Key, buffer, mimeType ?? "application/pdf");
+  await uploadObjectBuffer(s3Key, buffer, mimeType ?? "application/pdf", { scan: false });
 
   if ((mimeType ?? "").includes("html") || extension === "html") {
     console.warn(

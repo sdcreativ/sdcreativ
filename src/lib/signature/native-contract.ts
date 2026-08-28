@@ -182,7 +182,7 @@ export async function signContractNative(input: {
   if (isS3Configured()) {
     const safe = sanitizeFilename(`${contract.reference}-signe.${rendered.extension}`);
     proofS3Key = `contracts/${contract.clientId}/${contract.id}/${safe}`;
-    await uploadObjectBuffer(proofS3Key, rendered.buffer, rendered.mimeType);
+    await uploadObjectBuffer(proofS3Key, rendered.buffer, rendered.mimeType, { scan: false });
   }
 
   await withDb(async (query) => {

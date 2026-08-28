@@ -62,7 +62,7 @@ export async function saveBillingDocument(input: {
     fileName,
   );
 
-  await uploadObjectBuffer(s3Key, input.buffer, input.mimeType);
+  await uploadObjectBuffer(s3Key, input.buffer, input.mimeType, { scan: false });
 
   return withDb(async (query) => {
     const { rows } = await query<BillingDocumentRow>(

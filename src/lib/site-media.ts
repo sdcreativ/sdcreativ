@@ -3,6 +3,7 @@ import path from "node:path";
 import { PutObjectCommand } from "@aws-sdk/client-s3";
 import { getS3PublicUrl, isAllowedBlogImageType, MAX_IMAGE_BYTES } from "@/lib/blog-media";
 import { isS3Configured, sanitizeFilename } from "@/lib/s3";
+import { assertCleanUpload } from "@/lib/clamav";
 
 export function buildSiteMediaKey(filename: string): string {
   const id = crypto.randomUUID();
@@ -60,6 +61,7 @@ export async function uploadSiteMedia(
   if (!isAllowedBlogImageType(contentType)) {
     throw new Error("Format non supporté (JPEG, PNG, WebP, GIF).");
   }
+  await assertCleanUpload(buffer);
 
   if (isS3Configured()) {
     return { url: await uploadSiteMediaToS3(buffer, filename, contentType), storage: "s3" };
