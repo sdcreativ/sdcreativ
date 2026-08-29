@@ -4,6 +4,7 @@ import { PutObjectCommand, S3Client } from "@aws-sdk/client-s3";
 import { getS3PublicUrl } from "@/lib/blog-media";
 import { isS3Configured, sanitizeFilename } from "@/lib/s3";
 import { assertCleanUpload } from "@/lib/clamav";
+import { prepareImageForStorage } from "@/lib/image-to-webp";
 
 const ALLOWED_LOGO_TYPES = new Set([
   "image/jpeg",
@@ -72,11 +73,22 @@ export async function uploadSiteLogo(
     throw new Error("Logo trop volumineux (max 2 Mo).");
   }
   await assertCleanUpload(buffer);
+  const prepared = await prepareImageForStorage(buffer, filename, contentType, {
+    maxWidth: 1024,
+    quality: 82,
+  });
 
   if (isS3Configured()) {
-    const url = await uploadSiteLogoToS3(buffer, filename, contentType);
+    const url = await uploadSiteLogoToS3(
+      prepared.buffer,
+      prepared.filename,
+      prepared.contentType,
+    );
     return { url, storage: "s3" };
   }
 
-  return { url: await uploadSiteLogoLocal(buffer, filename), storage: "local" };
+  return {
+    url: await uploadSiteLogoLocal(prepared.buffer, prepared.filename),
+    storage: "local",
+  };
 }

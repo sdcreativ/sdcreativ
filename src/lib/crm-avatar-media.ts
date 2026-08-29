@@ -4,6 +4,7 @@ import { PutObjectCommand, S3Client } from "@aws-sdk/client-s3";
 import { isAllowedBlogImageType, getS3PublicUrl } from "@/lib/blog-media";
 import { isS3Configured, sanitizeFilename } from "@/lib/s3";
 import { assertCleanUpload } from "@/lib/clamav";
+import { prepareImageForStorage } from "@/lib/image-to-webp";
 
 const MAX_AVATAR_BYTES = 2 * 1024 * 1024;
 
@@ -66,11 +67,23 @@ export async function uploadCrmAvatar(
     throw new Error("Image trop volumineuse (max 2 Mo).");
   }
   await assertCleanUpload(buffer);
+  const prepared = await prepareImageForStorage(buffer, filename, contentType, {
+    maxWidth: 512,
+    quality: 80,
+  });
 
   if (isS3Configured()) {
-    const url = await uploadCrmAvatarToS3(userId, buffer, filename, contentType);
+    const url = await uploadCrmAvatarToS3(
+      userId,
+      prepared.buffer,
+      prepared.filename,
+      prepared.contentType,
+    );
     return { url, storage: "s3" };
   }
 
-  return { url: await uploadCrmAvatarLocal(userId, buffer, filename), storage: "local" };
+  return {
+    url: await uploadCrmAvatarLocal(userId, prepared.buffer, prepared.filename),
+    storage: "local",
+  };
 }

@@ -4,6 +4,7 @@ import { PutObjectCommand } from "@aws-sdk/client-s3";
 import { getS3PublicUrl, isAllowedBlogImageType, MAX_IMAGE_BYTES } from "@/lib/blog-media";
 import { isS3Configured, sanitizeFilename } from "@/lib/s3";
 import { assertCleanUpload } from "@/lib/clamav";
+import { prepareImageForStorage } from "@/lib/image-to-webp";
 
 export function buildSiteMediaKey(filename: string): string {
   const id = crypto.randomUUID();
@@ -62,10 +63,24 @@ export async function uploadSiteMedia(
     throw new Error("Format non supporté (JPEG, PNG, WebP, GIF).");
   }
   await assertCleanUpload(buffer);
+  const prepared = await prepareImageForStorage(buffer, filename, contentType, {
+    maxWidth: 1920,
+    quality: 80,
+  });
 
   if (isS3Configured()) {
-    return { url: await uploadSiteMediaToS3(buffer, filename, contentType), storage: "s3" };
+    return {
+      url: await uploadSiteMediaToS3(
+        prepared.buffer,
+        prepared.filename,
+        prepared.contentType,
+      ),
+      storage: "s3",
+    };
   }
 
-  return { url: await uploadSiteMediaLocal(buffer, filename), storage: "local" };
+  return {
+    url: await uploadSiteMediaLocal(prepared.buffer, prepared.filename),
+    storage: "local",
+  };
 }

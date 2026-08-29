@@ -1,10 +1,10 @@
 import { GetObjectCommand, S3Client } from "@aws-sdk/client-s3";
 import { NextResponse } from "next/server";
-import sharp from "sharp";
 import {
   isPublicMediaS3Key,
   parseS3ObjectFromPublicUrl,
 } from "@/lib/image-url";
+import { convertRasterToWebp, isSvgImage } from "@/lib/image-to-webp";
 import { snapMediaWidth } from "@/lib/media-image-loader";
 import { isS3Configured } from "@/lib/s3";
 
@@ -16,12 +16,6 @@ function parseQuality(raw: string | null): number {
   const value = Number.parseInt(raw ?? "75", 10);
   if (!Number.isFinite(value)) return 75;
   return Math.min(90, Math.max(40, value));
-}
-
-function isSvg(contentType: string | undefined, key: string): boolean {
-  return Boolean(
-    contentType?.includes("svg") || key.toLowerCase().endsWith(".svg"),
-  );
 }
 
 export async function GET(request: Request) {
@@ -77,7 +71,7 @@ export async function GET(request: Request) {
       "Cache-Control": "public, max-age=31536000, immutable",
     };
 
-    if (isSvg(contentType, ref.key) || !widthParam) {
+    if (isSvgImage(contentType, ref.key)) {
       return new NextResponse(response.Body.transformToWebStream(), {
         headers: {
           "Content-Type": contentType,
@@ -87,8 +81,9 @@ export async function GET(request: Request) {
     }
 
     const bytes = await response.Body.transformToByteArray();
-    if (bytes.byteLength > MAX_INPUT_BYTES) {
-      return new NextResponse(Buffer.from(bytes), {
+    const input = Buffer.from(bytes);
+    if (input.byteLength > MAX_INPUT_BYTES) {
+      return new NextResponse(input, {
         headers: {
           "Content-Type": contentType,
           ...cacheHeaders,
@@ -96,31 +91,28 @@ export async function GET(request: Request) {
       });
     }
 
-    try {
-      const width = snapMediaWidth(Number.parseInt(widthParam, 10) || 640);
-      const webp = await sharp(bytes)
-        .rotate()
-        .resize({
-          width,
-          withoutEnlargement: true,
-        })
-        .webp({ quality })
-        .toBuffer();
+    const converted = await convertRasterToWebp(input, {
+      quality,
+      maxWidth: widthParam
+        ? snapMediaWidth(Number.parseInt(widthParam, 10) || 640)
+        : undefined,
+    });
 
-      return new NextResponse(webp, {
+    if (converted) {
+      return new NextResponse(converted.buffer, {
         headers: {
-          "Content-Type": "image/webp",
-          ...cacheHeaders,
-        },
-      });
-    } catch {
-      return new NextResponse(Buffer.from(bytes), {
-        headers: {
-          "Content-Type": contentType,
+          "Content-Type": converted.contentType,
           ...cacheHeaders,
         },
       });
     }
+
+    return new NextResponse(input, {
+      headers: {
+        "Content-Type": contentType,
+        ...cacheHeaders,
+      },
+    });
   } catch (error) {
     console.error("[api/media]", {
       bucket: ref.bucket,

@@ -2,6 +2,7 @@ import { mkdir, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { isS3Configured, sanitizeFilename, uploadObjectBuffer } from "@/lib/s3";
 import { assertCleanUpload } from "@/lib/clamav";
+import { prepareImageForStorage } from "@/lib/image-to-webp";
 export { resolveCrmDocScreenshotSrc } from "@/lib/crm-docs-screenshot-url";
 
 const ALLOWED_IMAGE_TYPES = new Set([
@@ -60,10 +61,14 @@ export async function uploadCrmDocImage(
     throw new Error("Format non supporté (JPEG, PNG, WebP, GIF).");
   }
   await assertCleanUpload(buffer);
+  const prepared = await prepareImageForStorage(buffer, filename, contentType, {
+    maxWidth: 1600,
+    quality: 78,
+  });
 
   if (isS3Configured()) {
-    const key = buildCrmDocMediaKey(filename);
-    await uploadObjectBuffer(key, buffer, contentType, { scan: false });
+    const key = buildCrmDocMediaKey(prepared.filename);
+    await uploadObjectBuffer(key, prepared.buffer, prepared.contentType, { scan: false });
     const url = getCrmDocS3PublicUrl(key);
     return { url, storage: "s3", key };
   }
@@ -75,6 +80,6 @@ export async function uploadCrmDocImage(
     );
   }
 
-  const url = await uploadLocal(buffer, filename);
+  const url = await uploadLocal(prepared.buffer, prepared.filename);
   return { url, storage: "local" };
 }
