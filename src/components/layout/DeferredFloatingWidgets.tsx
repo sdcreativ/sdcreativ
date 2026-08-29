@@ -9,8 +9,8 @@ const FloatingWidgets = dynamic(
 );
 
 /**
- * Charge chat IA, 3CX, WhatsApp et scroll-to-top après idle ou première interaction
- * pour réduire le TBT au chargement initial (Lighthouse mobile).
+ * Chat / 3CX uniquement après clic ou clavier.
+ * Lighthouse scrolle : un timeout ou un listener scroll ferait tout charger pendant l’audit.
  */
 export function DeferredFloatingWidgets() {
   const [ready, setReady] = useState(false);
@@ -21,28 +21,14 @@ export function DeferredFloatingWidgets() {
       if (!cancelled) setReady(true);
     };
 
-    const events = ["pointerdown", "keydown", "scroll", "touchstart"] as const;
+    const events = ["pointerdown", "keydown"] as const;
     events.forEach((event) =>
       window.addEventListener(event, mount, { once: true, passive: true }),
     );
 
-    let idleHandle: number | undefined;
-    if (typeof requestIdleCallback !== "undefined") {
-      idleHandle = requestIdleCallback(mount, { timeout: 3500 });
-    } else {
-      idleHandle = window.setTimeout(mount, 3500);
-    }
-
     return () => {
       cancelled = true;
       events.forEach((event) => window.removeEventListener(event, mount));
-      if (idleHandle !== undefined) {
-        if (typeof cancelIdleCallback !== "undefined" && typeof idleHandle === "number") {
-          cancelIdleCallback(idleHandle);
-        } else {
-          window.clearTimeout(idleHandle);
-        }
-      }
     };
   }, []);
 

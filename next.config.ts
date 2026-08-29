@@ -18,12 +18,14 @@ const nextConfig: NextConfig = {
   },
   output: "standalone",
   // Évite le tracing partiel (ex. browsers.json manquant) qui casse le PDF en prod.
-  serverExternalPackages: ["playwright-core"],
+  serverExternalPackages: ["playwright-core", "sharp"],
   // Migrations SQL + Playwright (PDF) — aussi copiés explicitement dans le Dockerfile.
   outputFileTracingIncludes: {
     "/*": [
       "./migrations/**/*",
       "./node_modules/playwright-core/**/*",
+      "./node_modules/sharp/**/*",
+      "./node_modules/@img/**/*",
       // Logos PDF (document-logo lit public/images sans tracer tout le repo)
       "./public/images/logo.png",
       "./public/images/logo_sd.svg",

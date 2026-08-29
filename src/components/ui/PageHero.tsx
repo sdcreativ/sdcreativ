@@ -1,6 +1,6 @@
-import Image from "next/image";
 import { cn } from "@/lib/utils";
-import { isProxiedMediaUrl, resolveImageDisplayUrl } from "@/lib/image-url";
+import { MediaImage } from "@/components/ui/MediaImage";
+import { resolveImageDisplayUrl } from "@/lib/image-url";
 import { Breadcrumb } from "@/components/ui/Breadcrumb";
 import { BreadcrumbJsonLd } from "@/components/seo/JsonLd";
 
@@ -46,14 +46,14 @@ export function PageHero({
     >
       {backgroundSrc ? (
         <>
-          <Image
+          <MediaImage
             src={backgroundSrc}
             alt={imageAlt}
             fill
             priority
-            unoptimized={isProxiedMediaUrl(backgroundSrc)}
             className="object-cover object-center"
             sizes="100vw"
+            quality={75}
           />
           <div className="absolute inset-0 bg-dark/80" />
           <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top,_rgba(0,114,181,0.2),_transparent_60%)]" />

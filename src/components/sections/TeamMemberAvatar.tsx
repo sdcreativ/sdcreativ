@@ -1,16 +1,15 @@
 "use client";
 
 import { useState } from "react";
-import Image from "next/image";
 import { DEFAULT_IMAGE_POSITION } from "@/lib/image-position";
-import { resolveImageDisplayUrl, isProxiedMediaUrl } from "@/lib/image-url";
+import { resolveImageDisplayUrl } from "@/lib/image-url";
+import { MediaImage } from "@/components/ui/MediaImage";
 import { cn } from "@/lib/utils";
 
 type Props = {
   image: string;
   imageAlt: string;
   imagePosition?: string;
-  /** Chemin local de secours (ex. /images/team/….png). */
   fallbackSrc?: string | null;
   initials?: string;
   size: "compact" | "large";
@@ -29,6 +28,7 @@ export function TeamMemberAvatar({
   const primary = resolveImageDisplayUrl(image);
   const [src, setSrc] = useState(primary);
   const [failed, setFailed] = useState(false);
+  const pixelSize = size === "large" ? 160 : 80;
 
   const avatarClass =
     size === "large" ? "mb-5 h-28 w-28 md:h-32 md:w-32" : "mb-4 h-20 w-20";
@@ -59,40 +59,21 @@ export function TeamMemberAvatar({
         className,
       )}
     >
-      {/* img natif pour /api/media (évite _next/image) + fallback local */}
-      {isProxiedMediaUrl(src) || src.startsWith("/images/") ? (
-        // eslint-disable-next-line @next/next/no-img-element
-        <img
-          src={src}
-          alt={imageAlt}
-          className="absolute inset-0 h-full w-full object-cover"
-          style={{ objectPosition: imagePosition ?? DEFAULT_IMAGE_POSITION }}
-          onError={() => {
-            if (fallbackSrc && src !== fallbackSrc) {
-              setSrc(fallbackSrc);
-              return;
-            }
-            setFailed(true);
-          }}
-        />
-      ) : (
-        <Image
-          src={src}
-          alt={imageAlt}
-          fill
-          sizes={size === "large" ? "128px" : "80px"}
-          unoptimized={isProxiedMediaUrl(src)}
-          className="object-cover"
-          style={{ objectPosition: imagePosition ?? DEFAULT_IMAGE_POSITION }}
-          onError={() => {
-            if (fallbackSrc && src !== fallbackSrc) {
-              setSrc(fallbackSrc);
-              return;
-            }
-            setFailed(true);
-          }}
-        />
-      )}
+      <MediaImage
+        src={src}
+        alt={imageAlt}
+        fill
+        sizes={`${pixelSize}px`}
+        className="object-cover"
+        style={{ objectPosition: imagePosition ?? DEFAULT_IMAGE_POSITION }}
+        onError={() => {
+          if (fallbackSrc && src !== fallbackSrc) {
+            setSrc(fallbackSrc);
+            return;
+          }
+          setFailed(true);
+        }}
+      />
     </div>
   );
 }

@@ -1,4 +1,3 @@
-import Image from "next/image";
 import {
   ArrowRight,
   Check,
@@ -9,9 +8,10 @@ import {
   Smartphone,
 } from "lucide-react";
 import { Button } from "@/components/ui/Button";
+import { MediaImage } from "@/components/ui/MediaImage";
 import { heroContentEn } from "@/i18n/public-en";
 import { getSiteHeroSettings } from "@/lib/site-hero-settings";
-import { isProxiedMediaUrl, resolveImageDisplayUrl } from "@/lib/image-url";
+import { resolveImageDisplayUrl } from "@/lib/image-url";
 
 const highlightIcons = [Monitor, Search, Smartphone, HeadphonesIcon];
 
@@ -36,12 +36,11 @@ export async function HeroSection({ locale = "fr" }: { locale?: "fr" | "en" }) {
 
   return (
     <section className="relative overflow-hidden bg-dark pt-[4.5rem] md:pt-[4.75rem]">
-      <Image
+      <MediaImage
         src={backgroundSrc}
         alt={heroAlt || (isEn ? "SD CREATIV — web agency Abidjan" : "SD CREATIV — agence web Abidjan")}
         fill
         priority
-        unoptimized={isProxiedMediaUrl(backgroundSrc)}
         className="object-cover object-[center_40%]"
         sizes="(max-width: 768px) 100vw, 1400px"
         quality={75}

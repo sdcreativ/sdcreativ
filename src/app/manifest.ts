@@ -1,12 +1,11 @@
 import type { MetadataRoute } from "next";
-import { SITE, LOGO } from "@/lib/constants";
-import { getSiteIconHref } from "@/lib/site-favicon";
+import { SITE } from "@/lib/constants";
 
-export const revalidate = 300;
+/** Statique : évite un fetch CMS sur le chemin critique Lighthouse. */
+export const dynamic = "force-static";
+export const revalidate = 86400;
 
-export default async function manifest(): Promise<MetadataRoute.Manifest> {
-  const icon = await getSiteIconHref().catch(() => LOGO.src);
-
+export default function manifest(): MetadataRoute.Manifest {
   return {
     name: `${SITE.name} — ${SITE.tagline}`,
     short_name: SITE.name,
@@ -30,18 +29,6 @@ export default async function manifest(): Promise<MetadataRoute.Manifest> {
         sizes: "180x180",
         type: "image/png",
         purpose: "any",
-      },
-      {
-        src: icon,
-        sizes: "any",
-        type: icon.toLowerCase().includes(".svg") ? "image/svg+xml" : "image/png",
-        purpose: "any",
-      },
-      {
-        src: icon,
-        sizes: "any",
-        type: icon.toLowerCase().includes(".svg") ? "image/svg+xml" : "image/png",
-        purpose: "maskable",
       },
     ],
   };

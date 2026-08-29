@@ -1,13 +1,35 @@
 import { GetObjectCommand, S3Client } from "@aws-sdk/client-s3";
 import { NextResponse } from "next/server";
+import sharp from "sharp";
 import {
   isPublicMediaS3Key,
   parseS3ObjectFromPublicUrl,
 } from "@/lib/image-url";
+import { snapMediaWidth } from "@/lib/media-image-loader";
 import { isS3Configured } from "@/lib/s3";
 
+export const runtime = "nodejs";
+
+const MAX_INPUT_BYTES = 8 * 1024 * 1024;
+
+function parseQuality(raw: string | null): number {
+  const value = Number.parseInt(raw ?? "75", 10);
+  if (!Number.isFinite(value)) return 75;
+  return Math.min(90, Math.max(40, value));
+}
+
+function isSvg(contentType: string | undefined, key: string): boolean {
+  return Boolean(
+    contentType?.includes("svg") || key.toLowerCase().endsWith(".svg"),
+  );
+}
+
 export async function GET(request: Request) {
-  const rawUrl = new URL(request.url).searchParams.get("url");
+  const requestUrl = new URL(request.url);
+  const rawUrl = requestUrl.searchParams.get("url");
+  const widthParam = requestUrl.searchParams.get("w");
+  const quality = parseQuality(requestUrl.searchParams.get("q"));
+
   if (!rawUrl) {
     return NextResponse.json({ error: "URL manquante." }, { status: 400 });
   }
@@ -50,12 +72,55 @@ export async function GET(request: Request) {
       return NextResponse.json({ error: "Fichier introuvable." }, { status: 404 });
     }
 
-    return new NextResponse(response.Body.transformToWebStream(), {
-      headers: {
-        "Content-Type": response.ContentType ?? "application/octet-stream",
-        "Cache-Control": "public, max-age=31536000, immutable",
-      },
-    });
+    const contentType = response.ContentType ?? "application/octet-stream";
+    const cacheHeaders = {
+      "Cache-Control": "public, max-age=31536000, immutable",
+    };
+
+    if (isSvg(contentType, ref.key) || !widthParam) {
+      return new NextResponse(response.Body.transformToWebStream(), {
+        headers: {
+          "Content-Type": contentType,
+          ...cacheHeaders,
+        },
+      });
+    }
+
+    const bytes = await response.Body.transformToByteArray();
+    if (bytes.byteLength > MAX_INPUT_BYTES) {
+      return new NextResponse(Buffer.from(bytes), {
+        headers: {
+          "Content-Type": contentType,
+          ...cacheHeaders,
+        },
+      });
+    }
+
+    try {
+      const width = snapMediaWidth(Number.parseInt(widthParam, 10) || 640);
+      const webp = await sharp(bytes)
+        .rotate()
+        .resize({
+          width,
+          withoutEnlargement: true,
+        })
+        .webp({ quality })
+        .toBuffer();
+
+      return new NextResponse(webp, {
+        headers: {
+          "Content-Type": "image/webp",
+          ...cacheHeaders,
+        },
+      });
+    } catch {
+      return new NextResponse(Buffer.from(bytes), {
+        headers: {
+          "Content-Type": contentType,
+          ...cacheHeaders,
+        },
+      });
+    }
   } catch (error) {
     console.error("[api/media]", {
       bucket: ref.bucket,

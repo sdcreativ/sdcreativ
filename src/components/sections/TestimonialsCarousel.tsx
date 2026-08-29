@@ -6,7 +6,6 @@ import type { Testimonial } from "@/content/testimonials";
 import { AnimatedSection } from "@/components/ui/AnimatedSection";
 import { SectionHeading } from "@/components/ui/SectionHeading";
 import { cn } from "@/lib/utils";
-import { motion, AnimatePresence } from "framer-motion";
 
 type Props = {
   testimonials: Testimonial[];
@@ -33,56 +32,55 @@ export function TestimonialsCarousel({ testimonials, locale = "fr" }: Props) {
         />
 
         <div className="relative mx-auto max-w-4xl">
-          <AnimatePresence mode="wait">
-            <motion.div
-              key={current.id}
-              initial={{ opacity: 0, x: 20 }}
-              animate={{ opacity: 1, x: 0 }}
-              exit={{ opacity: 0, x: -20 }}
-              transition={{ duration: 0.35 }}
-              className="relative rounded-2xl bg-white p-8 shadow-sm md:p-12"
-            >
-              <Quote
-                className="absolute right-8 top-8 h-16 w-16 text-primary/10"
-                aria-hidden
-              />
-              <div className="mb-4 flex gap-1">
-                {Array.from({ length: 5 }).map((_, i) => (
-                  <Star
-                    key={i}
-                    className="h-5 w-5 fill-accent text-accent"
-                    aria-hidden
-                  />
-                ))}
-              </div>
-              <blockquote className="text-lg italic leading-relaxed text-foreground/90 md:text-xl">
-                &ldquo;{current.quote}&rdquo;
-              </blockquote>
-              <footer className="mt-6">
-                <cite className="not-italic">
-                  <span className="font-bold text-foreground">{current.author}</span>
-                  <span className="text-gray-text">
-                    {" "}
-                    — {current.role}, {current.company}
-                  </span>
-                </cite>
-              </footer>
-            </motion.div>
-          </AnimatePresence>
+          <div className="relative rounded-2xl bg-white p-8 shadow-sm md:p-12">
+            <Quote
+              className="absolute right-8 top-8 h-16 w-16 text-primary/10"
+              aria-hidden
+            />
+            <div className="mb-4 flex gap-1">
+              {Array.from({ length: 5 }).map((_, i) => (
+                <Star
+                  key={i}
+                  className="h-5 w-5 fill-accent text-accent"
+                  aria-hidden
+                />
+              ))}
+            </div>
+            <blockquote className="text-lg italic leading-relaxed text-foreground/90 md:text-xl">
+              &ldquo;{current.quote}&rdquo;
+            </blockquote>
+            <footer className="mt-6">
+              <cite className="not-italic">
+                <span className="font-bold text-foreground">{current.author}</span>
+                <span className="text-gray-text">
+                  {" "}
+                  — {current.role}, {current.company}
+                </span>
+              </cite>
+            </footer>
+          </div>
 
           {testimonials.length > 1 && (
-            <div className="mt-8 flex justify-center gap-2">
+            <div className="mt-6 flex justify-center">
               {testimonials.map((item, i) => (
                 <button
                   key={item.id}
                   type="button"
                   onClick={() => setActive(i)}
-                  className={cn(
-                    "h-2.5 rounded-full transition-all duration-300",
-                    safeActive === i ? "w-8 bg-primary" : "w-2.5 bg-gray hover:bg-primary/50",
-                  )}
+                  className="group flex h-12 w-12 items-center justify-center"
                   aria-label={isEn ? `Testimonial ${i + 1}` : `Témoignage ${i + 1}`}
-                />
+                  aria-current={safeActive === i ? "true" : undefined}
+                >
+                  <span
+                    className={cn(
+                      "rounded-full transition-all duration-300",
+                      safeActive === i
+                        ? "h-2.5 w-8 bg-primary"
+                        : "h-2.5 w-2.5 bg-gray group-hover:bg-primary/50",
+                    )}
+                    aria-hidden
+                  />
+                </button>
               ))}
             </div>
           )}
