@@ -77,15 +77,22 @@ function resolveReviewedAt(
   return existing;
 }
 
+function formatDocSectionHtml(text: string): string {
+  return text
+    .split(/\n\n+/)
+    .map((block) => block.trim())
+    .filter(Boolean)
+    .map((block) => `<p>${escapeHtml(block).replace(/\n/g, "<br/>")}</p>`)
+    .join("");
+}
+
 function buildDefaultHtml(explanation: string, howItWorks: string): string {
   const parts: string[] = [];
   if (explanation.trim()) {
-    parts.push(`<h2>Explication</h2><p>${escapeHtml(explanation).replace(/\n/g, "<br/>")}</p>`);
+    parts.push(`<h2>Explication</h2>${formatDocSectionHtml(explanation)}`);
   }
   if (howItWorks.trim()) {
-    parts.push(
-      `<h2>Fonctionnement</h2><p>${escapeHtml(howItWorks).replace(/\n/g, "<br/>")}</p>`,
-    );
+    parts.push(`<h2>Fonctionnement</h2>${formatDocSectionHtml(howItWorks)}`);
   }
   return parts.join("");
 }
