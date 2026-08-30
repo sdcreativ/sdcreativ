@@ -1,3 +1,4 @@
+import type { HTMLAttributes } from "react";
 import { ChevronDown } from "lucide-react";
 
 type AccordionItemProps = {
@@ -14,7 +15,7 @@ export function AccordionItem({
   return (
     <details
       className="group border-b border-gray last:border-0"
-      defaultOpen={defaultOpen}
+      {...({ defaultOpen } as HTMLAttributes<HTMLDetailsElement>)}
     >
       <summary className="flex w-full cursor-pointer list-none items-center justify-between gap-4 py-5 text-left font-semibold text-foreground [&::-webkit-details-marker]:hidden">
         {question}

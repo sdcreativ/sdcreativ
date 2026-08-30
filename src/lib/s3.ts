@@ -7,29 +7,20 @@ import {
 } from "@aws-sdk/client-s3";
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 import { assertCleanUpload } from "@/lib/clamav";
+import {
+  DOCUMENT_CATEGORIES,
+  type DocumentCategory,
+  type StoredDocument,
+} from "@/lib/document-types";
+
+export {
+  DOCUMENT_CATEGORIES,
+  type DocumentCategory,
+  type StoredDocument,
+} from "@/lib/document-types";
 
 const PRESIGN_UPLOAD_TTL_SECONDS = 15 * 60;
 const PRESIGN_DOWNLOAD_TTL_SECONDS = 15 * 60;
-
-export const DOCUMENT_CATEGORIES = [
-  "invoices",
-  "contracts",
-  "deliverables",
-  "uploads",
-  "misc",
-  "archive",
-] as const;
-
-export type DocumentCategory = (typeof DOCUMENT_CATEGORIES)[number];
-
-export type StoredDocument = {
-  key: string;
-  name: string;
-  category: DocumentCategory;
-  size: number;
-  lastModified: string;
-  projectId?: string;
-};
 
 let s3Client: S3Client | null = null;
 

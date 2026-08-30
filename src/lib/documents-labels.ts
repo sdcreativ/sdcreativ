@@ -1,4 +1,4 @@
-import type { DocumentCategory } from "@/lib/s3";
+import type { DocumentCategory } from "@/lib/document-types";
 
 export const DOCUMENT_CATEGORY_LABELS: Record<DocumentCategory, string> = {
   invoices: "Factures",

@@ -1,5 +1,7 @@
 import { z } from "zod";
-import { DOCUMENT_CATEGORIES } from "@/lib/s3";
+import { DOCUMENT_CATEGORIES, MAX_DOCUMENT_BYTES } from "@/lib/document-types";
+
+export { MAX_DOCUMENT_BYTES };
 
 const clientIdSchema = z
   .string()
@@ -52,4 +54,3 @@ export const documentDeleteSchema = z.object({
   key: documentDownloadQuerySchema.shape.key,
 });
 
-export const MAX_DOCUMENT_BYTES = 10 * 1024 * 1024;

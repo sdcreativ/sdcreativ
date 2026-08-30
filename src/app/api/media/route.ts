@@ -12,6 +12,10 @@ export const runtime = "nodejs";
 
 const MAX_INPUT_BYTES = 8 * 1024 * 1024;
 
+function asBody(buffer: Buffer): BodyInit {
+  return new Uint8Array(buffer) as unknown as BodyInit;
+}
+
 function parseQuality(raw: string | null): number {
   const value = Number.parseInt(raw ?? "75", 10);
   if (!Number.isFinite(value)) return 75;
@@ -83,7 +87,7 @@ export async function GET(request: Request) {
     const bytes = await response.Body.transformToByteArray();
     const input = Buffer.from(bytes);
     if (input.byteLength > MAX_INPUT_BYTES) {
-      return new NextResponse(input, {
+      return new NextResponse(asBody(input), {
         headers: {
           "Content-Type": contentType,
           ...cacheHeaders,
@@ -99,7 +103,7 @@ export async function GET(request: Request) {
     });
 
     if (converted) {
-      return new NextResponse(converted.buffer, {
+      return new NextResponse(asBody(converted.buffer), {
         headers: {
           "Content-Type": converted.contentType,
           ...cacheHeaders,
@@ -107,7 +111,7 @@ export async function GET(request: Request) {
       });
     }
 
-    return new NextResponse(input, {
+    return new NextResponse(asBody(input), {
       headers: {
         "Content-Type": contentType,
         ...cacheHeaders,

@@ -15,7 +15,7 @@ import {
   Trash2,
   Upload,
 } from "lucide-react";
-import type { DocumentCategory, StoredDocument } from "@/lib/s3";
+import type { DocumentCategory, StoredDocument } from "@/lib/document-types";
 import {
   deleteDocument,
   fetchDocuments,

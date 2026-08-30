@@ -3,8 +3,7 @@
 import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import { DOCUMENT_CATEGORY_LABELS, formatFileSize } from "@/lib/documents-labels";
-import type { StoredDocument } from "@/lib/s3";
-import { DOCUMENT_CATEGORIES } from "@/lib/s3";
+import { DOCUMENT_CATEGORIES, type StoredDocument } from "@/lib/document-types";
 import { fetchProjectDocuments, presignProjectDocumentUpload } from "@/lib/projects-api";
 import { fetchDownloadUrl } from "@/lib/documents-api";
 import { cn } from "@/lib/utils";

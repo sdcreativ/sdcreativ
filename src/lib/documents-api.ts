@@ -1,5 +1,5 @@
-import type { DocumentCategory, StoredDocument } from "@/lib/s3";
-import { MAX_DOCUMENT_BYTES } from "@/lib/validations/documents";
+import type { DocumentCategory, StoredDocument } from "@/lib/document-types";
+import { MAX_DOCUMENT_BYTES } from "@/lib/document-types";
 import { isAcceptedMimeType } from "@/lib/documents-labels";
 
 type ApiError = { error: string };

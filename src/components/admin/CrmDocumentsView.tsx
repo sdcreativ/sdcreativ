@@ -17,7 +17,7 @@ import {
 } from "@/components/documents/DocumentsPanel";
 import { DOCUMENT_CATEGORY_LABELS } from "@/lib/documents-labels";
 import { fetchAdminClients } from "@/lib/documents-api";
-import type { DocumentCategory } from "@/lib/s3";
+import type { DocumentCategory } from "@/lib/document-types";
 import { cn } from "@/lib/utils";
 
 const emptyStats = (): DocumentStats => ({

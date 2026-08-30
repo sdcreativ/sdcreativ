@@ -10,7 +10,7 @@ import {
   ticketsToActivities,
 } from "@/lib/client-portal-utils";
 import { formatFcfaShort } from "@/lib/format";
-import type { StoredDocument } from "@/lib/s3";
+import type { StoredDocument } from "@/lib/document-types";
 import { formatFileSize } from "@/lib/documents-labels";
 import type { Ticket, TicketMessage } from "@/lib/tickets";
 import { cn } from "@/lib/utils";
