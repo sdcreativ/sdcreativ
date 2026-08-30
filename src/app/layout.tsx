@@ -41,6 +41,10 @@ export default async function RootLayout({
   return (
     <html lang="fr" className={`${poppins.variable} scroll-smooth`} suppressHydrationWarning>
       <head>
+        <meta
+          name="google-site-verification"
+          content="HJKMgEUIvxJbR9RnUbzkwM2VZ4D1JMBdF1CghaHbDVg"
+        />
         <OrganizationJsonLd />
         <LocalBusinessJsonLd />
         <WebSiteJsonLd />

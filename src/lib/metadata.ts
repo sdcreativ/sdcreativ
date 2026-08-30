@@ -100,5 +100,8 @@ export function createMetadata({
     robots: noIndex
       ? { index: false, follow: false }
       : { index: true, follow: true },
+    verification: {
+      google: "HJKMgEUIvxJbR9RnUbzkwM2VZ4D1JMBdF1CghaHbDVg",
+    },
   };
 }
