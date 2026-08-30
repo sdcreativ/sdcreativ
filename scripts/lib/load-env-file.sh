@@ -9,8 +9,10 @@ load_env_file() {
   local line key value
   while IFS= read -r line || [ -n "$line" ]; do
     line="${line%$'\r'}"
-    [[ "$line" =~ ^[[:space:]]*# ]] && continue
-    [[ -z "${line//[[:space:]]/}" ]] && continue
+    line="${line#"${line%%[![:space:]]*}"}"
+    line="${line%"${line##*[![:space:]]}"}"
+    [[ "$line" =~ ^# ]] && continue
+    [[ -z "$line" ]] && continue
 
     if [[ ! "$line" =~ ^([A-Za-z_][A-Za-z0-9_]*)=(.*)$ ]]; then
       echo "⚠ ${file} : ligne ignorée (format KEY=VALUE attendu) : ${line}" >&2

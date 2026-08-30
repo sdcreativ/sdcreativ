@@ -18,8 +18,10 @@ open_quote=""
 while IFS= read -r line || [ -n "$line" ]; do
   line_no=$((line_no + 1))
   line="${line%$'\r'}"
-  [[ "$line" =~ ^[[:space:]]*# ]] && continue
-  [[ -z "${line//[[:space:]]/}" ]] && continue
+  line="${line#"${line%%[![:space:]]*}"}"
+  line="${line%"${line##*[![:space:]]}"}"
+  [[ "$line" =~ ^# ]] && continue
+  [[ -z "$line" ]] && continue
 
   if [ -n "$open_quote" ]; then
     echo "✗ Ligne $line_no : guillemet non fermé (début ligne $open_quote)"
