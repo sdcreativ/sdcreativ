@@ -766,7 +766,7 @@ export const serviceDetailsEn: ServiceDetail[] = [
       {
         question: "What tech stack do you use?",
         answer:
-          "Primarily Next.js, TypeScript, PostgreSQL, and modern APIs. We adapt the stack to your existing constraints.",
+          "We choose tools based on your existing systems, constraints, and budget — not a single public stack. Technical details stay in the scoping workshop, not on the website.",
       },
       {
         question: "Can the platform evolve after launch?",

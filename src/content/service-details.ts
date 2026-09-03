@@ -790,7 +790,7 @@ export const serviceDetails: ServiceDetail[] = [
       {
         question: "Quelle stack technique utilisez-vous ?",
         answer:
-          "Principalement Next.js, TypeScript, PostgreSQL et des APIs modernes. Nous adaptons la stack à vos contraintes existantes.",
+          "Nous choisissons les outils selon votre existant, vos contraintes et votre budget — sans imposer une stack unique. Le détail technique se discute en cadrage, pas en public.",
       },
       {
         question: "Puis-je faire évoluer la plateforme après le lancement ?",

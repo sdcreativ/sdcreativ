@@ -1,12 +1,15 @@
 import { technologyPartners as staticPartners } from "@/content/partners";
 import { allowLocaleStaticSeed } from "@/lib/cms-locale";
 import { isDatabaseConfigured } from "@/lib/db";
+import { hideInternalStackPartners } from "@/lib/internal-stack-public";
 import { listPublicPartners, toTechnologyPartner } from "@/lib/public-partners";
 import type { TechnologyPartner } from "@/lib/public-partners";
 import { allowStaticContentFallback } from "@/lib/static-content-fallback";
 
 function staticAsPartners(): TechnologyPartner[] {
-  return staticPartners.map((p) => ({ name: p.name, category: p.category }));
+  return hideInternalStackPartners(
+    staticPartners.map((p) => ({ name: p.name, category: p.category })),
+  );
 }
 
 /**
@@ -24,7 +27,9 @@ export async function getTechnologyPartners(locale = "fr"): Promise<TechnologyPa
 
   try {
     const records = await listPublicPartners({ locale, visibleOnly: true });
-    if (records.length > 0) return records.map(toTechnologyPartner);
+    if (records.length > 0) {
+      return hideInternalStackPartners(records.map(toTechnologyPartner));
+    }
   } catch (error) {
     console.error("[public-partners] fallback:", error);
   }
