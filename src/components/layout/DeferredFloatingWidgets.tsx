@@ -39,7 +39,7 @@ export function DeferredFloatingWidgets() {
     );
 
     let idleHandle: number | undefined;
-    let timeoutHandle: ReturnType<typeof setTimeout> | undefined;
+    let timeoutHandle: number | undefined;
     if (typeof window.requestIdleCallback === "function") {
       idleHandle = window.requestIdleCallback(mount, { timeout: 2000 });
     } else {
