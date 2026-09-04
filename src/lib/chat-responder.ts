@@ -5,6 +5,7 @@ import {
   chatKnowledgeEn,
   type ChatKnowledgeEntry,
 } from "@/content/chat-knowledge";
+import { KADY_SYSTEM_EN, KADY_SYSTEM_FR } from "@/content/kady-profile";
 
 export type ChatLink = { label: string; href: string };
 export type ChatLocale = "fr" | "en";
@@ -81,19 +82,8 @@ export function respondFromKnowledge(
   };
 }
 
-const SYSTEM_PROMPT_FR = `Tu es l'assistant commercial de SD CREATIV, agence web à Abidjan (Côte d'Ivoire).
-Réponds en français, de façon concise (2-4 phrases max).
-Tarifs : toujours sur devis personnalisé gratuit (pas de montants publics). Orienter vers /tarifs, /devis ou /contact.
-Délais moyens : 15-30 jours pour un site, 4-8 semaines pour IA/sur mesure.
-Oriente vers /devis, /contact, /solutions-ia ou /maintenance quand pertinent.
-Ne invente pas de tarifs ou délais non mentionnés.`;
-
-const SYSTEM_PROMPT_EN = `You are the sales assistant for SD CREATIV, a web agency in Abidjan (Côte d'Ivoire).
-Reply in English, concisely (2-4 sentences max).
-Pricing: always a free custom quote (no public amounts). Point to /en/pricing, /en/devis or /en/contact.
-Average timelines: 15-30 days for a website, 4-8 weeks for AI/custom work.
-Suggest /en/devis, /en/contact, /en/solutions-ia or /en/maintenance when relevant.
-Do not invent prices or timelines not mentioned.`;
+const SYSTEM_PROMPT_FR = KADY_SYSTEM_FR;
+const SYSTEM_PROMPT_EN = KADY_SYSTEM_EN;
 
 export async function respondWithLlm(
   message: string,

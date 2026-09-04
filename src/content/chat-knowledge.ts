@@ -1,3 +1,5 @@
+import { KADY_BIO_EN, KADY_BIO_FR } from "@/content/kady-profile";
+
 export type ChatKnowledgeEntry = {
   id: string;
   keywords: string[];
@@ -7,23 +9,36 @@ export type ChatKnowledgeEntry = {
 
 /** Accueil générique — le widget utilise `getAiGreeting` (Phase 7) selon les horaires. */
 export const chatGreeting =
-  "Bonjour ! Je suis l'assistant SD CREATIV. Posez-moi vos questions sur nos services, tarifs ou délais — je suis là pour vous orienter.";
+  "Bonjour ! Je suis Kady, l'assistance virtuelle de SD CREATIV à Abidjan. Posez-moi vos questions sur nos services, tarifs ou délais — je suis là pour vous orienter.";
 
 export const chatSuggestions = [
+  "Qui es-tu, Kady ?",
   "Quels sont vos tarifs ?",
   "Combien de temps pour un site ?",
   "Proposez-vous des agents IA ?",
-  "Maintenance et SLA ?",
 ] as const;
 
 export const chatSuggestionsEn = [
+  "Who are you, Kady?",
   "How does pricing work?",
   "How long for a website?",
   "Do you build AI agents?",
-  "Maintenance & SLA?",
 ] as const;
 
 export const chatKnowledge: ChatKnowledgeEntry[] = [
+  {
+    id: "kady",
+    keywords: [
+      "qui es-tu", "qui es tu", "qui êtes-vous", "qui etes vous", "t'es qui", "tes qui",
+      "tu es qui", "ton nom", "tu t'appelles", "tu t appelles", "présente-toi", "presente-toi",
+      "présentation", "presentation", "kady", "c'est qui", "c est qui",
+    ],
+    answer: KADY_BIO_FR,
+    links: [
+      { label: "Solutions IA", href: "/solutions-ia" },
+      { label: "Parler à un conseiller", href: "/contact" },
+    ],
+  },
   {
     id: "tarifs",
     keywords: [
@@ -140,10 +155,22 @@ export const chatFallbackEn =
   "I could not find a precise answer. During business hours, open the advisor chat (bottom right). Otherwise: WhatsApp, contact form or online booking.";
 
 export const chatGreetingEn =
-  "Hello! I am the SD CREATIV assistant. Ask about our services, quotes or timelines — I will point you in the right direction.";
+  "Hello! I'm Kady, SD CREATIV's virtual assistant in Abidjan. Ask about our services, quotes or timelines — I will point you in the right direction.";
 
 /** Knowledge base EN (same ids as FR). */
 export const chatKnowledgeEn: ChatKnowledgeEntry[] = [
+  {
+    id: "kady",
+    keywords: [
+      "who are you", "your name", "what's your name", "whats your name",
+      "introduce yourself", "kady", "are you human", "are you a bot",
+    ],
+    answer: KADY_BIO_EN,
+    links: [
+      { label: "AI solutions", href: "/en/solutions-ia" },
+      { label: "Talk to an advisor", href: "/en/contact" },
+    ],
+  },
   {
     id: "tarifs",
     keywords: [

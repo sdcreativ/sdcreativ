@@ -33,7 +33,7 @@ export const privacyPolicySections: PrivacySection[] = [
       { label: "Contact & devis", details: "nom, email, téléphone, entreprise, type de projet, budget, délai, message" },
       { label: "Newsletter", details: "adresse email" },
       { label: "Candidatures", details: "identité, coordonnées, parcours, motivation, liens CV/LinkedIn" },
-      { label: "Assistant IA (chat)", details: "contenu des messages échangés (temporaire, session navigateur)" },
+      { label: "Kady (assistance virtuelle)", details: "contenu des messages échangés (temporaire, session navigateur)" },
       {
         label: "Chat & appels 3CX (si activé)",
         details:

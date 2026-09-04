@@ -76,7 +76,7 @@ export const defaultSiteSolutionsIaSettings: SiteSolutionsIaSettings = {
     title: "Essayez un agent IA en live",
     description:
       "L’assistant en bas à gauche montre concrètement ce que vos visiteurs peuvent vivre : réponses utiles, orientation commerciale, et passage à un humain si besoin.",
-    hint: "Cliquez sur « Assistant IA » pour l’essayer →",
+    hint: "Cliquez sur « Kady » pour l’essayer →",
   },
   headings: {
     useCases: {

@@ -42,4 +42,10 @@ describe("ai-coexistence Phase 7", () => {
       }),
     ).toBe("default");
   });
+
+  it("présente Kady dans l’accueil par défaut", () => {
+    expect(getAiGreeting("default").content).toContain("Kady");
+    expect(getAiGreeting("default").content).toContain("assistance virtuelle");
+    expect(getAiGreeting("default", "en").content).toContain("Kady");
+  });
 });

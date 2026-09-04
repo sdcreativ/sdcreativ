@@ -1,10 +1,12 @@
 "use client";
 
 import { useEffect, useRef, useState, type FormEvent } from "react";
+import Image from "next/image";
 import Link from "next/link";
-import { Bot, Headphones, Loader2, Send, X } from "lucide-react";
+import { Headphones, Loader2, Send, X } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { chatSuggestions, chatSuggestionsEn } from "@/content/chat-knowledge";
+import { CHATBOT } from "@/lib/constants";
 import { HoneypotField } from "@/components/forms/HoneypotField";
 import {
   getAiGreeting,
@@ -166,15 +168,19 @@ export function ChatWidget({ mode = "default", locale = "fr" }: Props) {
             className="fixed bottom-36 left-4 z-[55] flex h-[min(520px,calc(100vh-10rem))] w-[min(380px,calc(100vw-2rem))] flex-col overflow-hidden rounded-2xl border border-gray/40 bg-white shadow-2xl shadow-black/15 md:bottom-28 md:left-8"
             id="chat-widget-panel"
             role="dialog"
-            aria-label={isEn ? "SD CREATIV assistant" : "Assistant SD CREATIV"}
+            aria-label={isEn ? `${CHATBOT.name}, ${CHATBOT.roleEn}` : `${CHATBOT.name}, ${CHATBOT.roleFr}`}
           >
             <header className="flex items-center gap-3 bg-dark px-4 py-3.5">
-              <div className="flex h-9 w-9 items-center justify-center rounded-full bg-primary">
-                <Bot className="h-5 w-5 text-white" aria-hidden />
-              </div>
+              <Image
+                src={CHATBOT.avatarSrc}
+                alt={isEn ? CHATBOT.avatarAltEn : CHATBOT.avatarAltFr}
+                width={36}
+                height={36}
+                className="h-9 w-9 rounded-full object-cover ring-2 ring-white/20"
+              />
               <div className="min-w-0 flex-1">
                 <p className="truncate text-sm font-bold text-white">
-                  {isEn ? "SD CREATIV assistant" : "Assistant SD CREATIV"}
+                  {CHATBOT.name}
                 </p>
                 <p className="text-xs text-white/60">
                   {isEn
@@ -182,12 +188,12 @@ export function ChatWidget({ mode = "default", locale = "fr" }: Props) {
                       ? "Advisor available · or AI"
                       : mode === "after_hours"
                         ? "After hours · Booking / WhatsApp"
-                        : "AI-powered · Live demo"
+                        : CHATBOT.roleEn
                     : mode === "handoff"
                       ? "Conseiller dispo · ou IA"
                       : mode === "after_hours"
                         ? "Hors horaires · RDV / WhatsApp"
-                        : "Propulsé par IA · Démo live"}
+                        : CHATBOT.roleFr}
                 </p>
               </div>
               <button
@@ -308,7 +314,7 @@ export function ChatWidget({ mode = "default", locale = "fr" }: Props) {
           type="button"
           onClick={() => setOpen(false)}
           className={toggleClassName}
-          aria-label={isEn ? "Close assistant" : "Fermer l'assistant"}
+          aria-label={isEn ? `Close ${CHATBOT.name}` : `Fermer ${CHATBOT.name}`}
           aria-expanded="true"
         >
           <X className="h-6 w-6" aria-hidden />
@@ -319,11 +325,17 @@ export function ChatWidget({ mode = "default", locale = "fr" }: Props) {
           onClick={() => setOpen(true)}
           className={toggleClassName}
           data-track-cta="chat_open"
-          aria-label={isEn ? "Open SD CREATIV assistant" : "Ouvrir l'assistant SD CREATIV"}
+          aria-label={isEn ? `Open chat with ${CHATBOT.name}` : `Ouvrir le chat avec ${CHATBOT.name}`}
           aria-expanded="false"
         >
-          <Bot className="h-6 w-6" aria-hidden />
-          <span className="hidden text-sm font-semibold sm:inline">Assistant IA</span>
+          <Image
+            src={CHATBOT.avatarSrc}
+            alt=""
+            width={32}
+            height={32}
+            className="h-8 w-8 rounded-full object-cover ring-2 ring-white/30"
+          />
+          <span className="hidden text-sm font-semibold sm:inline">{CHATBOT.name}</span>
         </button>
       )}
     </>

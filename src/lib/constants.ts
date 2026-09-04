@@ -9,6 +9,16 @@ export const SITE = {
   locale: "fr_CI",
 } as const;
 
+/** Assistance virtuelle du site (widget + prompts OpenAI). */
+export const CHATBOT = {
+  name: "Kady",
+  roleFr: "Assistance virtuelle",
+  roleEn: "Virtual assistant",
+  avatarSrc: "/images/kady.webp",
+  avatarAltFr: "Kady, assistance virtuelle de SD CREATIV",
+  avatarAltEn: "Kady, SD CREATIV virtual assistant",
+} as const;
+
 /** Logo officiel SD CREATIV (SVG). */
 export const LOGO = {
   src: "/images/logo_sd.svg",

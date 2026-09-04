@@ -257,7 +257,7 @@ function checkOpenAI(): IntegrationHealth {
   if (!process.env.OPENAI_API_KEY) {
     return {
       id: "openai",
-      name: "OpenAI (chat widget)",
+      name: "OpenAI (Kady)",
       status: "degraded",
       detail: "Réponses basées sur la base de connaissances locale",
       hint: "Optionnel — OPENAI_API_KEY pour enrichir le chat.",
@@ -266,7 +266,7 @@ function checkOpenAI(): IntegrationHealth {
   }
   return {
     id: "openai",
-    name: "OpenAI (chat widget)",
+    name: "OpenAI (Kady)",
     status: "ok",
     detail: `Modèle ${process.env.OPENAI_MODEL ?? "gpt-4o-mini"}`,
     envVars,
