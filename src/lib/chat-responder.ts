@@ -6,6 +6,7 @@ import {
   type ChatKnowledgeEntry,
 } from "@/content/chat-knowledge";
 import { KADY_SYSTEM_EN, KADY_SYSTEM_FR } from "@/content/kady-profile";
+import { attachChatActionLinks, stripInternalChatPaths } from "@/lib/chat-actions";
 
 export type ChatLink = { label: string; href: string };
 export type ChatLocale = "fr" | "en";
@@ -132,7 +133,12 @@ export async function respondWithLlm(
     const content = data.choices?.[0]?.message?.content?.trim();
     if (!content) return null;
 
-    return { answer: content, source: "llm" };
+    const answer = stripInternalChatPaths(content);
+    return {
+      answer,
+      links: attachChatActionLinks(message, `${content}\n${answer}`, locale),
+      source: "llm",
+    };
   } catch {
     return null;
   }
