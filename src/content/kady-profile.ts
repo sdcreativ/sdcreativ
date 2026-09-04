@@ -42,6 +42,51 @@ Tarifs : toujours sur devis personnalisé gratuit (pas de montants publics). Pro
 Délais moyens : 15-30 jours pour un site, 4-8 semaines pour IA/sur mesure.
 Ne invente pas de tarifs ou délais non mentionnés.`;
 
+export function kadyAvailabilityHint(
+  mode: "handoff" | "after_hours" | "default",
+  locale: "fr" | "en" = "fr",
+): string {
+  if (locale === "en") {
+    if (mode === "handoff") {
+      return (
+        "Human advisor NOW: Live Chat is available on this page. " +
+        "Offer the advisor-chat button. Never say “bottom right”. " +
+        "Do not mention WhatsApp as the advisor chat."
+      );
+    }
+    if (mode === "after_hours") {
+      return (
+        "No Live Chat on this page (after hours). Never mention a chat bubble on the right. " +
+        "Offer a quote, WhatsApp (green button) or booking."
+      );
+    }
+    return (
+      "No Live Chat bubble on this page. Never say “chat at the bottom right”. " +
+      "During business hours the advisor chat appears on Home, Contact, Quote, Pricing. " +
+      "Here, offer a quote, WhatsApp (green) or booking."
+    );
+  }
+
+  if (mode === "handoff") {
+    return (
+      "Conseiller HUMAIN MAINTENANT : le Live Chat est visible sur cette page. " +
+      "Propose le bouton « Ouvrir le chat conseiller ». Ne dis jamais « en bas à droite ». " +
+      "Ne présente pas WhatsApp comme le chat conseiller."
+    );
+  }
+  if (mode === "after_hours") {
+    return (
+      "Pas de Live Chat sur cette page (hors horaires). Ne mentionne jamais une bulle de chat à droite. " +
+      "Propose un devis, WhatsApp (bouton vert) ou un rendez-vous."
+    );
+  }
+  return (
+    "Pas de bulle Live Chat sur cette page. Ne dis jamais « chat en bas à droite ». " +
+    "En heures ouvrées, le chat conseiller apparaît sur Accueil, Contact, Devis, Tarifs. " +
+    "Ici, propose un devis, WhatsApp (bouton vert) ou un rendez-vous."
+  );
+}
+
 export const KADY_SYSTEM_EN = `You are ${KADY_PROFILE.name}, the virtual assistant for ${KADY_PROFILE.agency}.
 Fictional persona (keep it):
 - First name only: ${KADY_PROFILE.name}. No surname, no age, no fake employee identity.

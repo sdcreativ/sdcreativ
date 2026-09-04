@@ -107,7 +107,7 @@ export const chatKnowledge: ChatKnowledgeEntry[] = [
       "rencontrer", "équipe", "equipe", "abidjan",
     ],
     answer:
-      "En heures ouvrées (lun–ven 8h–18h Abidjan), un conseiller répond via le Live Chat / appel audio (bulle en bas à droite). Hors horaires : WhatsApp, formulaire de contact ou prise de rendez-vous en ligne. Nous sommes basés à Abidjan.",
+      "En heures ouvrées (lun–ven 8h–18h Abidjan), un conseiller répond via le Live Chat sur Accueil, Contact, Devis ou Tarifs. Hors horaires : WhatsApp, formulaire de contact ou prise de rendez-vous en ligne.",
     links: [
       { label: "Prendre rendez-vous", href: "/rendez-vous" },
       { label: "Contact", href: "/contact" },
@@ -121,7 +121,7 @@ export const chatKnowledge: ChatKnowledgeEntry[] = [
       "live chat", "3cx", "parler à", "parler a", "agent",
     ],
     answer:
-      "Oui — du lundi au vendredi, 8h–18h (Abidjan), ouvrez le chat conseiller (ou un appel audio) via la bulle en bas à droite. Hors horaires, prenez rendez-vous ou écrivez-nous sur WhatsApp ; un humain reprendra dès l’ouverture.",
+      "Oui — du lundi au vendredi, 8h–18h (Abidjan), le chat conseiller (ou un appel audio) s’affiche sur Accueil, Contact, Devis ou Tarifs. Hors horaires, prenez rendez-vous ou écrivez-nous sur WhatsApp.",
     links: [
       { label: "Prendre rendez-vous", href: "/rendez-vous" },
       { label: "Contact", href: "/contact" },
@@ -149,10 +149,10 @@ export const chatKnowledge: ChatKnowledgeEntry[] = [
 ];
 
 export const chatFallback =
-  "Je n'ai pas trouvé de réponse précise à votre question. En heures ouvrées, ouvrez le chat conseiller (bas à droite). Sinon : WhatsApp, formulaire de contact ou prise de rendez-vous.";
+  "Je n'ai pas trouvé de réponse précise à votre question. En heures ouvrées, le chat conseiller s’ouvre sur Accueil, Contact, Devis ou Tarifs. Sinon : WhatsApp, formulaire de contact ou prise de rendez-vous.";
 
 export const chatFallbackEn =
-  "I could not find a precise answer. During business hours, open the advisor chat (bottom right). Otherwise: WhatsApp, contact form or online booking.";
+  "I could not find a precise answer. During business hours, the advisor chat opens on Home, Contact, Quote or Pricing. Otherwise: WhatsApp, contact form or online booking.";
 
 export const chatGreetingEn =
   "Hello! I'm Kady, SD CREATIV's virtual assistant. Ask about our services, quotes or timelines — I will point you in the right direction.";
@@ -237,7 +237,7 @@ export const chatKnowledgeEn: ChatKnowledgeEntry[] = [
       "contact", "call", "email", "meeting", "book", "appointment", "team", "abidjan", "rdv",
     ],
     answer:
-      "During business hours (Mon–Fri 8am–6pm Abidjan), an advisor can help via live chat / audio (bubble bottom right). Outside hours: WhatsApp, contact form or online booking. We are based in Abidjan.",
+      "During business hours (Mon–Fri 8am–6pm Abidjan), an advisor can help via live chat on Home, Contact, Quote or Pricing. Outside hours: WhatsApp, contact form or online booking.",
     links: [
       { label: "Book a call", href: "/en/book" },
       { label: "Contact", href: "/en/contact" },
@@ -250,7 +250,7 @@ export const chatKnowledgeEn: ChatKnowledgeEntry[] = [
       "advisor", "human", "person", "phone", "live chat", "3cx", "talk to", "agent",
     ],
     answer:
-      "Yes — Monday to Friday, 8am–6pm (Abidjan), open the advisor chat (or audio call) via the bubble bottom right. Outside hours, book a meeting or message us on WhatsApp; a human will follow up when we open.",
+      "Yes — Monday to Friday, 8am–6pm (Abidjan), the advisor chat (or audio call) appears on Home, Contact, Quote or Pricing. Outside hours, book a meeting or message us on WhatsApp.",
     links: [
       { label: "Book a call", href: "/en/book" },
       { label: "Contact", href: "/en/contact" },

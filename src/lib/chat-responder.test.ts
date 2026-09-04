@@ -17,6 +17,19 @@ describe("Kady — profil fictif", () => {
     expect(en.answer).toBe(KADY_BIO_EN);
   });
 
+  it("propose le chat conseiller seulement si le Live Chat est visible", async () => {
+    const prev = process.env.OPENAI_API_KEY;
+    delete process.env.OPENAI_API_KEY;
+    try {
+      const online = await getChatResponse("oui", "fr", [], "handoff");
+      expect(online.openThreeCxLabel).toBe("Ouvrir le chat conseiller");
+      const offline = await getChatResponse("oui", "fr", [], "default");
+      expect(offline.openThreeCxLabel).toBeUndefined();
+    } finally {
+      if (prev !== undefined) process.env.OPENAI_API_KEY = prev;
+    }
+  });
+
   it("sans clé OpenAI, s’appuie sur la base locale", async () => {
     const prev = process.env.OPENAI_API_KEY;
     delete process.env.OPENAI_API_KEY;

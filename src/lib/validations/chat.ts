@@ -13,6 +13,7 @@ export const chatSchema = z.object({
     .max(500, "Message trop long (500 caractères max)"),
   locale: z.enum(["fr", "en"]).optional().default("fr"),
   history: z.array(chatTurnSchema).max(12).optional().default([]),
+  mode: z.enum(["handoff", "after_hours", "default"]).optional().default("default"),
 });
 
 export type ChatInput = z.infer<typeof chatSchema>;

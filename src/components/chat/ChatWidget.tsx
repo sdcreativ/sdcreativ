@@ -117,6 +117,7 @@ export function ChatWidget({ mode = "default", locale = "fr" }: Props) {
           message: trimmed,
           locale: isEn ? "en" : "fr",
           history,
+          mode,
           _hp: hp ?? "",
         }),
       });
@@ -124,6 +125,7 @@ export function ChatWidget({ mode = "default", locale = "fr" }: Props) {
       const data = (await res.json()) as {
         answer?: string;
         links?: { label: string; href: string }[];
+        openThreeCxLabel?: string;
         error?: string;
       };
 
@@ -138,6 +140,7 @@ export function ChatWidget({ mode = "default", locale = "fr" }: Props) {
           role: "assistant",
           content: data.answer ?? (isEn ? "Sorry, something went wrong." : "Désolé, une erreur est survenue."),
           links: data.links,
+          openThreeCxLabel: data.openThreeCxLabel,
         },
       ]);
     } catch {
@@ -199,18 +202,17 @@ export function ChatWidget({ mode = "default", locale = "fr" }: Props) {
                 <p className="truncate text-sm font-bold text-white">
                   {CHATBOT.name}
                 </p>
-                <p className="text-xs text-white/60">
-                  {isEn
-                    ? mode === "handoff"
-                      ? "Advisor available · or AI"
-                      : mode === "after_hours"
-                        ? "After hours · Booking / WhatsApp"
-                        : CHATBOT.roleEn
-                    : mode === "handoff"
-                      ? "Conseiller dispo · ou IA"
-                      : mode === "after_hours"
-                        ? "Hors horaires · RDV / WhatsApp"
-                        : CHATBOT.roleFr}
+                <p className="flex items-center gap-1.5 text-xs text-white/60">
+                  {mode === "handoff" ? (
+                    <>
+                      <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-emerald-400" aria-hidden />
+                      {isEn ? "Advisor online" : "Conseiller en ligne"}
+                    </>
+                  ) : mode === "after_hours" ? (
+                    isEn ? "After hours · Booking / WhatsApp" : "Hors horaires · RDV / WhatsApp"
+                  ) : (
+                    isEn ? CHATBOT.roleEn : CHATBOT.roleFr
+                  )}
                 </p>
               </div>
               <button
@@ -345,13 +347,21 @@ export function ChatWidget({ mode = "default", locale = "fr" }: Props) {
           aria-label={isEn ? `Open chat with ${CHATBOT.name}` : `Ouvrir le chat avec ${CHATBOT.name}`}
           aria-expanded="false"
         >
-          <Image
-            src={CHATBOT.avatarSrc}
-            alt=""
-            width={32}
-            height={32}
-            className="h-8 w-8 rounded-full object-cover ring-2 ring-white/30"
-          />
+          <span className="relative">
+            <Image
+              src={CHATBOT.avatarSrc}
+              alt=""
+              width={32}
+              height={32}
+              className="h-8 w-8 rounded-full object-cover ring-2 ring-white/30"
+            />
+            {mode === "handoff" ? (
+              <span
+                className="absolute -right-0.5 -bottom-0.5 h-2.5 w-2.5 rounded-full border-2 border-primary bg-emerald-400"
+                aria-hidden
+              />
+            ) : null}
+          </span>
           <span className="hidden text-sm font-semibold sm:inline">{CHATBOT.name}</span>
         </button>
       )}

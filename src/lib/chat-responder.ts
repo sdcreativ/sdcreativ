@@ -5,8 +5,12 @@ import {
   chatKnowledgeEn,
   type ChatKnowledgeEntry,
 } from "@/content/chat-knowledge";
-import { KADY_SYSTEM_EN, KADY_SYSTEM_FR } from "@/content/kady-profile";
+import { KADY_SYSTEM_EN, KADY_SYSTEM_FR, kadyAvailabilityHint } from "@/content/kady-profile";
 import { attachChatActionLinks, stripInternalChatPaths } from "@/lib/chat-actions";
+import {
+  isAdvisorChatAvailable,
+  type AiCommsMode,
+} from "@/lib/threecx/ai-coexistence";
 
 export type ChatLink = { label: string; href: string };
 export type ChatLocale = "fr" | "en";
@@ -16,6 +20,7 @@ export type ChatResponse = {
   answer: string;
   links?: ChatLink[];
   source: "knowledge" | "llm" | "fallback";
+  openThreeCxLabel?: string;
 };
 
 function normalize(text: string): string {
@@ -87,16 +92,40 @@ export function respondFromKnowledge(
 const SYSTEM_PROMPT_FR = KADY_SYSTEM_FR;
 const SYSTEM_PROMPT_EN = KADY_SYSTEM_EN;
 
+function advisorChatLabel(locale: ChatLocale): string {
+  return locale === "en" ? "Open advisor chat" : "Ouvrir le chat conseiller";
+}
+
+function shouldOfferAdvisorChat(
+  mode: AiCommsMode,
+  userMessage: string,
+  answer: string,
+): boolean {
+  if (!isAdvisorChatAvailable(mode)) return false;
+  const user = normalize(userMessage);
+  const haystack = normalize(`${userMessage}\n${answer}`);
+  if (user === "oui" || user === "yes" || user === "ok") return true;
+  return (
+    haystack.includes("conseiller") ||
+    haystack.includes("humain") ||
+    haystack.includes("live chat") ||
+    haystack.includes("devis") ||
+    haystack.includes("quote") ||
+    haystack.includes("advisor")
+  );
+}
+
 export async function respondWithLlm(
   message: string,
   locale: ChatLocale = "fr",
   history: ChatTurn[] = [],
+  mode: AiCommsMode = "default",
 ): Promise<ChatResponse | null> {
   const apiKey = process.env.OPENAI_API_KEY;
   if (!apiKey) return null;
 
   const knowledge = locale === "en" ? chatKnowledgeEn : chatKnowledge;
-  const systemPrompt = locale === "en" ? SYSTEM_PROMPT_EN : SYSTEM_PROMPT_FR;
+  const systemPrompt = `${locale === "en" ? SYSTEM_PROMPT_EN : SYSTEM_PROMPT_FR}\n\n${kadyAvailabilityHint(mode, locale)}`;
   const context = knowledge.map((e) => `[${e.id}] ${e.answer}`).join("\n");
   const prior = history
     .filter((turn) => turn.content.trim())
@@ -138,6 +167,9 @@ export async function respondWithLlm(
       answer,
       links: attachChatActionLinks(message, `${content}\n${answer}`, locale),
       source: "llm",
+      openThreeCxLabel: shouldOfferAdvisorChat(mode, message, content)
+        ? advisorChatLabel(locale)
+        : undefined,
     };
   } catch {
     return null;
@@ -148,9 +180,20 @@ export async function getChatResponse(
   message: string,
   locale: ChatLocale = "fr",
   history: ChatTurn[] = [],
+  mode: AiCommsMode = "default",
 ): Promise<ChatResponse> {
-  const llm = await respondWithLlm(message, locale, history);
+  const llm = await respondWithLlm(message, locale, history, mode);
   if (llm) return llm;
 
-  return respondFromKnowledge(message, locale);
+  const knowledge = respondFromKnowledge(message, locale);
+  return {
+    ...knowledge,
+    openThreeCxLabel: shouldOfferAdvisorChat(
+      mode,
+      message,
+      knowledge.answer,
+    )
+      ? advisorChatLabel(locale)
+      : undefined,
+  };
 }

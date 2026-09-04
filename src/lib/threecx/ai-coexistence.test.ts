@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   getAiGreeting,
+  isAdvisorChatAvailable,
   resolveAiCommsMode,
   THREECX_AI_PRODUCT_RULE,
 } from "@/lib/threecx/ai-coexistence";
@@ -47,5 +48,12 @@ describe("ai-coexistence Phase 7", () => {
     expect(getAiGreeting("default").content).toContain("Kady");
     expect(getAiGreeting("default").content).toContain("assistance virtuelle");
     expect(getAiGreeting("default", "en").content).toContain("Kady");
+  });
+
+  it("signale le Live Chat seulement en mode handoff", () => {
+    expect(isAdvisorChatAvailable("handoff")).toBe(true);
+    expect(isAdvisorChatAvailable("default")).toBe(false);
+    expect(isAdvisorChatAvailable("after_hours")).toBe(false);
+    expect(getAiGreeting("default").content.toLowerCase()).not.toContain("bas à droite");
   });
 });

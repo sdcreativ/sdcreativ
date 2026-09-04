@@ -37,11 +37,13 @@ export async function POST(request: Request) {
       parsed.data.message,
       locale,
       parsed.data.history,
+      parsed.data.mode,
     );
 
     return NextResponse.json({
       answer: response.answer,
       links: response.links ?? [],
+      openThreeCxLabel: response.openThreeCxLabel,
     });
   } catch {
     return NextResponse.json(

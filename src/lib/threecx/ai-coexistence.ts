@@ -60,6 +60,11 @@ export function resolveAiCommsMode(opts: {
   return "default";
 }
 
+/** Live Chat conseiller visible sur la page (horaires + 3CX + page prioritaire). */
+export function isAdvisorChatAvailable(mode: AiCommsMode): boolean {
+  return mode === "handoff";
+}
+
 export function getAiGreeting(
   mode: AiCommsMode,
   locale: "fr" | "en" = "fr",
@@ -100,7 +105,7 @@ export function getAiGreeting(
     return {
       content:
         `Hello! I'm ${CHATBOT.name}, SD CREATIV's virtual assistant. Ask about our services, quotes or timelines. ` +
-        "To speak with an advisor, use the chat bottom-right on contact / quote pages (business hours), WhatsApp or booking.",
+        "To speak with an advisor during business hours, open Contact or Quote — the live chat appears there — or use WhatsApp or booking.",
       links: [
         { label: "Book a call", href: "/en/book" },
         { label: "Contact", href: "/en/contact" },
@@ -142,7 +147,7 @@ export function getAiGreeting(
   return {
     content:
       `Bonjour ! Je suis ${CHATBOT.name}, l’assistance virtuelle de SD CREATIV. Posez-moi vos questions sur nos services, tarifs ou délais. ` +
-      "Pour parler à un conseiller, utilisez le chat en bas à droite sur les pages contact / devis (heures ouvrées), WhatsApp ou la prise de RDV.",
+      "Pour un conseiller en heures ouvrées, ouvrez Contact ou Devis — le chat humain s’affiche alors — ou utilisez WhatsApp / un rendez-vous.",
     links: [
       { label: "Prendre rendez-vous", href: "/rendez-vous" },
       { label: "Contact", href: "/contact" },
