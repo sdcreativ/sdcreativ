@@ -43,19 +43,23 @@ export function ChatWidget({ mode = "default", locale = "fr" }: Props) {
   useEffect(() => {
     if (modeRef.current !== mode) {
       modeRef.current = mode;
-      setInitialized(false);
       if (open) {
         const greeting = getAiGreeting(mode, isEn ? "en" : "fr");
-        setMessages([
-          {
-            id: "welcome",
-            role: "assistant",
-            content: greeting.content,
-            links: greeting.links,
-            openThreeCxLabel: greeting.openThreeCxLabel,
-          },
-        ]);
+        setMessages((prev) => {
+          if (prev.some((msg) => msg.role === "user")) return prev;
+          return [
+            {
+              id: "welcome",
+              role: "assistant",
+              content: greeting.content,
+              links: greeting.links,
+              openThreeCxLabel: greeting.openThreeCxLabel,
+            },
+          ];
+        });
         setInitialized(true);
+      } else {
+        setInitialized(false);
       }
     }
   }, [mode, open, isEn]);
@@ -63,15 +67,18 @@ export function ChatWidget({ mode = "default", locale = "fr" }: Props) {
   useEffect(() => {
     if (open && !initialized) {
       const greeting = getAiGreeting(mode, isEn ? "en" : "fr");
-      setMessages([
-        {
-          id: "welcome",
-          role: "assistant",
-          content: greeting.content,
-          links: greeting.links,
-          openThreeCxLabel: greeting.openThreeCxLabel,
-        },
-      ]);
+      setMessages((prev) => {
+        if (prev.length > 0) return prev;
+        return [
+          {
+            id: "welcome",
+            role: "assistant",
+            content: greeting.content,
+            links: greeting.links,
+            openThreeCxLabel: greeting.openThreeCxLabel,
+          },
+        ];
+      });
       setInitialized(true);
     }
   }, [open, initialized, mode, isEn]);
@@ -87,6 +94,11 @@ export function ChatWidget({ mode = "default", locale = "fr" }: Props) {
     const trimmed = text.trim();
     if (!trimmed || loading) return;
 
+    const history = messages.slice(-10).map((msg) => ({
+      role: msg.role,
+      content: msg.content.slice(0, 500),
+    }));
+
     const userMsg: Message = {
       id: `user-${crypto.randomUUID()}`,
       role: "user",
@@ -101,7 +113,12 @@ export function ChatWidget({ mode = "default", locale = "fr" }: Props) {
       const res = await fetch("/api/chat", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ message: trimmed, locale: isEn ? "en" : "fr", _hp: hp ?? "" }),
+        body: JSON.stringify({
+          message: trimmed,
+          locale: isEn ? "en" : "fr",
+          history,
+          _hp: hp ?? "",
+        }),
       });
 
       const data = (await res.json()) as {

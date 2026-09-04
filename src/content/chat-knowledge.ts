@@ -9,7 +9,7 @@ export type ChatKnowledgeEntry = {
 
 /** Accueil générique — le widget utilise `getAiGreeting` (Phase 7) selon les horaires. */
 export const chatGreeting =
-  "Bonjour ! Je suis Kady, l'assistance virtuelle de SD CREATIV à Abidjan. Posez-moi vos questions sur nos services, tarifs ou délais — je suis là pour vous orienter.";
+  "Bonjour ! Je suis Kady, l'assistance virtuelle de SD CREATIV. Posez-moi vos questions sur nos services, tarifs ou délais — je suis là pour vous orienter.";
 
 export const chatSuggestions = [
   "Qui es-tu, Kady ?",
@@ -155,7 +155,7 @@ export const chatFallbackEn =
   "I could not find a precise answer. During business hours, open the advisor chat (bottom right). Otherwise: WhatsApp, contact form or online booking.";
 
 export const chatGreetingEn =
-  "Hello! I'm Kady, SD CREATIV's virtual assistant in Abidjan. Ask about our services, quotes or timelines — I will point you in the right direction.";
+  "Hello! I'm Kady, SD CREATIV's virtual assistant. Ask about our services, quotes or timelines — I will point you in the right direction.";
 
 /** Knowledge base EN (same ids as FR). */
 export const chatKnowledgeEn: ChatKnowledgeEntry[] = [

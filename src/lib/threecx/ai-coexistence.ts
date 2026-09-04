@@ -99,7 +99,7 @@ export function getAiGreeting(
 
     return {
       content:
-        `Hello! I'm ${CHATBOT.name}, SD CREATIV's virtual assistant in Abidjan. Ask about our services, quotes or timelines. ` +
+        `Hello! I'm ${CHATBOT.name}, SD CREATIV's virtual assistant. Ask about our services, quotes or timelines. ` +
         "To speak with an advisor, use the chat bottom-right on contact / quote pages (business hours), WhatsApp or booking.",
       links: [
         { label: "Book a call", href: "/en/book" },
@@ -141,7 +141,7 @@ export function getAiGreeting(
 
   return {
     content:
-      `Bonjour ! Je suis ${CHATBOT.name}, l’assistance virtuelle de SD CREATIV à Abidjan. Posez-moi vos questions sur nos services, tarifs ou délais. ` +
+      `Bonjour ! Je suis ${CHATBOT.name}, l’assistance virtuelle de SD CREATIV. Posez-moi vos questions sur nos services, tarifs ou délais. ` +
       "Pour parler à un conseiller, utilisez le chat en bas à droite sur les pages contact / devis (heures ouvrées), WhatsApp ou la prise de RDV.",
     links: [
       { label: "Prendre rendez-vous", href: "/rendez-vous" },

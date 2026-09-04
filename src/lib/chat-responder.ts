@@ -9,6 +9,7 @@ import { KADY_SYSTEM_EN, KADY_SYSTEM_FR } from "@/content/kady-profile";
 
 export type ChatLink = { label: string; href: string };
 export type ChatLocale = "fr" | "en";
+export type ChatTurn = { role: "user" | "assistant"; content: string };
 
 export type ChatResponse = {
   answer: string;
@@ -88,6 +89,7 @@ const SYSTEM_PROMPT_EN = KADY_SYSTEM_EN;
 export async function respondWithLlm(
   message: string,
   locale: ChatLocale = "fr",
+  history: ChatTurn[] = [],
 ): Promise<ChatResponse | null> {
   const apiKey = process.env.OPENAI_API_KEY;
   if (!apiKey) return null;
@@ -95,6 +97,10 @@ export async function respondWithLlm(
   const knowledge = locale === "en" ? chatKnowledgeEn : chatKnowledge;
   const systemPrompt = locale === "en" ? SYSTEM_PROMPT_EN : SYSTEM_PROMPT_FR;
   const context = knowledge.map((e) => `[${e.id}] ${e.answer}`).join("\n");
+  const prior = history
+    .filter((turn) => turn.content.trim())
+    .slice(-10)
+    .map((turn) => ({ role: turn.role, content: turn.content.slice(0, 500) }));
 
   try {
     const res = await fetch("https://api.openai.com/v1/chat/completions", {
@@ -112,6 +118,7 @@ export async function respondWithLlm(
             role: "system",
             content: `${systemPrompt}\n\nKnowledge base:\n${context}`,
           },
+          ...prior,
           { role: "user", content: message },
         ],
       }),
@@ -134,13 +141,10 @@ export async function respondWithLlm(
 export async function getChatResponse(
   message: string,
   locale: ChatLocale = "fr",
+  history: ChatTurn[] = [],
 ): Promise<ChatResponse> {
-  const knowledge = respondFromKnowledge(message, locale);
+  const llm = await respondWithLlm(message, locale, history);
+  if (llm) return llm;
 
-  if (knowledge.source !== "fallback") {
-    return knowledge;
-  }
-
-  const llm = await respondWithLlm(message, locale);
-  return llm ?? knowledge;
+  return respondFromKnowledge(message, locale);
 }

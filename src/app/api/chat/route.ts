@@ -33,7 +33,11 @@ export async function POST(request: Request) {
 
     const locale =
       isEnglishLocaleEnabled() && parsed.data.locale === "en" ? "en" : "fr";
-    const response = await getChatResponse(parsed.data.message, locale);
+    const response = await getChatResponse(
+      parsed.data.message,
+      locale,
+      parsed.data.history,
+    );
 
     return NextResponse.json({
       answer: response.answer,
