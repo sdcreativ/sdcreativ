@@ -94,7 +94,7 @@ export const enSolutionsIa = {
   highlight: "that work for your business",
   description:
     "Website chatbots, WhatsApp assistants, lead qualification and workflow automation — designed for SMEs in Côte d'Ivoire and beyond.",
-  demoTitle: "This site chatbot is a live demo",
+  demoTitle: "Talk with Kady on this site",
   demoDescription:
     "Ask about our services, pricing approach or timelines — then book a call when you are ready.",
   packsTitle: "Packages",

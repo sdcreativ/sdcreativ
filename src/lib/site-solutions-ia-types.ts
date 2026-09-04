@@ -384,9 +384,9 @@ export const defaultSiteSolutionsIaSettings: SiteSolutionsIaSettings = {
         "Contenus validés avec vous, règles d’escalade vers un humain, suivi des conversations et amélioration continue.",
     },
     {
-      question: "Ce chatbot sur votre site est-il une démo ?",
+      question: "Comment fonctionne l’assistant sur ce site ?",
       answer:
-        "Oui — l’assistant en bas à gauche illustre notre approche. En heures ouvrées, un conseiller peut aussi vous répondre ; hors horaires, l’IA reste disponible avec WhatsApp et prise de rendez-vous.",
+        "Kady, en bas à gauche, est l’assistance virtuelle de SD CREATIV. En heures ouvrées, un conseiller peut aussi vous répondre ; hors horaires, l’IA reste disponible avec WhatsApp et prise de rendez-vous.",
     },
     {
       question: "Comment cohabitent l’assistant IA et le chat conseiller ?",

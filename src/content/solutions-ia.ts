@@ -209,9 +209,9 @@ export const iaFaq = [
       "Base de connaissances validée par vos équipes, règles d'escalade vers un humain, supervision des conversations et amélioration continue.",
   },
   {
-    question: "Ce chatbot sur votre site est-il une démo ?",
+    question: "Comment fonctionne l’assistant sur ce site ?",
     answer:
-      "Oui — l’assistant en bas à gauche est une démo de notre savoir-faire. En heures ouvrées (lun–ven 8h–18h), un conseiller humain est aussi joignable via le Live Chat / appel audio (bulle dédiée). Hors horaires, l’IA reste disponible avec WhatsApp et prise de rendez-vous.",
+      "Kady, en bas à gauche, est l’assistance virtuelle de SD CREATIV. En heures ouvrées (lun–ven 8h–18h), un conseiller humain est aussi joignable via le Live Chat / appel audio (bulle dédiée). Hors horaires, l’IA reste disponible avec WhatsApp et prise de rendez-vous.",
   },
   {
     question: "Comment cohabitent l’assistant IA et le chat conseiller ?",

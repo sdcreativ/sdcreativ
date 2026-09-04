@@ -81,7 +81,7 @@ export const chatKnowledge: ChatKnowledgeEntry[] = [
       "llm", "automatisation", "assistant", "whatsapp", "lead", "leads", "marketing",
     ],
     answer:
-      "Nous créons 12 types d’agents IA : accueil, commercial, support, FAQ documentaire, prise de RDV, devis, e-commerce, relance, CRM, administratif, RH et finance. Ils répondent, qualifient et automatisent — avec passage à un humain si besoin. Devis gratuit. Ce chatbot est une démo !",
+      "Nous créons 12 types d’agents IA : accueil, commercial, support, FAQ documentaire, prise de RDV, devis, e-commerce, relance, CRM, administratif, RH et finance. Ils répondent, qualifient et automatisent — avec passage à un humain si besoin. Devis gratuit.",
     links: [
       { label: "Solutions IA", href: "/solutions-ia" },
       { label: "Devis agents IA", href: "/devis?type=agents-ia" },
@@ -213,7 +213,7 @@ export const chatKnowledgeEn: ChatKnowledgeEntry[] = [
       "automation", "assistant", "whatsapp",
     ],
     answer:
-      "We design custom AI agents: website chatbots, WhatsApp assistants, lead qualification and business automation. Stack: OpenAI, Claude, n8n, CRM integrations. Free custom quote. This chatbot is a live demo of our work!",
+      "We design custom AI agents: website chatbots, WhatsApp assistants, lead qualification and business automation. Stack: OpenAI, Claude, n8n, CRM integrations. Free custom quote.",
     links: [
       { label: "AI solutions", href: "/en/solutions-ia" },
       { label: "AI quote", href: "/en/devis?type=agents-ia" },
