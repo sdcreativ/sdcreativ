@@ -6,7 +6,11 @@ import {
   type ChatKnowledgeEntry,
 } from "@/content/chat-knowledge";
 import { KADY_SYSTEM_EN, KADY_SYSTEM_FR, kadyAvailabilityHint } from "@/content/kady-profile";
-import { attachChatActionLinks, stripInternalChatPaths } from "@/lib/chat-actions";
+import {
+  attachChatActionLinks,
+  sanitizeGhostChatCopy,
+  stripInternalChatPaths,
+} from "@/lib/chat-actions";
 import {
   isAdvisorChatAvailable,
   type AiCommsMode,
@@ -127,10 +131,17 @@ export async function respondWithLlm(
   const knowledge = locale === "en" ? chatKnowledgeEn : chatKnowledge;
   const systemPrompt = `${locale === "en" ? SYSTEM_PROMPT_EN : SYSTEM_PROMPT_FR}\n\n${kadyAvailabilityHint(mode, locale)}`;
   const context = knowledge.map((e) => `[${e.id}] ${e.answer}`).join("\n");
+  const advisorVisible = isAdvisorChatAvailable(mode);
   const prior = history
     .filter((turn) => turn.content.trim())
     .slice(-10)
-    .map((turn) => ({ role: turn.role, content: turn.content.slice(0, 500) }));
+    .map((turn) => ({
+      role: turn.role,
+      content:
+        turn.role === "assistant"
+          ? sanitizeGhostChatCopy(turn.content.slice(0, 500), advisorVisible)
+          : turn.content.slice(0, 500),
+    }));
 
   try {
     const res = await fetch("https://api.openai.com/v1/chat/completions", {
@@ -141,7 +152,7 @@ export async function respondWithLlm(
       },
       body: JSON.stringify({
         model: process.env.OPENAI_MODEL ?? "gpt-4o-mini",
-        temperature: 0.4,
+        temperature: 0.25,
         max_tokens: 300,
         messages: [
           {
@@ -162,7 +173,10 @@ export async function respondWithLlm(
     const content = data.choices?.[0]?.message?.content?.trim();
     if (!content) return null;
 
-    const answer = stripInternalChatPaths(content);
+    const answer = sanitizeGhostChatCopy(
+      stripInternalChatPaths(content),
+      advisorVisible,
+    );
     return {
       answer,
       links: attachChatActionLinks(message, `${content}\n${answer}`, locale),
@@ -188,6 +202,10 @@ export async function getChatResponse(
   const knowledge = respondFromKnowledge(message, locale);
   return {
     ...knowledge,
+    answer: sanitizeGhostChatCopy(
+      knowledge.answer,
+      isAdvisorChatAvailable(mode),
+    ),
     openThreeCxLabel: shouldOfferAdvisorChat(
       mode,
       message,

@@ -1,5 +1,9 @@
 import { describe, expect, it } from "vitest";
-import { attachChatActionLinks, stripInternalChatPaths } from "@/lib/chat-actions";
+import {
+  attachChatActionLinks,
+  sanitizeGhostChatCopy,
+  stripInternalChatPaths,
+} from "@/lib/chat-actions";
 
 describe("boutons d’action Kady", () => {
   it("ajoute devis, RDV et contact quand la réponse les propose", () => {
@@ -24,5 +28,26 @@ describe("boutons d’action Kady", () => {
 
   it("n’ajoute rien si aucune action n’est évoquée", () => {
     expect(attachChatActionLinks("Merci", "Avec plaisir.", "fr")).toEqual([]);
+  });
+
+  it("oriente vers RDV et WhatsApp si on demande un conseiller", () => {
+    const links = attachChatActionLinks(
+      "Je souhaite parler à un conseiller",
+      "Je vous propose un échange avec l’équipe.",
+      "fr",
+    );
+    expect(links.map((l) => l.href)).toEqual(
+      expect.arrayContaining(["/rendez-vous"]),
+    );
+    expect(links.some((l) => l.label === "WhatsApp")).toBe(true);
+  });
+
+  it("supprime le chat fantôme en bas à droite", () => {
+    const raw =
+      "Pour parler à un conseiller, vous pouvez ouvrir le chat en bas à droite ou passer un appel audio durant nos heures d'ouverture.";
+    const cleaned = sanitizeGhostChatCopy(raw, false);
+    expect(cleaned.toLowerCase()).not.toContain("bas à droite");
+    expect(cleaned.toLowerCase()).not.toContain("appel audio");
+    expect(cleaned.toLowerCase()).toMatch(/whatsapp|rendez-vous/);
   });
 });

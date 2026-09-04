@@ -34,6 +34,12 @@ const ACTIONS: ChatAction[] = [
       "prendre rendez",
       "book a call",
       "booking",
+      "conseiller",
+      "humain",
+      "parler à",
+      "parler a",
+      "talk to",
+      "advisor",
       "/rendez-vous",
       "/en/book",
     ],
@@ -76,7 +82,16 @@ const ACTIONS: ChatAction[] = [
     hrefEn: whatsappUrl("Hello SD CREATIV, I would like to talk."),
     labelFr: "WhatsApp",
     labelEn: "WhatsApp",
-    patterns: ["whatsapp", "wa.me"],
+    patterns: [
+      "whatsapp",
+      "wa.me",
+      "conseiller",
+      "humain",
+      "parler à",
+      "parler a",
+      "talk to",
+      "advisor",
+    ],
   },
 ];
 
@@ -108,22 +123,69 @@ export function attachChatActionLinks(
   return links;
 }
 
-export function stripInternalChatPaths(text: string): string {
+function tidyChatText(text: string): string {
   return text
-    .replace(
-      /(?:dans la section|via les? (?:pages?|liens?)|sur les? pages?)\s+\/[^\s.,;]+(?:\s+ou\s+\/[^\s.,;]+)*/gi,
-      "ci-dessous",
-    )
-    .replace(
-      /(?:in the (?:section|page)|via the (?:page|pages|links?))\s+\/[^\s.,;]+(?:\s+or\s+\/[^\s.,;]+)*/gi,
-      "below",
-    )
-    .replace(
-      /\/(?:en\/)?(?:devis|contact|tarifs|rendez-vous|book|solutions-ia|maintenance|pricing|audit-gratuit)(?:\?[^\s.,;!]*)?/gi,
-      "",
-    )
     .replace(/\s{2,}/g, " ")
     .replace(/\s+([.,;!?])/g, "$1")
     .replace(/([.,;!?]){2,}/g, "$1")
+    .replace(/^[.,;]\s*/, "")
     .trim();
+}
+
+export function stripInternalChatPaths(text: string): string {
+  return tidyChatText(
+    text
+      .replace(
+        /(?:dans la section|via les? (?:pages?|liens?)|sur les? pages?)\s+\/[^\s.,;]+(?:\s+ou\s+\/[^\s.,;]+)*/gi,
+        "ci-dessous",
+      )
+      .replace(
+        /(?:in the (?:section|page)|via the (?:page|pages|links?))\s+\/[^\s.,;]+(?:\s+or\s+\/[^\s.,;]+)*/gi,
+        "below",
+      )
+      .replace(
+        /\/(?:en\/)?(?:devis|contact|tarifs|rendez-vous|book|solutions-ia|maintenance|pricing|audit-gratuit)(?:\?[^\s.,;!]*)?/gi,
+        "",
+      ),
+  );
+}
+
+/** Le Live Chat 3CX n’est pas une bulle à droite : WhatsApp l’est. */
+export function sanitizeGhostChatCopy(
+  text: string,
+  advisorVisible: boolean,
+): string {
+  let out = text;
+
+  if (advisorVisible) {
+    return tidyChatText(
+      out
+        .replace(/ouvrir le chat en bas à droite/gi, "ouvrir le chat conseiller")
+        .replace(/le chat en bas à droite/gi, "le chat conseiller")
+        .replace(/chat (?:at the )?bottom[- ]right/gi, "advisor chat")
+        .replace(/en bas à droite/gi, "")
+        .replace(/bottom[- ]right/gi, ""),
+    );
+  }
+
+  return tidyChatText(
+    out
+      .replace(
+        /ouvrir le chat en bas à droite(?: ou passer un appel audio)?/gi,
+        "prendre rendez-vous ou écrire sur WhatsApp",
+      )
+      .replace(
+        /(?:ouvrir |via )?le chat(?: conseiller)? en bas à droite/gi,
+        "prendre rendez-vous ou WhatsApp",
+      )
+      .replace(/chat en bas à droite/gi, "WhatsApp")
+      .replace(/bulle en bas à droite/gi, "WhatsApp")
+      .replace(/en bas à droite/gi, "")
+      .replace(
+        /open (?:the )?(?:advisor )?chat(?: at the)? bottom[- ]right/gi,
+        "book a call or WhatsApp",
+      )
+      .replace(/bottom[- ]right/gi, "")
+      .replace(/passer un appel audio/gi, "prendre rendez-vous"),
+  );
 }
