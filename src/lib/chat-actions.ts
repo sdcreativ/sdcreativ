@@ -155,11 +155,9 @@ export function sanitizeGhostChatCopy(
   text: string,
   advisorVisible: boolean,
 ): string {
-  let out = text;
-
   if (advisorVisible) {
     return tidyChatText(
-      out
+      text
         .replace(/ouvrir le chat en bas à droite/gi, "ouvrir le chat conseiller")
         .replace(/le chat en bas à droite/gi, "le chat conseiller")
         .replace(/chat (?:at the )?bottom[- ]right/gi, "advisor chat")
@@ -169,7 +167,7 @@ export function sanitizeGhostChatCopy(
   }
 
   return tidyChatText(
-    out
+    text
       .replace(
         /ouvrir le chat en bas à droite(?: ou passer un appel audio)?/gi,
         "prendre rendez-vous ou écrire sur WhatsApp",
