@@ -45,6 +45,14 @@ const ACTIONS: ChatAction[] = [
     ],
   },
   {
+    id: "services",
+    hrefFr: "/services",
+    hrefEn: "/en/services",
+    labelFr: "Nos services",
+    labelEn: "Our services",
+    patterns: ["service", "prestation", "catalogue", "que faites"],
+  },
+  {
     id: "contact",
     hrefFr: "/contact",
     hrefEn: "/en/contact",
@@ -125,11 +133,37 @@ export function attachChatActionLinks(
 
 function tidyChatText(text: string): string {
   return text
-    .replace(/\s{2,}/g, " ")
-    .replace(/\s+([.,;!?])/g, "$1")
+    .split("\n")
+    .map((line) =>
+      line.replace(/[ \t]{2,}/g, " ").replace(/\s+([.,;!?])/g, "$1").trimEnd(),
+    )
+    .join("\n")
+    .replace(/\n{3,}/g, "\n\n")
     .replace(/([.,;!?]){2,}/g, "$1")
     .replace(/^[.,;]\s*/, "")
     .trim();
+}
+
+/** Retire le Markdown visible (**gras**, listes, liens) pour un texte professionnel. */
+export function stripChatMarkdown(text: string): string {
+  return text
+    .replace(/```[\s\S]*?```/g, " ")
+    .replace(/`([^`]+)`/g, "$1")
+    .replace(/\*\*([^*]+)\*\*/g, "$1")
+    .replace(/__([^_]+)__/g, "$1")
+    .replace(/(?<![\w*])\*([^*\n]+)\*(?![\w*])/g, "$1")
+    .replace(/^#{1,6}\s+/gm, "")
+    .replace(/\[([^\]]+)\]\([^)]+\)/g, "$1")
+    .replace(/^[-*]\s+/gm, "")
+    .replace(/^\d+\.\s+/gm, "")
+    .trim();
+}
+
+export function polishChatAnswer(text: string, advisorVisible: boolean): string {
+  return sanitizeGhostChatCopy(
+    stripInternalChatPaths(stripChatMarkdown(text)),
+    advisorVisible,
+  );
 }
 
 export function stripInternalChatPaths(text: string): string {

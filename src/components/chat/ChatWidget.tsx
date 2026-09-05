@@ -242,7 +242,7 @@ export function ChatWidget({ mode = "default", locale = "fr" }: Props) {
                         : "bg-gray-light text-foreground",
                     )}
                   >
-                    <p>{msg.content}</p>
+                    <p className="whitespace-pre-wrap wrap-break-word">{msg.content}</p>
                     {(msg.openThreeCxLabel || (msg.links && msg.links.length > 0)) && (
                       <div className="mt-2 flex flex-wrap gap-2">
                         {msg.openThreeCxLabel ? (

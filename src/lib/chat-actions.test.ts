@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   attachChatActionLinks,
+  polishChatAnswer,
   sanitizeGhostChatCopy,
   stripInternalChatPaths,
 } from "@/lib/chat-actions";
@@ -40,6 +41,16 @@ describe("boutons d’action Kady", () => {
       expect.arrayContaining(["/rendez-vous"]),
     );
     expect(links.some((l) => l.label === "WhatsApp")).toBe(true);
+  });
+
+  it("retire le Markdown des réponses", () => {
+    const cleaned = polishChatAnswer(
+      "Nous proposons :\n1. **Sites web** : vitrines\n2. **SEO local**\n3. **Agents IA**",
+      false,
+    );
+    expect(cleaned).not.toContain("**");
+    expect(cleaned).toContain("Sites web");
+    expect(cleaned).toContain("SEO local");
   });
 
   it("supprime le chat fantôme en bas à droite", () => {

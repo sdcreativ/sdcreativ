@@ -6,11 +6,7 @@ import {
   type ChatKnowledgeEntry,
 } from "@/content/chat-knowledge";
 import { KADY_SYSTEM_EN, KADY_SYSTEM_FR, kadyAvailabilityHint } from "@/content/kady-profile";
-import {
-  attachChatActionLinks,
-  sanitizeGhostChatCopy,
-  stripInternalChatPaths,
-} from "@/lib/chat-actions";
+import { attachChatActionLinks, polishChatAnswer } from "@/lib/chat-actions";
 import {
   isAdvisorChatAvailable,
   type AiCommsMode,
@@ -139,7 +135,7 @@ export async function respondWithLlm(
       role: turn.role,
       content:
         turn.role === "assistant"
-          ? sanitizeGhostChatCopy(turn.content.slice(0, 500), advisorVisible)
+          ? polishChatAnswer(turn.content.slice(0, 500), advisorVisible)
           : turn.content.slice(0, 500),
     }));
 
@@ -153,7 +149,7 @@ export async function respondWithLlm(
       body: JSON.stringify({
         model: process.env.OPENAI_MODEL ?? "gpt-4o-mini",
         temperature: 0.25,
-        max_tokens: 300,
+        max_tokens: 400,
         messages: [
           {
             role: "system",
@@ -173,10 +169,7 @@ export async function respondWithLlm(
     const content = data.choices?.[0]?.message?.content?.trim();
     if (!content) return null;
 
-    const answer = sanitizeGhostChatCopy(
-      stripInternalChatPaths(content),
-      advisorVisible,
-    );
+    const answer = polishChatAnswer(content, advisorVisible);
     return {
       answer,
       links: attachChatActionLinks(message, `${content}\n${answer}`, locale),
@@ -202,7 +195,7 @@ export async function getChatResponse(
   const knowledge = respondFromKnowledge(message, locale);
   return {
     ...knowledge,
-    answer: sanitizeGhostChatCopy(
+    answer: polishChatAnswer(
       knowledge.answer,
       isAdvisorChatAvailable(mode),
     ),
