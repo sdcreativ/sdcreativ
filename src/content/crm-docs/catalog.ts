@@ -667,6 +667,18 @@ export const CRM_DOC_FEATURES: CrmDocFeature[] = [
     recent: true,
   },
   {
+    id: "kodiva",
+    title: "KODIVA",
+    category: "infra",
+    summary: "Exploitation de la plateforme agents IA (KPI, incidents).",
+    explanation:
+      "Section CRM en lecture seule. Les leads / contacts / RDV restent ici. Console autonome KODIVA : /admin (secours).",
+    howItWorks:
+      "Menu Plateforme → KODIVA. Configurer KODIVA_API_URL et KODIVA_INTERNAL_TOKEN. Les écritures se font dans KODIVA.",
+    href: "/admin/crm/kodiva",
+    recent: true,
+  },
+  {
     id: "env-docker",
     title: "Flags runtime (.env.docker)",
     category: "infra",

@@ -16,8 +16,9 @@
 /public/uploads/crm-docs/*
 !/public/uploads/crm-docs/.gitkeep
 
-# --- Docker (config Nginx générée par init-letsencrypt.sh) ---
+# --- Docker (config Nginx générée) ---
 /docker/nginx/conf.d/sdcreativ.conf
+/docker/nginx/conf.d/kodiva-api.conf
 
 # --- Next.js ---
 /.next/

@@ -27,6 +27,7 @@ export const CRM_MOBILE_SECONDARY_IDS = [
   "inbox",
   "documentation",
   "settings",
+  "kodiva",
 ] as const;
 
 /** Barre du bas : 5 entrées max selon le rôle système. */
@@ -68,6 +69,7 @@ export const CRM_MOBILE_SHORT_LABELS: Partial<Record<string, string>> = {
   inbox: "Inbox",
   documentation: "Docs",
   settings: "Param.",
+  kodiva: "KODIVA",
 };
 
 export type MobileNavSplit = {

@@ -16,3 +16,16 @@ services:
     depends_on:
       clamav:
         condition: service_started
+    networks:
+      - sdcreativ
+      - kodiva_proxy
+
+  nginx:
+    networks:
+      - sdcreativ
+      - kodiva_proxy
+
+networks:
+  kodiva_proxy:
+    name: kodiva_proxy
+    external: true

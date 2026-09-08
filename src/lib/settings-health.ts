@@ -443,6 +443,39 @@ function checkAnalytics(): IntegrationHealth {
   };
 }
 
+function checkKodiva(): IntegrationHealth {
+  const envVars = ["KODIVA_API_URL", "KODIVA_INTERNAL_TOKEN"];
+  const url = process.env.KODIVA_API_URL?.trim();
+  const token = process.env.KODIVA_INTERNAL_TOKEN?.trim();
+  if (!url || !token) {
+    return {
+      id: "kodiva",
+      name: "KODIVA",
+      status: "missing",
+      detail: "Section CRM non branchée",
+      hint: "KODIVA_API_URL + KODIVA_INTERNAL_TOKEN (kodiva_int_…).",
+      envVars,
+    };
+  }
+  if (!token.startsWith("kodiva_int_")) {
+    return {
+      id: "kodiva",
+      name: "KODIVA",
+      status: "degraded",
+      detail: "Token interne invalide",
+      hint: "Le secret doit commencer par kodiva_int_.",
+      envVars,
+    };
+  }
+  return {
+    id: "kodiva",
+    name: "KODIVA",
+    status: "configured",
+    detail: "API et credential interne présents",
+    envVars,
+  };
+}
+
 export async function getSettingsHealth(session?: {
   name: string;
   role: CrmRole;
@@ -466,6 +499,7 @@ export async function getSettingsHealth(session?: {
     checkSanity(),
     checkOpenAI(),
     checkAnalytics(),
+    checkKodiva(),
   ];
 
   const director = session

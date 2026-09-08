@@ -3,6 +3,7 @@ import {
   BarChart3,
   CheckSquare,
   Archive,
+  Bot,
   BookOpen,
   Calendar,
   Clock,
@@ -88,6 +89,13 @@ export const crmNavGroups: CrmNavGroup[] = [
       { id: "archives", label: "Archives", href: "/admin/crm/archives", icon: Archive, ready: true },
       { id: "invoices", label: "Factures", href: "/admin/crm/factures", icon: Receipt, ready: true },
       { id: "messagerie", label: "Messagerie", href: "/admin/crm/messagerie", icon: Mail, ready: true },
+    ],
+  },
+  {
+    id: "platform",
+    label: "Plateforme",
+    items: [
+      { id: "kodiva", label: "KODIVA", href: "/admin/crm/kodiva", icon: Bot, ready: true },
     ],
   },
   {

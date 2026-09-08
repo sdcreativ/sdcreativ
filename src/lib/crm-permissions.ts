@@ -31,6 +31,7 @@ export const CRM_PERMISSIONS = [
   "calendar.write",
   "reports.view",
   "infra.view",
+  "kodiva.read",
   "documents.read",
   "documents.write",
   "blog.read",
@@ -107,7 +108,7 @@ export const CRM_PERMISSION_GROUPS: Array<{
   {
     id: "insights",
     label: "Reporting & infra",
-    permissions: ["reports.view", "infra.view"],
+    permissions: ["reports.view", "infra.view", "kodiva.read"],
   },
   {
     id: "mail",
@@ -156,6 +157,7 @@ export const CRM_PERMISSION_LABELS: Record<CrmPermission, string> = {
   "calendar.write": "Modifier le calendrier",
   "reports.view": "Voir les rapports",
   "infra.view": "Voir la santé infra VPS & dashboard DevOps",
+  "kodiva.read": "Voir la section KODIVA (exploitation plateforme IA)",
   "documents.read": "Voir les documents",
   "documents.write": "Gérer les documents",
   "blog.read": "Voir le blog",
@@ -253,6 +255,7 @@ export const ROLE_PERMISSIONS: Record<CrmRole, CrmPermission[]> = {
   ],
   devops: [
     "infra.view",
+    "kodiva.read",
     "reports.view",
     "docs.read",
     "projects.read",
