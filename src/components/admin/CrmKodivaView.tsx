@@ -55,7 +55,7 @@ export function CrmKodivaView() {
     void load();
   }, [load]);
 
-  const module = data?.module ?? null;
+  const snapshot = data?.module ?? null;
 
   return (
     <div className="space-y-6">
@@ -95,27 +95,27 @@ export function CrmKodivaView() {
         </div>
       ) : null}
 
-      {data?.configured && data.error && !module ? (
+      {data?.configured && data.error && !snapshot ? (
         <p className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
           {data.error}
         </p>
       ) : null}
 
-      {module ? <KodivaSnapshot module={module} embed={embed} onEmbed={setEmbed} /> : null}
+      {snapshot ? <KodivaSnapshot snapshot={snapshot} embed={embed} onEmbed={setEmbed} /> : null}
     </div>
   );
 }
 
 function KodivaSnapshot({
-  module,
+  snapshot,
   embed,
   onEmbed,
 }: {
-  module: KodivaModuleSnapshot;
+  snapshot: KodivaModuleSnapshot;
   embed: boolean;
   onEmbed: (value: boolean) => void;
 }) {
-  const { kpis, incidents, links } = module;
+  const { kpis, incidents, links } = snapshot;
   const cards = [
     { label: "Organisations", value: String(kpis.tenants) },
     { label: "Suspendues", value: String(kpis.suspended) },
@@ -130,7 +130,7 @@ function KodivaSnapshot({
 
   return (
     <>
-      <p className="text-xs text-gray-text">Snapshot {formatWhen(module.generatedAt)}</p>
+      <p className="text-xs text-gray-text">Snapshot {formatWhen(snapshot.generatedAt)}</p>
       <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
         {cards.map((card) => (
           <article
