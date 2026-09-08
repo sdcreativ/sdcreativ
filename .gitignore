@@ -19,6 +19,7 @@
 # --- Docker (config Nginx générée) ---
 /docker/nginx/conf.d/sdcreativ.conf
 /docker/nginx/conf.d/kodiva-api.conf
+/docker/nginx/conf.d/kodiva-web.conf
 
 # --- Next.js ---
 /.next/
