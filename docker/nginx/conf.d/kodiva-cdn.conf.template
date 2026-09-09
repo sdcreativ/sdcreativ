@@ -1,0 +1,49 @@
+# HTTPS — fichiers statiques du widget KODIVA (proxy vers kodiva-web /kodiva/).
+# Généré sur le VPS : scripts/certbot-kodiva-cdn.sh
+# Ne pas committer le fichier rendu (certificats Let’s Encrypt requis).
+
+server {
+  listen 443 ssl;
+  listen [::]:443 ssl;
+  http2 on;
+  server_name ${KODIVA_CDN_HOST};
+
+  ssl_certificate /etc/letsencrypt/live/${KODIVA_CDN_HOST}/fullchain.pem;
+  ssl_certificate_key /etc/letsencrypt/live/${KODIVA_CDN_HOST}/privkey.pem;
+  ssl_session_timeout 1d;
+  ssl_session_cache shared:SSL:10m;
+  ssl_protocols TLSv1.2 TLSv1.3;
+  ssl_prefer_server_ciphers off;
+
+  add_header X-Content-Type-Options "nosniff" always;
+  add_header Referrer-Policy "strict-origin-when-cross-origin" always;
+  add_header Strict-Transport-Security "max-age=31536000; includeSubDomains" always;
+  add_header Access-Control-Allow-Origin "*" always;
+
+  resolver 127.0.0.11 valid=30s ipv6=off;
+
+  location = /widget.js {
+    set $upstream_kodiva_web kodiva-web;
+    proxy_pass http://$upstream_kodiva_web:3000/kodiva/widget.js;
+    proxy_http_version 1.1;
+    proxy_set_header Host kodiva.sdcreativ.com;
+    proxy_hide_header Cache-Control;
+    add_header Cache-Control "public, max-age=300" always;
+    add_header Access-Control-Allow-Origin "*" always;
+  }
+
+  location /kodiva/ {
+    set $upstream_kodiva_web kodiva-web;
+    proxy_pass http://$upstream_kodiva_web:3000/kodiva/;
+    proxy_http_version 1.1;
+    proxy_set_header Host kodiva.sdcreativ.com;
+    proxy_hide_header Cache-Control;
+    add_header Cache-Control "public, max-age=300" always;
+    add_header Access-Control-Allow-Origin "*" always;
+  }
+
+  location / {
+    default_type text/plain;
+    return 404 "KODIVA CDN";
+  }
+}

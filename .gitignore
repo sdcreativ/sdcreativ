@@ -20,6 +20,7 @@
 /docker/nginx/conf.d/sdcreativ.conf
 /docker/nginx/conf.d/kodiva-api.conf
 /docker/nginx/conf.d/kodiva-web.conf
+/docker/nginx/conf.d/kodiva-cdn.conf
 
 # --- Next.js ---
 /.next/
