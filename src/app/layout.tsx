@@ -48,6 +48,12 @@ export default async function RootLayout({
         <OrganizationJsonLd />
         <LocalBusinessJsonLd />
         <WebSiteJsonLd />
+        {/* Clé sessionStorage : KODIVA_BANNER_STORAGE_KEY dans src/lib/kodiva-banner.ts */}
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `(function(){try{var p=location.pathname.replace(/\\/$/,"");if(p==="/solutions-ia"||p==="/en/solutions-ia"||sessionStorage.getItem("sd-kodiva-banner")==="1")document.documentElement.setAttribute("data-kodiva-banner","off")}catch(e){}})();`,
+          }}
+        />
       </head>
       <body
         className="min-h-screen bg-background font-sans text-foreground antialiased"

@@ -40,7 +40,7 @@ export function PageHero({
       {breadcrumb && breadcrumb.length > 0 && <BreadcrumbJsonLd items={breadcrumb} />}
       <section
       className={cn(
-        "relative overflow-hidden bg-dark pt-28 pb-16 md:pt-32 md:pb-20",
+        "relative overflow-hidden bg-dark sd-page-hero-offset pb-16 md:pb-20",
         className,
       )}
     >

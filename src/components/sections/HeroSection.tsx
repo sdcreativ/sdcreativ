@@ -35,7 +35,7 @@ export async function HeroSection({ locale = "fr" }: { locale?: "fr" | "en" }) {
     .trim();
 
   return (
-    <section className="relative overflow-hidden bg-dark pt-[4.5rem] md:pt-[4.75rem]">
+    <section className="relative overflow-hidden bg-dark sd-below-header">
       <MediaImage
         src={backgroundSrc}
         alt={heroAlt || (isEn ? "SD CREATIV — web agency Abidjan" : "SD CREATIV — agence web Abidjan")}

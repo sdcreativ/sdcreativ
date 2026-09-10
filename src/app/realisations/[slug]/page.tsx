@@ -67,7 +67,7 @@ export default async function RealisationDetailPage({ params }: Props) {
       <BreadcrumbJsonLd items={breadcrumbItems} />
 
       {/* Hero */}
-      <header className="bg-dark pt-28 pb-12 md:pt-32">
+      <header className="bg-dark sd-page-hero-offset pb-12">
         <div className="container mx-auto px-4 md:px-6 lg:px-8">
           <Breadcrumb className="mb-6" items={breadcrumbItems} />
 

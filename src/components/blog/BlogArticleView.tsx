@@ -87,7 +87,7 @@ export function BlogArticleView({
     <article data-blog-article>
       <BlogReadingProgress />
 
-      <header className="relative isolate overflow-hidden bg-dark pt-28 md:pt-32">
+      <header className="relative isolate overflow-hidden bg-dark sd-page-hero-offset">
         {coverSrc ? (
           <>
             <Image

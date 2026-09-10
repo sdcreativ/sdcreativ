@@ -15,6 +15,37 @@
   --gray: #e8ecf0;
   --gray-text: #4d6175;
   --silver: #c8cdd3;
+  --sd-nav-h: 4.5rem;
+  --sd-banner-h: 2.25rem;
+  --sd-header-offset: calc(var(--sd-nav-h) + var(--sd-banner-h));
+}
+
+@media (min-width: 768px) {
+  :root {
+    --sd-nav-h: 4.75rem;
+  }
+}
+
+html[data-kodiva-banner="off"] {
+  --sd-banner-h: 0px;
+}
+
+html[data-kodiva-banner="off"] .kodiva-banner {
+  display: none;
+}
+
+.sd-below-header {
+  padding-top: var(--sd-header-offset);
+}
+
+.sd-page-hero-offset {
+  padding-top: calc(var(--sd-header-offset) + 2.5rem);
+}
+
+@media (min-width: 768px) {
+  .sd-page-hero-offset {
+    padding-top: calc(var(--sd-header-offset) + 3.25rem);
+  }
 }
 
 @theme inline {

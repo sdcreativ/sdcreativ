@@ -21,7 +21,7 @@ export default function BookPageEn() {
       <div className="pointer-events-none absolute -left-24 top-40 h-72 w-72 rounded-full bg-primary/5 blur-3xl" />
       <div className="pointer-events-none absolute -right-16 bottom-20 h-64 w-64 rounded-full bg-primary/8 blur-3xl" />
 
-      <div className="container relative mx-auto px-4 pb-20 pt-28 md:px-6 md:pb-28 md:pt-32 lg:px-8">
+      <div className="container relative mx-auto px-4 pb-20 sd-page-hero-offset md:px-6 md:pb-28 lg:px-8">
         <header className="mx-auto max-w-2xl text-center">
           <p className="text-xs font-semibold uppercase tracking-[0.2em] text-primary">
             SD CREATIV

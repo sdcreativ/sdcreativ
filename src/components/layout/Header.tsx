@@ -10,6 +10,7 @@ import { mainNav } from "@/content/navigation";
 import { enNav } from "@/i18n/en-content";
 import { isActiveEnglishPath } from "@/i18n/routes";
 import { useWhatsappUrl } from "@/components/site/SitePublicProvider";
+import { KodivaBanner } from "@/components/layout/KodivaBanner";
 import { cn } from "@/lib/utils";
 
 export function Header() {
@@ -79,6 +80,7 @@ export function Header() {
         scrolled && "border-[#e0e0e0] shadow-[0_4px_20px_rgba(0,0,0,0.06)]",
       )}
     >
+      <KodivaBanner />
       <div className="container mx-auto flex h-[4.5rem] items-center gap-4 px-4 md:h-[4.75rem] md:px-6 lg:px-8">
         <Logo className="shrink-0" priority />
 
@@ -212,13 +214,13 @@ export function Header() {
       {mobileOpen && (
         <>
           <div
-            className="fixed inset-0 top-[4.5rem] z-40 bg-black/50 backdrop-blur-sm lg:hidden md:top-[4.75rem]"
+            className="fixed inset-0 top-(--sd-header-offset) z-40 bg-black/50 backdrop-blur-sm lg:hidden"
             onClick={() => setMobileOpen(false)}
             aria-hidden
           />
           <div
             id="mobile-navigation"
-            className="fixed inset-x-0 top-[4.5rem] z-50 max-h-[calc(100vh-4.5rem)] overflow-y-auto border-b border-gray/60 bg-[#f6f6f6] lg:hidden md:top-[4.75rem]"
+            className="fixed inset-x-0 top-(--sd-header-offset) z-50 max-h-[calc(100vh-var(--sd-header-offset))] overflow-y-auto border-b border-gray/60 bg-[#f6f6f6] lg:hidden"
           >
             <nav
               className="container mx-auto px-4 py-5"
