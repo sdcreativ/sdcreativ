@@ -194,6 +194,24 @@ export default async function SolutionsIaPage() {
         </div>
       </AnimatedSection>
 
+      <section className="border-t border-gray/40 bg-primary-light py-16 md:py-20">
+        <div className="container mx-auto max-w-3xl px-4 text-center md:px-6 lg:px-8">
+          <p className="text-xs font-semibold uppercase tracking-wider text-primary">KODIVA</p>
+          <h2 className="mt-3 text-2xl font-bold text-foreground md:text-3xl">
+            Vous voulez le déployer vous-même ?
+          </h2>
+          <p className="mx-auto mt-3 max-w-xl text-gray-text">
+            Créez votre espace, posez le widget et pilotez les conversations. SD CREATIV reste
+            disponible si vous préférez qu’on l’installe pour vous.
+          </p>
+          <div className="mt-8 flex justify-center">
+            <Button href="https://kodiva.sdcreativ.com/register" size="lg">
+              Créer un espace KODIVA
+            </Button>
+          </div>
+        </div>
+      </section>
+
       <section className="border-t border-gray/40 bg-white py-16 md:py-20">
         <div className="container mx-auto max-w-3xl px-4 md:px-6 lg:px-8">
           <h2 className="mb-8 text-2xl font-bold text-foreground">Questions fréquentes</h2>
