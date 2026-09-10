@@ -8,5 +8,10 @@ export const KODIVA_BANNER_STORAGE_KEY = "sd-kodiva-banner";
 /** Déjà un CTA KODIVA sous Kady : pas de bandeau en double. */
 export function isKodivaBannerHiddenPath(pathname: string): boolean {
   const path = normalizePath(pathname);
-  return path === "/solutions-ia" || path === "/en/solutions-ia";
+  return (
+    path === "/solutions-ia" ||
+    path === "/en/solutions-ia" ||
+    path === "/produits" ||
+    path === "/en/products"
+  );
 }

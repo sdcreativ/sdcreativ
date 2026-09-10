@@ -8,6 +8,11 @@ describe("isKodivaBannerHiddenPath", () => {
     expect(isKodivaBannerHiddenPath("/en/solutions-ia")).toBe(true);
   });
 
+  it("hides the banner on the products catalog", () => {
+    expect(isKodivaBannerHiddenPath("/produits")).toBe(true);
+    expect(isKodivaBannerHiddenPath("/en/products")).toBe(true);
+  });
+
   it("keeps the banner on the rest of the public site", () => {
     expect(isKodivaBannerHiddenPath("/")).toBe(false);
     expect(isKodivaBannerHiddenPath("/services")).toBe(false);

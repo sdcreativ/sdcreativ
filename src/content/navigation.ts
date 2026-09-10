@@ -21,7 +21,7 @@ export const mainNav = [
   { label: "Formations", href: "/formations" },
   { label: "Réalisations", href: "/realisations" },
   { label: "Tarifs", href: "/tarifs" },
-  { label: "Blog", href: "/blog" },
+  { label: "Produits", href: "/produits" },
   { label: "À propos", href: "/a-propos" },
   { label: "Contact", href: "/contact" },
 ] as const;
@@ -31,6 +31,7 @@ export const footerQuickLinks = [
   { label: "Services", href: "/services" },
   { label: "Réalisations", href: "/realisations" },
   { label: "Tarifs", href: "/tarifs" },
+  { label: "Produits", href: "/produits" },
   { label: "Formations", href: "/formations" },
   { label: "Devis en ligne", href: "/devis" },
   { label: "Audit web gratuit", href: "/audit-gratuit" },

@@ -71,7 +71,22 @@ export const chatKnowledge: ChatKnowledgeEntry[] = [
       "SD CREATIV aide les PME à Abidjan avec le marketing digital et le digital : sites web, e-commerce, SEO local, agents IA (réponses clients & leads), automatisation commerciale, et si besoin applications, cloud ou projets sur mesure.",
     links: [
       { label: "Nos services", href: "/services" },
+      { label: "Nos produits", href: "/produits" },
       { label: "Solutions IA", href: "/solutions-ia" },
+    ],
+  },
+  {
+    id: "produits",
+    keywords: [
+      "produit", "produits", "kodiva", "caddynote", "caddy note", "caddy",
+      "logiciel", "saas", "plateforme",
+    ],
+    answer:
+      "SD CREATIV édite deux produits : KODIVA, la plateforme d’agents IA, et CaddyNote, la gestion scolaire (présences, notes, paiements Mobile Money, familles). Les sites et le sur-mesure restent des services d’agence.",
+    links: [
+      { label: "Voir les produits", href: "/produits" },
+      { label: "Ouvrir KODIVA", href: "https://kodiva.sdcreativ.com/" },
+      { label: "Ouvrir CaddyNote", href: "https://caddynote.com/" },
     ],
   },
   {
@@ -205,7 +220,22 @@ export const chatKnowledgeEn: ChatKnowledgeEntry[] = [
       "SD CREATIV offers 12 services: showcase sites, e-commerce, redesign, visual identity, local SEO, maintenance, AI agents, automation, DevOps, cloud, mobile apps and custom development. Based in Abidjan, we support Ivorian SMEs.",
     links: [
       { label: "Our services", href: "/en/services" },
+      { label: "Our products", href: "/en/products" },
       { label: "AI solutions", href: "/en/solutions-ia" },
+    ],
+  },
+  {
+    id: "produits",
+    keywords: [
+      "product", "products", "kodiva", "caddynote", "caddy note", "caddy",
+      "software", "saas", "platform",
+    ],
+    answer:
+      "SD CREATIV publishes two products: KODIVA, the AI-agent platform, and CaddyNote, school management (attendance, grades, Mobile Money, families). Websites and custom work stay agency services.",
+    links: [
+      { label: "See products", href: "/en/products" },
+      { label: "Open KODIVA", href: "https://kodiva.sdcreativ.com/" },
+      { label: "Open CaddyNote", href: "https://caddynote.com/" },
     ],
   },
   {

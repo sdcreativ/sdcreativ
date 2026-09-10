@@ -16,6 +16,7 @@ export const LOCALE_ROUTE_PAIRS = [
   { fr: "/audit-gratuit", en: "/en/free-audit" },
   { fr: "/faq", en: "/en/faq" },
   { fr: "/solutions-ia", en: "/en/solutions-ia" },
+  { fr: "/produits", en: "/en/products" },
   { fr: "/blog", en: "/en/blog" },
   { fr: "/agence-web-abidjan", en: "/en/web-agency-abidjan" },
   { fr: "/creation-site-cote-ivoire", en: "/en/website-development-cote-divoire" },

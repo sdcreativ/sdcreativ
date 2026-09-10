@@ -21,7 +21,7 @@ export const enNav = [
   { label: "Training", href: "/en/training" },
   { label: "Portfolio", href: "/en/portfolio" },
   { label: "Pricing", href: "/en/pricing" },
-  { label: "Blog", href: "/en/blog" },
+  { label: "Products", href: "/en/products" },
   { label: "About", href: "/en/about" },
   { label: "Contact", href: "/en/contact" },
 ] as const;
@@ -122,6 +122,7 @@ export const enFooter = {
     { label: "AI solutions", href: "/en/solutions-ia" },
     { label: "Portfolio", href: "/en/portfolio" },
     { label: "Pricing", href: "/en/pricing" },
+    { label: "Products", href: "/en/products" },
     { label: "Training", href: "/en/training" },
     { label: "Blog", href: "/en/blog" },
     { label: "Online quote", href: "/en/devis" },
