@@ -24,7 +24,7 @@ export const defaultSiteHeroSettings: SiteHeroSettings = {
   titleHighlight: "moins de tâches",
   titleAfter: " répétitives.",
   description:
-    "SD CREATIV aide les PME, commerces et équipes commerciales à attirer des prospects, convertir et gagner du temps — sites web, marketing digital et agents IA qui répondent, qualifient et relancent pour vous.",
+    "SD CREATIV aide les PME, commerces et équipes commerciales à attirer des prospects, convertir et gagner du temps : sites web, marketing digital, et KODIVA, notre plateforme d’agents IA qui répondent, qualifient et relancent pour vous.",
   features: ["Agents IA", "Sites & e-commerce", "Leads & WhatsApp", "SEO local", "Automatisation"],
   highlights: [
     { label: "Plus de leads", description: "Visibilité et conversion" },

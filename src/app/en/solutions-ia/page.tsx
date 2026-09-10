@@ -44,6 +44,10 @@ export default function EnSolutionsIaPage() {
               {enSolutionsIa.demoTitle}
             </h2>
             <p className="mt-3 text-gray-text">{enSolutionsIa.demoDescription}</p>
+            <p className="mt-6 text-sm text-gray-text">Want to deploy it yourself?</p>
+            <div className="mt-3">
+              <Button href="https://kodiva.sdcreativ.com/register">Create a KODIVA workspace</Button>
+            </div>
           </div>
         </div>
       </AnimatedSection>
@@ -123,24 +127,6 @@ export default function EnSolutionsIaPage() {
           </div>
         </div>
       </AnimatedSection>
-
-      <section className="border-t border-gray/40 bg-primary-light py-16 md:py-20">
-        <div className="container mx-auto max-w-3xl px-4 text-center md:px-6 lg:px-8">
-          <p className="text-xs font-semibold uppercase tracking-wider text-primary">KODIVA</p>
-          <h2 className="mt-3 text-2xl font-bold text-foreground md:text-3xl">
-            Want to deploy it yourself?
-          </h2>
-          <p className="mx-auto mt-3 max-w-xl text-gray-text">
-            Create your workspace, add the widget and run the conversations. SD CREATIV stays
-            available if you prefer we install it for you.
-          </p>
-          <div className="mt-8 flex justify-center">
-            <Button href="https://kodiva.sdcreativ.com/register" size="lg">
-              Create a KODIVA workspace
-            </Button>
-          </div>
-        </div>
-      </section>
 
       <section className="border-t border-gray/40 bg-white py-16 md:py-20">
         <div className="container mx-auto max-w-3xl px-4 md:px-6 lg:px-8">

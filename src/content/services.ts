@@ -48,18 +48,18 @@ export const services: Service[] = [
     icon: Bot,
     title: "Agents IA",
     description:
-      "Des assistants qui répondent à vos clients, qualifient vos leads et relancent vos prospects — sur votre site et WhatsApp, 24h/24.",
+      "KODIVA, la plateforme d’agents IA de SD CREATIV : vos assistants répondent, qualifient et relancent, sur le site et WhatsApp, 24h/24.",
     features: [
       "Accueil, commercial, support et FAQ documentaire",
       "Devis, RDV, e-commerce et relances",
       "CRM, admin, RH et finance / facturation",
       "Escalade vers un humain quand c’est nécessaire",
-      "Combinables selon vos priorités métier",
+      "Déploiement par nos équipes, ou espace en self-service",
     ],
     image: "/images/services/agents-ia.png",
     imageAlt: "Interface de configuration d'agents IA et assistants conversationnels",
     detailHref: "/solutions-ia",
-    detailLabel: "Voir les cas d’usage marketing",
+    detailLabel: "Voir KODIVA et les cas d’usage",
   },
   {
     id: "automatisation",

@@ -79,11 +79,13 @@ export const chatKnowledge: ChatKnowledgeEntry[] = [
     keywords: [
       "ia", "intelligence", "artificielle", "agent", "chatbot", "bot", "openai", "claude",
       "llm", "automatisation", "assistant", "whatsapp", "lead", "leads", "marketing",
+      "kodiva",
     ],
     answer:
-      "Nous créons 12 types d’agents IA : accueil, commercial, support, FAQ documentaire, prise de RDV, devis, e-commerce, relance, CRM, administratif, RH et finance. Ils répondent, qualifient et automatisent — avec passage à un humain si besoin. Devis gratuit.",
+      "KODIVA est la plateforme d’agents IA de SD CREATIV. Nous créons 12 types d’agents : accueil, commercial, support, FAQ, RDV, devis, e-commerce, relance, CRM, admin, RH et finance. On peut les déployer pour vous, ou vous créer votre espace. Devis gratuit, ou inscription self-service.",
     links: [
       { label: "Solutions IA", href: "/solutions-ia" },
+      { label: "Créer un espace KODIVA", href: "https://kodiva.sdcreativ.com/register" },
       { label: "Devis agents IA", href: "/devis?type=agents-ia" },
     ],
   },

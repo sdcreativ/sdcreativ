@@ -92,15 +92,15 @@ export const servicesEnById: Record<
   "agents-ia": {
     title: "AI agents",
     description:
-      "We design and deploy intelligent agents to automate interactions, support and business workflows.",
+      "KODIVA is SD CREATIV’s AI agent platform: assistants that reply, qualify and follow up on your site and WhatsApp, 24/7.",
     features: [
       "Chatbots & conversational assistants",
-      "LLM integration (OpenAI, Claude, etc.)",
-      "Custom business agents",
-      "Connected to your tools (CRM, email, WhatsApp)",
-      "Monitoring & continuous improvement",
+      "Welcome, sales, support and knowledge FAQ",
+      "Quotes, bookings, ecommerce and follow-ups",
+      "Human handoff when needed",
+      "Deployed by our team, or a self-serve workspace",
     ],
-    detailLabel: "Explore our AI solutions",
+    detailLabel: "See KODIVA and use cases",
     imageAlt: "AI agent configuration interface",
   },
   automatisation: {
