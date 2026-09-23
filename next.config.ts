@@ -41,8 +41,14 @@ const nextConfig: NextConfig = {
     ];
   },
   async rewrites() {
-    // Les navigateurs demandent encore /favicon.ico (ex-fichier Next par défaut).
-    return [{ source: "/favicon.ico", destination: "/icon" }];
+    return [
+      { source: "/favicon.ico", destination: "/icon" },
+      // URL qui se termine par .vcf, servie par l'API (hors service worker).
+      {
+        source: "/api/cards/:token/contact.vcf",
+        destination: "/api/cards/:token/vcard",
+      },
+    ];
   },
   async redirects() {
     return [

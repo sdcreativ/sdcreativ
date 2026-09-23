@@ -1,6 +1,5 @@
 import { randomBytes } from "node:crypto";
 import { SITE } from "@/lib/constants";
-import { resolveImageDisplayUrl } from "@/lib/image-url";
 
 const TOKEN_PATTERN = /^[A-Za-z0-9_-]{16,64}$/;
 
@@ -143,13 +142,6 @@ function escapeVcard(value: string): string {
     .replace(/,/g, "\\,");
 }
 
-function absolutePhotoUrl(photoUrl: string): string {
-  const display = resolveImageDisplayUrl(photoUrl);
-  if (/^https?:\/\//i.test(display)) return display;
-  const base = SITE.url.replace(/\/$/, "");
-  return `${base}${display.startsWith("/") ? display : `/${display}`}`;
-}
-
 export function digitsOnly(value: string): string {
   return value.replace(/\D/g, "");
 }
@@ -160,10 +152,14 @@ export function whatsappUrl(phone: string): string | null {
   return `https://wa.me/${digits}`;
 }
 
-function splitPersonName(fullName: string): { given: string; family: string } {
+function splitPersonName(fullName: string): { given: string; additional: string; family: string } {
   const parts = fullName.trim().split(/\s+/).filter(Boolean);
-  if (parts.length <= 1) return { given: parts[0] ?? "", family: "" };
-  return { given: parts.slice(0, -1).join(" "), family: parts.at(-1) ?? "" };
+  if (parts.length === 0) return { given: "", additional: "", family: "" };
+  if (parts.length === 1) return { given: "", additional: "", family: parts[0] ?? "" };
+  const family = parts.at(-1) ?? "";
+  const given = parts[0] ?? "";
+  const additional = parts.slice(1, -1).join(" ");
+  return { given, additional, family };
 }
 
 function foldVcardLine(line: string): string {
@@ -190,49 +186,24 @@ function telValue(phone: string): string {
   return `+${digits}`;
 }
 
-/** vCard 3.0 que l'app Contacts d'iPhone peut enregistrer. */
-export function buildVcard(
-  card: PublicBusinessCard,
-  cardUrl: string,
-  photoJpegBase64?: string,
-): string {
-  const { given, family } = splitPersonName(card.name);
+/** vCard 3.0 minimal : une photo embarquée ou une URL de photo bloque l'enregistrement sur téléphone. */
+export function buildVcard(card: PublicBusinessCard, cardUrl: string): string {
+  const { given, additional, family } = splitPersonName(card.name);
   const lines = [
     "BEGIN:VCARD",
     "VERSION:3.0",
+    `N:${escapeVcard(family)};${escapeVcard(given)};${escapeVcard(additional)};;`,
     `FN:${escapeVcard(card.name)}`,
-    `N:${escapeVcard(family)};${escapeVcard(given)};;;`,
     `ORG:${escapeVcard(card.company)}`,
   ];
   if (card.jobTitle) lines.push(`TITLE:${escapeVcard(card.jobTitle)}`);
   if (card.phone) lines.push(`TEL;TYPE=CELL:${telValue(card.phone)}`);
-  if (card.email) lines.push(`EMAIL;TYPE=INTERNET:${escapeVcard(card.email)}`);
-  if (card.website) lines.push(`URL:${escapeVcard(card.website)}`);
-  else lines.push(`URL:${escapeVcard(cardUrl)}`);
+  if (card.email) lines.push(`EMAIL:${escapeVcard(card.email)}`);
+  lines.push(`URL:${escapeVcard(card.website || cardUrl)}`);
   if (card.location) lines.push(`ADR;TYPE=WORK:;;${escapeVcard(card.location)};;;;`);
   if (card.bio) lines.push(`NOTE:${escapeVcard(card.bio)}`);
-  const photo = photoJpegBase64?.replace(/\s/g, "");
-  if (photo) lines.push(`PHOTO;ENCODING=b;TYPE=JPEG:${photo}`);
   lines.push("END:VCARD");
   return `${lines.map(foldVcardLine).join("\r\n")}\r\n`;
-}
-
-/** JPEG embarqué : une URL distante dans PHOTO empêche souvent iPhone d'enregistrer le contact. */
-export async function readCardPhotoJpeg(photoUrl: string): Promise<string | null> {
-  try {
-    const response = await fetch(absolutePhotoUrl(photoUrl), {
-      signal: AbortSignal.timeout(8000),
-    });
-    if (!response.ok) return null;
-    const input = Buffer.from(await response.arrayBuffer());
-    if (input.length === 0 || input.length > 4_000_000) return null;
-    const sharp = (await import("sharp")).default;
-    const jpeg = await sharp(input, { failOn: "none" }).rotate().jpeg({ quality: 80 }).toBuffer();
-    if (jpeg.length === 0 || jpeg.length > 350_000) return null;
-    return jpeg.toString("base64");
-  } catch {
-    return null;
-  }
 }
 
 export function deviceTypeFromUserAgent(userAgent: string): "mobile" | "tablet" | "desktop" | "unknown" {

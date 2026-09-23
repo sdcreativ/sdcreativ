@@ -4,6 +4,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { Globe, Mail, MapPin, Phone } from "lucide-react";
+import { AddToContactsButton } from "@/components/cards/AddToContactsButton";
 import { BusinessCardActions } from "@/components/cards/BusinessCardActions";
 import { InstagramIcon, LinkedInIcon } from "@/components/ui/SocialIcons";
 import { Logo } from "@/components/ui/Logo";
@@ -175,12 +176,7 @@ export default async function PublicBusinessCardPage({ params }: Params) {
             </div>
           ) : null}
 
-          <a
-            href={`/cards/${encodeURIComponent(token)}/contact.vcf`}
-            className="mt-4 flex min-h-12 items-center justify-center rounded-2xl bg-foreground text-sm font-semibold text-white transition hover:bg-primary"
-          >
-            Ajouter aux contacts
-          </a>
+          <AddToContactsButton token={token} />
 
           {card.bio ? (
             <p className="mt-7 text-center text-sm leading-relaxed text-gray-text">{card.bio}</p>

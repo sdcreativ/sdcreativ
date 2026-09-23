@@ -1,4 +1,4 @@
-const CACHE = "sdcreativ-v2";
+const CACHE = "sdcreativ-v3";
 const PRECACHE = ["/", "/offline"];
 
 self.addEventListener("install", (event) => {
@@ -18,7 +18,13 @@ self.addEventListener("activate", (event) => {
 self.addEventListener("fetch", (event) => {
   if (event.request.method !== "GET") return;
   const url = new URL(event.request.url);
-  if (url.pathname.startsWith("/api/") || url.pathname.startsWith("/admin")) return;
+  if (
+    url.pathname.startsWith("/api/") ||
+    url.pathname.startsWith("/admin") ||
+    url.pathname.endsWith(".vcf")
+  ) {
+    return;
+  }
 
   event.respondWith(
     fetch(event.request)

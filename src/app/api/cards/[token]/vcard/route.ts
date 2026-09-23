@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { isBusinessCardsEnabled } from "@/lib/business-cards-flag";
 import { getBusinessCardByToken, getPublicBusinessCard } from "@/lib/business-cards";
-import { buildVcard, businessCardPublicUrl, isPublicCardToken, readCardPhotoJpeg } from "@/lib/business-card-public";
+import { buildVcard, businessCardPublicUrl, isPublicCardToken } from "@/lib/business-card-public";
 import {
   PUBLIC_CARD_RATE_LIMIT,
   consumeRateLimit,
@@ -18,7 +18,8 @@ export async function GET(request: Request, { params }: Params) {
   const limited = consumeRateLimit("public-card-vcard", getClientIp(request), PUBLIC_CARD_RATE_LIMIT);
   if (limited.limited) return rateLimitExceededResponse(limited.retryAfterSec);
 
-  const { token } = await params;
+  const { token: rawToken } = await params;
+  const token = rawToken.replace(/\.vcf$/i, "");
   if (!isPublicCardToken(token)) {
     return NextResponse.json({ error: "Introuvable." }, { status: 404 });
   }
@@ -31,13 +32,14 @@ export async function GET(request: Request, { params }: Params) {
     return NextResponse.json({ error: "Cette carte n'est plus active." }, { status: 410 });
   }
 
-  const photo = card.photoUrl ? await readCardPhotoJpeg(card.photoUrl) : null;
-  const body = buildVcard(card, businessCardPublicUrl(token), photo ?? undefined);
+  const body = buildVcard(card, businessCardPublicUrl(token));
+  const bytes = Buffer.from(body, "utf8");
 
-  return new NextResponse(body, {
+  return new NextResponse(bytes, {
     headers: {
-      "Content-Type": "text/vcard",
-      "Content-Disposition": 'inline; filename="contact.vcf"',
+      "Content-Type": "text/vcard; charset=utf-8",
+      "Content-Disposition": 'attachment; filename="contact.vcf"',
+      "Content-Length": String(bytes.length),
     },
   });
 }
