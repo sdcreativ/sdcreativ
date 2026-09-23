@@ -1,9 +1,11 @@
 import { withDb } from "@/lib/db";
+import { teamMembers } from "@/content/team";
 import { logCrmAudit, type AuditActor } from "@/lib/crm-audit";
 import {
   businessCardPublicUrl,
   deviceTypeFromUserAgent,
   generatePublicToken,
+  portraitNamesMatch,
   safeCountryCode,
   safeReferrer,
   toPublicBusinessCard,
@@ -230,31 +232,67 @@ function fieldValue(
   return value === undefined ? fallback : value;
 }
 
+async function hydratePortraits(
+  query: <R extends { name: string; image: string }>(
+    text: string,
+    params?: unknown[],
+  ) => Promise<{ rows: R[] }>,
+  records: BusinessCardRecord[],
+): Promise<BusinessCardRecord[]> {
+  if (records.length === 0 || records.every((record) => record.photoUrl.trim() || !record.showPhoto)) {
+    return records;
+  }
+  const { rows } = await query<{ name: string; image: string }>(
+    `SELECT name, image FROM public_team_members WHERE btrim(image) <> ''`,
+  );
+  const portraits = [
+    ...rows.map((row) => ({ name: row.name, image: row.image })),
+    ...teamMembers.map((member) => ({ name: member.name, image: member.image })),
+  ];
+  return records.map((record) => {
+    if (record.photoUrl.trim() || !record.showPhoto) return record;
+    const match = portraits.find((portrait) => portraitNamesMatch(record.name, portrait.name));
+    return match ? { ...record, photoUrl: match.image } : record;
+  });
+}
+
+async function hydratePortrait(
+  query: <R extends { name: string; image: string }>(
+    text: string,
+    params?: unknown[],
+  ) => Promise<{ rows: R[] }>,
+  record: BusinessCardRecord | null,
+): Promise<BusinessCardRecord | null> {
+  if (!record) return null;
+  const [next] = await hydratePortraits(query, [record]);
+  return next ?? record;
+}
+
 export async function listBusinessCards(): Promise<BusinessCardRecord[]> {
   return withDb(async (query) => {
     const { rows } = await query<CardRow>(`${SELECT_CARD} ORDER BY u.name ASC`);
-    return rows.map(mapRow);
+    return hydratePortraits(query, rows.map(mapRow));
   });
 }
 
 export async function getBusinessCardById(id: string): Promise<BusinessCardRecord | null> {
   return withDb(async (query) => {
     const { rows } = await query<CardRow>(`${SELECT_CARD} WHERE c.id = $1 LIMIT 1`, [id]);
-    return rows[0] ? mapRow(rows[0]) : null;
+    return hydratePortrait(query, rows[0] ? mapRow(rows[0]) : null);
   });
 }
 
 export async function getBusinessCardByUserId(userId: string): Promise<BusinessCardRecord | null> {
   return withDb(async (query) => {
     const { rows } = await query<CardRow>(`${SELECT_CARD} WHERE c.user_id = $1 LIMIT 1`, [userId]);
-    return rows[0] ? mapRow(rows[0]) : null;
+    return hydratePortrait(query, rows[0] ? mapRow(rows[0]) : null);
   });
 }
 
 export async function getBusinessCardByToken(token: string): Promise<BusinessCardRecord | null> {
   return withDb(async (query) => {
     const { rows } = await query<CardRow>(`${SELECT_CARD} WHERE c.public_token = $1 LIMIT 1`, [token]);
-    return rows[0] ? mapRow(rows[0]) : null;
+    return hydratePortrait(query, rows[0] ? mapRow(rows[0]) : null);
   });
 }
 
@@ -368,7 +406,7 @@ export async function createBusinessCard(
     }
 
     const { rows } = await query<CardRow>(`${SELECT_CARD} WHERE c.id = $1`, [insertedId]);
-    return mapRow(rows[0]!);
+    return hydratePortrait(query, mapRow(rows[0]!));
   });
 
   await logCrmAudit({
@@ -461,7 +499,7 @@ export async function updateBusinessCard(
     );
 
     const { rows } = await query<CardRow>(`${SELECT_CARD} WHERE c.id = $1`, [id]);
-    return rows[0] ? mapRow(rows[0]) : null;
+    return hydratePortrait(query, rows[0] ? mapRow(rows[0]) : null);
   });
 
   if (!record) return null;
@@ -505,7 +543,7 @@ export async function regenerateBusinessCardToken(
     }
 
     const { rows } = await query<CardRow>(`${SELECT_CARD} WHERE c.id = $1`, [id]);
-    return rows[0] ? mapRow(rows[0]) : null;
+    return hydratePortrait(query, rows[0] ? mapRow(rows[0]) : null);
   });
 
   if (!record) return null;

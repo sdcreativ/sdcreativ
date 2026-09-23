@@ -7,6 +7,7 @@ import {
   safeCountryCode,
   safeReferrer,
   toPublicBusinessCard,
+  portraitNamesMatch,
   whatsappUrl,
   type BusinessCardSource,
 } from "@/lib/business-card-public";
@@ -121,5 +122,13 @@ describe("cartes de visite", () => {
     expect(safeCountryCode("ci")).toBe("CI");
     expect(safeCountryCode("XX")).toBeNull();
     expect(safeReferrer("https://google.com/search?q=secret")).toBe("google.com/search");
+  });
+
+  it("relie un nom CRM au portrait d'équipe malgré l'accent et l'ordre", () => {
+    expect(portraitNamesMatch("Siméon Auguste Ba", "Simeon Auguste BA")).toBe(true);
+    expect(portraitNamesMatch("Paterne Gnonzion", "GNONZION Guélablé Paterne")).toBe(true);
+    expect(portraitNamesMatch("Kossa Disseka Ange Valeri", "Mlle Kossa Disseka Ange Valeri")).toBe(true);
+    expect(portraitNamesMatch("Kady Coulibaly", "Simeon Auguste BA")).toBe(false);
+    expect(portraitNamesMatch("Alex", "Alex Adjee Ibauld")).toBe(false);
   });
 });
