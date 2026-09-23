@@ -42,7 +42,7 @@ export function CookieConsent() {
     () => false,
   );
 
-  if (!mounted || consent !== null) return null;
+  if (!mounted || consent !== null || pathname.startsWith("/c/")) return null;
 
   return (
     <div

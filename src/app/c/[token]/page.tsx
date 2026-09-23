@@ -3,7 +3,7 @@ import type { Metadata } from "next";
 import Image from "next/image";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { Globe, Mail, Phone } from "lucide-react";
+import { Github, Globe, Instagram, Linkedin, Mail, MapPin, Phone } from "lucide-react";
 import { BusinessCardActions } from "@/components/cards/BusinessCardActions";
 import { isBusinessCardsEnabled } from "@/lib/business-cards-flag";
 import { getBusinessCardByToken, getPublicBusinessCard } from "@/lib/business-cards";
@@ -13,7 +13,7 @@ import {
   isPublicCardToken,
   whatsappUrl,
 } from "@/lib/business-card-public";
-import { LOGO, LOGO_FOOTER, SITE } from "@/lib/constants";
+import { LOGO, SITE } from "@/lib/constants";
 import { resolveImageDisplayUrl } from "@/lib/image-url";
 import { createMetadata } from "@/lib/metadata";
 
@@ -47,6 +47,12 @@ export async function generateMetadata({ params }: Params): Promise<Metadata> {
   });
 }
 
+function initials(name: string): string {
+  const parts = name.trim().split(/\s+/).filter(Boolean);
+  const letters = parts.slice(0, 2).map((part) => part[0]?.toUpperCase() ?? "");
+  return letters.join("") || "SD";
+}
+
 function ActionLink({
   href,
   label,
@@ -61,10 +67,12 @@ function ActionLink({
     <a
       href={href}
       aria-label={label}
-      className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl bg-primary px-4 py-2.5 text-sm font-semibold text-white hover:opacity-90"
+      className="flex min-h-16 min-w-[4.75rem] flex-1 flex-col items-center justify-center gap-1.5 rounded-2xl px-2 py-2 text-[11px] font-semibold tracking-wide text-foreground transition hover:bg-primary-light"
       {...(external ? { target: "_blank", rel: "noopener noreferrer" } : {})}
     >
-      {children}
+      <span className="flex h-11 w-11 items-center justify-center rounded-2xl bg-primary text-white shadow-sm">
+        {children}
+      </span>
       {label}
     </a>
   );
@@ -82,86 +90,95 @@ export default async function PublicBusinessCardPage({ params }: Params) {
 
   if (card.status !== "active") {
     return (
-      <main className="mx-auto flex min-h-[70vh] max-w-lg flex-col items-center justify-center px-4 py-16 text-center">
-        <Image src={LOGO.src} alt="SD CREATIV" width={160} height={90} className="h-12 w-auto" />
-        <h1 className="mt-8 text-2xl font-bold text-foreground">Cette carte professionnelle n&apos;est plus active.</h1>
-        <p className="mt-3 text-sm text-gray-text">SD CREATIV</p>
-        <Link href="/" className="mt-6 text-sm font-semibold text-primary hover:underline">
-          sdcreativ.com
-        </Link>
-      </main>
+      <div className="flex min-h-dvh items-center justify-center bg-[#f3f6fa] px-5 py-16">
+        <div className="w-full max-w-sm rounded-[28px] bg-white px-8 py-12 text-center shadow-[0_24px_80px_-36px_rgba(15,23,42,0.45)]">
+          <Image src={LOGO.src} alt="SD CREATIV" width={140} height={78} className="mx-auto h-10 w-auto" />
+          <h1 className="mt-8 text-xl font-semibold tracking-tight text-foreground">
+            Cette carte professionnelle n&apos;est plus active.
+          </h1>
+          <Link href="/" className="mt-6 inline-flex text-sm font-semibold text-primary">
+            sdcreativ.com
+          </Link>
+        </div>
+      </div>
     );
   }
 
   const wa = card.whatsapp ? whatsappUrl(card.whatsapp) : null;
   const photo = card.photoUrl ? resolveImageDisplayUrl(card.photoUrl) : "";
+  const actions = [
+    card.phone ? { href: `tel:${card.phone}`, label: "Appeler", icon: <Phone className="h-5 w-5" aria-hidden /> } : null,
+    wa ? { href: wa, label: "WhatsApp", icon: <Phone className="h-5 w-5" aria-hidden /> } : null,
+    card.email ? { href: `mailto:${card.email}`, label: "Email", icon: <Mail className="h-5 w-5" aria-hidden /> } : null,
+    card.website ? { href: card.website, label: "Site", icon: <Globe className="h-5 w-5" aria-hidden /> } : null,
+    card.linkedin ? { href: card.linkedin, label: "LinkedIn", icon: <Linkedin className="h-5 w-5" aria-hidden /> } : null,
+    card.github ? { href: card.github, label: "GitHub", icon: <Github className="h-5 w-5" aria-hidden /> } : null,
+    card.instagram ? { href: card.instagram, label: "Instagram", icon: <Instagram className="h-5 w-5" aria-hidden /> } : null,
+  ].filter((item) => item !== null);
 
   return (
-    <main className="mx-auto max-w-lg px-4 py-10 md:py-16">
-      <article className="overflow-hidden rounded-3xl border border-gray/40 bg-white shadow-sm">
-        <div className="bg-foreground px-6 py-5 text-white">
-          <Image src={LOGO_FOOTER.src} alt="SD CREATIV" width={LOGO_FOOTER.width} height={LOGO_FOOTER.height} className="h-8 w-auto" />
-        </div>
-        <div className="px-6 pb-8 pt-6">
-          {photo ? (
-            <Image
-              src={photo}
-              alt=""
-              width={112}
-              height={112}
-              unoptimized
-              className="mx-auto h-28 w-28 rounded-full object-cover ring-4 ring-primary-light"
-            />
-          ) : null}
-          <h1 className="mt-4 text-center text-2xl font-bold text-foreground">{card.name}</h1>
+    <div className="relative min-h-dvh overflow-hidden bg-[#eef3f8] px-4 py-8 sm:py-14">
+      <div className="pointer-events-none absolute inset-x-0 top-0 h-64 bg-[radial-gradient(ellipse_at_top,rgba(0,114,181,0.16),transparent_68%)]" />
+      <article className="relative mx-auto w-full max-w-[420px] overflow-hidden rounded-[32px] bg-white shadow-[0_30px_80px_-40px_rgba(15,23,42,0.55)]">
+        <div className="h-1.5 bg-primary" />
+        <div className="px-6 pb-8 pt-7 sm:px-8">
+          <Image src={LOGO.src} alt="SD CREATIV" width={132} height={74} className="mx-auto h-8 w-auto" />
+
+          <div className="mt-7 flex justify-center">
+            {photo ? (
+              <Image
+                src={photo}
+                alt=""
+                width={128}
+                height={128}
+                unoptimized
+                className="h-32 w-32 rounded-full object-cover shadow-[0_12px_30px_-16px_rgba(0,90,145,0.8)] ring-4 ring-white"
+              />
+            ) : (
+              <span className="flex h-32 w-32 items-center justify-center rounded-full bg-primary-light text-2xl font-semibold tracking-wide text-primary ring-4 ring-white">
+                {initials(card.name)}
+              </span>
+            )}
+          </div>
+
+          <h1 className="mt-5 text-center text-[1.65rem] font-semibold leading-tight tracking-tight text-foreground">
+            {card.name}
+          </h1>
           {card.jobTitle ? (
-            <p className="mt-1 text-center text-sm font-semibold text-primary">{card.jobTitle}</p>
+            <p className="mt-1.5 text-center text-sm font-semibold text-primary">{card.jobTitle}</p>
           ) : null}
           {card.department ? (
             <p className="mt-1 text-center text-sm text-gray-text">{card.department}</p>
           ) : null}
-          <p className="mt-1 text-center text-sm font-medium text-foreground">{card.company}</p>
+          <p className="mt-2 text-center text-[11px] font-semibold uppercase tracking-[0.22em] text-gray-text">
+            {card.company}
+          </p>
 
-          <div className="mt-6 flex flex-wrap justify-center gap-2">
-            {card.phone ? (
-              <ActionLink href={`tel:${card.phone}`} label="Appeler">
-                <Phone className="h-4 w-4" aria-hidden />
-              </ActionLink>
-            ) : null}
-            {wa ? (
-              <ActionLink href={wa} label="WhatsApp">
-                <Phone className="h-4 w-4" aria-hidden />
-              </ActionLink>
-            ) : null}
-            {card.email ? (
-              <ActionLink href={`mailto:${card.email}`} label="Email">
-                <Mail className="h-4 w-4" aria-hidden />
-              </ActionLink>
-            ) : null}
-            {card.website ? (
-              <ActionLink href={card.website} label="Site web">
-                <Globe className="h-4 w-4" aria-hidden />
-              </ActionLink>
-            ) : null}
-            {card.linkedin ? <ActionLink href={card.linkedin} label="LinkedIn"><span aria-hidden>in</span></ActionLink> : null}
-            {card.github ? <ActionLink href={card.github} label="GitHub"><span aria-hidden>gh</span></ActionLink> : null}
-          </div>
+          {actions.length > 0 ? (
+            <div className="mt-7 grid grid-cols-3 gap-1">
+              {actions.map((action) => (
+                <ActionLink key={action.label} href={action.href} label={action.label}>
+                  {action.icon}
+                </ActionLink>
+              ))}
+            </div>
+          ) : null}
 
-          <div className="mt-4 flex justify-center">
-            <a
-              href={`/api/cards/${encodeURIComponent(token)}/vcard`}
-              className="inline-flex min-h-11 items-center justify-center rounded-xl border border-primary/30 bg-primary-light px-4 py-2.5 text-sm font-semibold text-primary"
-            >
-              Ajouter aux contacts
-            </a>
-          </div>
+          <a
+            href={`/api/cards/${encodeURIComponent(token)}/vcard`}
+            className="mt-4 flex min-h-12 items-center justify-center rounded-2xl bg-foreground text-sm font-semibold text-white transition hover:bg-primary"
+          >
+            Ajouter aux contacts
+          </a>
 
-          {card.bio ? <p className="mt-6 text-sm leading-relaxed text-gray-text">{card.bio}</p> : null}
+          {card.bio ? (
+            <p className="mt-7 text-center text-sm leading-relaxed text-gray-text">{card.bio}</p>
+          ) : null}
 
           {card.skills.length > 0 ? (
-            <ul className="mt-4 flex flex-wrap gap-2">
+            <ul className="mt-5 flex flex-wrap justify-center gap-2">
               {card.skills.map((skill) => (
-                <li key={skill} className="rounded-full bg-gray-light px-3 py-1 text-xs font-medium text-foreground">
+                <li key={skill} className="rounded-full bg-[#f3f6fa] px-3 py-1 text-xs font-medium text-foreground">
                   {skill}
                 </li>
               ))}
@@ -169,7 +186,7 @@ export default async function PublicBusinessCardPage({ params }: Params) {
           ) : null}
 
           {card.services.length > 0 ? (
-            <ul className="mt-4 space-y-1 text-sm text-gray-text">
+            <ul className="mt-4 space-y-1 text-center text-sm text-gray-text">
               {card.services.map((service) => (
                 <li key={service}>{service}</li>
               ))}
@@ -177,42 +194,37 @@ export default async function PublicBusinessCardPage({ params }: Params) {
           ) : null}
 
           {card.location || card.languages ? (
-            <p className="mt-4 text-xs text-gray-text">
+            <p className="mt-4 flex items-center justify-center gap-1.5 text-center text-xs text-gray-text">
+              {card.location ? <MapPin className="h-3.5 w-3.5 shrink-0" aria-hidden /> : null}
               {[card.location, card.languages].filter(Boolean).join(" · ")}
             </p>
           ) : null}
 
-          {(card.instagram || card.twitter) && (
-            <div className="mt-4 flex flex-wrap gap-3 text-sm font-semibold text-primary">
-              {card.instagram ? (
-                <a href={card.instagram} target="_blank" rel="noopener noreferrer">
-                  Instagram
-                </a>
-              ) : null}
-              {card.twitter ? (
-                <a href={card.twitter} target="_blank" rel="noopener noreferrer">
-                  X
-                </a>
-              ) : null}
-            </div>
-          )}
+          {card.twitter ? (
+            <p className="mt-3 text-center">
+              <a href={card.twitter} target="_blank" rel="noopener noreferrer" className="text-sm font-semibold text-primary">
+                X / Twitter
+              </a>
+            </p>
+          ) : null}
 
-          <div className="mt-8 flex flex-col items-center gap-3">
+          <div className="mt-8 rounded-3xl bg-[#f7f9fc] px-4 py-5">
             <BusinessCardActions token={token} name={card.name} url={url} />
             <Image
               src={`/api/cards/${encodeURIComponent(token)}/qr`}
               alt={`QR code de la carte de ${card.name}`}
-              width={180}
-              height={180}
+              width={168}
+              height={168}
               unoptimized
-              className="h-44 w-44"
+              className="mx-auto mt-4 h-40 w-40 rounded-2xl bg-white p-2"
             />
-            <Link href="/" className="text-sm font-semibold text-primary hover:underline">
-              sdcreativ.com
-            </Link>
           </div>
+
+          <Link href="/" className="mt-5 block text-center text-xs font-semibold tracking-wide text-primary">
+            sdcreativ.com
+          </Link>
         </div>
       </article>
-    </main>
+    </div>
   );
 }

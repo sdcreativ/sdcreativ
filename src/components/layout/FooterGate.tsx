@@ -10,7 +10,8 @@ export function FooterGate({ sitePublic }: { sitePublic: ResolvedSitePublic }) {
   if (
     pathname.startsWith("/admin") ||
     pathname.startsWith("/espace-client") ||
-    pathname.startsWith("/presentation")
+    pathname.startsWith("/presentation") ||
+    pathname.startsWith("/c/")
   ) {
     return null;
   }
