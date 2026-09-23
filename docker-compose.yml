@@ -131,7 +131,9 @@ services:
     networks:
       - sdcreativ
 
-  # Antivirus (prod uniquement) — scan des uploads / PJ avant S3. ~1,5 Go RAM.
+  # Antivirus (prod uniquement) — scan des uploads / PJ avant S3.
+  # main.cvd dépasse 1,5 Go au chargement : en dessous, le noyau tue clamd
+  # et le conteneur reste « up » avec freshclam seul (ECONNREFUSED :3310).
   clamav:
     profiles: ["prod"]
     image: clamav/clamav:1.4
@@ -148,7 +150,7 @@ services:
       timeout: 10s
       retries: 3
       start_period: 300s
-    mem_limit: 1536m
+    mem_limit: 3g
     networks:
       - sdcreativ
 
