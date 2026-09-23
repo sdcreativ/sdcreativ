@@ -152,6 +152,29 @@ export function whatsappUrl(phone: string): string | null {
   return `https://wa.me/${digits}`;
 }
 
+const PORTRAIT_TITLES = new Set(["mlle", "mme", "mr", "m"]);
+
+function portraitTokens(name: string): string[] {
+  return name
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, " ")
+    .trim()
+    .split(/\s+/)
+    .filter((word) => word && !PORTRAIT_TITLES.has(word));
+}
+
+/** Même personne malgré les accents, la casse, un titre ou l'ordre des mots. */
+export function portraitNamesMatch(left: string, right: string): boolean {
+  const a = portraitTokens(left);
+  const b = new Set(portraitTokens(right));
+  if (a.length === 0 || b.size === 0) return false;
+  const shared = a.filter((word) => b.has(word));
+  const shortest = Math.min(a.length, b.size);
+  return shared.length === shortest && shared.length >= 2;
+}
+
 function splitPersonName(fullName: string): { given: string; additional: string; family: string } {
   const parts = fullName.trim().split(/\s+/).filter(Boolean);
   if (parts.length === 0) return { given: "", additional: "", family: "" };

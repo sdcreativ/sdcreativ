@@ -3,10 +3,10 @@ import type { Metadata } from "next";
 import Image from "next/image";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { Globe, Mail, MapPin, Phone } from "lucide-react";
+import { ChevronDown, Globe, Mail, MapPin, Phone } from "lucide-react";
 import { AddToContactsButton } from "@/components/cards/AddToContactsButton";
 import { BusinessCardActions } from "@/components/cards/BusinessCardActions";
-import { InstagramIcon, LinkedInIcon } from "@/components/ui/SocialIcons";
+import { InstagramIcon, LinkedInIcon, WhatsAppIcon } from "@/components/ui/SocialIcons";
 import { Logo } from "@/components/ui/Logo";
 import { isBusinessCardsEnabled } from "@/lib/business-cards-flag";
 import { getBusinessCardByToken, getPublicBusinessCard } from "@/lib/business-cards";
@@ -119,7 +119,7 @@ export default async function PublicBusinessCardPage({ params }: Params) {
   const photo = card.photoUrl ? resolveImageDisplayUrl(card.photoUrl) : "";
   const actions = [
     card.phone ? { href: `tel:${card.phone}`, label: "Appeler", icon: <Phone className="h-5 w-5" aria-hidden /> } : null,
-    wa ? { href: wa, label: "WhatsApp", icon: <Phone className="h-5 w-5" aria-hidden /> } : null,
+    wa ? { href: wa, label: "WhatsApp", icon: <WhatsAppIcon className="h-5 w-5" /> } : null,
     card.email ? { href: `mailto:${card.email}`, label: "Email", icon: <Mail className="h-5 w-5" aria-hidden /> } : null,
     card.website ? { href: card.website, label: "Site", icon: <Globe className="h-5 w-5" aria-hidden /> } : null,
     card.linkedin ? { href: card.linkedin, label: "LinkedIn", icon: <LinkedInIcon className="h-5 w-5" /> } : null,
@@ -178,53 +178,63 @@ export default async function PublicBusinessCardPage({ params }: Params) {
 
           <AddToContactsButton token={token} />
 
-          {card.bio ? (
-            <p className="mt-7 text-center text-sm leading-relaxed text-gray-text">{card.bio}</p>
+          {card.bio || card.skills.length > 0 || card.services.length > 0 || card.location || card.languages || card.twitter ? (
+            <details className="group mt-6 rounded-2xl bg-[#f7f9fc]">
+              <summary className="flex cursor-pointer list-none items-center justify-between px-4 py-3 text-sm font-semibold text-foreground [&::-webkit-details-marker]:hidden">
+                À propos
+                <ChevronDown className="h-4 w-4 text-gray-text transition group-open:rotate-180" aria-hidden />
+              </summary>
+              <div className="px-4 pb-4">
+                {card.bio ? <p className="text-center text-sm leading-relaxed text-gray-text">{card.bio}</p> : null}
+                {card.skills.length > 0 ? (
+                  <ul className="mt-4 flex flex-wrap justify-center gap-2">
+                    {card.skills.map((skill) => (
+                      <li key={skill} className="rounded-full bg-white px-3 py-1 text-xs font-medium text-foreground">
+                        {skill}
+                      </li>
+                    ))}
+                  </ul>
+                ) : null}
+                {card.services.length > 0 ? (
+                  <ul className="mt-4 space-y-1 text-center text-sm text-gray-text">
+                    {card.services.map((service) => (
+                      <li key={service}>{service}</li>
+                    ))}
+                  </ul>
+                ) : null}
+                {card.location || card.languages ? (
+                  <p className="mt-4 flex items-center justify-center gap-1.5 text-center text-xs text-gray-text">
+                    {card.location ? <MapPin className="h-3.5 w-3.5 shrink-0" aria-hidden /> : null}
+                    {[card.location, card.languages].filter(Boolean).join(" · ")}
+                  </p>
+                ) : null}
+                {card.twitter ? (
+                  <p className="mt-3 text-center">
+                    <a href={card.twitter} target="_blank" rel="noopener noreferrer" className="text-sm font-semibold text-primary">
+                      X / Twitter
+                    </a>
+                  </p>
+                ) : null}
+              </div>
+            </details>
           ) : null}
 
-          {card.skills.length > 0 ? (
-            <ul className="mt-5 flex flex-wrap justify-center gap-2">
-              {card.skills.map((skill) => (
-                <li key={skill} className="rounded-full bg-[#f3f6fa] px-3 py-1 text-xs font-medium text-foreground">
-                  {skill}
-                </li>
-              ))}
-            </ul>
-          ) : null}
-
-          {card.services.length > 0 ? (
-            <ul className="mt-4 space-y-1 text-center text-sm text-gray-text">
-              {card.services.map((service) => (
-                <li key={service}>{service}</li>
-              ))}
-            </ul>
-          ) : null}
-
-          {card.location || card.languages ? (
-            <p className="mt-4 flex items-center justify-center gap-1.5 text-center text-xs text-gray-text">
-              {card.location ? <MapPin className="h-3.5 w-3.5 shrink-0" aria-hidden /> : null}
-              {[card.location, card.languages].filter(Boolean).join(" · ")}
-            </p>
-          ) : null}
-
-          {card.twitter ? (
-            <p className="mt-3 text-center">
-              <a href={card.twitter} target="_blank" rel="noopener noreferrer" className="text-sm font-semibold text-primary">
-                X / Twitter
-              </a>
-            </p>
-          ) : null}
-
-          <div className="mt-8 rounded-3xl bg-[#f7f9fc] px-4 py-5">
+          <div className="mt-4 rounded-3xl bg-[#f7f9fc] px-4 py-4">
             <BusinessCardActions token={token} name={card.name} url={url} />
-            <Image
-              src={`/api/cards/${encodeURIComponent(token)}/qr`}
-              alt={`QR code de la carte de ${card.name}`}
-              width={168}
-              height={168}
-              unoptimized
-              className="mx-auto mt-4 h-40 w-40 rounded-2xl bg-white p-2"
-            />
+            <details className="group mt-2">
+              <summary className="flex cursor-pointer list-none items-center justify-center gap-1.5 py-2 text-sm font-semibold text-primary [&::-webkit-details-marker]:hidden">
+                Afficher le QR code
+                <ChevronDown className="h-4 w-4 transition group-open:rotate-180" aria-hidden />
+              </summary>
+              <Image
+                src={`/api/cards/${encodeURIComponent(token)}/qr`}
+                alt={`QR code de la carte de ${card.name}`}
+                width={168}
+                height={168}
+                unoptimized
+                className="mx-auto mt-2 h-36 w-36 rounded-2xl bg-white p-2"
+              />
+            </details>
           </div>
 
           <Link href="/" className="mt-5 block text-center text-xs font-semibold tracking-wide text-primary">
