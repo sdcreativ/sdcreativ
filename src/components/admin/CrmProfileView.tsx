@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState, type FormEvent } from "react";
+import Link from "next/link";
 import {
   AlertCircle,
   CheckCircle2,
@@ -166,9 +167,9 @@ export function CrmProfileView() {
         <p className="mt-1 text-sm text-gray-text">
           Gérez votre identité, votre photo et vos options de connexion sécurisée.
         </p>
-        <a href="/admin/crm/compte/carte" className="mt-3 inline-flex text-sm font-semibold text-primary hover:underline">
+        <Link href="/admin/crm/compte/carte" className="mt-3 inline-flex text-sm font-semibold text-primary hover:underline">
           Ma carte de visite
-        </a>
+        </Link>
       </div>
 
       <div className="flex gap-2 border-b border-gray/30 pb-1">
