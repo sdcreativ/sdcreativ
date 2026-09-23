@@ -232,11 +232,13 @@ function fieldValue(
   return value === undefined ? fallback : value;
 }
 
+type PortraitQuery = <R extends { name: string; image: string }>(
+  text: string,
+  params?: unknown[],
+) => Promise<{ rows: R[] }>;
+
 async function hydratePortraits(
-  query: <R extends { name: string; image: string }>(
-    text: string,
-    params?: unknown[],
-  ) => Promise<{ rows: R[] }>,
+  query: PortraitQuery,
   records: BusinessCardRecord[],
 ): Promise<BusinessCardRecord[]> {
   if (records.length === 0 || records.every((record) => record.photoUrl.trim() || !record.showPhoto)) {
@@ -256,11 +258,13 @@ async function hydratePortraits(
   });
 }
 
+async function hydratePortrait(query: PortraitQuery, record: BusinessCardRecord): Promise<BusinessCardRecord>;
 async function hydratePortrait(
-  query: <R extends { name: string; image: string }>(
-    text: string,
-    params?: unknown[],
-  ) => Promise<{ rows: R[] }>,
+  query: PortraitQuery,
+  record: BusinessCardRecord | null,
+): Promise<BusinessCardRecord | null>;
+async function hydratePortrait(
+  query: PortraitQuery,
   record: BusinessCardRecord | null,
 ): Promise<BusinessCardRecord | null> {
   if (!record) return null;
