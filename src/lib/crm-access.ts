@@ -34,6 +34,7 @@ export const CRM_NAV_PERMISSIONS: Record<string, CrmPermission | CrmPermission[]
   documentation: "docs.read",
   settings: ["settings.manage", "users.manage", "audit.view"],
   kodiva: "kodiva.read",
+  cards: "cards.read",
 };
 
 export const CRM_NEW_ITEM_PERMISSIONS: Record<string, CrmPermission> = {

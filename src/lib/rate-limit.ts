@@ -40,6 +40,12 @@ export const PUBLIC_CHAT_RATE_LIMIT: RateLimitConfig = {
   windowMs: 60 * 60 * 1000,
 };
 
+/** Consultations, vCard et QR d'une carte publique. */
+export const PUBLIC_CARD_RATE_LIMIT: RateLimitConfig = {
+  limit: 60,
+  windowMs: 60 * 60 * 1000,
+};
+
 function getBucket(namespace: string): Map<string, RateLimitEntry> {
   let bucket = buckets.get(namespace);
   if (!bucket) {

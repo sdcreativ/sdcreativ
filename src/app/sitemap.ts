@@ -5,6 +5,8 @@ import { blogPostsEn } from "@/content/blog-en";
 import { isEnglishLocaleEnabled } from "@/i18n/config";
 import { LOCALE_ROUTE_PAIRS } from "@/i18n/routes";
 import { getBlogPosts } from "@/lib/cms";
+import { isBusinessCardsEnabled } from "@/lib/business-cards-flag";
+import { listIndexableCardPaths } from "@/lib/business-cards";
 import {
   getFormationSitemapDates,
   getRealisationSitemapDates,
@@ -121,6 +123,19 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       }))
     : [];
 
+  const cardEntries = isBusinessCardsEnabled()
+    ? await listIndexableCardPaths()
+        .then((cards) =>
+          cards.map((card) => ({
+            url: `${SITE.url}/c/${card.token}`,
+            lastModified: new Date(card.updatedAt),
+            changeFrequency: "monthly" as const,
+            priority: 0.4,
+          })),
+        )
+        .catch(() => [])
+    : [];
+
   return [
     ...staticPages.map((path) => ({
       url: `${SITE.url}${path}`,
@@ -134,5 +149,6 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     ...localSeoEntries,
     ...blogEntries,
     ...blogEnEntries,
+    ...cardEntries,
   ];
 }

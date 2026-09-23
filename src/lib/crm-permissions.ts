@@ -47,6 +47,8 @@ export const CRM_PERMISSIONS = [
   "communications.write",
   "hr.read",
   "hr.write",
+  "cards.read",
+  "cards.write",
 ] as const;
 
 export type CrmPermission = (typeof CRM_PERMISSIONS)[number];
@@ -125,6 +127,11 @@ export const CRM_PERMISSION_GROUPS: Array<{
     label: "RH & contrats employés",
     permissions: ["hr.read", "hr.write"],
   },
+  {
+    id: "cards",
+    label: "Cartes de visite",
+    permissions: ["cards.read", "cards.write"],
+  },
 ];
 
 export const CRM_PERMISSION_LABELS: Record<CrmPermission, string> = {
@@ -173,6 +180,8 @@ export const CRM_PERMISSION_LABELS: Record<CrmPermission, string> = {
   "communications.write": "Gérer les communications 3CX",
   "hr.read": "Voir les contrats employés",
   "hr.write": "Gérer les contrats employés (Stage, CDD, CDI…)",
+  "cards.read": "Voir les cartes de visite de l'équipe",
+  "cards.write": "Créer et modifier les cartes de visite",
 };
 
 const ALL: CrmPermission[] = [...CRM_PERMISSIONS];
