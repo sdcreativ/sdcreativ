@@ -107,7 +107,10 @@ const SELECT_CARD = `
          u.name AS user_name,
          u.email AS user_email,
          u.phone AS user_phone,
-         NULLIF(u.preferences->>'avatarUrl', '') AS avatar_url,
+         NULLIF(
+           COALESCE(u.preferences->'profile'->>'avatarUrl', u.preferences->>'avatarUrl'),
+           ''
+         ) AS avatar_url,
          (SELECT COUNT(*) FROM business_card_views v WHERE v.business_card_id = c.id) AS view_count
   FROM digital_business_cards c
   JOIN crm_users u ON u.id = c.user_id
