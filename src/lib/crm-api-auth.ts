@@ -38,4 +38,5 @@ export const crmApiAuth = {
   infra: { read: read("infra.view") },
   kodiva: { read: read("kodiva.read") },
   hr: { read: read("hr.read"), write: write("hr.write") },
+  cards: { read: read("cards.read"), write: write("cards.write") },
 };
