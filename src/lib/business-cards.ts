@@ -326,7 +326,7 @@ export async function createBusinessCard(
             fields.bio ?? "",
             fields.skills ?? "",
             fields.services ?? "",
-            fieldValue(fields, "showPhone", false),
+            fieldValue(fields, "showPhone", true),
             fieldValue(fields, "showWhatsapp", false),
             fieldValue(fields, "showEmail", true),
             fieldValue(fields, "showWebsite", true),

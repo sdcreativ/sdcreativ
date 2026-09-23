@@ -6,6 +6,7 @@ import { notFound } from "next/navigation";
 import { Globe, Mail, MapPin, Phone } from "lucide-react";
 import { BusinessCardActions } from "@/components/cards/BusinessCardActions";
 import { InstagramIcon, LinkedInIcon } from "@/components/ui/SocialIcons";
+import { Logo } from "@/components/ui/Logo";
 import { isBusinessCardsEnabled } from "@/lib/business-cards-flag";
 import { getBusinessCardByToken, getPublicBusinessCard } from "@/lib/business-cards";
 import {
@@ -14,7 +15,7 @@ import {
   isPublicCardToken,
   whatsappUrl,
 } from "@/lib/business-card-public";
-import { LOGO, SITE } from "@/lib/constants";
+import { SITE } from "@/lib/constants";
 import { resolveImageDisplayUrl } from "@/lib/image-url";
 import { createMetadata } from "@/lib/metadata";
 
@@ -101,7 +102,7 @@ export default async function PublicBusinessCardPage({ params }: Params) {
     return (
       <div className="flex min-h-dvh items-center justify-center bg-[#f3f6fa] px-5 py-16">
         <div className="w-full max-w-sm rounded-[28px] bg-white px-8 py-12 text-center shadow-[0_24px_80px_-36px_rgba(15,23,42,0.45)]">
-          <Image src={LOGO.src} alt="SD CREATIV" width={140} height={78} className="mx-auto h-10 w-auto" />
+          <Logo href={null} variant="mark" size="card" />
           <h1 className="mt-8 text-xl font-semibold tracking-tight text-foreground">
             Cette carte professionnelle n&apos;est plus active.
           </h1>
@@ -131,7 +132,7 @@ export default async function PublicBusinessCardPage({ params }: Params) {
       <article className="relative mx-auto w-full max-w-[420px] overflow-hidden rounded-[32px] bg-white shadow-[0_30px_80px_-40px_rgba(15,23,42,0.55)]">
         <div className="h-1.5 bg-primary" />
         <div className="px-6 pb-8 pt-7 sm:px-8">
-          <Image src={LOGO.src} alt="SD CREATIV" width={132} height={74} className="mx-auto h-8 w-auto" />
+          <Logo href={null} variant="mark" size="card" />
 
           <div className="mt-7 flex justify-center">
             {photo ? (
