@@ -57,18 +57,8 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      - name: Install Chromium (system)
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y chromium-browser || sudo apt-get install -y chromium
-          if [ -x /usr/bin/chromium-browser ]; then
-            echo "CHROMIUM_EXECUTABLE_PATH=/usr/bin/chromium-browser" >> "$GITHUB_ENV"
-          elif [ -x /usr/bin/chromium ]; then
-            echo "CHROMIUM_EXECUTABLE_PATH=/usr/bin/chromium" >> "$GITHUB_ENV"
-          else
-            echo "Chromium introuvable après apt-get" >&2
-            exit 1
-          fi
+      - name: Install Playwright Chromium
+        run: npx playwright install --with-deps chromium
 
       - name: Smoke PDF
         run: npm run smoke:pdf

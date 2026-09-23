@@ -8,7 +8,7 @@
  * Docker prod : CHROMIUM_EXECUTABLE_PATH=/usr/bin/chromium-browser
  */
 
-import { access, readdir } from "node:fs/promises";
+import { access, readFile, readdir, realpath } from "node:fs/promises";
 import { homedir } from "node:os";
 import { join, resolve } from "node:path";
 
@@ -35,6 +35,27 @@ async function pathExists(candidate) {
   } catch {
     return false;
   }
+}
+
+/** Le paquet apt `chromium-browser` d'Ubuntu est un wrapper snap inutilisable en CI. */
+async function isSnapChromium(candidate) {
+  try {
+    const resolved = await realpath(candidate);
+    if (resolved.startsWith("/snap/") || resolved.includes("/snap/chromium")) return true;
+  } catch {
+    return false;
+  }
+  try {
+    const head = (await readFile(candidate)).subarray(0, 512).toString("utf8");
+    if (head.startsWith("#!") && /snap/i.test(head)) return true;
+  } catch {
+    // binaire : pas un script snap
+  }
+  return false;
+}
+
+async function isUsableChromium(candidate) {
+  return (await pathExists(candidate)) && !(await isSnapChromium(candidate));
 }
 
 async function findPlaywrightCacheChromium() {
@@ -78,7 +99,7 @@ async function findPlaywrightCacheChromium() {
         join(root, dir, "chrome-linux/chrome"),
       ];
       for (const candidate of [...macCandidates, ...linuxCandidates]) {
-        if (await pathExists(candidate)) return candidate;
+        if (await isUsableChromium(candidate)) return candidate;
       }
     }
   }
@@ -86,19 +107,21 @@ async function findPlaywrightCacheChromium() {
 }
 
 async function resolveChromiumFromPlaywrightPackage() {
-  try {
-    const playwright = await import("playwright");
-    const path = playwright.chromium.executablePath();
-    if (path && (await pathExists(path))) return path;
-  } catch {
-    // package playwright absent ou navigateurs non installés
+  for (const name of ["playwright-core", "playwright"]) {
+    try {
+      const playwright = await import(name);
+      const path = playwright.chromium.executablePath();
+      if (path && (await isUsableChromium(path))) return path;
+    } catch {
+      // package absent ou navigateurs non installés
+    }
   }
   return undefined;
 }
 
 async function resolveChromium() {
   for (const candidate of SYSTEM_CANDIDATES) {
-    if (await pathExists(candidate)) return candidate;
+    if (await isUsableChromium(candidate)) return candidate;
   }
   const fromPkg = await resolveChromiumFromPlaywrightPackage();
   if (fromPkg) return fromPkg;
