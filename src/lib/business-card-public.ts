@@ -160,25 +160,79 @@ export function whatsappUrl(phone: string): string | null {
   return `https://wa.me/${digits}`;
 }
 
-/** vCard 3.0 limitée aux champs déjà filtrés pour le public. */
-export function buildVcard(card: PublicBusinessCard, cardUrl: string): string {
+function splitPersonName(fullName: string): { given: string; family: string } {
+  const parts = fullName.trim().split(/\s+/).filter(Boolean);
+  if (parts.length <= 1) return { given: parts[0] ?? "", family: "" };
+  return { given: parts.slice(0, -1).join(" "), family: parts.at(-1) ?? "" };
+}
+
+function foldVcardLine(line: string): string {
+  const limit = 75;
+  if (Buffer.byteLength(line) <= limit) return line;
+  const chunks: string[] = [];
+  let rest = line;
+  let first = true;
+  while (rest.length > 0) {
+    const max = first ? limit : limit - 1;
+    let end = Math.min(rest.length, max);
+    while (end > 0 && Buffer.byteLength(rest.slice(0, end)) > max) end -= 1;
+    if (end === 0) end = 1;
+    chunks.push(first ? rest.slice(0, end) : ` ${rest.slice(0, end)}`);
+    rest = rest.slice(end);
+    first = false;
+  }
+  return chunks.join("\r\n");
+}
+
+function telValue(phone: string): string {
+  const digits = digitsOnly(phone);
+  if (digits.length < 8) return phone.trim();
+  return `+${digits}`;
+}
+
+/** vCard 3.0 que l'app Contacts d'iPhone peut enregistrer. */
+export function buildVcard(
+  card: PublicBusinessCard,
+  cardUrl: string,
+  photoJpegBase64?: string,
+): string {
+  const { given, family } = splitPersonName(card.name);
   const lines = [
     "BEGIN:VCARD",
     "VERSION:3.0",
     `FN:${escapeVcard(card.name)}`,
-    `N:;${escapeVcard(card.name)};;;`,
+    `N:${escapeVcard(family)};${escapeVcard(given)};;;`,
     `ORG:${escapeVcard(card.company)}`,
   ];
   if (card.jobTitle) lines.push(`TITLE:${escapeVcard(card.jobTitle)}`);
-  if (card.phone) lines.push(`TEL;TYPE=WORK:${escapeVcard(card.phone)}`);
+  if (card.phone) lines.push(`TEL;TYPE=CELL:${telValue(card.phone)}`);
   if (card.email) lines.push(`EMAIL;TYPE=INTERNET:${escapeVcard(card.email)}`);
-  if (card.photoUrl) lines.push(`PHOTO;VALUE=URI:${escapeVcard(absolutePhotoUrl(card.photoUrl))}`);
   if (card.website) lines.push(`URL:${escapeVcard(card.website)}`);
-  lines.push(`URL:${escapeVcard(cardUrl)}`);
+  else lines.push(`URL:${escapeVcard(cardUrl)}`);
   if (card.location) lines.push(`ADR;TYPE=WORK:;;${escapeVcard(card.location)};;;;`);
   if (card.bio) lines.push(`NOTE:${escapeVcard(card.bio)}`);
+  const photo = photoJpegBase64?.replace(/\s/g, "");
+  if (photo) lines.push(`PHOTO;ENCODING=b;TYPE=JPEG:${photo}`);
   lines.push("END:VCARD");
-  return `${lines.join("\r\n")}\r\n`;
+  return `${lines.map(foldVcardLine).join("\r\n")}\r\n`;
+}
+
+/** JPEG embarqué : une URL distante dans PHOTO empêche souvent iPhone d'enregistrer le contact. */
+export async function readCardPhotoJpeg(photoUrl: string): Promise<string | null> {
+  try {
+    const response = await fetch(absolutePhotoUrl(photoUrl), {
+      signal: AbortSignal.timeout(8000),
+    });
+    if (!response.ok) return null;
+    const input = Buffer.from(await response.arrayBuffer());
+    if (input.length === 0 || input.length > 4_000_000) return null;
+    const sharp = (await import("sharp")).default;
+    const jpeg = await sharp(input, { failOn: "none" }).rotate().jpeg({ quality: 80 }).toBuffer();
+    if (jpeg.length === 0 || jpeg.length > 350_000) return null;
+    return jpeg.toString("base64");
+  } catch {
+    return null;
+  }
 }
 
 export function deviceTypeFromUserAgent(userAgent: string): "mobile" | "tablet" | "desktop" | "unknown" {
