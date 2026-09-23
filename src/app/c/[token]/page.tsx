@@ -136,12 +136,13 @@ export default async function PublicBusinessCardPage({ params }: Params) {
 
           <div className="mt-7 flex justify-center">
             {photo ? (
-              <Image
+              // img : /api/media et les portraits d'équipe ne passent pas par l'optimiseur.
+              // eslint-disable-next-line @next/next/no-img-element
+              <img
                 src={photo}
                 alt=""
                 width={128}
                 height={128}
-                unoptimized
                 className="h-32 w-32 rounded-full object-cover shadow-[0_12px_30px_-16px_rgba(0,90,145,0.8)] ring-4 ring-white"
               />
             ) : (
@@ -175,7 +176,7 @@ export default async function PublicBusinessCardPage({ params }: Params) {
           ) : null}
 
           <a
-            href={`/api/cards/${encodeURIComponent(token)}/vcard`}
+            href={`/cards/${encodeURIComponent(token)}/contact.vcf`}
             className="mt-4 flex min-h-12 items-center justify-center rounded-2xl bg-foreground text-sm font-semibold text-white transition hover:bg-primary"
           >
             Ajouter aux contacts

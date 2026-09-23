@@ -89,10 +89,19 @@ describe("cartes de visite", () => {
     const vcard = buildVcard(card, "https://sdcreativ.com/c/token");
     expect(vcard).toContain("BEGIN:VCARD");
     expect(vcard).toContain("FN:Paterne Gnonzion");
+    expect(vcard).toContain("N:Gnonzion;Paterne;;;");
     expect(vcard).toContain("EMAIL;TYPE=INTERNET:paterne@sdcreativ.com");
-    expect(vcard).toContain("PHOTO;VALUE=URI:");
+    expect(vcard).not.toContain("PHOTO;");
     expect(vcard).not.toContain("TEL;");
     expect(whatsappUrl(card.whatsapp ?? "")).toBe("https://wa.me/2250700000000");
+  });
+
+  it("embarque la photo en JPEG plié pour l'enregistrement du contact", () => {
+    const card = toPublicBusinessCard(source({ showPhoto: true }));
+    if (card.status !== "active") throw new Error("active");
+    const vcard = buildVcard(card, "https://sdcreativ.com/c/token", "abc123");
+    expect(vcard).toContain("PHOTO;ENCODING=b;TYPE=JPEG:abc123");
+    expect(vcard).not.toContain("PHOTO;VALUE=URI");
   });
 
   it("refuse une URL de réseau invalide", () => {

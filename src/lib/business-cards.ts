@@ -108,7 +108,21 @@ const SELECT_CARD = `
          u.email AS user_email,
          u.phone AS user_phone,
          NULLIF(
-           COALESCE(u.preferences->'profile'->>'avatarUrl', u.preferences->>'avatarUrl'),
+           BTRIM(
+             COALESCE(
+               u.preferences #>> '{profile,avatarUrl}',
+               u.preferences #>> '{avatarUrl}',
+               u.preferences #>> '{profile,photoUrl}',
+               (
+                 SELECT t.image
+                 FROM public_team_members t
+                 WHERE lower(btrim(t.name)) = lower(btrim(u.name))
+                   AND btrim(t.image) <> ''
+                 ORDER BY t.is_visible DESC, t.sort_order ASC
+                 LIMIT 1
+               )
+             )
+           ),
            ''
          ) AS avatar_url,
          (SELECT COUNT(*) FROM business_card_views v WHERE v.business_card_id = c.id) AS view_count
