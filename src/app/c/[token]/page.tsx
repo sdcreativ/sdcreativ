@@ -3,8 +3,9 @@ import type { Metadata } from "next";
 import Image from "next/image";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { Github, Globe, Instagram, Linkedin, Mail, MapPin, Phone } from "lucide-react";
+import { Globe, Mail, MapPin, Phone } from "lucide-react";
 import { BusinessCardActions } from "@/components/cards/BusinessCardActions";
+import { InstagramIcon, LinkedInIcon } from "@/components/ui/SocialIcons";
 import { isBusinessCardsEnabled } from "@/lib/business-cards-flag";
 import { getBusinessCardByToken, getPublicBusinessCard } from "@/lib/business-cards";
 import {
@@ -45,6 +46,14 @@ export async function generateMetadata({ params }: Params): Promise<Metadata> {
     noIndex: !card.indexable,
     image: card.photoUrl,
   });
+}
+
+function GithubIcon({ className }: { className?: string }) {
+  return (
+    <svg className={className} viewBox="0 0 24 24" fill="currentColor" aria-hidden>
+      <path d="M12 .5C5.73.5.5 5.73.5 12.02c0 5.1 3.29 9.42 7.86 10.95.58.1.79-.25.79-.56 0-.28-.01-1.02-.02-2-3.2.7-3.88-1.54-3.88-1.54-.53-1.34-1.28-1.7-1.28-1.7-1.05-.72.08-.7.08-.7 1.16.08 1.77 1.2 1.77 1.2 1.03 1.77 2.7 1.26 3.36.96.1-.75.4-1.26.73-1.55-2.55-.29-5.23-1.28-5.23-5.7 0-1.26.45-2.29 1.19-3.1-.12-.29-.52-1.46.11-3.05 0 0 .97-.31 3.18 1.18a11.1 11.1 0 0 1 5.8 0c2.2-1.49 3.17-1.18 3.17-1.18.64 1.59.24 2.76.12 3.05.74.81 1.18 1.84 1.18 3.1 0 4.43-2.69 5.4-5.25 5.69.41.36.78 1.06.78 2.14 0 1.55-.01 2.8-.01 3.18 0 .31.21.67.8.56A11.52 11.52 0 0 0 23.5 12C23.5 5.73 18.27.5 12 .5z" />
+    </svg>
+  );
 }
 
 function initials(name: string): string {
@@ -111,9 +120,9 @@ export default async function PublicBusinessCardPage({ params }: Params) {
     wa ? { href: wa, label: "WhatsApp", icon: <Phone className="h-5 w-5" aria-hidden /> } : null,
     card.email ? { href: `mailto:${card.email}`, label: "Email", icon: <Mail className="h-5 w-5" aria-hidden /> } : null,
     card.website ? { href: card.website, label: "Site", icon: <Globe className="h-5 w-5" aria-hidden /> } : null,
-    card.linkedin ? { href: card.linkedin, label: "LinkedIn", icon: <Linkedin className="h-5 w-5" aria-hidden /> } : null,
-    card.github ? { href: card.github, label: "GitHub", icon: <Github className="h-5 w-5" aria-hidden /> } : null,
-    card.instagram ? { href: card.instagram, label: "Instagram", icon: <Instagram className="h-5 w-5" aria-hidden /> } : null,
+    card.linkedin ? { href: card.linkedin, label: "LinkedIn", icon: <LinkedInIcon className="h-5 w-5" /> } : null,
+    card.github ? { href: card.github, label: "GitHub", icon: <GithubIcon className="h-5 w-5" /> } : null,
+    card.instagram ? { href: card.instagram, label: "Instagram", icon: <InstagramIcon className="h-5 w-5" /> } : null,
   ].filter((item) => item !== null);
 
   return (
