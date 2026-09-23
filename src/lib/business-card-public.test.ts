@@ -69,6 +69,7 @@ describe("cartes de visite", () => {
     expect(card.phone).toBeUndefined();
     expect(card.location).toBeUndefined();
     expect(card.github).toBeUndefined();
+    expect(card.photoUrl).toBe("https://example.com/p.jpg");
     expect(card.skills).toEqual(["Next.js", "PostgreSQL"]);
   });
 
@@ -89,6 +90,7 @@ describe("cartes de visite", () => {
     expect(vcard).toContain("BEGIN:VCARD");
     expect(vcard).toContain("FN:Paterne Gnonzion");
     expect(vcard).toContain("EMAIL;TYPE=INTERNET:paterne@sdcreativ.com");
+    expect(vcard).toContain("PHOTO;VALUE=URI:");
     expect(vcard).not.toContain("TEL;");
     expect(whatsappUrl(card.whatsapp ?? "")).toBe("https://wa.me/2250700000000");
   });

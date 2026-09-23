@@ -1,5 +1,6 @@
 import { randomBytes } from "node:crypto";
 import { SITE } from "@/lib/constants";
+import { resolveImageDisplayUrl } from "@/lib/image-url";
 
 const TOKEN_PATTERN = /^[A-Za-z0-9_-]{16,64}$/;
 
@@ -142,6 +143,13 @@ function escapeVcard(value: string): string {
     .replace(/,/g, "\\,");
 }
 
+function absolutePhotoUrl(photoUrl: string): string {
+  const display = resolveImageDisplayUrl(photoUrl);
+  if (/^https?:\/\//i.test(display)) return display;
+  const base = SITE.url.replace(/\/$/, "");
+  return `${base}${display.startsWith("/") ? display : `/${display}`}`;
+}
+
 export function digitsOnly(value: string): string {
   return value.replace(/\D/g, "");
 }
@@ -164,6 +172,7 @@ export function buildVcard(card: PublicBusinessCard, cardUrl: string): string {
   if (card.jobTitle) lines.push(`TITLE:${escapeVcard(card.jobTitle)}`);
   if (card.phone) lines.push(`TEL;TYPE=WORK:${escapeVcard(card.phone)}`);
   if (card.email) lines.push(`EMAIL;TYPE=INTERNET:${escapeVcard(card.email)}`);
+  if (card.photoUrl) lines.push(`PHOTO;VALUE=URI:${escapeVcard(absolutePhotoUrl(card.photoUrl))}`);
   if (card.website) lines.push(`URL:${escapeVcard(card.website)}`);
   lines.push(`URL:${escapeVcard(cardUrl)}`);
   if (card.location) lines.push(`ADR;TYPE=WORK:;;${escapeVcard(card.location)};;;;`);
