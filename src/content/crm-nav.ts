@@ -27,6 +27,7 @@ import {
   Users,
   UsersRound,
   FileSignature,
+  QrCode,
 } from "lucide-react";
 
 export type CrmNavItem = {
@@ -117,6 +118,7 @@ export const crmNavGroups: CrmNavGroup[] = [
         icon: BookOpen,
         ready: true,
       },
+      { id: "cards", label: "Cartes de visite", href: "/admin/crm/cartes", icon: QrCode, ready: true },
       { id: "settings", label: "Paramètres", href: "/admin/crm/parametres", icon: Settings, ready: true },
     ],
   },
