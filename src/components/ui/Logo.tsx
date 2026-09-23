@@ -8,7 +8,7 @@ import { resolveImageDisplayUrl, isProxiedMediaUrl } from "@/lib/image-url";
 import { useSitePublic } from "@/components/site/SitePublicProvider";
 import { cn } from "@/lib/utils";
 
-export type LogoSize = "header" | "footer" | "panel" | "panelMobile" | "centered" | "sidebar";
+export type LogoSize = "header" | "footer" | "panel" | "panelMobile" | "centered" | "sidebar" | "card";
 
 export const LOGO_IMAGE_SIZES: Record<LogoSize, string> = {
   header: "h-12 w-auto object-contain md:h-14",
@@ -16,7 +16,8 @@ export const LOGO_IMAGE_SIZES: Record<LogoSize, string> = {
   panel: "h-16 w-auto max-w-[min(100%,20rem)] object-contain xl:h-[4.5rem]",
   panelMobile: "h-14 w-auto max-w-[min(100%,18rem)] object-contain sm:h-16",
   centered: "mx-auto h-14 w-auto object-contain",
-  sidebar: "h-11 w-auto max-w-full object-contain object-left",
+  sidebar: "h-14 w-auto max-w-full object-contain object-left",
+  card: "mx-auto h-20 w-auto object-contain",
 };
 
 type LogoProps = {

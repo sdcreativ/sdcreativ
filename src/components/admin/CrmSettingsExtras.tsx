@@ -11,10 +11,9 @@ import {
   updateCrmEmailTemplateApi,
 } from "@/lib/crm-settings-api";
 import { LOGO } from "@/lib/constants";
-import { resolveImageDisplayUrl } from "@/lib/image-url";
 import { cn } from "@/lib/utils";
 import { Loader2, Code2, Pencil, Palette, Send } from "lucide-react";
-import { Logo, LOGO_IMAGE_SIZES } from "@/components/ui/Logo";
+import { Logo } from "@/components/ui/Logo";
 import { SiteLogoUploadField } from "@/components/admin/SiteLogoUploadField";
 import { useCrmBranding } from "@/components/admin/CrmBrandingProvider";
 import { MailRichEditor } from "@/components/admin/MailRichEditor";
@@ -146,7 +145,7 @@ export function BrandingSection() {
               }
             />
             <p className="mt-1.5 text-xs text-gray-text">
-              Affiché dans la sidebar CRM. Upload vers S3 (ou stockage local en dev).
+              Utilisé dans les e-mails. La sidebar affiche le logo du site public.
             </p>
           </div>
         </div>
@@ -159,16 +158,7 @@ export function BrandingSection() {
         >
           <p className="text-[10px] font-bold uppercase tracking-wider text-gray-text">Aperçu</p>
           <div className="mt-3 rounded-xl bg-[#071525] px-4 py-3">
-            {branding.logoUrl?.trim() ? (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img
-                src={resolveImageDisplayUrl(branding.logoUrl.trim())}
-                alt={branding.agencyName}
-                className={cn(LOGO_IMAGE_SIZES.sidebar, "max-w-40 object-contain object-left")}
-              />
-            ) : (
-              <Logo href={null} variant="mark" size="sidebar" onDark className="max-w-40" />
-            )}
+            <Logo href={null} variant="mark" size="sidebar" className="max-w-40" />
           </div>
           <p className="mt-3 text-lg font-bold" style={{ color: branding.primaryColor }}>
             {branding.agencyName}

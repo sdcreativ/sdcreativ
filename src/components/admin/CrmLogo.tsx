@@ -18,7 +18,7 @@ type Props = {
 };
 
 /**
- * Logo sidebar CRM : branding CRM si défini, sinon logo site public, sinon PNG par défaut.
+ * Logo sidebar CRM : le même logo que le site public, sinon le PNG par défaut.
  */
 export function CrmLogo({
   href = "/admin/crm",
@@ -30,13 +30,9 @@ export function CrmLogo({
   const { branding, loading } = useCrmBranding();
   const sitePublic = useSitePublic();
 
-  const brandingLogo = branding.logoUrl?.trim() || "";
   const siteLogo = sitePublic.logoUrl?.trim() || "";
-  const logoUrl =
-    brandingLogo ||
-    (siteLogo && siteLogo !== LOGO.src ? siteLogo : "");
-  const agencyName =
-    branding.agencyName || sitePublic.companyName || SITE.name;
+  const logoUrl = siteLogo && siteLogo !== LOGO.src ? siteLogo : "";
+  const agencyName = sitePublic.companyName || branding.agencyName || SITE.name;
 
   const imageClass = cn(
     LOGO_IMAGE_SIZES[size],

@@ -824,7 +824,7 @@ CREATE TABLE IF NOT EXISTS digital_business_cards (
   bio TEXT NOT NULL DEFAULT '',
   skills TEXT NOT NULL DEFAULT '',
   services TEXT NOT NULL DEFAULT '',
-  show_phone BOOLEAN NOT NULL DEFAULT false,
+  show_phone BOOLEAN NOT NULL DEFAULT true,
   show_whatsapp BOOLEAN NOT NULL DEFAULT false,
   show_email BOOLEAN NOT NULL DEFAULT true,
   show_website BOOLEAN NOT NULL DEFAULT true,

@@ -72,6 +72,12 @@ describe("cartes de visite", () => {
     expect(card.skills).toEqual(["Next.js", "PostgreSQL"]);
   });
 
+  it("affiche le téléphone quand il est autorisé", () => {
+    const card = toPublicBusinessCard(source({ showPhone: true }));
+    if (card.status !== "active") throw new Error("active");
+    expect(card.phone).toBe("+2250700000000");
+  });
+
   it("ne révèle rien si la carte est inactive", () => {
     expect(toPublicBusinessCard(source({ active: false }))).toEqual({ status: "inactive" });
   });
