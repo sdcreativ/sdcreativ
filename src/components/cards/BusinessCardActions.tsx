@@ -39,7 +39,7 @@ export function BusinessCardActions({ token, name, url }: Props) {
     <button
       type="button"
       onClick={() => void share()}
-      className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl border border-gray/60 bg-white px-4 py-2.5 text-sm font-semibold text-foreground hover:bg-gray-light"
+      className="inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-2xl border border-gray/40 bg-white px-4 py-3 text-sm font-semibold text-foreground transition hover:border-primary/30 hover:bg-primary-light"
     >
       {copied ? <Check className="h-4 w-4" aria-hidden /> : <Share2 className="h-4 w-4" aria-hidden />}
       {copied ? "Lien copié" : "Partager ma carte"}

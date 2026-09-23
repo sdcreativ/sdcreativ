@@ -14,7 +14,8 @@ function isPublicChromePath(pathname: string): boolean {
   return (
     !pathname.startsWith("/admin") &&
     !pathname.startsWith("/espace-client") &&
-    !pathname.startsWith("/presentation")
+    !pathname.startsWith("/presentation") &&
+    !pathname.startsWith("/c/")
   );
 }
 
