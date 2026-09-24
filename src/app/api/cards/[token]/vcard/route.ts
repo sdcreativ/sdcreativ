@@ -1,7 +1,13 @@
 import { NextResponse } from "next/server";
 import { isBusinessCardsEnabled } from "@/lib/business-cards-flag";
 import { getBusinessCardByToken, getPublicBusinessCard } from "@/lib/business-cards";
-import { buildVcard, businessCardPublicUrl, isPublicCardToken } from "@/lib/business-card-public";
+import {
+  buildVcard,
+  businessCardPublicUrl,
+  isPublicCardToken,
+  vcardDisposition,
+  vcardFilename,
+} from "@/lib/business-card-public";
 import {
   PUBLIC_CARD_RATE_LIMIT,
   consumeRateLimit,
@@ -34,11 +40,13 @@ export async function GET(request: Request, { params }: Params) {
 
   const body = buildVcard(card, businessCardPublicUrl(token));
   const bytes = Buffer.from(body, "utf8");
+  const filename = vcardFilename(card.name).replace(/"/g, "");
+  const disposition = vcardDisposition(request.headers.get("user-agent") ?? "");
 
   return new NextResponse(bytes, {
     headers: {
       "Content-Type": "text/vcard; charset=utf-8",
-      "Content-Disposition": 'attachment; filename="contact.vcf"',
+      "Content-Disposition": `${disposition}; filename="${filename}"`,
       "Content-Length": String(bytes.length),
     },
   });

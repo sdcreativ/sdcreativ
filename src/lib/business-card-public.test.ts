@@ -8,6 +8,8 @@ import {
   safeReferrer,
   toPublicBusinessCard,
   portraitNamesMatch,
+  vcardDisposition,
+  vcardFilename,
   whatsappUrl,
   type BusinessCardSource,
 } from "@/lib/business-card-public";
@@ -128,7 +130,15 @@ describe("cartes de visite", () => {
     expect(portraitNamesMatch("Siméon Auguste Ba", "Simeon Auguste BA")).toBe(true);
     expect(portraitNamesMatch("Paterne Gnonzion", "GNONZION Guélablé Paterne")).toBe(true);
     expect(portraitNamesMatch("Kossa Disseka Ange Valeri", "Mlle Kossa Disseka Ange Valeri")).toBe(true);
+    expect(portraitNamesMatch("Coulibaly Kadydiatou NARIGAGNON", "Kady Coulibaly")).toBe(true);
+    expect(portraitNamesMatch("Jean Coulibaly", "Kady Coulibaly")).toBe(false);
     expect(portraitNamesMatch("Kady Coulibaly", "Simeon Auguste BA")).toBe(false);
     expect(portraitNamesMatch("Alex", "Alex Adjee Ibauld")).toBe(false);
+  });
+
+  it("ouvre la fiche contact sur iPhone et télécharge ailleurs", () => {
+    expect(vcardDisposition("Mozilla/5.0 (iPhone; CPU iPhone OS 18_0 like Mac OS X)")).toBe("inline");
+    expect(vcardDisposition("Mozilla/5.0 (Linux; Android 14)")).toBe("attachment");
+    expect(vcardFilename("Coulibaly Kadydiatou NARIGAGNON")).toBe("Coulibaly Kadydiatou NARIGAGNON.vcf");
   });
 });

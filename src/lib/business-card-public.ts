@@ -165,14 +165,42 @@ function portraitTokens(name: string): string[] {
     .filter((word) => word && !PORTRAIT_TITLES.has(word));
 }
 
-/** Même personne malgré les accents, la casse, un titre ou l'ordre des mots. */
+function looseTokenMatch(left: string, right: string): boolean {
+  if (left === right) return true;
+  const shorter = left.length <= right.length ? left : right;
+  const longer = left.length <= right.length ? right : left;
+  return shorter.length >= 4 && longer.startsWith(shorter);
+}
+
+function sharedTokenCount(left: string[], right: string[]): number {
+  const used = new Set<number>();
+  let count = 0;
+  for (const word of left) {
+    const index = right.findIndex((other, i) => !used.has(i) && looseTokenMatch(word, other));
+    if (index === -1) continue;
+    used.add(index);
+    count += 1;
+  }
+  return count;
+}
+
+/** Même personne malgré les accents, la casse, un titre, l'ordre ou un prénom composé. */
 export function portraitNamesMatch(left: string, right: string): boolean {
   const a = portraitTokens(left);
-  const b = new Set(portraitTokens(right));
-  if (a.length === 0 || b.size === 0) return false;
-  const shared = a.filter((word) => b.has(word));
-  const shortest = Math.min(a.length, b.size);
-  return shared.length === shortest && shared.length >= 2;
+  const b = portraitTokens(right);
+  if (a.length === 0 || b.length === 0) return false;
+  const shortest = Math.min(a.length, b.length);
+  return sharedTokenCount(a, b) === shortest && shortest >= 2;
+}
+
+/** iPhone ouvre la fiche contact ; les autres appareils téléchargent le fichier. */
+export function vcardDisposition(userAgent: string): "inline" | "attachment" {
+  return /iPad|iPhone|iPod/i.test(userAgent) ? "inline" : "attachment";
+}
+
+export function vcardFilename(name: string): string {
+  const cleaned = name.replace(/[^\p{L}\p{N} ._-]+/gu, "").replace(/\s+/g, " ").trim();
+  return `${cleaned || "contact"}.vcf`;
 }
 
 function splitPersonName(fullName: string): { given: string; additional: string; family: string } {
