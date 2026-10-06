@@ -21,6 +21,8 @@ export function PricingPlanCard({ plan, locale = "fr", className }: Props) {
   const perks = plan.perks.filter((perk) => perk.isVisible);
   const badge = plan.highlighted ? plan.badgeLabel?.trim() : "";
   const tone = accent ? "text-accent" : "text-primary";
+  // Petit texte sur fond teinté : rouge foncé pour tenir 4.5:1 (WCAG AA).
+  const perkTone = accent ? "text-accent-dark" : "text-primary";
 
   return (
     <div
@@ -70,7 +72,7 @@ export function PricingPlanCard({ plan, locale = "fr", className }: Props) {
               <li key={perk.id} className="flex items-start gap-3">
                 <Icon className={cn("mt-0.5 h-6 w-6 shrink-0", tone)} aria-hidden />
                 <div className="min-w-0">
-                  <p className={cn("text-sm font-semibold leading-snug", tone)}>{perk.title}</p>
+                  <p className={cn("text-sm font-semibold leading-snug", perkTone)}>{perk.title}</p>
                   {perk.detail && <p className="mt-0.5 text-xs leading-snug text-gray-text">{perk.detail}</p>}
                 </div>
               </li>
