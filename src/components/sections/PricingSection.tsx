@@ -1,11 +1,9 @@
-import { Check, Clock, Monitor, Headphones, Target } from "lucide-react";
+import { Clock, Monitor, Headphones, Target } from "lucide-react";
 import { AnimatedSection, AnimatedCard } from "@/components/ui/AnimatedSection";
 import { SectionHeading } from "@/components/ui/SectionHeading";
-import { Button } from "@/components/ui/Button";
+import { PricingPlanCard } from "@/components/sections/PricingPlanCard";
 import { getPricingPlans, getPricingReassurance } from "@/lib/public-pricing-resolver";
-import { PRICE_ON_REQUEST_LABEL, PRICE_ON_REQUEST_LABEL_EN } from "@/lib/format";
 import { SITE_VALUE_PROP, SITE_VALUE_PROP_EN } from "@/lib/site-value-prop";
-import { cn } from "@/lib/utils";
 
 const reassuranceIcons = [Clock, Monitor, Headphones, Target];
 
@@ -34,55 +32,10 @@ export async function PricingSection({ locale = "fr" }: Props) {
           {locale === "en" ? SITE_VALUE_PROP_EN : SITE_VALUE_PROP}
         </p>
 
-        <div className="grid gap-8 lg:grid-cols-3">
+        <div className="grid gap-8 pt-3 md:grid-cols-2 lg:grid-cols-3">
           {pricingPlans.map((plan, i) => (
-            <AnimatedCard
-              key={plan.id}
-              delay={i * 0.1}
-              className={cn(
-                "relative flex flex-col rounded-2xl border bg-white p-8 shadow-sm transition-shadow hover:shadow-lg",
-                plan.highlighted && "border-primary shadow-md ring-2 ring-primary/20",
-                plan.variant === "accent"
-                  ? "border-t-4 border-t-accent"
-                  : "border-t-4 border-t-primary",
-              )}
-            >
-              {plan.highlighted && (
-                <span className="absolute -top-3 left-1/2 -translate-x-1/2 rounded-full bg-primary px-4 py-1 text-xs font-semibold text-white">
-                  {locale === "en" ? "Popular" : "Populaire"}
-                </span>
-              )}
-              <h3 className="text-2xl font-bold uppercase text-foreground">{plan.name}</h3>
-              <p className="mt-1 text-gray-text">{plan.tagline}</p>
-              <p
-                className={cn(
-                  "mt-4 text-base font-semibold",
-                  plan.variant === "accent" ? "text-accent" : "text-primary",
-                )}
-              >
-                {locale === "en" ? PRICE_ON_REQUEST_LABEL_EN : PRICE_ON_REQUEST_LABEL}
-              </p>
-              <ul className="mt-8 flex-1 space-y-3">
-                {plan.features.map((feature) => (
-                  <li key={feature} className="flex items-start gap-3 text-sm">
-                    <Check
-                      className={cn(
-                        "mt-0.5 h-4 w-4 shrink-0",
-                        plan.variant === "accent" ? "text-accent" : "text-primary",
-                      )}
-                      aria-hidden
-                    />
-                    {feature}
-                  </li>
-                ))}
-              </ul>
-              <Button
-                href={locale === "en" ? "/en/devis" : "/devis"}
-                variant={plan.variant === "accent" ? "accent" : "primary"}
-                className="mt-8 w-full justify-center"
-              >
-                {locale === "en" ? "Get a quote" : "Demander un devis"}
-              </Button>
+            <AnimatedCard key={plan.id} delay={i * 0.1} className="h-full">
+              <PricingPlanCard plan={plan} locale={locale} />
             </AnimatedCard>
           ))}
         </div>

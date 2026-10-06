@@ -1,6 +1,12 @@
 import { crmApiAuth } from "@/lib/crm-api-auth";
 import { NextResponse } from "next/server";
-import { deletePublicPricingPlan, updatePublicPricingPlan, updatePublicPricingPlanSchema } from "@/lib/public-pricing";
+import {
+  deletePublicPricingPlan,
+  formatPlanIssue,
+  PricingPlanValidationError,
+  updatePublicPricingPlan,
+  updatePublicPricingPlanSchema,
+} from "@/lib/public-pricing";
 import { isDatabaseConfigured } from "@/lib/db";
 import { revalidatePricingPages } from "@/lib/site-revalidate";
 
@@ -12,8 +18,14 @@ export async function PATCH(request: Request, { params }: Props) {
   if (!isDatabaseConfigured()) return NextResponse.json({ error: "Base de données non configurée." }, { status: 503 });
   const { id } = await params;
   const parsed = updatePublicPricingPlanSchema.safeParse(await request.json());
-  if (!parsed.success) return NextResponse.json({ error: parsed.error.issues[0]?.message ?? "Données invalides." }, { status: 400 });
-  const plan = await updatePublicPricingPlan(id, parsed.data);
+  if (!parsed.success) return NextResponse.json({ error: formatPlanIssue(parsed.error.issues[0]) }, { status: 400 });
+  let plan;
+  try {
+    plan = await updatePublicPricingPlan(id, parsed.data);
+  } catch (error) {
+    if (error instanceof PricingPlanValidationError) return NextResponse.json({ error: error.message }, { status: 400 });
+    throw error;
+  }
   if (!plan) return NextResponse.json({ error: "Formule introuvable." }, { status: 404 });
   revalidatePricingPages();
   return NextResponse.json({ plan });

@@ -1,7 +1,7 @@
 "use client";
 
 import { cloneElement, isValidElement, useId, type ReactElement } from "react";
-import { Plus, Trash2, type LucideIcon } from "lucide-react";
+import { ArrowDown, ArrowUp, Plus, Trash2, type LucideIcon } from "lucide-react";
 import { LUCIDE_ICON_NAMES, type LucideIconName } from "@/lib/lucide-icon-map";
 import { cn } from "@/lib/utils";
 
@@ -139,6 +139,8 @@ type LineListProps = {
   placeholder?: string;
   addLabel?: string;
   minItems?: number;
+  /** Affiche les boutons monter / descendre sur chaque ligne. */
+  reorderable?: boolean;
 };
 
 export function CrmLineListEditor({
@@ -149,6 +151,7 @@ export function CrmLineListEditor({
   placeholder = "Nouvel élément…",
   addLabel = "Ajouter une ligne",
   minItems = 0,
+  reorderable = false,
 }: LineListProps) {
   const baseId = useId();
 
@@ -165,6 +168,14 @@ export function CrmLineListEditor({
 
   function add() {
     onChange([...values, ""]);
+  }
+
+  function move(index: number, delta: -1 | 1) {
+    const target = index + delta;
+    if (target < 0 || target >= values.length) return;
+    const next = [...values];
+    [next[index], next[target]] = [next[target]!, next[index]!];
+    onChange(next);
   }
 
   return (
@@ -190,6 +201,28 @@ export function CrmLineListEditor({
               placeholder={placeholder}
               aria-label={label ? `${label} ${index + 1}` : `Ligne ${index + 1}`}
             />
+            {reorderable && (
+              <>
+                <button
+                  type="button"
+                  onClick={() => move(index, -1)}
+                  disabled={index === 0}
+                  className="shrink-0 rounded-xl border border-gray/60 p-2.5 text-gray-text hover:bg-gray-light disabled:opacity-40"
+                  aria-label={`Monter la ligne ${index + 1}`}
+                >
+                  <ArrowUp className="h-4 w-4" aria-hidden />
+                </button>
+                <button
+                  type="button"
+                  onClick={() => move(index, 1)}
+                  disabled={index === values.length - 1}
+                  className="shrink-0 rounded-xl border border-gray/60 p-2.5 text-gray-text hover:bg-gray-light disabled:opacity-40"
+                  aria-label={`Descendre la ligne ${index + 1}`}
+                >
+                  <ArrowDown className="h-4 w-4" aria-hidden />
+                </button>
+              </>
+            )}
             <button
               type="button"
               onClick={() => remove(index)}

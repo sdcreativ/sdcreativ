@@ -32,22 +32,18 @@ import {
   updatePricingReassuranceApi,
 } from "@/lib/public-pricing-api";
 import { useDialog } from "@/components/ui/DialogProvider";
+import {
+  CrmPricingPlanForm,
+  emptyPlanForm,
+  planToForm,
+  type PlanForm,
+  type planFormToPayload,
+} from "@/components/admin/CrmPricingPlanForm";
+import { resolvePlanPriceDisplay } from "@/lib/pricing-display";
 import { cn } from "@/lib/utils";
 
 const fieldClass =
   "w-full rounded-xl border border-gray/60 bg-white px-3 py-2.5 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20";
-
-type PlanForm = {
-  name: string;
-  tagline: string;
-  priceFrom: string;
-  priceNote: string;
-  features: string;
-  highlighted: boolean;
-  variant: "primary" | "accent";
-  locale: "fr" | "en";
-  isVisible: boolean;
-};
 
 type ReassuranceForm = {
   label: string;
@@ -56,38 +52,12 @@ type ReassuranceForm = {
   isVisible: boolean;
 };
 
-const emptyPlanForm = (): PlanForm => ({
-  name: "",
-  tagline: "",
-  priceFrom: "",
-  priceNote: "",
-  features: "",
-  highlighted: false,
-  variant: "primary",
-  locale: "fr",
-  isVisible: true,
-});
-
 const emptyReassuranceForm = (): ReassuranceForm => ({
   label: "",
   description: "",
   locale: "fr",
   isVisible: true,
 });
-
-function planToForm(r: PublicPricingPlanRecord): PlanForm {
-  return {
-    name: r.name,
-    tagline: r.tagline,
-    priceFrom: r.priceFrom != null ? String(r.priceFrom) : "",
-    priceNote: r.priceNote ?? "",
-    features: r.features.join("\n"),
-    highlighted: r.highlighted,
-    variant: r.variant,
-    locale: r.locale as "fr" | "en",
-    isVisible: r.isVisible,
-  };
-}
 
 function reassuranceToForm(r: PublicPricingReassuranceRecord): ReassuranceForm {
   return {
@@ -98,21 +68,13 @@ function reassuranceToForm(r: PublicPricingReassuranceRecord): ReassuranceForm {
   };
 }
 
-function planFormToPayload(form: PlanForm) {
-  return {
-    name: form.name,
-    tagline: form.tagline,
-    priceFrom: form.priceFrom.trim() === "" ? null : Number(form.priceFrom),
-    priceNote: form.priceNote.trim() || undefined,
-    features: form.features
-      .split("\n")
-      .map((f) => f.trim())
-      .filter(Boolean),
-    highlighted: form.highlighted,
-    variant: form.variant,
-    locale: form.locale,
-    isVisible: form.isVisible,
-  };
+function formatAdminPrice(item: PublicPricingPlanRecord): string {
+  const price = resolvePlanPriceDisplay(
+    { ...item, priceAmount: item.priceAmount ?? undefined, priceNote: item.priceNote ?? undefined },
+    item.locale === "en" ? "en" : "fr",
+  );
+  if (price.kind === "quote") return `Sur devis — ${price.label}`;
+  return [price.prefix, price.amount, price.suffix].filter(Boolean).join(" ") + (price.note ? ` · ${price.note}` : "");
 }
 
 export function CrmPricingView() {
@@ -126,7 +88,9 @@ export function CrmPricingView() {
   const [creating, setCreating] = useState(false);
   const [editingPlanId, setEditingPlanId] = useState<string | null>(null);
   const [editingReassuranceId, setEditingReassuranceId] = useState<string | null>(null);
-  const [planForm, setPlanForm] = useState<PlanForm>(emptyPlanForm);
+  const [planForm, setPlanForm] = useState<PlanForm>(() => emptyPlanForm());
+  const [planFormKey, setPlanFormKey] = useState(0);
+  const [planError, setPlanError] = useState("");
   const [reassuranceForm, setReassuranceForm] = useState<ReassuranceForm>(emptyReassuranceForm);
   const [saving, setSaving] = useState(false);
   const [busyId, setBusyId] = useState<string | null>(null);
@@ -161,7 +125,9 @@ export function CrmPricingView() {
     setFormMode("plan");
     setCreating(true);
     setEditingPlanId(null);
-    setPlanForm(emptyPlanForm());
+    setPlanForm(emptyPlanForm(localeFilter === "en" ? "en" : "fr"));
+    setPlanFormKey((k) => k + 1);
+    setPlanError("");
     setMessage("");
   }
 
@@ -170,6 +136,8 @@ export function CrmPricingView() {
     setCreating(false);
     setEditingPlanId(item.id);
     setPlanForm(planToForm(item));
+    setPlanFormKey((k) => k + 1);
+    setPlanError("");
     setMessage("");
   }
 
@@ -198,11 +166,10 @@ export function CrmPricingView() {
     setReassuranceForm(emptyReassuranceForm());
   }
 
-  async function handlePlanSubmit(e: React.FormEvent) {
-    e.preventDefault();
+  async function handlePlanSubmit(payload: ReturnType<typeof planFormToPayload>) {
     setSaving(true);
     setMessage("");
-    const payload = planFormToPayload(planForm);
+    setPlanError("");
     try {
       if (creating) {
         const item = await createPricingPlanApi(payload);
@@ -216,7 +183,7 @@ export function CrmPricingView() {
         setMessage("Formule mise à jour.");
       }
     } catch (err) {
-      setMessage(err instanceof Error ? err.message : "Enregistrement impossible.");
+      setPlanError(err instanceof Error ? err.message : "Enregistrement impossible.");
     } finally {
       setSaving(false);
     }
@@ -341,7 +308,8 @@ export function CrmPricingView() {
   async function handleImportStatic() {
     const ok = await confirm({
       title: "Importer les tarifs statiques ?",
-      message: "Les formules et éléments de réassurance du code seront ajoutés en base (sans écraser les existants).",
+      message:
+        "Seules les formules et éléments absents de la base sont ajoutés. Les contenus déjà administrés ne sont jamais modifiés ni écrasés.",
       confirmLabel: "Importer",
     });
     if (!ok) return;
@@ -351,7 +319,8 @@ export function CrmPricingView() {
       const result = await importStaticPricingApi();
       await load();
       setMessage(
-        `Import : ${result.plansImported} formule(s), ${result.reassuranceImported} réassurance(s) ajoutée(s).`,
+        `Import : ${result.plansImported} formule(s), ${result.reassuranceImported} réassurance(s) ajoutée(s) — ` +
+          `${result.plansSkipped + result.reassuranceSkipped} élément(s) déjà présent(s) conservé(s) tel(s) quel(s).`,
       );
     } catch (err) {
       setMessage(err instanceof Error ? err.message : "Import impossible.");
@@ -424,14 +393,14 @@ export function CrmPricingView() {
                   <div>
                     <h3 className="font-semibold text-foreground">
                       {item.name}
-                      {item.highlighted && <span className="ml-2 rounded-full bg-primary/10 px-2 py-0.5 text-xs font-medium text-primary">Mise en avant</span>}
+                      {item.highlighted && <span className="ml-2 rounded-full bg-primary/10 px-2 py-0.5 text-xs font-medium text-primary">Mise en avant{item.badgeLabel ? ` · ${item.badgeLabel}` : ""}</span>}
+                      {!item.isVisible && <span className="ml-2 rounded-full bg-gray-light px-2 py-0.5 text-xs font-medium text-gray-text">Masquée</span>}
                     </h3>
                     <p className="mt-1 text-sm text-gray-text">{item.tagline}</p>
-                    {(item.priceFrom != null || item.priceNote) && (
-                      <p className="mt-1 text-sm font-medium">
-                        {[item.priceFrom != null ? `${item.priceFrom.toLocaleString("fr-FR")} FCFA` : null, item.priceNote]
-                          .filter(Boolean)
-                          .join(" · ")}
+                    <p className="mt-1 text-sm font-medium">{formatAdminPrice(item)}</p>
+                    {item.perks.length > 0 && (
+                      <p className="mt-1 text-xs text-gray-text">
+                        Services inclus : {item.perks.filter((p) => p.isVisible).map((p) => p.title).join(" · ") || "tous masqués"}
                       </p>
                     )}
                     <ul className="mt-2 list-inside list-disc text-xs text-gray-text">
@@ -491,62 +460,15 @@ export function CrmPricingView() {
       </section>
 
       {showForm && formMode === "plan" && (
-        <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/40 p-4 sm:items-center">
-          <div className="max-h-[90vh] w-full max-w-lg overflow-y-auto rounded-2xl bg-white p-6 shadow-xl" role="dialog" aria-modal="true">
-            <h2 className="text-lg font-bold">{creating ? "Nouvelle formule" : "Modifier la formule"}</h2>
-            <form onSubmit={(e) => void handlePlanSubmit(e)} className="mt-4 space-y-4">
-              <label className="block">
-                <span className="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-gray-text">Nom</span>
-                <input required value={planForm.name} onChange={(e) => setPlanForm((p) => ({ ...p, name: e.target.value }))} className={fieldClass} />
-              </label>
-              <label className="block">
-                <span className="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-gray-text">Accroche</span>
-                <input required value={planForm.tagline} onChange={(e) => setPlanForm((p) => ({ ...p, tagline: e.target.value }))} className={fieldClass} />
-              </label>
-              <label className="block">
-                <span className="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-gray-text">Prix à partir de (FCFA, optionnel)</span>
-                <input type="number" min={0} value={planForm.priceFrom} onChange={(e) => setPlanForm((p) => ({ ...p, priceFrom: e.target.value }))} className={fieldClass} placeholder="Laisser vide si sur devis" />
-              </label>
-              <label className="block">
-                <span className="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-gray-text">Note de prix</span>
-                <input value={planForm.priceNote} onChange={(e) => setPlanForm((p) => ({ ...p, priceNote: e.target.value }))} className={fieldClass} placeholder="HT · devis personnalisé gratuit" />
-              </label>
-              <label className="block">
-                <span className="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-gray-text">Fonctionnalités (une par ligne)</span>
-                <textarea required rows={6} value={planForm.features} onChange={(e) => setPlanForm((p) => ({ ...p, features: e.target.value }))} className={fieldClass} />
-              </label>
-              <label className="block">
-                <span className="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-gray-text">Variante</span>
-                <select value={planForm.variant} onChange={(e) => setPlanForm((p) => ({ ...p, variant: e.target.value as "primary" | "accent" }))} className={fieldClass}>
-                  <option value="primary">Primary</option>
-                  <option value="accent">Accent</option>
-                </select>
-              </label>
-              <label className="block">
-                <span className="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-gray-text">Langue</span>
-                <select value={planForm.locale} onChange={(e) => setPlanForm((p) => ({ ...p, locale: e.target.value as "fr" | "en" }))} className={fieldClass}>
-                  <option value="fr">Français</option>
-                  <option value="en">English</option>
-                </select>
-              </label>
-              <label className="flex items-center gap-2 text-sm">
-                <input type="checkbox" checked={planForm.highlighted} onChange={(e) => setPlanForm((p) => ({ ...p, highlighted: e.target.checked }))} className="rounded border-gray/60 text-primary" />
-                Mise en avant
-              </label>
-              <label className="flex items-center gap-2 text-sm">
-                <input type="checkbox" checked={planForm.isVisible} onChange={(e) => setPlanForm((p) => ({ ...p, isVisible: e.target.checked }))} className="rounded border-gray/60 text-primary" />
-                Visible sur le site
-              </label>
-              <div className="flex justify-end gap-2 pt-2">
-                <button type="button" onClick={closeForm} className="rounded-xl border border-gray/60 px-4 py-2 text-sm font-medium hover:bg-gray-light">Annuler</button>
-                <button type="submit" disabled={saving} className="inline-flex items-center gap-2 rounded-xl bg-primary px-4 py-2 text-sm font-semibold text-white disabled:opacity-60">
-                  {saving && <Loader2 className="h-4 w-4 animate-spin" aria-hidden />}
-                  Enregistrer
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
+        <CrmPricingPlanForm
+          key={planFormKey}
+          creating={creating}
+          initial={planForm}
+          saving={saving}
+          serverError={planError}
+          onCancel={closeForm}
+          onSubmit={(payload) => void handlePlanSubmit(payload)}
+        />
       )}
 
       {showForm && formMode === "reassurance" && (
