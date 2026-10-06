@@ -1,6 +1,12 @@
 import { crmApiAuth } from "@/lib/crm-api-auth";
 import { NextResponse } from "next/server";
-import { createPublicPricingPlan, createPublicPricingPlanSchema, listPublicPricingPlans } from "@/lib/public-pricing";
+import {
+  createPublicPricingPlan,
+  createPublicPricingPlanSchema,
+  listPublicPricingPlans,
+  formatPlanIssue,
+  PricingPlanValidationError,
+} from "@/lib/public-pricing";
 import { isDatabaseConfigured } from "@/lib/db";
 import { revalidatePricingPages } from "@/lib/site-revalidate";
 
@@ -18,8 +24,14 @@ export async function POST(request: Request) {
   if (authError) return authError;
   if (!isDatabaseConfigured()) return NextResponse.json({ error: "Base de données non configurée." }, { status: 503 });
   const parsed = createPublicPricingPlanSchema.safeParse(await request.json());
-  if (!parsed.success) return NextResponse.json({ error: parsed.error.issues[0]?.message ?? "Données invalides." }, { status: 400 });
-  const plan = await createPublicPricingPlan(parsed.data);
+  if (!parsed.success) return NextResponse.json({ error: formatPlanIssue(parsed.error.issues[0]) }, { status: 400 });
+  let plan;
+  try {
+    plan = await createPublicPricingPlan(parsed.data);
+  } catch (error) {
+    if (error instanceof PricingPlanValidationError) return NextResponse.json({ error: error.message }, { status: 400 });
+    throw error;
+  }
   revalidatePricingPages();
   return NextResponse.json({ plan }, { status: 201 });
 }
