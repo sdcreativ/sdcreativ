@@ -11,6 +11,10 @@ export type PricingPerk = {
   detail: string;
   icon: LucideIconName;
   isVisible: boolean;
+  /** Le titre pointe vers le lien de parrainage réglé dans l'admin (rel="sponsored"). */
+  referralLink?: boolean;
+  /** Résolu à la lecture depuis `referralLink` — jamais saisi directement. */
+  href?: string;
 };
 
 export type PricingPlan = {
@@ -24,6 +28,10 @@ export type PricingPlan = {
   /** Libellé public de la devise, ex. « FCFA ». */
   currencyLabel: string;
   taxMention: PricingTaxMention;
+  /** Prix avant remise (barré) — présent seulement s'il est supérieur au montant affiché. */
+  compareAtAmount?: number;
+  /** Pastille près du prix, ex. « Hébergement -20 % ». */
+  discountLabel?: string;
   /** Texte complémentaire sous le prix (ou libellé « sur devis »). */
   priceNote?: string;
   features: string[];

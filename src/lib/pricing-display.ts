@@ -8,6 +8,8 @@ export type PlanPriceDisplay =
       prefix: string | null;
       /** Montant formaté avec séparateurs français (ex. « 287 000 »). */
       amount: string;
+      /** Prix avant remise formaté, à afficher barré (null sans remise). */
+      compareAt: string | null;
       /** Devise + mention fiscale (ex. « FCFA TTC »). */
       suffix: string;
       note: string | null;
@@ -22,7 +24,8 @@ export function formatPlanAmount(amount: number): string {
 }
 
 export function resolvePlanPriceDisplay(
-  plan: Pick<PricingPlan, "priceMode" | "priceAmount" | "currencyLabel" | "currencyCode" | "taxMention" | "priceNote">,
+  plan: Pick<PricingPlan, "priceMode" | "priceAmount" | "currencyLabel" | "currencyCode" | "taxMention" | "priceNote"> &
+    Partial<Pick<PricingPlan, "compareAtAmount">>,
   locale: "fr" | "en" = "fr",
 ): PlanPriceDisplay {
   const note = plan.priceNote?.trim() || null;
@@ -37,38 +40,72 @@ export function resolvePlanPriceDisplay(
     kind: "amount",
     prefix: plan.priceMode === "from" ? (locale === "en" ? "From" : "À partir de") : null,
     amount: formatPlanAmount(amount),
+    compareAt: plan.compareAtAmount != null && plan.compareAtAmount > amount ? formatPlanAmount(plan.compareAtAmount) : null,
     suffix: [currency, TAX_LABELS[plan.taxMention]].filter(Boolean).join(" "),
     note,
   };
 }
 
 /** Charge HT ajoutée au prix de base d'une formule (licence, hébergement…) — admin uniquement. */
-export type PricingCharge = { id: string; label: string; amount: number };
+export type PricingCharge = {
+  id: string;
+  label: string;
+  amount: number;
+  /** Remise parrainage (%) sur cette charge, ex. 20 pour l'hébergement Hostinger. */
+  discountPercent?: number;
+};
 
-export type PricingChargeInput = Pick<PricingCharge, "amount">;
+export type PricingChargeInput = Pick<PricingCharge, "amount" | "discountPercent">;
 
 /** Taux de TVA par défaut (UEMOA / Côte d'Ivoire) si aucun réglage en base. */
 export const DEFAULT_PRICING_VAT_RATE = 18;
 
+/** Parrainage Hostinger SD CREATIV : -20 % pour le nouveau compte client. */
+export const DEFAULT_PRICING_REFERRAL_URL = "https://www.hostinger.com/fr?REFERRALCODE=BMJAGENCEZMT";
+export const DEFAULT_PRICING_REFERRAL_PERCENT = 20;
+
 export type PlanTtcBreakdown = {
   baseHt: number;
+  /** Charges HT avant remise. */
   chargesHt: number;
+  /** Total des remises parrainage HT. */
+  discountHt: number;
+  /** Base + charges − remises. */
   subtotalHt: number;
   vatRate: number;
   vatAmount: number;
   totalTtc: number;
+  /** TTC sans remise — prix barré quand discountHt > 0. */
+  totalTtcBeforeDiscount: number;
 };
 
+/** Points de base (centièmes de %) pour calculer en entiers, sans erreur de flottant. */
+const toBp = (percent: number) => Math.round(percent * 100);
+
 /**
- * TTC = (base HT + charges HT) × (1 + TVA). Calcul en entiers (taux au centième)
- * pour éviter les erreurs de flottants ; arrondi au franc près.
+ * TTC = (base HT + charges HT − remises parrainage HT) × (1 + TVA).
+ * Chaque remise s'applique à sa charge (ex. hébergement -20 %) ; arrondis au franc près.
  */
 export function computePlanTtc(baseHt: number, charges: PricingChargeInput[], vatRate: number): PlanTtcBreakdown {
   const chargesHt = charges.reduce((sum, c) => sum + c.amount, 0);
-  const subtotalHt = baseHt + chargesHt;
-  const rateBp = Math.round(vatRate * 100);
-  const totalTtc = Math.round((subtotalHt * (10000 + rateBp)) / 10000);
-  return { baseHt, chargesHt, subtotalHt, vatRate: rateBp / 100, vatAmount: totalTtc - subtotalHt, totalTtc };
+  const discountHt = charges.reduce(
+    (sum, c) => sum + Math.round((c.amount * Math.min(toBp(c.discountPercent ?? 0), 10000)) / 10000),
+    0,
+  );
+  const subtotalHt = baseHt + chargesHt - discountHt;
+  const rateBp = toBp(vatRate);
+  const withVat = (ht: number) => Math.round((ht * (10000 + rateBp)) / 10000);
+  const totalTtc = withVat(subtotalHt);
+  return {
+    baseHt,
+    chargesHt,
+    discountHt,
+    subtotalHt,
+    vatRate: rateBp / 100,
+    vatAmount: totalTtc - subtotalHt,
+    totalTtc,
+    totalTtcBeforeDiscount: withVat(baseHt + chargesHt),
+  };
 }
 
 /** Destination de bouton acceptée : chemin interne, ancre ou URL https. */
