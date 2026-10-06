@@ -2,7 +2,7 @@ import { Check } from "lucide-react";
 import type { PricingPlan } from "@/content/pricing";
 import { Button } from "@/components/ui/Button";
 import { getLucideIcon } from "@/lib/lucide-icon-map";
-import { resolvePlanPriceDisplay } from "@/lib/pricing-display";
+import { buildPlanCtaHref, resolvePlanPriceDisplay } from "@/lib/pricing-display";
 import { cn } from "@/lib/utils";
 
 type Props = {
@@ -108,6 +108,7 @@ export function PricingPlanCard({ plan, locale = "fr", className }: Props) {
                     )}
                   </p>
                   {perk.detail && <p className="mt-0.5 text-xs leading-snug text-gray-text">{perk.detail}</p>}
+                  {perk.note && <p className={cn("mt-0.5 text-xs font-semibold leading-snug", perkTone)}>{perk.note}</p>}
                 </div>
               </li>
             );
@@ -124,7 +125,7 @@ export function PricingPlanCard({ plan, locale = "fr", className }: Props) {
         ))}
       </ul>
 
-      <Button href={plan.ctaHref} variant={accent ? "accent" : "primary"} className="mt-8 w-full justify-center">
+      <Button href={buildPlanCtaHref(plan.ctaHref, plan.id, Boolean(price.kind === "amount" && price.compareAt))} variant={accent ? "accent" : "primary"} className="mt-8 w-full justify-center">
         {plan.ctaLabel}
       </Button>
     </div>

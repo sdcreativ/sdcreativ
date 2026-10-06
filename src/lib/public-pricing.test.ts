@@ -79,6 +79,7 @@ describe("toPricingPlan", () => {
     priceNote: null,
     baseAmountHt: null,
     charges: [],
+    includeHosting: false,
     compareAtAmount: null,
     discountLabel: null,
     features: ["Order management"],
@@ -104,10 +105,18 @@ describe("toPricingPlan", () => {
       ],
     };
     const url = "https://www.hostinger.com/fr?REFERRALCODE=BMJAGENCEZMT";
-    const [hosting, maintenance] = toPricingPlan(withPerks, url).perks;
+    const settings = { referralUrl: url, referralPercent: 20, referralNote: "-{pourcentage} % grâce à notre partenariat Hostinger" };
+    const [hosting, maintenance] = toPricingPlan(withPerks, settings).perks;
     expect(hosting?.href).toBe(url);
+    expect(hosting?.note).toBeUndefined(); // pas de remise sur cette formule
     expect(maintenance?.href).toBeUndefined();
     expect(toPricingPlan(withPerks).perks[0]?.href).toBeUndefined();
+
+    // Remise active (hébergement inclus + prix barré) : mention sous l'avantage hébergement seulement.
+    const discounted = { ...withPerks, includeHosting: true, priceMode: "fixed" as const, priceAmount: 264729, compareAtAmount: 287000 };
+    const [hostingOn, maintenanceOn] = toPricingPlan(discounted, settings).perks;
+    expect(hostingOn?.note).toBe("-20 % grâce à notre partenariat Hostinger");
+    expect(maintenanceOn?.note).toBeUndefined();
   });
 
   it("conserve le parcours devis par langue si le bouton est vide", () => {
@@ -141,7 +150,13 @@ describe("charges et TVA", () => {
     expect(updatePublicPricingPlanSchema.safeParse({ baseAmountHt: null }).success).toBe(true);
   });
 
-  const settings = { vatRate: 18, referralUrl: "https://www.hostinger.com/fr?REFERRALCODE=BMJAGENCEZMT", referralPercent: 20 };
+  const settings = {
+    vatRate: 18,
+    referralUrl: "https://www.hostinger.com/fr?REFERRALCODE=BMJAGENCEZMT",
+    referralPercent: 20,
+    hostingEur: 143.86,
+    referralNote: "-{pourcentage} % grâce à notre partenariat Hostinger",
+  };
 
   it("borne la TVA et la remise entre 0 et 100 au centième", () => {
     expect(pricingSettingsSchema.safeParse(settings).success).toBe(true);
@@ -157,9 +172,18 @@ describe("charges et TVA", () => {
     expect(pricingSettingsSchema.safeParse({ ...settings, referralUrl: "javascript:alert(1)" }).success).toBe(false);
   });
 
-  it("valide la remise d'une charge", () => {
-    const charge = { id: "h", label: "Hébergement", amount: 43000 };
-    expect(updatePublicPricingPlanSchema.safeParse({ charges: [{ ...charge, discountPercent: 20 }] }).success).toBe(true);
-    expect(updatePublicPricingPlanSchema.safeParse({ charges: [{ ...charge, discountPercent: 150 }] }).success).toBe(false);
+  it("valide le prix de l'hébergement en euros (≥ 0, au centime)", () => {
+    expect(pricingSettingsSchema.safeParse({ ...settings, hostingEur: 0 }).success).toBe(true);
+    expect(pricingSettingsSchema.safeParse({ ...settings, hostingEur: -1 }).success).toBe(false);
+    expect(pricingSettingsSchema.safeParse({ ...settings, hostingEur: 143.861 }).success).toBe(false);
+  });
+
+  it("les charges ne portent plus de remise : le champ est ignoré", () => {
+    const parsed = updatePublicPricingPlanSchema.parse({
+      charges: [{ id: "c", label: "Licence", amount: 25000, discountPercent: 20 }],
+      includeHosting: true,
+    });
+    expect(parsed.charges?.[0]).toEqual({ id: "c", label: "Licence", amount: 25000 });
+    expect(parsed.includeHosting).toBe(true);
   });
 });

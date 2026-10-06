@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState, type FormEvent } from "react";
 import { useSearchParams } from "next/navigation";
+import { PRICING_REFERRAL_OFFER } from "@/lib/pricing-display";
 import {
   Calculator,
   CheckCircle,
@@ -78,6 +79,10 @@ export function QuoteConfigurator({
     skip: isPresentation,
   });
 
+  // Formule / offre transmises par le bouton d'une carte tarifs (validées côté serveur).
+  const pricingPlan = /^[a-z0-9-]{1,120}$/.test(searchParams.get("formule") ?? "") ? searchParams.get("formule")! : undefined;
+  const pricingOffer = searchParams.get("offre") === PRICING_REFERRAL_OFFER ? PRICING_REFERRAL_OFFER : undefined;
+
   useEffect(() => {
     const type = searchParams.get("type");
     if (type && config.projectTypes.some((t) => t.id === type)) {
@@ -146,6 +151,8 @@ export function QuoteConfigurator({
       budget: data.get("budget"),
       timeline: data.get("timeline"),
       message: data.get("message"),
+      pricingPlan,
+      pricingOffer,
       _hp: data.get("_hp"),
       turnstileToken: turnstileToken || undefined,
     };
@@ -251,6 +258,17 @@ export function QuoteConfigurator({
               : config.formSubtitle}
           </p>
         </div>
+
+        {pricingPlan && !isPresentation && (
+          <p className="rounded-xl bg-primary-light px-4 py-3 text-sm text-primary" role="note">
+            {locale === "en" ? "Selected plan: " : "Formule choisie : "}
+            <strong className="capitalize">{pricingPlan.replaceAll("-", " ")}</strong>
+            {pricingOffer &&
+              (locale === "en"
+                ? " — Hostinger referral discount on hosting included in your request."
+                : " — remise parrainage Hostinger sur l’hébergement prise en compte dans votre demande.")}
+          </p>
+        )}
 
         <div>
           <label htmlFor="projectType" className="mb-2 block text-sm font-semibold text-foreground">

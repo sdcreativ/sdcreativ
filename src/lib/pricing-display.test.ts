@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { computePlanTtc, formatPlanAmount, isSafePlanCtaHref, resolvePlanPriceDisplay } from "@/lib/pricing-display";
+import { buildPlanCtaHref, formatReferralNote, baseHtFromTtc, computePlanPricing, computePlanTtc, eurToXof, formatPlanAmount, isSafePlanCtaHref, resolvePlanPriceDisplay } from "@/lib/pricing-display";
 import { PRICE_ON_REQUEST_LABEL, PRICE_ON_REQUEST_LABEL_EN } from "@/lib/format";
 
 const base = {
@@ -123,5 +123,71 @@ describe("remise parrainage", () => {
     expect(withDiscount.kind === "amount" && plain(withDiscount.compareAt ?? "")).toBe("286 740");
     const noDiscount = resolvePlanPriceDisplay({ ...plan, compareAtAmount: 276592 });
     expect(noDiscount.kind === "amount" && noDiscount.compareAt).toBeNull();
+  });
+});
+
+describe("baseHtFromTtc", () => {
+  it("retrouve une base HT qui redonne le TTC actuel (exact si atteignable)", () => {
+    expect(baseHtFromTtc(287000, 18)).toBe(243220);
+    expect(computePlanTtc(baseHtFromTtc(287000, 18), [], 18).totalTtc).toBe(287000);
+    expect(computePlanTtc(baseHtFromTtc(450000, 18), [], 18).totalTtc).toBe(450000);
+  });
+
+  it("reste à 1 franc près quand le TTC n'est pas atteignable", () => {
+    // 669 491 × 1,18 = 789 999,38 ; 669 492 × 1,18 = 790 000,56 → 790 000 impossible.
+    const ttc = computePlanTtc(baseHtFromTtc(790000, 18), [], 18).totalTtc;
+    expect(Math.abs(ttc - 790000)).toBeLessThanOrEqual(1);
+  });
+});
+
+describe("hébergement Hostinger parrainé", () => {
+  const settings = { hostingEur: 143.86, referralPercent: 20, vatRate: 18 };
+
+  it("convertit 143,86 € en FCFA à la parité fixe", () => {
+    expect(eurToXof(143.86)).toBe(94366);
+  });
+
+  it("applique -20 % à l'hébergement seulement, pas aux charges", () => {
+    const b = computePlanPricing({ baseHt: 200000, charges: [{ amount: 25000 }], includeHosting: true, ...settings });
+    expect(b.otherChargesHt).toBe(25000);
+    expect(b.hostingHt).toBe(94366);
+    expect(b.discountHt).toBe(18873); // 20 % de 94 366
+    expect(b.subtotalHt).toBe(200000 + 25000 + 94366 - 18873);
+    expect(b.totalTtc).toBe(Math.round(b.subtotalHt * 1.18));
+    expect(b.totalTtcBeforeDiscount).toBe(Math.round((200000 + 25000 + 94366) * 1.18));
+  });
+
+  it("sans hébergement inclus : ni hébergement ni remise", () => {
+    const b = computePlanPricing({ baseHt: 200000, charges: [{ amount: 25000 }], includeHosting: false, ...settings });
+    expect(b.hostingHt).toBe(0);
+    expect(b.discountHt).toBe(0);
+    expect(b.totalTtc).toBe(b.totalTtcBeforeDiscount);
+  });
+});
+
+describe("bouton « Demander un devis »", () => {
+  it("transmet la formule, et l'offre seulement si la remise s'applique", () => {
+    expect(buildPlanCtaHref("/devis", "essentiel", false)).toBe("/devis?formule=essentiel");
+    expect(buildPlanCtaHref("/devis", "essentiel", true)).toBe("/devis?formule=essentiel&offre=parrainage-hebergement");
+  });
+
+  it("conserve les paramètres existants (type de projet) et l'ancre", () => {
+    expect(buildPlanCtaHref("/devis?type=e-commerce#form", "business", true)).toBe(
+      "/devis?type=e-commerce&formule=business&offre=parrainage-hebergement#form",
+    );
+  });
+
+  it("ne touche pas aux liens externes ni aux ancres", () => {
+    expect(buildPlanCtaHref("https://wa.me/225000", "business", true)).toBe("https://wa.me/225000");
+    expect(buildPlanCtaHref("#contact", "business", true)).toBe("#contact");
+  });
+});
+
+describe("mention de remise", () => {
+  it("remplace {pourcentage} par le % de parrainage", () => {
+    expect(formatReferralNote("-{pourcentage} % grâce à notre partenariat Hostinger", 20)).toBe(
+      "-20 % grâce à notre partenariat Hostinger",
+    );
+    expect(formatReferralNote("Remise de {pourcentage} %", 12.5)).toBe("Remise de 12,5 %");
   });
 });
