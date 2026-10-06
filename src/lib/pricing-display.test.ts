@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { buildPlanCtaHref, formatReferralNote, baseHtFromTtc, computePlanPricing, computePlanTtc, eurToXof, formatPlanAmount, isSafePlanCtaHref, resolvePlanPriceDisplay } from "@/lib/pricing-display";
+import { buildPlanCtaHref, formatReferralNote, baseHtFromTtc, computePlanPricing, computePlanTtc, eurToXof, hostingDiscountPercent, formatPlanAmount, isSafePlanCtaHref, resolvePlanPriceDisplay } from "@/lib/pricing-display";
 import { PRICE_ON_REQUEST_LABEL, PRICE_ON_REQUEST_LABEL_EN } from "@/lib/format";
 
 const base = {
@@ -140,21 +140,33 @@ describe("baseHtFromTtc", () => {
   });
 });
 
-describe("hébergement Hostinger parrainé", () => {
-  const settings = { hostingEur: 143.86, referralPercent: 20, vatRate: 18 };
+describe("hébergement Hostinger parrainé (prix relevés au panier)", () => {
+  const settings = { hostingEur: 150.87, hostingReferralEur: 35.88, vatRate: 18 };
 
-  it("convertit 143,86 € en FCFA à la parité fixe", () => {
-    expect(eurToXof(143.86)).toBe(94366);
+  it("convertit les prix en FCFA à la parité fixe", () => {
+    expect(eurToXof(150.87)).toBe(98964); // Pack 143,88 € + domaine 6,99 €
+    expect(eurToXof(35.88)).toBe(23536);
   });
 
-  it("applique -20 % à l'hébergement seulement, pas aux charges", () => {
-    const b = computePlanPricing({ baseHt: 200000, charges: [{ amount: 25000 }], includeHosting: true, ...settings });
+  it("déduit la remise en % des deux prix", () => {
+    expect(hostingDiscountPercent(150.87, 35.88)).toBe(76);
+    expect(hostingDiscountPercent(0, 0)).toBe(0);
+  });
+
+  it("remplace le prix normal par le prix parrainé sur l'hébergement seulement", () => {
+    const b = computePlanPricing({ baseHt: 144256, charges: [{ amount: 25000 }], includeHosting: true, ...settings });
     expect(b.otherChargesHt).toBe(25000);
-    expect(b.hostingHt).toBe(94366);
-    expect(b.discountHt).toBe(18873); // 20 % de 94 366
-    expect(b.subtotalHt).toBe(200000 + 25000 + 94366 - 18873);
-    expect(b.totalTtc).toBe(Math.round(b.subtotalHt * 1.18));
-    expect(b.totalTtcBeforeDiscount).toBe(Math.round((200000 + 25000 + 94366) * 1.18));
+    expect(b.hostingHt).toBe(98964);
+    expect(b.hostingPaidHt).toBe(23536);
+    expect(b.discountHt).toBe(75428);
+    expect(b.subtotalHt).toBe(144256 + 25000 + 23536);
+    expect(b.totalTtcBeforeDiscount).toBe(Math.round((144256 + 25000 + 98964) * 1.18));
+  });
+
+  it("Essentiel : 287 000 barré → 197 995 TTC", () => {
+    const b = computePlanPricing({ baseHt: 144256, charges: [], includeHosting: true, ...settings });
+    expect(b.totalTtcBeforeDiscount).toBe(287000);
+    expect(b.totalTtc).toBe(197995);
   });
 
   it("sans hébergement inclus : ni hébergement ni remise", () => {

@@ -50,16 +50,15 @@ export function resolvePlanPriceDisplay(
 /** Charge HT ajoutée au prix de base d'une formule (licence, hébergement…) — admin uniquement. */
 export type PricingCharge = { id: string; label: string; amount: number };
 
-/** Ligne de calcul : une charge, ou l'hébergement parrainé avec sa remise. */
-export type PricingChargeInput = { amount: number; discountPercent?: number };
+/** Ligne de calcul : une charge, ou l'hébergement parrainé avec sa remise (montant ou %). */
+export type PricingChargeInput = { amount: number; discountPercent?: number; discountAmount?: number };
 
 /** Taux de TVA par défaut (UEMOA / Côte d'Ivoire) si aucun réglage en base. */
 export const DEFAULT_PRICING_VAT_RATE = 18;
 
-/** Parrainage Hostinger SD CREATIV : -20 % pour le nouveau compte client. */
+/** Lien de parrainage Hostinger SD CREATIV (nouveau compte client). */
 export const DEFAULT_PRICING_REFERRAL_URL = "https://www.hostinger.com/fr?REFERRALCODE=BMJAGENCEZMT";
-export const DEFAULT_PRICING_REFERRAL_PERCENT = 20;
-/** Mention sous l'avantage hébergement ; {pourcentage} est remplacé par le % de parrainage. */
+/** Mention sous l'avantage hébergement ; {pourcentage} est remplacé par la remise calculée. */
 export const DEFAULT_PRICING_REFERRAL_NOTE = "-{pourcentage} % grâce à notre partenariat Hostinger";
 /** Valeur du paramètre `offre` transmis au devis quand la remise parrainage s'applique. */
 export const PRICING_REFERRAL_OFFER = "parrainage-hebergement";
@@ -83,8 +82,12 @@ export function buildPlanCtaHref(href: string, planSlug: string, withOffer: bool
   return `${path}?${params.toString()}${hash ? `#${hash}` : ""}`;
 }
 
-/** Hébergement Hostinger 1 an (HT, en euros) — seul poste concerné par la remise parrainage. */
-export const DEFAULT_PRICING_HOSTING_EUR = 143.86;
+/**
+ * Hébergement Hostinger 1 an, prix HT relevés au panier : normal (Pack Premium 143,88 € + domaine
+ * 6,99 €) et payé avec le lien de parrainage. Seul poste concerné par la remise.
+ */
+export const DEFAULT_PRICING_HOSTING_EUR = 150.87;
+export const DEFAULT_PRICING_HOSTING_REFERRAL_EUR = 35.88;
 
 /** Parité fixe FCFA (XOF) / euro. */
 const EUR_TO_XOF = SUGGESTED_RATES_TO_XOF.EUR;
@@ -119,7 +122,11 @@ const toBp = (percent: number) => Math.round(percent * 100);
 export function computePlanTtc(baseHt: number, charges: PricingChargeInput[], vatRate: number): PlanTtcBreakdown {
   const chargesHt = charges.reduce((sum, c) => sum + c.amount, 0);
   const discountHt = charges.reduce(
-    (sum, c) => sum + Math.round((c.amount * Math.min(toBp(c.discountPercent ?? 0), 10000)) / 10000),
+    (sum, c) =>
+      sum +
+      (c.discountAmount != null
+        ? Math.min(Math.max(c.discountAmount, 0), c.amount)
+        : Math.round((c.amount * Math.min(toBp(c.discountPercent ?? 0), 10000)) / 10000)),
     0,
   );
   const subtotalHt = baseHt + chargesHt - discountHt;
@@ -142,17 +149,29 @@ export type PlanPricingInput = {
   baseHt: number;
   charges: PricingChargeInput[];
   includeHosting: boolean;
+  /** Prix normal HT (€) de l'hébergement 1 an. */
   hostingEur: number;
-  referralPercent: number;
+  /** Prix HT (€) payé avec le lien de parrainage. */
+  hostingReferralEur: number;
   vatRate: number;
 };
 
 export type PlanPricingBreakdown = PlanTtcBreakdown & {
   /** Charges saisies, hors hébergement. */
   otherChargesHt: number;
-  /** Hébergement 1 an converti en FCFA (0 si non inclus). */
+  /** Hébergement 1 an au prix normal, en FCFA (0 si non inclus). */
   hostingHt: number;
+  /** Hébergement 1 an au prix parrainage, en FCFA. */
+  hostingPaidHt: number;
 };
+
+/** Remise de l'hébergement en % (arrondie), déduite des deux prix. */
+export function hostingDiscountPercent(hostingEur: number, hostingReferralEur: number): number {
+  const normal = eurToXof(hostingEur);
+  if (normal <= 0) return 0;
+  const paid = Math.min(eurToXof(hostingReferralEur), normal);
+  return Math.round(((normal - paid) / normal) * 100);
+}
 
 /**
  * Calcul complet d'une formule : base + charges + hébergement Hostinger 1 an (remise
@@ -160,10 +179,11 @@ export type PlanPricingBreakdown = PlanTtcBreakdown & {
  */
 export function computePlanPricing(input: PlanPricingInput): PlanPricingBreakdown {
   const hostingHt = input.includeHosting ? eurToXof(input.hostingEur) : 0;
+  const hostingPaidHt = Math.min(input.includeHosting ? eurToXof(input.hostingReferralEur) : 0, hostingHt);
   const lines: PricingChargeInput[] = input.charges.map((c) => ({ amount: c.amount }));
-  if (hostingHt > 0) lines.push({ amount: hostingHt, discountPercent: input.referralPercent });
+  if (hostingHt > 0) lines.push({ amount: hostingHt, discountAmount: hostingHt - hostingPaidHt });
   const breakdown = computePlanTtc(input.baseHt, lines, input.vatRate);
-  return { ...breakdown, otherChargesHt: breakdown.chargesHt - hostingHt, hostingHt };
+  return { ...breakdown, otherChargesHt: breakdown.chargesHt - hostingHt, hostingHt, hostingPaidHt };
 }
 
 /** Base HT qui redonne (à l'arrondi près) un TTC donné — pré-remplissage au passage en calcul auto. */
