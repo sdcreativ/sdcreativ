@@ -7,6 +7,7 @@ import {
 } from "@/content/pricing";
 import { isDatabaseConfigured } from "@/lib/db";
 import {
+  getPricingSettings,
   listPublicPricingPlans,
   listPublicPricingReassurance,
   toPricingPlan,
@@ -26,8 +27,11 @@ async function loadPricingPlans(locale: string): Promise<PricingPlan[]> {
   }
 
   try {
-    const records = await listPublicPricingPlans({ locale, visibleOnly: true });
-    if (records.length > 0) return records.map(toPricingPlan);
+    const [records, settings] = await Promise.all([
+      listPublicPricingPlans({ locale, visibleOnly: true }),
+      getPricingSettings(),
+    ]);
+    if (records.length > 0) return records.map((record) => toPricingPlan(record, settings.referralUrl));
   } catch (error) {
     console.error("[public-pricing] plans fallback:", error);
   }

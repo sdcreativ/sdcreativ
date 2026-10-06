@@ -34,7 +34,10 @@ export type PlanForm = {
   /** Calcul automatique : TTC = (base HT + charges HT) × (1 + TVA globale). */
   autoCalc: boolean;
   baseAmountHt: string;
-  charges: { id: string; label: string; amount: string }[];
+  /** discountPercent vide = pas de remise parrainage sur cette charge. */
+  charges: { id: string; label: string; amount: string; discountPercent: string }[];
+  /** Pastille près du prix quand une remise s'applique, ex. « Hébergement -20 % ». */
+  discountLabel: string;
   perks: PricingPerk[];
   features: string[];
   ctaLabel: string;
@@ -69,6 +72,7 @@ export const emptyPlanForm = (locale: "fr" | "en" = "fr"): PlanForm => ({
   autoCalc: false,
   baseAmountHt: "",
   charges: [],
+  discountLabel: "",
   perks: [],
   features: [""],
   ...defaultCta(locale),
@@ -92,7 +96,13 @@ export function planToForm(r: PublicPricingPlanRecord): PlanForm {
     priceNote: r.priceNote ?? "",
     autoCalc: r.baseAmountHt != null,
     baseAmountHt: r.baseAmountHt != null ? String(r.baseAmountHt) : "",
-    charges: r.charges.map((c) => ({ ...c, amount: String(c.amount) })),
+    charges: r.charges.map((c) => ({
+      id: c.id,
+      label: c.label,
+      amount: String(c.amount),
+      discountPercent: c.discountPercent ? String(c.discountPercent).replace(".", ",") : "",
+    })),
+    discountLabel: r.discountLabel ?? "",
     perks: r.perks,
     features: r.features.length ? r.features : [""],
     ctaLabel: r.ctaLabel || defaultCta(locale).ctaLabel,
@@ -107,10 +117,20 @@ function cleanPerks(perks: PricingPerk[]): PricingPerk[] {
 }
 
 const digits = (value: string) => value.replace(/\D/g, "").slice(0, 10);
+const percentInput = (value: string) => value.replace(/[^\d.,]/g, "").slice(0, 6);
+const parsePercent = (value: string) => Math.min(100, Math.round(Number(value.replace(",", ".")) * 100) / 100 || 0);
 
 function cleanCharges(form: PlanForm) {
   return form.charges
-    .map((c) => ({ id: c.id, label: c.label.trim(), amount: Number(c.amount || 0) }))
+    .map((c) => {
+      const discount = parsePercent(c.discountPercent);
+      return {
+        id: c.id,
+        label: c.label.trim(),
+        amount: Number(c.amount || 0),
+        ...(discount > 0 ? { discountPercent: discount } : {}),
+      };
+    })
     .filter((c) => c.label);
 }
 
@@ -139,6 +159,7 @@ export function planFormToPayload(form: PlanForm) {
     priceNote: form.priceNote.trim(),
     baseAmountHt: auto && form.baseAmountHt !== "" ? Number(form.baseAmountHt) : null,
     charges: cleanCharges(form),
+    discountLabel: form.discountLabel.trim(),
     perks: cleanPerks(form.perks),
     features: form.features.map((f) => f.trim()).filter(Boolean),
     ctaLabel: form.ctaLabel.trim(),
@@ -146,7 +167,7 @@ export function planFormToPayload(form: PlanForm) {
   };
 }
 
-function formToPreviewPlan(form: PlanForm, vatRate: number): PricingPlan {
+function formToPreviewPlan(form: PlanForm, vatRate: number, referralUrl: string): PricingPlan {
   const payload = planFormToPayload(form);
   const breakdown = formBreakdown(form, vatRate);
   return {
@@ -156,6 +177,9 @@ function formToPreviewPlan(form: PlanForm, vatRate: number): PricingPlan {
     name: payload.name || "Nom de la formule",
     tagline: payload.tagline || "Description courte",
     priceAmount: breakdown ? breakdown.totalTtc : (payload.priceAmount ?? undefined),
+    compareAtAmount: breakdown && breakdown.discountHt > 0 ? breakdown.totalTtcBeforeDiscount : undefined,
+    discountLabel: breakdown && breakdown.discountHt > 0 ? payload.discountLabel || undefined : undefined,
+    perks: payload.perks.map((perk) => (perk.referralLink && referralUrl ? { ...perk, href: referralUrl } : perk)),
     priceNote: payload.priceNote || undefined,
     features: payload.features.length ? payload.features : ["Prestation"],
     badgeLabel: payload.badgeLabel || undefined,
@@ -184,6 +208,9 @@ type Props = {
   creating: boolean;
   /** Taux de TVA global (%) réglé en haut de la page Tarifs. */
   vatRate: number;
+  /** % proposé par défaut quand on coche « Remise parrainage » sur une charge. */
+  referralPercent: number;
+  referralUrl: string;
   initial: PlanForm;
   saving: boolean;
   serverError: string;
@@ -191,7 +218,7 @@ type Props = {
   onSubmit: (payload: ReturnType<typeof planFormToPayload>) => void;
 };
 
-export function CrmPricingPlanForm({ creating, vatRate, initial, saving, serverError, onCancel, onSubmit }: Props) {
+export function CrmPricingPlanForm({ creating, vatRate, referralPercent, referralUrl, initial, saving, serverError, onCancel, onSubmit }: Props) {
   const [form, setForm] = useState<PlanForm>(initial);
   const [localError, setLocalError] = useState("");
   const set = <K extends keyof PlanForm>(key: K, value: PlanForm[K]) => setForm((p) => ({ ...p, [key]: value }));
@@ -310,37 +337,66 @@ export function CrmPricingPlanForm({ creating, vatRate, initial, saving, serverE
                   <div className="space-y-2">
                     <p className="text-sm font-medium text-foreground">Charges HT</p>
                     {form.charges.map((charge, index) => (
-                      <div key={charge.id} className="flex gap-2">
-                        <input
-                          value={charge.label}
-                          onChange={(e) => updateCharge(index, { label: e.target.value })}
-                          maxLength={120}
-                          className={crmFieldClass}
-                          placeholder="Ex. Hébergement 1 an"
-                          aria-label={`Libellé de la charge ${index + 1}`}
-                        />
-                        <input
-                          inputMode="numeric"
-                          value={charge.amount}
-                          onChange={(e) => updateCharge(index, { amount: digits(e.target.value) })}
-                          className={cn(crmFieldClass, "w-36 shrink-0")}
-                          placeholder="Montant HT"
-                          aria-label={`Montant HT de la charge ${index + 1}`}
-                        />
-                        <button
-                          type="button"
-                          onClick={() => set("charges", form.charges.filter((_, i) => i !== index))}
-                          className="shrink-0 rounded-xl border border-gray/60 bg-white p-2.5 text-gray-text hover:bg-red-50 hover:text-red-600"
-                          aria-label={`Supprimer la charge ${index + 1}`}
-                        >
-                          <Trash2 className="h-4 w-4" aria-hidden />
-                        </button>
+                      <div key={charge.id} className="space-y-1.5 rounded-lg bg-white/70 p-2">
+                        <div className="flex gap-2">
+                          <input
+                            value={charge.label}
+                            onChange={(e) => updateCharge(index, { label: e.target.value })}
+                            maxLength={120}
+                            className={crmFieldClass}
+                            placeholder="Ex. Hébergement 1 an"
+                            aria-label={`Libellé de la charge ${index + 1}`}
+                          />
+                          <input
+                            inputMode="numeric"
+                            value={charge.amount}
+                            onChange={(e) => updateCharge(index, { amount: digits(e.target.value) })}
+                            className={cn(crmFieldClass, "w-36 shrink-0")}
+                            placeholder="Montant HT"
+                            aria-label={`Montant HT de la charge ${index + 1}`}
+                          />
+                          <button
+                            type="button"
+                            onClick={() => set("charges", form.charges.filter((_, i) => i !== index))}
+                            className="shrink-0 rounded-xl border border-gray/60 bg-white p-2.5 text-gray-text hover:bg-red-50 hover:text-red-600"
+                            aria-label={`Supprimer la charge ${index + 1}`}
+                          >
+                            <Trash2 className="h-4 w-4" aria-hidden />
+                          </button>
+                        </div>
+                        <div className="flex flex-wrap items-center gap-2 text-sm">
+                          <label className="flex items-center gap-2">
+                            <input
+                              type="checkbox"
+                              checked={charge.discountPercent !== ""}
+                              onChange={(e) =>
+                                updateCharge(index, {
+                                  discountPercent: e.target.checked ? String(referralPercent).replace(".", ",") : "",
+                                })
+                              }
+                              className="rounded border-gray/60 text-primary"
+                            />
+                            Remise parrainage hébergeur
+                          </label>
+                          {charge.discountPercent !== "" && (
+                            <>
+                              <input
+                                inputMode="decimal"
+                                value={charge.discountPercent}
+                                onChange={(e) => updateCharge(index, { discountPercent: percentInput(e.target.value) })}
+                                className={cn(crmFieldClass, "w-20 py-1.5")}
+                                aria-label={`Pourcentage de remise de la charge ${index + 1}`}
+                              />
+                              <span className="text-gray-text">%</span>
+                            </>
+                          )}
+                        </div>
                       </div>
                     ))}
                     {form.charges.length < 20 && (
                       <button
                         type="button"
-                        onClick={() => set("charges", [...form.charges, { id: newPerkId(), label: "", amount: "" }])}
+                        onClick={() => set("charges", [...form.charges, { id: newPerkId(), label: "", amount: "", discountPercent: "" }])}
                         className="inline-flex items-center gap-1.5 rounded-xl border border-dashed border-gray/60 bg-white px-3 py-2 text-sm font-medium text-gray-text hover:border-primary/40 hover:text-primary"
                       >
                         <Plus className="h-4 w-4" aria-hidden />
@@ -352,13 +408,33 @@ export function CrmPricingPlanForm({ creating, vatRate, initial, saving, serverE
                     <dl className="space-y-1 rounded-lg bg-white p-3 text-sm" aria-label="Détail du calcul">
                       <div className="flex justify-between gap-4"><dt className="text-gray-text">Prix de base HT</dt><dd>{formatPlanAmount(breakdown.baseHt)}</dd></div>
                       <div className="flex justify-between gap-4"><dt className="text-gray-text">Charges HT</dt><dd>{formatPlanAmount(breakdown.chargesHt)}</dd></div>
+                      {breakdown.discountHt > 0 && (
+                        <div className="flex justify-between gap-4 text-emerald-700"><dt>Remise parrainage HT</dt><dd>−{formatPlanAmount(breakdown.discountHt)}</dd></div>
+                      )}
                       <div className="flex justify-between gap-4 border-t border-gray/40 pt-1"><dt className="text-gray-text">Sous-total HT</dt><dd>{formatPlanAmount(breakdown.subtotalHt)}</dd></div>
                       <div className="flex justify-between gap-4"><dt className="text-gray-text">TVA {breakdown.vatRate.toLocaleString("fr-FR")} %</dt><dd>{formatPlanAmount(breakdown.vatAmount)}</dd></div>
                       <div className="flex justify-between gap-4 border-t border-gray/40 pt-1 font-semibold">
                         <dt className="inline-flex items-center gap-1.5"><Calculator className="h-4 w-4 text-primary" aria-hidden />Total TTC affiché</dt>
                         <dd>{formatPlanAmount(breakdown.totalTtc)} {form.currencyLabel || form.currencyCode}</dd>
                       </div>
+                      {breakdown.discountHt > 0 && (
+                        <div className="flex justify-between gap-4 text-gray-text">
+                          <dt>Prix barré (TTC sans remise)</dt>
+                          <dd className="line-through">{formatPlanAmount(breakdown.totalTtcBeforeDiscount)}</dd>
+                        </div>
+                      )}
                     </dl>
+                  )}
+                  {breakdown && breakdown.discountHt > 0 && (
+                    <CrmFormField label="Pastille de remise (facultatif)" hint="Affichée près du prix, ex. « Hébergement -20 % ».">
+                      <input
+                        maxLength={60}
+                        value={form.discountLabel}
+                        onChange={(e) => set("discountLabel", e.target.value)}
+                        className={crmFieldClass}
+                        placeholder={`Hébergement -${String(referralPercent).replace(".", ",")} %`}
+                      />
+                    </CrmFormField>
                   )}
                 </div>
               )}
@@ -429,6 +505,15 @@ export function CrmPricingPlanForm({ creating, vatRate, initial, saving, serverE
                     </CrmFormField>
                     <CrmIconSelect value={perk.icon} onChange={(icon) => updatePerk(index, { icon })} />
                   </div>
+                  <label className="flex items-center gap-2 text-sm">
+                    <input
+                      type="checkbox"
+                      checked={perk.referralLink === true}
+                      onChange={(e) => updatePerk(index, { referralLink: e.target.checked || undefined })}
+                      className="rounded border-gray/60 text-primary"
+                    />
+                    Titre cliquable vers le lien de parrainage hébergeur
+                  </label>
                   <div className="flex flex-wrap gap-1.5">
                     <button type="button" onClick={() => updatePerk(index, { isVisible: !perk.isVisible })} className="inline-flex items-center gap-1 rounded-lg border border-gray/60 bg-white px-2 py-1 text-xs font-medium hover:bg-gray-light">
                       {perk.isVisible ? <><EyeOff className="h-3 w-3" aria-hidden />Masquer</> : <><Eye className="h-3 w-3" aria-hidden />Afficher</>}
@@ -482,7 +567,7 @@ export function CrmPricingPlanForm({ creating, vatRate, initial, saving, serverE
 
           <aside className="min-w-0 lg:sticky lg:top-0 lg:self-start">
             <p className="mb-5 text-xs font-semibold uppercase tracking-wide text-gray-text">Aperçu</p>
-            <PricingPlanCard plan={formToPreviewPlan(form, vatRate)} locale={form.locale} className={cn(!form.isVisible && "opacity-60")} />
+            <PricingPlanCard plan={formToPreviewPlan(form, vatRate, referralUrl)} locale={form.locale} className={cn(!form.isVisible && "opacity-60")} />
           </aside>
         </div>
 

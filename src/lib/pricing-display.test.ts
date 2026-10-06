@@ -84,10 +84,12 @@ describe("computePlanTtc", () => {
     expect(b).toEqual({
       baseHt: 200000,
       chargesHt: 43000,
+      discountHt: 0,
       subtotalHt: 243000,
       vatRate: 18,
       vatAmount: 43740,
       totalTtc: 286740,
+      totalTtcBeforeDiscount: 286740,
     });
   });
 
@@ -99,5 +101,27 @@ describe("computePlanTtc", () => {
     // 100 001 × 1,1925 = 119 251,1925 → 119 251
     expect(computePlanTtc(100001, [], 19.25).totalTtc).toBe(119251);
     expect(computePlanTtc(100, [], 0.1 + 0.2).vatRate).toBe(0.3);
+  });
+});
+
+describe("remise parrainage", () => {
+  it("applique -20 % uniquement sur la charge hébergement", () => {
+    const b = computePlanTtc(200000, [{ amount: 43000, discountPercent: 20 }, { amount: 10000 }], 18);
+    expect(b.discountHt).toBe(8600);
+    expect(b.subtotalHt).toBe(244400); // 200 000 + 53 000 − 8 600
+    expect(b.totalTtc).toBe(288392);
+    expect(b.totalTtcBeforeDiscount).toBe(298540);
+  });
+
+  it("borne la remise à 100 % de la charge", () => {
+    expect(computePlanTtc(1000, [{ amount: 500, discountPercent: 150 }], 0).discountHt).toBe(500);
+  });
+
+  it("affiche le prix barré seulement s'il dépasse le prix final", () => {
+    const plan = { ...base, priceMode: "fixed" as const, priceAmount: 276592 };
+    const withDiscount = resolvePlanPriceDisplay({ ...plan, compareAtAmount: 286740 });
+    expect(withDiscount.kind === "amount" && plain(withDiscount.compareAt ?? "")).toBe("286 740");
+    const noDiscount = resolvePlanPriceDisplay({ ...plan, compareAtAmount: 276592 });
+    expect(noDiscount.kind === "amount" && noDiscount.compareAt).toBeNull();
   });
 });

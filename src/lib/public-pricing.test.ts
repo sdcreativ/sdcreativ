@@ -3,7 +3,7 @@ import {
   assertPlanPricingConsistent,
   createPublicPricingPlanSchema,
   PricingPlanValidationError,
-  pricingVatRateSchema,
+  pricingSettingsSchema,
   toPricingPlan,
   updatePublicPricingPlanSchema,
   type PublicPricingPlanRecord,
@@ -79,6 +79,8 @@ describe("toPricingPlan", () => {
     priceNote: null,
     baseAmountHt: null,
     charges: [],
+    compareAtAmount: null,
+    discountLabel: null,
     features: ["Order management"],
     perks: [],
     highlighted: false,
@@ -92,6 +94,21 @@ describe("toPricingPlan", () => {
     createdAt: new Date(0).toISOString(),
     updatedAt: new Date(0).toISOString(),
   };
+
+  it("résout le lien de parrainage sur les avantages marqués, et seulement eux", () => {
+    const withPerks: PublicPricingPlanRecord = {
+      ...record,
+      perks: [
+        { id: "hosting", title: "Hébergement", detail: "", icon: "Server", isVisible: true, referralLink: true },
+        { id: "maintenance", title: "Maintenance", detail: "", icon: "Settings", isVisible: true },
+      ],
+    };
+    const url = "https://www.hostinger.com/fr?REFERRALCODE=BMJAGENCEZMT";
+    const [hosting, maintenance] = toPricingPlan(withPerks, url).perks;
+    expect(hosting?.href).toBe(url);
+    expect(maintenance?.href).toBeUndefined();
+    expect(toPricingPlan(withPerks).perks[0]?.href).toBeUndefined();
+  });
 
   it("conserve le parcours devis par langue si le bouton est vide", () => {
     expect(toPricingPlan(record)).toMatchObject({ ctaLabel: "Get a quote", ctaHref: "/en/devis" });
@@ -124,10 +141,25 @@ describe("charges et TVA", () => {
     expect(updatePublicPricingPlanSchema.safeParse({ baseAmountHt: null }).success).toBe(true);
   });
 
-  it("borne le taux de TVA entre 0 et 100 au centième", () => {
-    expect(pricingVatRateSchema.safeParse({ vatRate: 18 }).success).toBe(true);
-    expect(pricingVatRateSchema.safeParse({ vatRate: 19.25 }).success).toBe(true);
-    expect(pricingVatRateSchema.safeParse({ vatRate: 101 }).success).toBe(false);
-    expect(pricingVatRateSchema.safeParse({ vatRate: 18.123 }).success).toBe(false);
+  const settings = { vatRate: 18, referralUrl: "https://www.hostinger.com/fr?REFERRALCODE=BMJAGENCEZMT", referralPercent: 20 };
+
+  it("borne la TVA et la remise entre 0 et 100 au centième", () => {
+    expect(pricingSettingsSchema.safeParse(settings).success).toBe(true);
+    expect(pricingSettingsSchema.safeParse({ ...settings, vatRate: 19.25 }).success).toBe(true);
+    expect(pricingSettingsSchema.safeParse({ ...settings, vatRate: 101 }).success).toBe(false);
+    expect(pricingSettingsSchema.safeParse({ ...settings, vatRate: 18.123 }).success).toBe(false);
+    expect(pricingSettingsSchema.safeParse({ ...settings, referralPercent: 120 }).success).toBe(false);
+  });
+
+  it("n'accepte qu'un lien de parrainage https (ou vide)", () => {
+    expect(pricingSettingsSchema.safeParse({ ...settings, referralUrl: "" }).success).toBe(true);
+    expect(pricingSettingsSchema.safeParse({ ...settings, referralUrl: "http://hostinger.com" }).success).toBe(false);
+    expect(pricingSettingsSchema.safeParse({ ...settings, referralUrl: "javascript:alert(1)" }).success).toBe(false);
+  });
+
+  it("valide la remise d'une charge", () => {
+    const charge = { id: "h", label: "Hébergement", amount: 43000 };
+    expect(updatePublicPricingPlanSchema.safeParse({ charges: [{ ...charge, discountPercent: 20 }] }).success).toBe(true);
+    expect(updatePublicPricingPlanSchema.safeParse({ charges: [{ ...charge, discountPercent: 150 }] }).success).toBe(false);
   });
 });

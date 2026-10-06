@@ -1,4 +1,5 @@
 import type {
+  PricingSettings,
   PublicPricingPlanRecord,
   PublicPricingReassuranceRecord,
 } from "@/lib/public-pricing";
@@ -132,18 +133,19 @@ export async function importStaticPricingApi(): Promise<{
   }>(res);
 }
 
-export async function fetchPricingVatRateApi(): Promise<number> {
+export async function fetchPricingSettingsApi(): Promise<PricingSettings> {
   const res = await fetch("/api/admin/pricing-settings", { credentials: "include" });
-  const json = await parseFetchJson<{ vatRate: number }>(res);
-  return json.vatRate;
+  return parseFetchJson<PricingSettings>(res);
 }
 
-export async function updatePricingVatRateApi(vatRate: number): Promise<{ vatRate: number; plansUpdated: number }> {
+export async function updatePricingSettingsApi(
+  input: PricingSettings,
+): Promise<PricingSettings & { plansUpdated: number }> {
   const res = await fetch("/api/admin/pricing-settings", {
     method: "PUT",
     credentials: "include",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ vatRate }),
+    body: JSON.stringify(input),
   });
-  return parseFetchJson<{ vatRate: number; plansUpdated: number }>(res);
+  return parseFetchJson<PricingSettings & { plansUpdated: number }>(res);
 }

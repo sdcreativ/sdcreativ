@@ -23,6 +23,9 @@ export function PricingPlanCard({ plan, locale = "fr", className }: Props) {
   const tone = accent ? "text-accent" : "text-primary";
   // Petit texte sur fond teinté : rouge foncé pour tenir 4.5:1 (WCAG AA).
   const perkTone = accent ? "text-accent-dark" : "text-primary";
+  const tintBg = accent ? "bg-accent/5" : "bg-primary-light";
+  const discountLabel = price.kind === "amount" && price.compareAt ? plan.discountLabel?.trim() : "";
+  const en = locale === "en";
 
   return (
     <div
@@ -50,8 +53,26 @@ export function PricingPlanCard({ plan, locale = "fr", className }: Props) {
       <div className="mt-5">
         {price.kind === "amount" ? (
           <>
-            {price.prefix && <p className="text-sm text-gray-text">{price.prefix}</p>}
+            {(price.prefix || discountLabel) && (
+              <p className="flex flex-wrap items-center gap-2 text-sm text-gray-text">
+                {price.prefix}
+                {discountLabel && (
+                  <span className={cn("rounded-full px-2.5 py-0.5 text-xs font-semibold", tintBg, perkTone)}>
+                    {discountLabel}
+                  </span>
+                )}
+              </p>
+            )}
+            {price.compareAt && (
+              <p className="text-lg font-semibold text-gray-text">
+                <span className="sr-only">{en ? "Regular price: " : "Prix sans remise : "}</span>
+                <del>
+                  {price.compareAt} {plan.currencyLabel || plan.currencyCode}
+                </del>
+              </p>
+            )}
             <p className="flex flex-wrap items-baseline gap-x-2">
+              {price.compareAt && <span className="sr-only">{en ? "Discounted price: " : "Prix remisé : "}</span>}
               <span className={cn("text-4xl font-extrabold leading-tight tracking-tight sm:text-5xl", tone)}>
                 {price.amount}
               </span>
@@ -65,14 +86,27 @@ export function PricingPlanCard({ plan, locale = "fr", className }: Props) {
       </div>
 
       {perks.length > 0 && (
-        <ul className={cn("mt-6 space-y-4 rounded-xl p-4", accent ? "bg-accent/5" : "bg-primary-light")}>
+        <ul className={cn("mt-6 space-y-4 rounded-xl p-4", tintBg)}>
           {perks.map((perk) => {
             const Icon = getLucideIcon(perk.icon);
             return (
               <li key={perk.id} className="flex items-start gap-3">
                 <Icon className={cn("mt-0.5 h-6 w-6 shrink-0", tone)} aria-hidden />
                 <div className="min-w-0">
-                  <p className={cn("text-sm font-semibold leading-snug", perkTone)}>{perk.title}</p>
+                  <p className={cn("text-sm font-semibold leading-snug", perkTone)}>
+                    {perk.href ? (
+                      <a
+                        href={perk.href}
+                        target="_blank"
+                        rel="sponsored noopener noreferrer"
+                        className="underline decoration-1 underline-offset-2 hover:decoration-2"
+                      >
+                        {perk.title}
+                      </a>
+                    ) : (
+                      perk.title
+                    )}
+                  </p>
                   {perk.detail && <p className="mt-0.5 text-xs leading-snug text-gray-text">{perk.detail}</p>}
                 </div>
               </li>
