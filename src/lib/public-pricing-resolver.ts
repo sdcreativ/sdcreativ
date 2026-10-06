@@ -31,7 +31,7 @@ async function loadPricingPlans(locale: string): Promise<PricingPlan[]> {
       listPublicPricingPlans({ locale, visibleOnly: true }),
       getPricingSettings(),
     ]);
-    if (records.length > 0) return records.map((record) => toPricingPlan(record, settings.referralUrl));
+    if (records.length > 0) return records.map((record) => toPricingPlan(record, settings));
   } catch (error) {
     console.error("[public-pricing] plans fallback:", error);
   }

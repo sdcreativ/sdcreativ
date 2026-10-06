@@ -1,4 +1,5 @@
 import type { PricingPlan, PricingTaxMention } from "@/content/pricing";
+import { SUGGESTED_RATES_TO_XOF } from "@/lib/currencies";
 import { PRICE_ON_REQUEST_LABEL, PRICE_ON_REQUEST_LABEL_EN } from "@/lib/format";
 
 export type PlanPriceDisplay =
@@ -47,15 +48,10 @@ export function resolvePlanPriceDisplay(
 }
 
 /** Charge HT ajoutée au prix de base d'une formule (licence, hébergement…) — admin uniquement. */
-export type PricingCharge = {
-  id: string;
-  label: string;
-  amount: number;
-  /** Remise parrainage (%) sur cette charge, ex. 20 pour l'hébergement Hostinger. */
-  discountPercent?: number;
-};
+export type PricingCharge = { id: string; label: string; amount: number };
 
-export type PricingChargeInput = Pick<PricingCharge, "amount" | "discountPercent">;
+/** Ligne de calcul : une charge, ou l'hébergement parrainé avec sa remise. */
+export type PricingChargeInput = { amount: number; discountPercent?: number };
 
 /** Taux de TVA par défaut (UEMOA / Côte d'Ivoire) si aucun réglage en base. */
 export const DEFAULT_PRICING_VAT_RATE = 18;
@@ -63,6 +59,40 @@ export const DEFAULT_PRICING_VAT_RATE = 18;
 /** Parrainage Hostinger SD CREATIV : -20 % pour le nouveau compte client. */
 export const DEFAULT_PRICING_REFERRAL_URL = "https://www.hostinger.com/fr?REFERRALCODE=BMJAGENCEZMT";
 export const DEFAULT_PRICING_REFERRAL_PERCENT = 20;
+/** Mention sous l'avantage hébergement ; {pourcentage} est remplacé par le % de parrainage. */
+export const DEFAULT_PRICING_REFERRAL_NOTE = "-{pourcentage} % grâce à notre partenariat Hostinger";
+/** Valeur du paramètre `offre` transmis au devis quand la remise parrainage s'applique. */
+export const PRICING_REFERRAL_OFFER = "parrainage-hebergement";
+
+export function formatReferralNote(note: string, percent: number): string {
+  return note.replaceAll("{pourcentage}", percent.toLocaleString("fr-FR")).trim();
+}
+
+/**
+ * Lien du bouton d'une carte : ajoute `formule` (et `offre` si remise) aux destinations internes,
+ * en conservant les paramètres existants (ex. ?type=e-commerce). Liens externes et ancres inchangés.
+ */
+export function buildPlanCtaHref(href: string, planSlug: string, withOffer: boolean): string {
+  if (!href.startsWith("/") || href.startsWith("//")) return href;
+  const [pathAndQuery = "", hash] = href.split("#", 2);
+  const [path = "", query = ""] = pathAndQuery.split("?", 2);
+  const params = new URLSearchParams(query);
+  params.set("formule", planSlug);
+  if (withOffer) params.set("offre", PRICING_REFERRAL_OFFER);
+  else params.delete("offre");
+  return `${path}?${params.toString()}${hash ? `#${hash}` : ""}`;
+}
+
+/** Hébergement Hostinger 1 an (HT, en euros) — seul poste concerné par la remise parrainage. */
+export const DEFAULT_PRICING_HOSTING_EUR = 143.86;
+
+/** Parité fixe FCFA (XOF) / euro. */
+const EUR_TO_XOF = SUGGESTED_RATES_TO_XOF.EUR;
+
+/** Convertit un montant en euros en FCFA (parité fixe 655,957), arrondi au franc. */
+export function eurToXof(eur: number): number {
+  return Math.round((Math.round(eur * 100) * EUR_TO_XOF) / 100);
+}
 
 export type PlanTtcBreakdown = {
   baseHt: number;
@@ -106,6 +136,43 @@ export function computePlanTtc(baseHt: number, charges: PricingChargeInput[], va
     totalTtc,
     totalTtcBeforeDiscount: withVat(baseHt + chargesHt),
   };
+}
+
+export type PlanPricingInput = {
+  baseHt: number;
+  charges: PricingChargeInput[];
+  includeHosting: boolean;
+  hostingEur: number;
+  referralPercent: number;
+  vatRate: number;
+};
+
+export type PlanPricingBreakdown = PlanTtcBreakdown & {
+  /** Charges saisies, hors hébergement. */
+  otherChargesHt: number;
+  /** Hébergement 1 an converti en FCFA (0 si non inclus). */
+  hostingHt: number;
+};
+
+/**
+ * Calcul complet d'une formule : base + charges + hébergement Hostinger 1 an (remise
+ * parrainage appliquée à l'hébergement seulement), puis TVA.
+ */
+export function computePlanPricing(input: PlanPricingInput): PlanPricingBreakdown {
+  const hostingHt = input.includeHosting ? eurToXof(input.hostingEur) : 0;
+  const lines: PricingChargeInput[] = input.charges.map((c) => ({ amount: c.amount }));
+  if (hostingHt > 0) lines.push({ amount: hostingHt, discountPercent: input.referralPercent });
+  const breakdown = computePlanTtc(input.baseHt, lines, input.vatRate);
+  return { ...breakdown, otherChargesHt: breakdown.chargesHt - hostingHt, hostingHt };
+}
+
+/** Base HT qui redonne (à l'arrondi près) un TTC donné — pré-remplissage au passage en calcul auto. */
+export function baseHtFromTtc(ttc: number, vatRate: number): number {
+  const estimate = Math.round((ttc * 10000) / (10000 + toBp(vatRate)));
+  // Certains TTC ne sont pas atteignables au franc près (1 F HT = 1,18 F TTC) : on prend la base
+  // dont le TTC est le plus proche, en privilégiant l'égalité exacte.
+  const distance = (base: number) => Math.abs(computePlanTtc(base, [], vatRate).totalTtc - ttc);
+  return [estimate, estimate - 1, estimate + 1].reduce((best, base) => (distance(base) < distance(best) ? base : best));
 }
 
 /** Destination de bouton acceptée : chemin interne, ancre ou URL https. */

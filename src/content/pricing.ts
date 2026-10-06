@@ -15,6 +15,8 @@ export type PricingPerk = {
   referralLink?: boolean;
   /** Résolu à la lecture depuis `referralLink` — jamais saisi directement. */
   href?: string;
+  /** Mention de remise parrainage (réglages), résolue quand la remise s'applique à la formule. */
+  note?: string;
 };
 
 export type PricingPlan = {

@@ -16,6 +16,7 @@ import {
   rateLimitExceededResponse,
 } from "@/lib/rate-limit";
 import { createDevisSchema } from "@/lib/validations/devis";
+import { PRICING_REFERRAL_OFFER } from "@/lib/pricing-display";
 
 export async function POST(request: Request) {
   try {
@@ -82,6 +83,8 @@ export async function POST(request: Request) {
         ${htmlRow("Email", data.email)}
         ${htmlRow("Téléphone", data.phone)}
         ${htmlRow("Entreprise", data.company)}
+        ${htmlRow("Formule tarifaire", data.pricingPlan)}
+        ${htmlRow("Offre", data.pricingOffer === PRICING_REFERRAL_OFFER ? "Remise parrainage hébergement Hostinger" : undefined)}
         ${htmlRow("Type de projet", quote.projectLabel)}
         ${htmlRow("Nombre de pages", pageTier?.label)}
         ${htmlRow("Options", addonLabels || "—")}
@@ -118,6 +121,8 @@ export async function POST(request: Request) {
         formattedSubtotal: quote.formattedSubtotal,
         formattedRange: quote.formattedRange,
         lines: quote.lines,
+        ...(data.pricingPlan ? { pricingPlan: data.pricingPlan } : {}),
+        ...(data.pricingOffer ? { pricingOffer: data.pricingOffer } : {}),
       },
     });
 

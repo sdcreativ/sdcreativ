@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { ArrowDown, ArrowUp, Calculator, Eye, EyeOff, Loader2, Plus, Trash2 } from "lucide-react";
 import type { PricingPerk, PricingPlan, PricingPriceMode, PricingTaxMention } from "@/content/pricing";
 import type { PublicPricingPlanRecord } from "@/lib/public-pricing";
@@ -13,7 +13,8 @@ import {
   crmFieldClass,
 } from "@/components/admin/crm-site-form-ui";
 import { CURRENCY_LABELS, SUPPORTED_CURRENCIES } from "@/lib/currencies";
-import { computePlanTtc, formatPlanAmount } from "@/lib/pricing-display";
+import { baseHtFromTtc, computePlanPricing, eurToXof, formatPlanAmount, formatReferralNote } from "@/lib/pricing-display";
+import type { PricingSettings } from "@/lib/public-pricing";
 import { cn } from "@/lib/utils";
 
 export type PlanForm = {
@@ -34,8 +35,9 @@ export type PlanForm = {
   /** Calcul automatique : TTC = (base HT + charges HT) × (1 + TVA globale). */
   autoCalc: boolean;
   baseAmountHt: string;
-  /** discountPercent vide = pas de remise parrainage sur cette charge. */
-  charges: { id: string; label: string; amount: string; discountPercent: string }[];
+  charges: { id: string; label: string; amount: string }[];
+  /** Ajoute l'hébergement Hostinger 1 an (réglages) avec la remise parrainage. */
+  includeHosting: boolean;
   /** Pastille près du prix quand une remise s'applique, ex. « Hébergement -20 % ». */
   discountLabel: string;
   perks: PricingPerk[];
@@ -72,6 +74,7 @@ export const emptyPlanForm = (locale: "fr" | "en" = "fr"): PlanForm => ({
   autoCalc: false,
   baseAmountHt: "",
   charges: [],
+  includeHosting: false,
   discountLabel: "",
   perks: [],
   features: [""],
@@ -96,12 +99,8 @@ export function planToForm(r: PublicPricingPlanRecord): PlanForm {
     priceNote: r.priceNote ?? "",
     autoCalc: r.baseAmountHt != null,
     baseAmountHt: r.baseAmountHt != null ? String(r.baseAmountHt) : "",
-    charges: r.charges.map((c) => ({
-      id: c.id,
-      label: c.label,
-      amount: String(c.amount),
-      discountPercent: c.discountPercent ? String(c.discountPercent).replace(".", ",") : "",
-    })),
+    charges: r.charges.map((c) => ({ id: c.id, label: c.label, amount: String(c.amount) })),
+    includeHosting: r.includeHosting,
     discountLabel: r.discountLabel ?? "",
     perks: r.perks,
     features: r.features.length ? r.features : [""],
@@ -117,27 +116,24 @@ function cleanPerks(perks: PricingPerk[]): PricingPerk[] {
 }
 
 const digits = (value: string) => value.replace(/\D/g, "").slice(0, 10);
-const percentInput = (value: string) => value.replace(/[^\d.,]/g, "").slice(0, 6);
-const parsePercent = (value: string) => Math.min(100, Math.round(Number(value.replace(",", ".")) * 100) / 100 || 0);
 
 function cleanCharges(form: PlanForm) {
   return form.charges
-    .map((c) => {
-      const discount = parsePercent(c.discountPercent);
-      return {
-        id: c.id,
-        label: c.label.trim(),
-        amount: Number(c.amount || 0),
-        ...(discount > 0 ? { discountPercent: discount } : {}),
-      };
-    })
+    .map((c) => ({ id: c.id, label: c.label.trim(), amount: Number(c.amount || 0) }))
     .filter((c) => c.label);
 }
 
 /** Détail HT → TTC si le calcul automatique est actif, sinon null. */
-export function formBreakdown(form: PlanForm, vatRate: number) {
+export function formBreakdown(form: PlanForm, settings: PricingSettings) {
   if (!form.autoCalc || form.priceMode === "quote" || form.baseAmountHt === "") return null;
-  return computePlanTtc(Number(form.baseAmountHt), cleanCharges(form), vatRate);
+  return computePlanPricing({
+    baseHt: Number(form.baseAmountHt),
+    charges: cleanCharges(form),
+    includeHosting: form.includeHosting,
+    hostingEur: settings.hostingEur,
+    referralPercent: settings.referralPercent,
+    vatRate: settings.vatRate,
+  });
 }
 
 export function planFormToPayload(form: PlanForm) {
@@ -159,6 +155,7 @@ export function planFormToPayload(form: PlanForm) {
     priceNote: form.priceNote.trim(),
     baseAmountHt: auto && form.baseAmountHt !== "" ? Number(form.baseAmountHt) : null,
     charges: cleanCharges(form),
+    includeHosting: auto && form.includeHosting,
     discountLabel: form.discountLabel.trim(),
     perks: cleanPerks(form.perks),
     features: form.features.map((f) => f.trim()).filter(Boolean),
@@ -167,9 +164,10 @@ export function planFormToPayload(form: PlanForm) {
   };
 }
 
-function formToPreviewPlan(form: PlanForm, vatRate: number, referralUrl: string): PricingPlan {
+function formToPreviewPlan(form: PlanForm, settings: PricingSettings): PricingPlan {
+  const referralUrl = settings.referralUrl;
   const payload = planFormToPayload(form);
-  const breakdown = formBreakdown(form, vatRate);
+  const breakdown = formBreakdown(form, settings);
   return {
     ...payload,
     ...(breakdown ? { priceAmount: breakdown.totalTtc, taxMention: "ttc" as const } : {}),
@@ -179,7 +177,12 @@ function formToPreviewPlan(form: PlanForm, vatRate: number, referralUrl: string)
     priceAmount: breakdown ? breakdown.totalTtc : (payload.priceAmount ?? undefined),
     compareAtAmount: breakdown && breakdown.discountHt > 0 ? breakdown.totalTtcBeforeDiscount : undefined,
     discountLabel: breakdown && breakdown.discountHt > 0 ? payload.discountLabel || undefined : undefined,
-    perks: payload.perks.map((perk) => (perk.referralLink && referralUrl ? { ...perk, href: referralUrl } : perk)),
+    perks: payload.perks.map((perk) => {
+      if (!perk.referralLink) return perk;
+      const note =
+        breakdown && breakdown.discountHt > 0 ? formatReferralNote(settings.referralNote, settings.referralPercent) : "";
+      return { ...perk, ...(referralUrl ? { href: referralUrl } : {}), ...(note ? { note } : {}) };
+    }),
     priceNote: payload.priceNote || undefined,
     features: payload.features.length ? payload.features : ["Prestation"],
     badgeLabel: payload.badgeLabel || undefined,
@@ -206,24 +209,59 @@ function validate(form: PlanForm): string | null {
 
 type Props = {
   creating: boolean;
-  /** Taux de TVA global (%) réglé en haut de la page Tarifs. */
-  vatRate: number;
-  /** % proposé par défaut quand on coche « Remise parrainage » sur une charge. */
-  referralPercent: number;
-  referralUrl: string;
+  /** Réglages globaux (TVA, hébergement Hostinger, parrainage) du haut de la page Tarifs. */
+  settings: PricingSettings;
   initial: PlanForm;
+  /** Ouvre directement la section charges / calcul automatique (bouton « Charges & TVA »). */
+  focusPricing?: boolean;
   saving: boolean;
   serverError: string;
   onCancel: () => void;
   onSubmit: (payload: ReturnType<typeof planFormToPayload>) => void;
 };
 
-export function CrmPricingPlanForm({ creating, vatRate, referralPercent, referralUrl, initial, saving, serverError, onCancel, onSubmit }: Props) {
-  const [form, setForm] = useState<PlanForm>(initial);
+/**
+ * Passe en calcul auto. L'hébergement est inclus par défaut (avantage « Hébergement inclus »),
+ * et la base est pré-remplie pour que le prix actuel devienne le prix barré (sans remise).
+ */
+function withAutoCalc(form: PlanForm, settings: PricingSettings): PlanForm {
+  const canPrefill = form.baseAmountHt === "" && Number(form.priceAmount) > 0;
+  const includeHosting = form.autoCalc ? form.includeHosting : true;
+  const hostingHt = includeHosting ? eurToXof(settings.hostingEur) : 0;
+  const base = canPrefill ? Math.max(0, baseHtFromTtc(Number(form.priceAmount), settings.vatRate) - hostingHt) : null;
+  return {
+    ...form,
+    autoCalc: true,
+    includeHosting,
+    priceMode: form.priceMode === "quote" ? "fixed" : form.priceMode,
+    baseAmountHt: base != null ? String(base) : form.baseAmountHt,
+  };
+}
+
+export function CrmPricingPlanForm({
+  creating,
+  settings,
+  initial,
+  focusPricing = false,
+  saving,
+  serverError,
+  onCancel,
+  onSubmit,
+}: Props) {
+  const [form, setForm] = useState<PlanForm>(() => (focusPricing ? withAutoCalc(initial, settings) : initial));
+  const prefilledBase = form.autoCalc && !initial.autoCalc && form.baseAmountHt !== "" && Number(initial.priceAmount) > 0;
+  const pricingRef = useRef<HTMLFieldSetElement>(null);
+
+  useEffect(() => {
+    if (focusPricing) pricingRef.current?.scrollIntoView({ block: "start" });
+  }, [focusPricing]);
   const [localError, setLocalError] = useState("");
   const set = <K extends keyof PlanForm>(key: K, value: PlanForm[K]) => setForm((p) => ({ ...p, [key]: value }));
   const isQuote = form.priceMode === "quote";
-  const breakdown = formBreakdown(form, vatRate);
+  const breakdown = formBreakdown(form, settings);
+  const { vatRate, referralPercent } = settings;
+  const hostingXof = eurToXof(settings.hostingEur);
+  const eur = (value: number) => value.toLocaleString("fr-FR", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
   const error = localError || serverError;
 
   function updatePerk(index: number, patch: Partial<PricingPerk>) {
@@ -307,7 +345,7 @@ export function CrmPricingPlanForm({ creating, vatRate, referralPercent, referra
               <p className="text-xs text-gray-text">L’ordre des cartes se règle avec les boutons Haut / Bas de la liste.</p>
             </fieldset>
 
-            <fieldset className="space-y-4 border-t border-gray/30 pt-5">
+            <fieldset ref={pricingRef} className="scroll-mt-4 space-y-4 border-t border-gray/30 pt-5">
               <legend className="mb-2 text-sm font-semibold uppercase tracking-wide text-gray-text">Prix</legend>
               <CrmFormField label="Mode d’affichage">
                 <select value={form.priceMode} onChange={(e) => set("priceMode", e.target.value as PricingPriceMode)} className={crmFieldClass}>
@@ -316,15 +354,38 @@ export function CrmPricingPlanForm({ creating, vatRate, referralPercent, referra
                   ))}
                 </select>
               </CrmFormField>
-              {!isQuote && (
-                <label className="flex items-center gap-2 text-sm">
-                  <input type="checkbox" checked={form.autoCalc} onChange={(e) => set("autoCalc", e.target.checked)} className="rounded border-gray/60 text-primary" />
-                  Calcul automatique du TTC (prix de base HT + charges + TVA {vatRate.toLocaleString("fr-FR")} %)
+              <div className="rounded-xl border border-primary/30 bg-white p-4">
+                <p className="flex items-center gap-2 text-sm font-semibold text-foreground">
+                  <Calculator className="h-4 w-4 text-primary" aria-hidden />
+                  Charges &amp; calcul automatique du TTC
+                </p>
+                <p className="mt-1 text-xs text-gray-text">
+                  Saisissez le prix de base HT et les charges (hébergement, licences…) : le TTC est calculé avec la TVA
+                  ({vatRate.toLocaleString("fr-FR")} %). La remise parrainage s’applique uniquement à l’hébergement Hostinger.
+                </p>
+                <label className="mt-3 flex items-center gap-2 text-sm font-medium">
+                  <input
+                    type="checkbox"
+                    checked={form.autoCalc && !isQuote}
+                    onChange={(e) => setForm((p) => (e.target.checked ? withAutoCalc(p, settings) : { ...p, autoCalc: false }))}
+                    className="rounded border-gray/60 text-primary"
+                  />
+                  Activer le calcul automatique
                 </label>
-              )}
+                {isQuote && (
+                  <p className="mt-2 text-xs text-gray-text">En l’activant, le mode passe de « Sur devis » à « Prix fixe ».</p>
+                )}
+              </div>
               {!isQuote && form.autoCalc && (
                 <div className="space-y-4 rounded-xl border border-primary/20 bg-primary-light/40 p-4">
-                  <CrmFormField label="Prix de base HT" hint="Chiffres uniquement, sans espace ni devise.">
+                  <CrmFormField
+                    label="Prix de base HT"
+                    hint={
+                      prefilledBase
+                        ? `Pré-rempli pour que le prix actuel (${formatPlanAmount(Number(initial.priceAmount))} TTC) devienne le prix barré${form.includeHosting ? ", hébergement déduit" : ""} (à 1 franc près). Retirez-en le coût des autres charges si vous les ajoutez.`
+                        : "Chiffres uniquement, sans espace ni devise."
+                    }
+                  >
                     <input
                       required
                       inputMode="numeric"
@@ -334,8 +395,23 @@ export function CrmPricingPlanForm({ creating, vatRate, referralPercent, referra
                       placeholder="200000"
                     />
                   </CrmFormField>
+                  <label className="flex items-start gap-2 rounded-lg bg-white/70 p-3 text-sm">
+                    <input
+                      type="checkbox"
+                      checked={form.includeHosting}
+                      onChange={(e) => set("includeHosting", e.target.checked)}
+                      className="mt-0.5 rounded border-gray/60 text-primary"
+                    />
+                    <span>
+                      <span className="font-medium">Inclure l’hébergement Hostinger 1 an</span>
+                      <span className="block text-xs text-gray-text">
+                        {eur(settings.hostingEur)} € HT ≈ {formatPlanAmount(hostingXof)} FCFA (1 € = 655,957 FCFA), remise
+                        parrainage −{referralPercent.toLocaleString("fr-FR")} % appliquée à l’hébergement seulement.
+                      </span>
+                    </span>
+                  </label>
                   <div className="space-y-2">
-                    <p className="text-sm font-medium text-foreground">Charges HT</p>
+                    <p className="text-sm font-medium text-foreground">Autres charges HT (sans remise)</p>
                     {form.charges.map((charge, index) => (
                       <div key={charge.id} className="space-y-1.5 rounded-lg bg-white/70 p-2">
                         <div className="flex gap-2">
@@ -344,7 +420,7 @@ export function CrmPricingPlanForm({ creating, vatRate, referralPercent, referra
                             onChange={(e) => updateCharge(index, { label: e.target.value })}
                             maxLength={120}
                             className={crmFieldClass}
-                            placeholder="Ex. Hébergement 1 an"
+                            placeholder="Ex. Licence thème premium"
                             aria-label={`Libellé de la charge ${index + 1}`}
                           />
                           <input
@@ -364,39 +440,12 @@ export function CrmPricingPlanForm({ creating, vatRate, referralPercent, referra
                             <Trash2 className="h-4 w-4" aria-hidden />
                           </button>
                         </div>
-                        <div className="flex flex-wrap items-center gap-2 text-sm">
-                          <label className="flex items-center gap-2">
-                            <input
-                              type="checkbox"
-                              checked={charge.discountPercent !== ""}
-                              onChange={(e) =>
-                                updateCharge(index, {
-                                  discountPercent: e.target.checked ? String(referralPercent).replace(".", ",") : "",
-                                })
-                              }
-                              className="rounded border-gray/60 text-primary"
-                            />
-                            Remise parrainage hébergeur
-                          </label>
-                          {charge.discountPercent !== "" && (
-                            <>
-                              <input
-                                inputMode="decimal"
-                                value={charge.discountPercent}
-                                onChange={(e) => updateCharge(index, { discountPercent: percentInput(e.target.value) })}
-                                className={cn(crmFieldClass, "w-20 py-1.5")}
-                                aria-label={`Pourcentage de remise de la charge ${index + 1}`}
-                              />
-                              <span className="text-gray-text">%</span>
-                            </>
-                          )}
-                        </div>
                       </div>
                     ))}
                     {form.charges.length < 20 && (
                       <button
                         type="button"
-                        onClick={() => set("charges", [...form.charges, { id: newPerkId(), label: "", amount: "", discountPercent: "" }])}
+                        onClick={() => set("charges", [...form.charges, { id: newPerkId(), label: "", amount: "" }])}
                         className="inline-flex items-center gap-1.5 rounded-xl border border-dashed border-gray/60 bg-white px-3 py-2 text-sm font-medium text-gray-text hover:border-primary/40 hover:text-primary"
                       >
                         <Plus className="h-4 w-4" aria-hidden />
@@ -407,9 +456,12 @@ export function CrmPricingPlanForm({ creating, vatRate, referralPercent, referra
                   {breakdown && (
                     <dl className="space-y-1 rounded-lg bg-white p-3 text-sm" aria-label="Détail du calcul">
                       <div className="flex justify-between gap-4"><dt className="text-gray-text">Prix de base HT</dt><dd>{formatPlanAmount(breakdown.baseHt)}</dd></div>
-                      <div className="flex justify-between gap-4"><dt className="text-gray-text">Charges HT</dt><dd>{formatPlanAmount(breakdown.chargesHt)}</dd></div>
+                      <div className="flex justify-between gap-4"><dt className="text-gray-text">Charges HT</dt><dd>{formatPlanAmount(breakdown.otherChargesHt)}</dd></div>
+                      {breakdown.hostingHt > 0 && (
+                        <div className="flex justify-between gap-4"><dt className="text-gray-text">Hébergement Hostinger 1 an HT</dt><dd>{formatPlanAmount(breakdown.hostingHt)}</dd></div>
+                      )}
                       {breakdown.discountHt > 0 && (
-                        <div className="flex justify-between gap-4 text-emerald-700"><dt>Remise parrainage HT</dt><dd>−{formatPlanAmount(breakdown.discountHt)}</dd></div>
+                        <div className="flex justify-between gap-4 text-emerald-700"><dt>Remise parrainage −{referralPercent.toLocaleString("fr-FR")} % sur l’hébergement</dt><dd>−{formatPlanAmount(breakdown.discountHt)}</dd></div>
                       )}
                       <div className="flex justify-between gap-4 border-t border-gray/40 pt-1"><dt className="text-gray-text">Sous-total HT</dt><dd>{formatPlanAmount(breakdown.subtotalHt)}</dd></div>
                       <div className="flex justify-between gap-4"><dt className="text-gray-text">TVA {breakdown.vatRate.toLocaleString("fr-FR")} %</dt><dd>{formatPlanAmount(breakdown.vatAmount)}</dd></div>
@@ -512,7 +564,7 @@ export function CrmPricingPlanForm({ creating, vatRate, referralPercent, referra
                       onChange={(e) => updatePerk(index, { referralLink: e.target.checked || undefined })}
                       className="rounded border-gray/60 text-primary"
                     />
-                    Titre cliquable vers le lien de parrainage hébergeur
+                    Avantage hébergement parrainé (lien Hostinger + mention de remise quand elle s’applique)
                   </label>
                   <div className="flex flex-wrap gap-1.5">
                     <button type="button" onClick={() => updatePerk(index, { isVisible: !perk.isVisible })} className="inline-flex items-center gap-1 rounded-lg border border-gray/60 bg-white px-2 py-1 text-xs font-medium hover:bg-gray-light">
@@ -567,7 +619,7 @@ export function CrmPricingPlanForm({ creating, vatRate, referralPercent, referra
 
           <aside className="min-w-0 lg:sticky lg:top-0 lg:self-start">
             <p className="mb-5 text-xs font-semibold uppercase tracking-wide text-gray-text">Aperçu</p>
-            <PricingPlanCard plan={formToPreviewPlan(form, vatRate, referralUrl)} locale={form.locale} className={cn(!form.isVisible && "opacity-60")} />
+            <PricingPlanCard plan={formToPreviewPlan(form, settings)} locale={form.locale} className={cn(!form.isVisible && "opacity-60")} />
           </aside>
         </div>
 

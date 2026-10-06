@@ -1,3 +1,4 @@
+import { PRICING_REFERRAL_OFFER } from "@/lib/pricing-display";
 import { z } from "zod";
 import { timelineOptions } from "@/content/contact-options";
 import type { SiteQuoteConfigSettings } from "@/lib/site-quote-config-types";
@@ -31,6 +32,10 @@ export function createDevisSchema(config: Pick<SiteQuoteConfigSettings, "project
       .max(80, "Le budget est trop long."),
     timeline: z.enum(timelineValues, { message: "Veuillez indiquer un délai." }),
     message: z.string().optional(),
+    /** Formule tarifaire d'origine (slug, bouton « Demander un devis » d'une carte). Ignorée si invalide. */
+    pricingPlan: z.string().regex(/^[a-z0-9-]{1,120}$/).optional().catch(undefined),
+    /** Offre associée, ex. remise parrainage hébergement. Ignorée si inconnue. */
+    pricingOffer: z.enum([PRICING_REFERRAL_OFFER]).optional().catch(undefined),
   }).superRefine((data, ctx) => {
     if (data.pageTierId && !pageTierIds.has(data.pageTierId)) {
       ctx.addIssue({ code: "custom", message: "Palier de pages invalide.", path: ["pageTierId"] });

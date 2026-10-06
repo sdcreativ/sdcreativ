@@ -5,6 +5,7 @@ import {
   ArrowDown,
   ArrowUp,
   BadgeEuro,
+  Calculator,
   Download,
   Eye,
   EyeOff,
@@ -42,11 +43,14 @@ import {
   type planFormToPayload,
 } from "@/components/admin/CrmPricingPlanForm";
 import {
-  computePlanTtc,
+  computePlanPricing,
+  DEFAULT_PRICING_HOSTING_EUR,
+  DEFAULT_PRICING_REFERRAL_NOTE,
   DEFAULT_PRICING_REFERRAL_PERCENT,
   DEFAULT_PRICING_REFERRAL_URL,
   DEFAULT_PRICING_VAT_RATE,
   formatPlanAmount,
+  formatReferralNote,
   resolvePlanPriceDisplay,
 } from "@/lib/pricing-display";
 import type { PricingSettings } from "@/lib/public-pricing";
@@ -93,10 +97,19 @@ function formatAdminPrice(item: PublicPricingPlanRecord): string {
   return (price.compareAt ? `${price.compareAt} → ${final}` : final) + (price.note ? ` · ${price.note}` : "");
 }
 
-function formatAdminBreakdown(item: PublicPricingPlanRecord, vatRate: number): string {
-  const b = computePlanTtc(item.baseAmountHt ?? 0, item.charges, vatRate);
-  const discount = b.discountHt > 0 ? ` − remise parrainage ${formatPlanAmount(b.discountHt)} HT` : "";
-  return `Calcul auto : base ${formatPlanAmount(b.baseHt)} HT + ${item.charges.length} charge(s) ${formatPlanAmount(b.chargesHt)} HT${discount} + TVA ${b.vatRate.toLocaleString("fr-FR")} % ${formatPlanAmount(b.vatAmount)}`;
+function formatAdminBreakdown(item: PublicPricingPlanRecord, settings: PricingSettings): string {
+  const b = computePlanPricing({
+    baseHt: item.baseAmountHt ?? 0,
+    charges: item.charges,
+    includeHosting: item.includeHosting,
+    hostingEur: settings.hostingEur,
+    referralPercent: settings.referralPercent,
+    vatRate: settings.vatRate,
+  });
+  const hosting = b.hostingHt > 0
+    ? ` + hébergement ${formatPlanAmount(b.hostingHt)} − parrainage ${formatPlanAmount(b.discountHt)}`
+    : "";
+  return `Calcul auto : base ${formatPlanAmount(b.baseHt)} HT + ${item.charges.length} charge(s) ${formatPlanAmount(b.otherChargesHt)} HT${hosting} + TVA ${b.vatRate.toLocaleString("fr-FR")} % ${formatPlanAmount(b.vatAmount)}`;
 }
 
 export function CrmPricingView() {
@@ -112,19 +125,23 @@ export function CrmPricingView() {
   const [editingReassuranceId, setEditingReassuranceId] = useState<string | null>(null);
   const [planForm, setPlanForm] = useState<PlanForm>(() => emptyPlanForm());
   const [planFormKey, setPlanFormKey] = useState(0);
+  const [focusPricing, setFocusPricing] = useState(false);
   const [planError, setPlanError] = useState("");
   const [settings, setSettings] = useState<PricingSettings>({
     vatRate: DEFAULT_PRICING_VAT_RATE,
     referralUrl: DEFAULT_PRICING_REFERRAL_URL,
     referralPercent: DEFAULT_PRICING_REFERRAL_PERCENT,
+    hostingEur: DEFAULT_PRICING_HOSTING_EUR,
+    referralNote: DEFAULT_PRICING_REFERRAL_NOTE,
   });
   const [settingsInput, setSettingsInput] = useState({
     vatRate: String(DEFAULT_PRICING_VAT_RATE),
     referralUrl: DEFAULT_PRICING_REFERRAL_URL,
     referralPercent: String(DEFAULT_PRICING_REFERRAL_PERCENT),
+    hostingEur: String(DEFAULT_PRICING_HOSTING_EUR).replace(".", ","),
+    referralNote: DEFAULT_PRICING_REFERRAL_NOTE,
   });
   const [savingSettings, setSavingSettings] = useState(false);
-  const vatRate = settings.vatRate;
   const [reassuranceForm, setReassuranceForm] = useState<ReassuranceForm>(emptyReassuranceForm);
   const [saving, setSaving] = useState(false);
   const [busyId, setBusyId] = useState<string | null>(null);
@@ -146,6 +163,8 @@ export function CrmPricingView() {
         vatRate: String(vat.vatRate).replace(".", ","),
         referralUrl: vat.referralUrl,
         referralPercent: String(vat.referralPercent).replace(".", ","),
+        hostingEur: String(vat.hostingEur).replace(".", ","),
+        referralNote: vat.referralNote,
       });
       setPlans(plansData);
       setReassurance(reassuranceData);
@@ -163,6 +182,7 @@ export function CrmPricingView() {
   }, [load]);
 
   function openCreatePlan() {
+    setFocusPricing(false);
     setFormMode("plan");
     setCreating(true);
     setEditingPlanId(null);
@@ -172,7 +192,8 @@ export function CrmPricingView() {
     setMessage("");
   }
 
-  function openEditPlan(item: PublicPricingPlanRecord) {
+  function openEditPlan(item: PublicPricingPlanRecord, pricing = false) {
+    setFocusPricing(pricing);
     setFormMode("plan");
     setCreating(false);
     setEditingPlanId(item.id);
@@ -353,9 +374,15 @@ export function CrmPricingView() {
       vatRate: toNumber(settingsInput.vatRate),
       referralUrl: settingsInput.referralUrl.trim(),
       referralPercent: toNumber(settingsInput.referralPercent),
+      hostingEur: toNumber(settingsInput.hostingEur),
+      referralNote: settingsInput.referralNote.trim(),
     };
     if (![next.vatRate, next.referralPercent].every((v) => Number.isFinite(v) && v >= 0 && v <= 100)) {
       setMessage("Impossible : les pourcentages doivent être compris entre 0 et 100.");
+      return;
+    }
+    if (!Number.isFinite(next.hostingEur) || next.hostingEur < 0) {
+      setMessage("Impossible : prix d’hébergement invalide.");
       return;
     }
     const ok = await confirm({
@@ -368,7 +395,11 @@ export function CrmPricingView() {
     try {
       const result = await updatePricingSettingsApi(next);
       await load();
-      setMessage(`Réglages enregistrés — ${result.plansUpdated} formule(s) recalculée(s).`);
+      setMessage(
+        result.plansUpdated > 0
+          ? `Réglages enregistrés — ${result.plansUpdated} formule(s) recalculée(s).`
+          : "Réglages enregistrés. Aucune formule n’utilise encore le calcul automatique : cliquez sur « Charges & TVA » sous une formule pour saisir son prix de base HT et ses charges.",
+      );
     } catch (err) {
       setMessage(err instanceof Error ? `Impossible : ${err.message}` : "Impossible d'enregistrer les réglages.");
     } finally {
@@ -444,10 +475,10 @@ export function CrmPricingView() {
         <div>
           <h2 className="text-base font-bold text-foreground">Réglages tarifs</h2>
           <p className="mt-1 text-sm text-gray-text">
-            Communs à toutes les formules. Calcul automatique : TTC = (prix de base HT + charges HT − remises parrainage) × (1 + TVA).
+            Communs à toutes les formules. Calcul automatique : TTC = (prix de base HT + charges HT + hébergement − remise parrainage sur l’hébergement) × (1 + TVA).
           </p>
         </div>
-        <div className="grid gap-3 sm:grid-cols-[8rem_minmax(0,1fr)_10rem_auto] sm:items-end">
+        <div className="grid gap-3 sm:grid-cols-[7rem_minmax(0,1fr)_9rem_10rem_auto] sm:items-end">
           <label className="block">
             <span className="mb-1 block text-xs font-semibold uppercase tracking-wide text-gray-text">TVA (%)</span>
             <input
@@ -476,13 +507,39 @@ export function CrmPricingView() {
               className={fieldClass}
             />
           </label>
+          <label className="block">
+            <span className="mb-1 block text-xs font-semibold uppercase tracking-wide text-gray-text">Hébergement 1 an (€ HT)</span>
+            <input
+              inputMode="decimal"
+              value={settingsInput.hostingEur}
+              onChange={(e) => setSettingsInput((p) => ({ ...p, hostingEur: e.target.value.replace(/[^\d.,]/g, "").slice(0, 9) }))}
+              className={fieldClass}
+            />
+          </label>
           <button type="submit" disabled={savingSettings || loading} className="inline-flex items-center justify-center gap-2 rounded-xl bg-primary px-4 py-2.5 text-sm font-semibold text-white disabled:opacity-60">
             {savingSettings && <Loader2 className="h-4 w-4 animate-spin" aria-hidden />}
             Appliquer
           </button>
         </div>
+        <label className="block">
+          <span className="mb-1 block text-xs font-semibold uppercase tracking-wide text-gray-text">
+            Mention sous l’avantage hébergement (quand la remise s’applique)
+          </span>
+          <input
+            maxLength={160}
+            value={settingsInput.referralNote}
+            onChange={(e) => setSettingsInput((p) => ({ ...p, referralNote: e.target.value }))}
+            className={fieldClass}
+            placeholder={DEFAULT_PRICING_REFERRAL_NOTE}
+          />
+          <span className="mt-1 block text-xs text-gray-text">
+            {"{pourcentage}"} est remplacé par la remise parrainage. Aperçu :{" "}
+            « {formatReferralNote(settingsInput.referralNote, Number(settingsInput.referralPercent.replace(",", ".")) || 0)} »
+          </span>
+        </label>
         <p className="text-xs text-gray-text">
-          La remise parrainage est proposée par défaut sur les charges (ex. hébergement) ; chaque charge garde son propre pourcentage.
+          La remise parrainage s’applique uniquement à l’hébergement Hostinger 1 an (converti à 655,957 FCFA pour 1 €), dans les formules
+          où « Inclure l’hébergement Hostinger » est coché.
         </p>
       </form>
 
@@ -518,9 +575,18 @@ export function CrmPricingView() {
                     </h3>
                     <p className="mt-1 text-sm text-gray-text">{item.tagline}</p>
                     <p className="mt-1 text-sm font-medium">{formatAdminPrice(item)}</p>
-                    {item.baseAmountHt != null && item.priceMode !== "quote" && (
+                    {item.compareAtAmount != null && item.priceAmount != null && (
+                      <p className="mt-1 text-xs font-medium text-emerald-700">
+                        Remise parrainage hébergement :{" "}
+                        −{formatPlanAmount(item.compareAtAmount - item.priceAmount)} TTC · Prix barré (TTC sans remise) :{" "}
+                        <span className="line-through">{formatPlanAmount(item.compareAtAmount)}</span>
+                      </p>
+                    )}
+                    {item.priceMode !== "quote" && (
                       <p className="mt-1 text-xs text-gray-text">
-                        {formatAdminBreakdown(item, vatRate)}
+                        {item.baseAmountHt != null
+                          ? formatAdminBreakdown(item, settings)
+                          : "Prix saisi manuellement — « Charges & TVA » pour le calculer à partir du HT et des charges."}
                       </p>
                     )}
                     {item.perks.length > 0 && (
@@ -539,6 +605,7 @@ export function CrmPricingView() {
                 </div>
                 <div className="mt-3 flex flex-wrap gap-1.5">
                   <button type="button" onClick={() => openEditPlan(item)} className="inline-flex items-center gap-1 rounded-lg border border-gray/60 px-2 py-1 text-xs font-medium hover:bg-gray-light"><Pencil className="h-3 w-3" aria-hidden />Modifier</button>
+                  <button type="button" onClick={() => openEditPlan(item, true)} className="inline-flex items-center gap-1 rounded-lg border border-primary/40 px-2 py-1 text-xs font-medium text-primary hover:bg-primary-light"><Calculator className="h-3 w-3" aria-hidden />Charges &amp; TVA</button>
                   <button type="button" onClick={() => void handleTogglePlanVisible(item)} disabled={busyId === item.id} className="inline-flex items-center gap-1 rounded-lg border border-gray/60 px-2 py-1 text-xs font-medium hover:bg-gray-light disabled:opacity-60">{item.isVisible ? <><EyeOff className="h-3 w-3" aria-hidden />Masquer</> : <><Eye className="h-3 w-3" aria-hidden />Afficher</>}</button>
                   <button type="button" onClick={() => void handleReorderPlan(item.id, "up")} disabled={busyId === item.id || index === 0} className="inline-flex items-center gap-1 rounded-lg border border-gray/60 px-2 py-1 text-xs font-medium hover:bg-gray-light disabled:opacity-40"><ArrowUp className="h-3 w-3" aria-hidden />Haut</button>
                   <button type="button" onClick={() => void handleReorderPlan(item.id, "down")} disabled={busyId === item.id || index === plans.length - 1} className="inline-flex items-center gap-1 rounded-lg border border-gray/60 px-2 py-1 text-xs font-medium hover:bg-gray-light disabled:opacity-40"><ArrowDown className="h-3 w-3" aria-hidden />Bas</button>
@@ -588,10 +655,9 @@ export function CrmPricingView() {
         <CrmPricingPlanForm
           key={planFormKey}
           creating={creating}
-          vatRate={vatRate}
-          referralPercent={settings.referralPercent}
-          referralUrl={settings.referralUrl}
+          settings={settings}
           initial={planForm}
+          focusPricing={focusPricing}
           saving={saving}
           serverError={planError}
           onCancel={closeForm}
