@@ -3,6 +3,7 @@ import {
   assertPlanPricingConsistent,
   createPublicPricingPlanSchema,
   PricingPlanValidationError,
+  pricingVatRateSchema,
   toPricingPlan,
   updatePublicPricingPlanSchema,
   type PublicPricingPlanRecord,
@@ -76,6 +77,8 @@ describe("toPricingPlan", () => {
     currencyLabel: "FCFA",
     taxMention: "none",
     priceNote: null,
+    baseAmountHt: null,
+    charges: [],
     features: ["Order management"],
     perks: [],
     highlighted: false,
@@ -110,5 +113,21 @@ describe("catalogue code", () => {
 
   it("ne met pas de français dans le catalogue EN", () => {
     expect(pricingPlansEn.every((p) => p.ctaHref === "/en/devis" && p.priceMode === "quote")).toBe(true);
+  });
+});
+
+describe("charges et TVA", () => {
+  it("valide les charges (libellé requis, montant entier ≥ 0)", () => {
+    expect(updatePublicPricingPlanSchema.safeParse({ charges: [{ id: "a", label: "Hébergement", amount: 25000 }] }).success).toBe(true);
+    expect(updatePublicPricingPlanSchema.safeParse({ charges: [{ id: "a", label: "", amount: 25000 }] }).success).toBe(false);
+    expect(updatePublicPricingPlanSchema.safeParse({ charges: [{ id: "a", label: "X", amount: -5 }] }).success).toBe(false);
+    expect(updatePublicPricingPlanSchema.safeParse({ baseAmountHt: null }).success).toBe(true);
+  });
+
+  it("borne le taux de TVA entre 0 et 100 au centième", () => {
+    expect(pricingVatRateSchema.safeParse({ vatRate: 18 }).success).toBe(true);
+    expect(pricingVatRateSchema.safeParse({ vatRate: 19.25 }).success).toBe(true);
+    expect(pricingVatRateSchema.safeParse({ vatRate: 101 }).success).toBe(false);
+    expect(pricingVatRateSchema.safeParse({ vatRate: 18.123 }).success).toBe(false);
   });
 });
