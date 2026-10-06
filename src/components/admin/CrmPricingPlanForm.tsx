@@ -13,7 +13,14 @@ import {
   crmFieldClass,
 } from "@/components/admin/crm-site-form-ui";
 import { CURRENCY_LABELS, SUPPORTED_CURRENCIES } from "@/lib/currencies";
-import { baseHtFromTtc, computePlanPricing, eurToXof, formatPlanAmount, formatReferralNote } from "@/lib/pricing-display";
+import {
+  baseHtFromTtc,
+  computePlanPricing,
+  eurToXof,
+  formatPlanAmount,
+  formatReferralNote,
+  hostingDiscountPercent,
+} from "@/lib/pricing-display";
 import type { PricingSettings } from "@/lib/public-pricing";
 import { cn } from "@/lib/utils";
 
@@ -131,7 +138,7 @@ export function formBreakdown(form: PlanForm, settings: PricingSettings) {
     charges: cleanCharges(form),
     includeHosting: form.includeHosting,
     hostingEur: settings.hostingEur,
-    referralPercent: settings.referralPercent,
+    hostingReferralEur: settings.hostingReferralEur,
     vatRate: settings.vatRate,
   });
 }
@@ -180,7 +187,9 @@ function formToPreviewPlan(form: PlanForm, settings: PricingSettings): PricingPl
     perks: payload.perks.map((perk) => {
       if (!perk.referralLink) return perk;
       const note =
-        breakdown && breakdown.discountHt > 0 ? formatReferralNote(settings.referralNote, settings.referralPercent) : "";
+        breakdown && breakdown.discountHt > 0
+          ? formatReferralNote(settings.referralNote, hostingDiscountPercent(settings.hostingEur, settings.hostingReferralEur))
+          : "";
       return { ...perk, ...(referralUrl ? { href: referralUrl } : {}), ...(note ? { note } : {}) };
     }),
     priceNote: payload.priceNote || undefined,
@@ -259,8 +268,10 @@ export function CrmPricingPlanForm({
   const set = <K extends keyof PlanForm>(key: K, value: PlanForm[K]) => setForm((p) => ({ ...p, [key]: value }));
   const isQuote = form.priceMode === "quote";
   const breakdown = formBreakdown(form, settings);
-  const { vatRate, referralPercent } = settings;
+  const { vatRate } = settings;
+  const referralPercent = hostingDiscountPercent(settings.hostingEur, settings.hostingReferralEur);
   const hostingXof = eurToXof(settings.hostingEur);
+  const hostingPaidXof = eurToXof(settings.hostingReferralEur);
   const eur = (value: number) => value.toLocaleString("fr-FR", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
   const error = localError || serverError;
 
@@ -405,8 +416,9 @@ export function CrmPricingPlanForm({
                     <span>
                       <span className="font-medium">Inclure l’hébergement Hostinger 1 an</span>
                       <span className="block text-xs text-gray-text">
-                        {eur(settings.hostingEur)} € HT ≈ {formatPlanAmount(hostingXof)} FCFA (1 € = 655,957 FCFA), remise
-                        parrainage −{referralPercent.toLocaleString("fr-FR")} % appliquée à l’hébergement seulement.
+                        Prix normal {eur(settings.hostingEur)} € HT ≈ {formatPlanAmount(hostingXof)} FCFA → avec le lien de
+                        parrainage {eur(settings.hostingReferralEur)} € HT ≈ {formatPlanAmount(hostingPaidXof)} FCFA
+                        (−{referralPercent.toLocaleString("fr-FR")} %, 1 € = 655,957 FCFA). Remise sur l’hébergement seulement.
                       </span>
                     </span>
                   </label>
@@ -458,10 +470,10 @@ export function CrmPricingPlanForm({
                       <div className="flex justify-between gap-4"><dt className="text-gray-text">Prix de base HT</dt><dd>{formatPlanAmount(breakdown.baseHt)}</dd></div>
                       <div className="flex justify-between gap-4"><dt className="text-gray-text">Charges HT</dt><dd>{formatPlanAmount(breakdown.otherChargesHt)}</dd></div>
                       {breakdown.hostingHt > 0 && (
-                        <div className="flex justify-between gap-4"><dt className="text-gray-text">Hébergement Hostinger 1 an HT</dt><dd>{formatPlanAmount(breakdown.hostingHt)}</dd></div>
+                        <div className="flex justify-between gap-4"><dt className="text-gray-text">Hébergement Hostinger 1 an HT (prix normal)</dt><dd>{formatPlanAmount(breakdown.hostingHt)}</dd></div>
                       )}
                       {breakdown.discountHt > 0 && (
-                        <div className="flex justify-between gap-4 text-emerald-700"><dt>Remise parrainage −{referralPercent.toLocaleString("fr-FR")} % sur l’hébergement</dt><dd>−{formatPlanAmount(breakdown.discountHt)}</dd></div>
+                        <div className="flex justify-between gap-4 text-emerald-700"><dt>Remise parrainage −{referralPercent.toLocaleString("fr-FR")} % sur l’hébergement (payé {formatPlanAmount(breakdown.hostingPaidHt)})</dt><dd>−{formatPlanAmount(breakdown.discountHt)}</dd></div>
                       )}
                       <div className="flex justify-between gap-4 border-t border-gray/40 pt-1"><dt className="text-gray-text">Sous-total HT</dt><dd>{formatPlanAmount(breakdown.subtotalHt)}</dd></div>
                       <div className="flex justify-between gap-4"><dt className="text-gray-text">TVA {breakdown.vatRate.toLocaleString("fr-FR")} %</dt><dd>{formatPlanAmount(breakdown.vatAmount)}</dd></div>

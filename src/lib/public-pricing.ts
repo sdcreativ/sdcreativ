@@ -15,10 +15,11 @@ import {
   computePlanPricing,
   DEFAULT_PRICING_HOSTING_EUR,
   DEFAULT_PRICING_REFERRAL_NOTE,
-  DEFAULT_PRICING_REFERRAL_PERCENT,
+  DEFAULT_PRICING_HOSTING_REFERRAL_EUR,
   DEFAULT_PRICING_REFERRAL_URL,
   DEFAULT_PRICING_VAT_RATE,
   formatReferralNote,
+  hostingDiscountPercent,
   isSafePlanCtaHref,
   type PricingCharge,
 } from "@/lib/pricing-display";
@@ -195,10 +196,13 @@ function mapReassurance(row: ReassuranceRow): PublicPricingReassuranceRecord {
  */
 export function toPricingPlan(
   record: PublicPricingPlanRecord,
-  settings?: Pick<PricingSettings, "referralUrl" | "referralPercent" | "referralNote">,
+  settings?: Pick<PricingSettings, "referralUrl" | "referralNote" | "hostingEur" | "hostingReferralEur">,
 ): PricingPlan {
   const discounted = record.compareAtAmount != null && record.includeHosting;
-  const note = discounted && settings ? formatReferralNote(settings.referralNote, settings.referralPercent) : "";
+  const note =
+    discounted && settings
+      ? formatReferralNote(settings.referralNote, hostingDiscountPercent(settings.hostingEur, settings.hostingReferralEur))
+      : "";
   const en = record.locale === "en";
   return {
     id: record.slug,
@@ -323,27 +327,33 @@ export function assertPlanPricingConsistent(plan: {
   }
 }
 
-export const pricingSettingsSchema = z.object({
+export const pricingSettingsSchema = z
+  .object({
   vatRate: z.number().min(0).max(100).multipleOf(0.01),
   referralUrl: z
     .string()
     .trim()
     .max(500)
     .refine((v) => v === "" || /^https:\/\/[^\s/]+/i.test(v), "Lien de parrainage : URL https attendue."),
-  referralPercent: z.number().min(0).max(100).multipleOf(0.01),
-  /** Hébergement 1 an HT en euros (Hostinger), converti en FCFA à la parité fixe. */
+  /** Hébergement 1 an HT en euros (Hostinger) au prix normal, converti en FCFA à la parité fixe. */
   hostingEur: z.number().min(0).max(100_000).multipleOf(0.01),
-  /** Mention sous l'avantage hébergement ; {pourcentage} = % de parrainage. */
+  /** Même hébergement, prix HT payé avec le lien de parrainage. */
+  hostingReferralEur: z.number().min(0).max(100_000).multipleOf(0.01),
+  /** Mention sous l'avantage hébergement ; {pourcentage} = remise calculée. */
   referralNote: z.string().trim().max(160),
-});
+  })
+  .refine((v) => v.hostingReferralEur <= v.hostingEur, {
+    message: "Le prix avec parrainage doit être inférieur ou égal au prix normal.",
+    path: ["hostingReferralEur"],
+  });
 
 export type PricingSettings = z.infer<typeof pricingSettingsSchema>;
 
 const DEFAULT_PRICING_SETTINGS: PricingSettings = {
   vatRate: DEFAULT_PRICING_VAT_RATE,
   referralUrl: DEFAULT_PRICING_REFERRAL_URL,
-  referralPercent: DEFAULT_PRICING_REFERRAL_PERCENT,
   hostingEur: DEFAULT_PRICING_HOSTING_EUR,
+  hostingReferralEur: DEFAULT_PRICING_HOSTING_REFERRAL_EUR,
   referralNote: DEFAULT_PRICING_REFERRAL_NOTE,
 };
 
@@ -372,7 +382,7 @@ function resolveEffectivePrice(
       charges: plan.charges,
       includeHosting: plan.includeHosting,
       hostingEur: settings.hostingEur,
-      referralPercent: settings.referralPercent,
+      hostingReferralEur: settings.hostingReferralEur,
       vatRate: settings.vatRate,
     });
     return {
@@ -387,8 +397,8 @@ function resolveEffectivePrice(
 type CrmSettingsPricingRow = {
   pricing_vat_rate: string | number;
   pricing_referral_url: string;
-  pricing_referral_percent: string | number;
   pricing_hosting_eur: string | number;
+  pricing_hosting_referral_eur: string | number;
   pricing_referral_note: string;
 };
 
@@ -397,7 +407,7 @@ export async function getPricingSettings(): Promise<PricingSettings> {
   if (!isDatabaseConfigured()) return DEFAULT_PRICING_SETTINGS;
   return withDb(async (query) => {
     const { rows } = await query<CrmSettingsPricingRow>(
-      `SELECT pricing_vat_rate, pricing_referral_url, pricing_referral_percent, pricing_hosting_eur,
+      `SELECT pricing_vat_rate, pricing_referral_url, pricing_hosting_eur, pricing_hosting_referral_eur,
          pricing_referral_note
        FROM crm_settings WHERE id = 1`,
     );
@@ -406,8 +416,8 @@ export async function getPricingSettings(): Promise<PricingSettings> {
     return {
       vatRate: Number(row.pricing_vat_rate),
       referralUrl: row.pricing_referral_url,
-      referralPercent: Number(row.pricing_referral_percent),
       hostingEur: Number(row.pricing_hosting_eur),
+      hostingReferralEur: Number(row.pricing_hosting_referral_eur),
       referralNote: row.pricing_referral_note,
     };
   });
@@ -419,12 +429,12 @@ export async function updatePricingSettings(
 ): Promise<PricingSettings & { plansUpdated: number }> {
   await withDb(async (query) => {
     await query(
-      `INSERT INTO crm_settings (id, pricing_vat_rate, pricing_referral_url, pricing_referral_percent,
-         pricing_hosting_eur, pricing_referral_note, updated_at)
+      `INSERT INTO crm_settings (id, pricing_vat_rate, pricing_referral_url, pricing_hosting_eur,
+         pricing_hosting_referral_eur, pricing_referral_note, updated_at)
        VALUES (1, $1, $2, $3, $4, $5, NOW())
        ON CONFLICT (id) DO UPDATE SET pricing_vat_rate = $1, pricing_referral_url = $2,
-         pricing_referral_percent = $3, pricing_hosting_eur = $4, pricing_referral_note = $5, updated_at = NOW()`,
-      [input.vatRate, input.referralUrl, input.referralPercent, input.hostingEur, input.referralNote],
+         pricing_hosting_eur = $3, pricing_hosting_referral_eur = $4, pricing_referral_note = $5, updated_at = NOW()`,
+      [input.vatRate, input.referralUrl, input.hostingEur, input.hostingReferralEur, input.referralNote],
     );
   });
 

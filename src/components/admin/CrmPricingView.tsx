@@ -46,11 +46,12 @@ import {
   computePlanPricing,
   DEFAULT_PRICING_HOSTING_EUR,
   DEFAULT_PRICING_REFERRAL_NOTE,
-  DEFAULT_PRICING_REFERRAL_PERCENT,
+  DEFAULT_PRICING_HOSTING_REFERRAL_EUR,
   DEFAULT_PRICING_REFERRAL_URL,
   DEFAULT_PRICING_VAT_RATE,
   formatPlanAmount,
   formatReferralNote,
+  hostingDiscountPercent,
   resolvePlanPriceDisplay,
 } from "@/lib/pricing-display";
 import type { PricingSettings } from "@/lib/public-pricing";
@@ -103,7 +104,7 @@ function formatAdminBreakdown(item: PublicPricingPlanRecord, settings: PricingSe
     charges: item.charges,
     includeHosting: item.includeHosting,
     hostingEur: settings.hostingEur,
-    referralPercent: settings.referralPercent,
+    hostingReferralEur: settings.hostingReferralEur,
     vatRate: settings.vatRate,
   });
   const hosting = b.hostingHt > 0
@@ -130,15 +131,15 @@ export function CrmPricingView() {
   const [settings, setSettings] = useState<PricingSettings>({
     vatRate: DEFAULT_PRICING_VAT_RATE,
     referralUrl: DEFAULT_PRICING_REFERRAL_URL,
-    referralPercent: DEFAULT_PRICING_REFERRAL_PERCENT,
     hostingEur: DEFAULT_PRICING_HOSTING_EUR,
+    hostingReferralEur: DEFAULT_PRICING_HOSTING_REFERRAL_EUR,
     referralNote: DEFAULT_PRICING_REFERRAL_NOTE,
   });
   const [settingsInput, setSettingsInput] = useState({
     vatRate: String(DEFAULT_PRICING_VAT_RATE),
     referralUrl: DEFAULT_PRICING_REFERRAL_URL,
-    referralPercent: String(DEFAULT_PRICING_REFERRAL_PERCENT),
     hostingEur: String(DEFAULT_PRICING_HOSTING_EUR).replace(".", ","),
+    hostingReferralEur: String(DEFAULT_PRICING_HOSTING_REFERRAL_EUR).replace(".", ","),
     referralNote: DEFAULT_PRICING_REFERRAL_NOTE,
   });
   const [savingSettings, setSavingSettings] = useState(false);
@@ -162,8 +163,8 @@ export function CrmPricingView() {
       setSettingsInput({
         vatRate: String(vat.vatRate).replace(".", ","),
         referralUrl: vat.referralUrl,
-        referralPercent: String(vat.referralPercent).replace(".", ","),
         hostingEur: String(vat.hostingEur).replace(".", ","),
+        hostingReferralEur: String(vat.hostingReferralEur).replace(".", ","),
         referralNote: vat.referralNote,
       });
       setPlans(plansData);
@@ -367,22 +368,31 @@ export function CrmPricingView() {
     }
   }
 
+  const settingsPercent = hostingDiscountPercent(
+    Number(settingsInput.hostingEur.replace(",", ".")) || 0,
+    Number(settingsInput.hostingReferralEur.replace(",", ".")) || 0,
+  );
+
   async function handleSaveSettings(e: React.FormEvent) {
     e.preventDefault();
     const toNumber = (v: string) => Math.round(Number(v.replace(",", ".")) * 100) / 100;
     const next: PricingSettings = {
       vatRate: toNumber(settingsInput.vatRate),
       referralUrl: settingsInput.referralUrl.trim(),
-      referralPercent: toNumber(settingsInput.referralPercent),
       hostingEur: toNumber(settingsInput.hostingEur),
+      hostingReferralEur: toNumber(settingsInput.hostingReferralEur),
       referralNote: settingsInput.referralNote.trim(),
     };
-    if (![next.vatRate, next.referralPercent].every((v) => Number.isFinite(v) && v >= 0 && v <= 100)) {
-      setMessage("Impossible : les pourcentages doivent être compris entre 0 et 100.");
+    if (!Number.isFinite(next.vatRate) || next.vatRate < 0 || next.vatRate > 100) {
+      setMessage("Impossible : la TVA doit être comprise entre 0 et 100 %.");
       return;
     }
-    if (!Number.isFinite(next.hostingEur) || next.hostingEur < 0) {
+    if (![next.hostingEur, next.hostingReferralEur].every((v) => Number.isFinite(v) && v >= 0)) {
       setMessage("Impossible : prix d’hébergement invalide.");
+      return;
+    }
+    if (next.hostingReferralEur > next.hostingEur) {
+      setMessage("Impossible : le prix avec parrainage doit être inférieur ou égal au prix normal.");
       return;
     }
     const ok = await confirm({
@@ -499,20 +509,20 @@ export function CrmPricingView() {
             />
           </label>
           <label className="block">
-            <span className="mb-1 block text-xs font-semibold uppercase tracking-wide text-gray-text">Remise parrainage (%)</span>
-            <input
-              inputMode="decimal"
-              value={settingsInput.referralPercent}
-              onChange={(e) => setSettingsInput((p) => ({ ...p, referralPercent: e.target.value.replace(/[^\d.,]/g, "").slice(0, 6) }))}
-              className={fieldClass}
-            />
-          </label>
-          <label className="block">
-            <span className="mb-1 block text-xs font-semibold uppercase tracking-wide text-gray-text">Hébergement 1 an (€ HT)</span>
+            <span className="mb-1 block text-xs font-semibold uppercase tracking-wide text-gray-text">Hébergement normal (€ HT)</span>
             <input
               inputMode="decimal"
               value={settingsInput.hostingEur}
               onChange={(e) => setSettingsInput((p) => ({ ...p, hostingEur: e.target.value.replace(/[^\d.,]/g, "").slice(0, 9) }))}
+              className={fieldClass}
+            />
+          </label>
+          <label className="block">
+            <span className="mb-1 block text-xs font-semibold uppercase tracking-wide text-gray-text">Avec parrainage (€ HT)</span>
+            <input
+              inputMode="decimal"
+              value={settingsInput.hostingReferralEur}
+              onChange={(e) => setSettingsInput((p) => ({ ...p, hostingReferralEur: e.target.value.replace(/[^\d.,]/g, "").slice(0, 9) }))}
               className={fieldClass}
             />
           </label>
@@ -534,12 +544,13 @@ export function CrmPricingView() {
           />
           <span className="mt-1 block text-xs text-gray-text">
             {"{pourcentage}"} est remplacé par la remise parrainage. Aperçu :{" "}
-            « {formatReferralNote(settingsInput.referralNote, Number(settingsInput.referralPercent.replace(",", ".")) || 0)} »
+            « {formatReferralNote(settingsInput.referralNote, settingsPercent)} »
           </span>
         </label>
         <p className="text-xs text-gray-text">
-          La remise parrainage s’applique uniquement à l’hébergement Hostinger 1 an (converti à 655,957 FCFA pour 1 €), dans les formules
-          où « Inclure l’hébergement Hostinger » est coché.
+          Hébergement Hostinger 1 an (Pack + nom de domaine), prix HT relevés au panier, convertis à 655,957 FCFA pour 1 €.
+          Remise calculée : −{settingsPercent.toLocaleString("fr-FR")} %, appliquée uniquement à l’hébergement des formules où
+          « Inclure l’hébergement Hostinger » est coché.
         </p>
       </form>
 
