@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { formatPlanAmount, isSafePlanCtaHref, resolvePlanPriceDisplay } from "@/lib/pricing-display";
+import { computePlanTtc, formatPlanAmount, isSafePlanCtaHref, resolvePlanPriceDisplay } from "@/lib/pricing-display";
 import { PRICE_ON_REQUEST_LABEL, PRICE_ON_REQUEST_LABEL_EN } from "@/lib/format";
 
 const base = {
@@ -75,5 +75,29 @@ describe("isSafePlanCtaHref", () => {
     expect(isSafePlanCtaHref("//evil.example")).toBe(false);
     expect(isSafePlanCtaHref("http://insecure.example")).toBe(false);
     expect(isSafePlanCtaHref("data:text/html,x")).toBe(false);
+  });
+});
+
+describe("computePlanTtc", () => {
+  it("TTC = (base HT + charges HT) × (1 + TVA)", () => {
+    const b = computePlanTtc(200000, [{ amount: 25000 }, { amount: 18000 }], 18);
+    expect(b).toEqual({
+      baseHt: 200000,
+      chargesHt: 43000,
+      subtotalHt: 243000,
+      vatRate: 18,
+      vatAmount: 43740,
+      totalTtc: 286740,
+    });
+  });
+
+  it("sans charges ni TVA, le TTC égale la base", () => {
+    expect(computePlanTtc(450000, [], 0).totalTtc).toBe(450000);
+  });
+
+  it("taux décimal arrondi au franc près, sans erreur de flottant", () => {
+    // 100 001 × 1,1925 = 119 251,1925 → 119 251
+    expect(computePlanTtc(100001, [], 19.25).totalTtc).toBe(119251);
+    expect(computePlanTtc(100, [], 0.1 + 0.2).vatRate).toBe(0.3);
   });
 });

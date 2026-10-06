@@ -131,3 +131,19 @@ export async function importStaticPricingApi(): Promise<{
     reassuranceSkipped: number;
   }>(res);
 }
+
+export async function fetchPricingVatRateApi(): Promise<number> {
+  const res = await fetch("/api/admin/pricing-settings", { credentials: "include" });
+  const json = await parseFetchJson<{ vatRate: number }>(res);
+  return json.vatRate;
+}
+
+export async function updatePricingVatRateApi(vatRate: number): Promise<{ vatRate: number; plansUpdated: number }> {
+  const res = await fetch("/api/admin/pricing-settings", {
+    method: "PUT",
+    credentials: "include",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ vatRate }),
+  });
+  return parseFetchJson<{ vatRate: number; plansUpdated: number }>(res);
+}

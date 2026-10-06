@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { ArrowDown, ArrowUp, Eye, EyeOff, Loader2, Plus } from "lucide-react";
+import { ArrowDown, ArrowUp, Calculator, Eye, EyeOff, Loader2, Plus, Trash2 } from "lucide-react";
 import type { PricingPerk, PricingPlan, PricingPriceMode, PricingTaxMention } from "@/content/pricing";
 import type { PublicPricingPlanRecord } from "@/lib/public-pricing";
 import { PricingPlanCard } from "@/components/sections/PricingPlanCard";
@@ -13,7 +13,7 @@ import {
   crmFieldClass,
 } from "@/components/admin/crm-site-form-ui";
 import { CURRENCY_LABELS, SUPPORTED_CURRENCIES } from "@/lib/currencies";
-import { formatPlanAmount } from "@/lib/pricing-display";
+import { computePlanTtc, formatPlanAmount } from "@/lib/pricing-display";
 import { cn } from "@/lib/utils";
 
 export type PlanForm = {
@@ -31,6 +31,10 @@ export type PlanForm = {
   currencyLabel: string;
   taxMention: PricingTaxMention;
   priceNote: string;
+  /** Calcul automatique : TTC = (base HT + charges HT) × (1 + TVA globale). */
+  autoCalc: boolean;
+  baseAmountHt: string;
+  charges: { id: string; label: string; amount: string }[];
   perks: PricingPerk[];
   features: string[];
   ctaLabel: string;
@@ -62,6 +66,9 @@ export const emptyPlanForm = (locale: "fr" | "en" = "fr"): PlanForm => ({
   currencyLabel: "FCFA",
   taxMention: "ttc",
   priceNote: "",
+  autoCalc: false,
+  baseAmountHt: "",
+  charges: [],
   perks: [],
   features: [""],
   ...defaultCta(locale),
@@ -83,6 +90,9 @@ export function planToForm(r: PublicPricingPlanRecord): PlanForm {
     currencyLabel: r.currencyLabel,
     taxMention: r.taxMention === "none" && r.priceMode === "quote" ? "ttc" : r.taxMention,
     priceNote: r.priceNote ?? "",
+    autoCalc: r.baseAmountHt != null,
+    baseAmountHt: r.baseAmountHt != null ? String(r.baseAmountHt) : "",
+    charges: r.charges.map((c) => ({ ...c, amount: String(c.amount) })),
     perks: r.perks,
     features: r.features.length ? r.features : [""],
     ctaLabel: r.ctaLabel || defaultCta(locale).ctaLabel,
@@ -96,8 +106,23 @@ function cleanPerks(perks: PricingPerk[]): PricingPerk[] {
     .filter((p) => p.title);
 }
 
+const digits = (value: string) => value.replace(/\D/g, "").slice(0, 10);
+
+function cleanCharges(form: PlanForm) {
+  return form.charges
+    .map((c) => ({ id: c.id, label: c.label.trim(), amount: Number(c.amount || 0) }))
+    .filter((c) => c.label);
+}
+
+/** Détail HT → TTC si le calcul automatique est actif, sinon null. */
+export function formBreakdown(form: PlanForm, vatRate: number) {
+  if (!form.autoCalc || form.priceMode === "quote" || form.baseAmountHt === "") return null;
+  return computePlanTtc(Number(form.baseAmountHt), cleanCharges(form), vatRate);
+}
+
 export function planFormToPayload(form: PlanForm) {
   const quote = form.priceMode === "quote";
+  const auto = form.autoCalc && !quote;
   return {
     name: form.name.trim(),
     tagline: form.tagline.trim(),
@@ -112,6 +137,8 @@ export function planFormToPayload(form: PlanForm) {
     currencyLabel: form.currencyLabel.trim(),
     taxMention: form.taxMention,
     priceNote: form.priceNote.trim(),
+    baseAmountHt: auto && form.baseAmountHt !== "" ? Number(form.baseAmountHt) : null,
+    charges: cleanCharges(form),
     perks: cleanPerks(form.perks),
     features: form.features.map((f) => f.trim()).filter(Boolean),
     ctaLabel: form.ctaLabel.trim(),
@@ -119,14 +146,16 @@ export function planFormToPayload(form: PlanForm) {
   };
 }
 
-function formToPreviewPlan(form: PlanForm): PricingPlan {
+function formToPreviewPlan(form: PlanForm, vatRate: number): PricingPlan {
   const payload = planFormToPayload(form);
+  const breakdown = formBreakdown(form, vatRate);
   return {
     ...payload,
+    ...(breakdown ? { priceAmount: breakdown.totalTtc, taxMention: "ttc" as const } : {}),
     id: "preview",
     name: payload.name || "Nom de la formule",
     tagline: payload.tagline || "Description courte",
-    priceAmount: payload.priceAmount ?? undefined,
+    priceAmount: breakdown ? breakdown.totalTtc : (payload.priceAmount ?? undefined),
     priceNote: payload.priceNote || undefined,
     features: payload.features.length ? payload.features : ["Prestation"],
     badgeLabel: payload.badgeLabel || undefined,
@@ -140,7 +169,10 @@ function newPerkId(): string {
 }
 
 function validate(form: PlanForm): string | null {
-  if (form.priceMode !== "quote" && !(Number(form.priceAmount) > 0)) {
+  if (form.priceMode !== "quote" && form.autoCalc) {
+    if (form.baseAmountHt === "") return "Indiquez le prix de base HT.";
+    if (form.charges.some((c) => !c.label.trim() && c.amount !== "")) return "Chaque charge doit avoir un libellé.";
+  } else if (form.priceMode !== "quote" && !(Number(form.priceAmount) > 0)) {
     return "Indiquez un montant pour un prix fixe ou « À partir de ».";
   }
   if (!form.features.some((f) => f.trim())) return "Ajoutez au moins une prestation.";
@@ -150,6 +182,8 @@ function validate(form: PlanForm): string | null {
 
 type Props = {
   creating: boolean;
+  /** Taux de TVA global (%) réglé en haut de la page Tarifs. */
+  vatRate: number;
   initial: PlanForm;
   saving: boolean;
   serverError: string;
@@ -157,15 +191,20 @@ type Props = {
   onSubmit: (payload: ReturnType<typeof planFormToPayload>) => void;
 };
 
-export function CrmPricingPlanForm({ creating, initial, saving, serverError, onCancel, onSubmit }: Props) {
+export function CrmPricingPlanForm({ creating, vatRate, initial, saving, serverError, onCancel, onSubmit }: Props) {
   const [form, setForm] = useState<PlanForm>(initial);
   const [localError, setLocalError] = useState("");
   const set = <K extends keyof PlanForm>(key: K, value: PlanForm[K]) => setForm((p) => ({ ...p, [key]: value }));
   const isQuote = form.priceMode === "quote";
+  const breakdown = formBreakdown(form, vatRate);
   const error = localError || serverError;
 
   function updatePerk(index: number, patch: Partial<PricingPerk>) {
     setForm((p) => ({ ...p, perks: p.perks.map((perk, i) => (i === index ? { ...perk, ...patch } : perk)) }));
+  }
+
+  function updateCharge(index: number, patch: Partial<PlanForm["charges"][number]>) {
+    setForm((p) => ({ ...p, charges: p.charges.map((c, i) => (i === index ? { ...c, ...patch } : c)) }));
   }
 
   function movePerk(index: number, delta: -1 | 1) {
@@ -251,22 +290,102 @@ export function CrmPricingPlanForm({ creating, initial, saving, serverError, onC
                 </select>
               </CrmFormField>
               {!isQuote && (
-                <div className="grid gap-4 sm:grid-cols-2">
-                  <CrmFormField
-                    label="Montant"
-                    hint={form.priceAmount ? `Affiché : ${formatPlanAmount(Number(form.priceAmount))}` : "Chiffres uniquement, sans espace ni devise."}
-                  >
+                <label className="flex items-center gap-2 text-sm">
+                  <input type="checkbox" checked={form.autoCalc} onChange={(e) => set("autoCalc", e.target.checked)} className="rounded border-gray/60 text-primary" />
+                  Calcul automatique du TTC (prix de base HT + charges + TVA {vatRate.toLocaleString("fr-FR")} %)
+                </label>
+              )}
+              {!isQuote && form.autoCalc && (
+                <div className="space-y-4 rounded-xl border border-primary/20 bg-primary-light/40 p-4">
+                  <CrmFormField label="Prix de base HT" hint="Chiffres uniquement, sans espace ni devise.">
                     <input
                       required
                       inputMode="numeric"
-                      value={form.priceAmount}
-                      onChange={(e) => set("priceAmount", e.target.value.replace(/\D/g, "").slice(0, 10))}
+                      value={form.baseAmountHt}
+                      onChange={(e) => set("baseAmountHt", digits(e.target.value))}
                       className={crmFieldClass}
-                      placeholder="287000"
+                      placeholder="200000"
                     />
                   </CrmFormField>
-                  <CrmFormField label="Mention fiscale">
-                    <select value={form.taxMention} onChange={(e) => set("taxMention", e.target.value as PricingTaxMention)} className={crmFieldClass}>
+                  <div className="space-y-2">
+                    <p className="text-sm font-medium text-foreground">Charges HT</p>
+                    {form.charges.map((charge, index) => (
+                      <div key={charge.id} className="flex gap-2">
+                        <input
+                          value={charge.label}
+                          onChange={(e) => updateCharge(index, { label: e.target.value })}
+                          maxLength={120}
+                          className={crmFieldClass}
+                          placeholder="Ex. Hébergement 1 an"
+                          aria-label={`Libellé de la charge ${index + 1}`}
+                        />
+                        <input
+                          inputMode="numeric"
+                          value={charge.amount}
+                          onChange={(e) => updateCharge(index, { amount: digits(e.target.value) })}
+                          className={cn(crmFieldClass, "w-36 shrink-0")}
+                          placeholder="Montant HT"
+                          aria-label={`Montant HT de la charge ${index + 1}`}
+                        />
+                        <button
+                          type="button"
+                          onClick={() => set("charges", form.charges.filter((_, i) => i !== index))}
+                          className="shrink-0 rounded-xl border border-gray/60 bg-white p-2.5 text-gray-text hover:bg-red-50 hover:text-red-600"
+                          aria-label={`Supprimer la charge ${index + 1}`}
+                        >
+                          <Trash2 className="h-4 w-4" aria-hidden />
+                        </button>
+                      </div>
+                    ))}
+                    {form.charges.length < 20 && (
+                      <button
+                        type="button"
+                        onClick={() => set("charges", [...form.charges, { id: newPerkId(), label: "", amount: "" }])}
+                        className="inline-flex items-center gap-1.5 rounded-xl border border-dashed border-gray/60 bg-white px-3 py-2 text-sm font-medium text-gray-text hover:border-primary/40 hover:text-primary"
+                      >
+                        <Plus className="h-4 w-4" aria-hidden />
+                        Ajouter une charge
+                      </button>
+                    )}
+                  </div>
+                  {breakdown && (
+                    <dl className="space-y-1 rounded-lg bg-white p-3 text-sm" aria-label="Détail du calcul">
+                      <div className="flex justify-between gap-4"><dt className="text-gray-text">Prix de base HT</dt><dd>{formatPlanAmount(breakdown.baseHt)}</dd></div>
+                      <div className="flex justify-between gap-4"><dt className="text-gray-text">Charges HT</dt><dd>{formatPlanAmount(breakdown.chargesHt)}</dd></div>
+                      <div className="flex justify-between gap-4 border-t border-gray/40 pt-1"><dt className="text-gray-text">Sous-total HT</dt><dd>{formatPlanAmount(breakdown.subtotalHt)}</dd></div>
+                      <div className="flex justify-between gap-4"><dt className="text-gray-text">TVA {breakdown.vatRate.toLocaleString("fr-FR")} %</dt><dd>{formatPlanAmount(breakdown.vatAmount)}</dd></div>
+                      <div className="flex justify-between gap-4 border-t border-gray/40 pt-1 font-semibold">
+                        <dt className="inline-flex items-center gap-1.5"><Calculator className="h-4 w-4 text-primary" aria-hidden />Total TTC affiché</dt>
+                        <dd>{formatPlanAmount(breakdown.totalTtc)} {form.currencyLabel || form.currencyCode}</dd>
+                      </div>
+                    </dl>
+                  )}
+                </div>
+              )}
+              {!isQuote && (
+                <div className="grid gap-4 sm:grid-cols-2">
+                  {!form.autoCalc && (
+                    <CrmFormField
+                      label="Montant"
+                      hint={form.priceAmount ? `Affiché : ${formatPlanAmount(Number(form.priceAmount))}` : "Chiffres uniquement, sans espace ni devise."}
+                    >
+                      <input
+                        required
+                        inputMode="numeric"
+                        value={form.priceAmount}
+                        onChange={(e) => set("priceAmount", digits(e.target.value))}
+                        className={crmFieldClass}
+                        placeholder="287000"
+                      />
+                    </CrmFormField>
+                  )}
+                  <CrmFormField label="Mention fiscale" hint={form.autoCalc ? "TTC imposé par le calcul automatique." : undefined}>
+                    <select
+                      value={form.autoCalc ? "ttc" : form.taxMention}
+                      disabled={form.autoCalc}
+                      onChange={(e) => set("taxMention", e.target.value as PricingTaxMention)}
+                      className={cn(crmFieldClass, "disabled:opacity-60")}
+                    >
                       {(Object.keys(TAX_LABELS) as PricingTaxMention[]).map((t) => (
                         <option key={t} value={t}>{TAX_LABELS[t]}</option>
                       ))}
@@ -363,7 +482,7 @@ export function CrmPricingPlanForm({ creating, initial, saving, serverError, onC
 
           <aside className="min-w-0 lg:sticky lg:top-0 lg:self-start">
             <p className="mb-5 text-xs font-semibold uppercase tracking-wide text-gray-text">Aperçu</p>
-            <PricingPlanCard plan={formToPreviewPlan(form)} locale={form.locale} className={cn(!form.isVisible && "opacity-60")} />
+            <PricingPlanCard plan={formToPreviewPlan(form, vatRate)} locale={form.locale} className={cn(!form.isVisible && "opacity-60")} />
           </aside>
         </div>
 

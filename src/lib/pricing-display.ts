@@ -42,6 +42,35 @@ export function resolvePlanPriceDisplay(
   };
 }
 
+/** Charge HT ajoutée au prix de base d'une formule (licence, hébergement…) — admin uniquement. */
+export type PricingCharge = { id: string; label: string; amount: number };
+
+export type PricingChargeInput = Pick<PricingCharge, "amount">;
+
+/** Taux de TVA par défaut (UEMOA / Côte d'Ivoire) si aucun réglage en base. */
+export const DEFAULT_PRICING_VAT_RATE = 18;
+
+export type PlanTtcBreakdown = {
+  baseHt: number;
+  chargesHt: number;
+  subtotalHt: number;
+  vatRate: number;
+  vatAmount: number;
+  totalTtc: number;
+};
+
+/**
+ * TTC = (base HT + charges HT) × (1 + TVA). Calcul en entiers (taux au centième)
+ * pour éviter les erreurs de flottants ; arrondi au franc près.
+ */
+export function computePlanTtc(baseHt: number, charges: PricingChargeInput[], vatRate: number): PlanTtcBreakdown {
+  const chargesHt = charges.reduce((sum, c) => sum + c.amount, 0);
+  const subtotalHt = baseHt + chargesHt;
+  const rateBp = Math.round(vatRate * 100);
+  const totalTtc = Math.round((subtotalHt * (10000 + rateBp)) / 10000);
+  return { baseHt, chargesHt, subtotalHt, vatRate: rateBp / 100, vatAmount: totalTtc - subtotalHt, totalTtc };
+}
+
 /** Destination de bouton acceptée : chemin interne, ancre ou URL https. */
 export function isSafePlanCtaHref(href: string): boolean {
   const value = href.trim();

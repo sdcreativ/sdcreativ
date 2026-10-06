@@ -11,7 +11,12 @@ import { slugifyBlogTitle } from "@/lib/blog-posts-types";
 import { SUPPORTED_CURRENCIES } from "@/lib/currencies";
 import { isDatabaseConfigured, withDb } from "@/lib/db";
 import { LUCIDE_ICON_NAME_ENUM, LUCIDE_ICON_NAMES, type LucideIconName } from "@/lib/lucide-icon-map";
-import { isSafePlanCtaHref } from "@/lib/pricing-display";
+import {
+  computePlanTtc,
+  DEFAULT_PRICING_VAT_RATE,
+  isSafePlanCtaHref,
+  type PricingCharge,
+} from "@/lib/pricing-display";
 
 export type PublicPricingPlanRecord = {
   id: string;
@@ -25,6 +30,9 @@ export type PublicPricingPlanRecord = {
   currencyLabel: string;
   taxMention: PricingTaxMention;
   priceNote: string | null;
+  /** Calcul automatique : quand renseigné, priceAmount = (base + charges) × (1 + TVA). */
+  baseAmountHt: number | null;
+  charges: PricingCharge[];
   features: string[];
   perks: PricingPerk[];
   highlighted: boolean;
@@ -61,6 +69,8 @@ type PlanRow = {
   currency_label: string;
   tax_mention: string;
   price_note: string | null;
+  base_amount_ht: number | null;
+  charges: unknown;
   features: string[];
   perks: unknown;
   highlighted: boolean;
@@ -110,6 +120,16 @@ function parsePerks(value: unknown): PricingPerk[] {
   });
 }
 
+function parseCharges(value: unknown): PricingCharge[] {
+  if (!Array.isArray(value)) return [];
+  return value.flatMap((raw, index) => {
+    if (!raw || typeof raw !== "object") return [];
+    const item = raw as Record<string, unknown>;
+    if (typeof item.label !== "string" || typeof item.amount !== "number") return [];
+    return [{ id: typeof item.id === "string" && item.id ? item.id : `charge-${index}`, label: item.label, amount: item.amount }];
+  });
+}
+
 function mapPlan(row: PlanRow): PublicPricingPlanRecord {
   return {
     id: row.id,
@@ -122,6 +142,8 @@ function mapPlan(row: PlanRow): PublicPricingPlanRecord {
     currencyLabel: row.currency_label,
     taxMention: TAX_MENTIONS.find((t) => t === row.tax_mention) ?? "none",
     priceNote: row.price_note,
+    baseAmountHt: row.base_amount_ht,
+    charges: parseCharges(row.charges),
     features: row.features ?? [],
     perks: parsePerks(row.perks),
     highlighted: row.highlighted,
@@ -191,6 +213,16 @@ const pricingPlanFields = z.object({
   currencyLabel: z.string().trim().max(20),
   taxMention: z.enum(TAX_MENTIONS),
   priceNote: z.string().trim().max(120),
+  baseAmountHt: z.number().int().min(0).max(1_000_000_000).nullable(),
+  charges: z
+    .array(
+      z.object({
+        id: z.string().trim().min(1).max(40),
+        label: z.string().trim().min(1).max(120),
+        amount: z.number().int().min(0).max(1_000_000_000),
+      }),
+    )
+    .max(20),
   features: z.array(z.string().trim().min(1).max(200)).min(1).max(20),
   perks: z.array(pricingPerkSchema).max(8),
   highlighted: z.boolean(),
@@ -215,6 +247,8 @@ export const createPublicPricingPlanSchema = pricingPlanFields.extend({
   currencyLabel: pricingPlanFields.shape.currencyLabel.default("FCFA"),
   taxMention: pricingPlanFields.shape.taxMention.default("none"),
   priceNote: pricingPlanFields.shape.priceNote.optional(),
+  baseAmountHt: pricingPlanFields.shape.baseAmountHt.optional(),
+  charges: pricingPlanFields.shape.charges.default([]),
   perks: pricingPlanFields.shape.perks.default([]),
   highlighted: pricingPlanFields.shape.highlighted.default(false),
   badgeLabel: pricingPlanFields.shape.badgeLabel.optional(),
@@ -246,6 +280,67 @@ export function assertPlanPricingConsistent(plan: {
   if (plan.priceMode !== "quote" && (plan.priceAmount == null || plan.priceAmount <= 0)) {
     throw new PricingPlanValidationError("Montant requis pour un prix fixe ou « À partir de ».");
   }
+}
+
+export const pricingVatRateSchema = z.object({
+  vatRate: z.number().min(0).max(100).multipleOf(0.01),
+});
+
+/**
+ * Montant affiché et mention fiscale effectifs. En calcul automatique, le TTC est dérivé
+ * de la base HT, des charges et de la TVA globale ; sinon le montant saisi est conservé.
+ */
+function resolveEffectivePrice(
+  plan: {
+    priceMode: PricingPriceMode;
+    priceAmount: number | null | undefined;
+    taxMention: PricingTaxMention;
+    baseAmountHt: number | null | undefined;
+    charges: PricingCharge[];
+  },
+  vatRate: number,
+): { priceAmount: number | null; taxMention: PricingTaxMention } {
+  if (plan.priceMode === "quote") return { priceAmount: null, taxMention: "none" };
+  if (plan.baseAmountHt != null) {
+    return { priceAmount: computePlanTtc(plan.baseAmountHt, plan.charges, vatRate).totalTtc, taxMention: "ttc" };
+  }
+  return { priceAmount: plan.priceAmount ?? null, taxMention: plan.taxMention };
+}
+
+type CrmSettingsVatRow = { pricing_vat_rate: string | number };
+
+/** Taux de TVA global des formules (crm_settings), 18 % par défaut. */
+export async function getPricingVatRate(): Promise<number> {
+  if (!isDatabaseConfigured()) return DEFAULT_PRICING_VAT_RATE;
+  return withDb(async (query) => {
+    const { rows } = await query<CrmSettingsVatRow>(`SELECT pricing_vat_rate FROM crm_settings WHERE id = 1`);
+    return rows[0] ? Number(rows[0].pricing_vat_rate) : DEFAULT_PRICING_VAT_RATE;
+  });
+}
+
+/** Enregistre le taux puis recalcule le TTC de toutes les formules en calcul automatique. */
+export async function updatePricingVatRate(vatRate: number): Promise<{ vatRate: number; plansUpdated: number }> {
+  await withDb(async (query) => {
+    await query(
+      `INSERT INTO crm_settings (id, pricing_vat_rate, updated_at) VALUES (1, $1, NOW())
+       ON CONFLICT (id) DO UPDATE SET pricing_vat_rate = $1, updated_at = NOW()`,
+      [vatRate],
+    );
+  });
+
+  const autoPlans = (await listPublicPricingPlans()).filter(
+    (plan) => plan.baseAmountHt != null && plan.priceMode !== "quote",
+  );
+  await withDb(async (query) => {
+    for (const plan of autoPlans) {
+      const { totalTtc } = computePlanTtc(plan.baseAmountHt!, plan.charges, vatRate);
+      await query(
+        `UPDATE public_pricing_plans SET price_from=$2, tax_mention='ttc', updated_at=NOW() WHERE id=$1`,
+        [plan.id, totalTtc],
+      );
+    }
+  });
+  return { vatRate, plansUpdated: autoPlans.length };
 }
 
 export const createPublicPricingReassuranceSchema = z.object({
@@ -324,7 +419,11 @@ async function getReassuranceById(id: string): Promise<PublicPricingReassuranceR
 export async function createPublicPricingPlan(
   input: z.infer<typeof createPublicPricingPlanSchema>,
 ): Promise<PublicPricingPlanRecord> {
-  assertPlanPricingConsistent({ priceMode: input.priceMode, priceAmount: input.priceAmount });
+  const effective = resolveEffectivePrice(
+    { ...input, priceAmount: input.priceAmount ?? null, baseAmountHt: input.baseAmountHt ?? null },
+    input.baseAmountHt != null ? await getPricingVatRate() : DEFAULT_PRICING_VAT_RATE,
+  );
+  assertPlanPricingConsistent({ priceMode: input.priceMode, priceAmount: effective.priceAmount });
   const en = input.locale === "en";
   const slug = slugifyBlogTitle(input.name).slice(0, 120) || "plan";
   return withDb(async (query) => {
@@ -338,19 +437,21 @@ export async function createPublicPricingPlan(
 
     const { rows } = await query<PlanRow>(
       `INSERT INTO public_pricing_plans (slug, name, tagline, price_mode, price_from, currency_code, currency_label,
-         tax_mention, price_note, features, perks, highlighted, badge_label, variant, cta_label, cta_href,
-         locale, sort_order, is_visible)
-       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19) RETURNING *`,
+         tax_mention, price_note, base_amount_ht, charges, features, perks, highlighted, badge_label, variant,
+         cta_label, cta_href, locale, sort_order, is_visible)
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21) RETURNING *`,
       [
         slug,
         input.name.trim(),
         input.tagline.trim(),
         input.priceMode,
-        input.priceMode === "quote" ? null : (input.priceAmount ?? null),
+        effective.priceAmount,
         input.currencyCode,
         input.currencyLabel,
-        input.priceMode === "quote" ? "none" : input.taxMention,
+        effective.taxMention,
         input.priceNote?.trim() || null,
+        input.baseAmountHt ?? null,
+        JSON.stringify(input.charges),
         input.features,
         JSON.stringify(input.perks),
         input.highlighted,
@@ -375,10 +476,21 @@ export async function updatePublicPricingPlan(
   if (!existing) return null;
   const nextName = input.name?.trim() ?? existing.name;
   const nextSlug = nextName !== existing.name ? slugifyBlogTitle(nextName).slice(0, 120) : existing.slug;
-  const priceMode = input.priceMode ?? existing.priceMode;
-  const priceAmount = input.priceAmount !== undefined ? input.priceAmount : existing.priceAmount;
-  assertPlanPricingConsistent({ priceMode, priceAmount });
   const pick = <T,>(value: T | undefined, fallback: T): T => (value !== undefined ? value : fallback);
+  const priceMode = pick(input.priceMode, existing.priceMode);
+  const baseAmountHt = pick(input.baseAmountHt, existing.baseAmountHt);
+  const charges = pick(input.charges, existing.charges);
+  const effective = resolveEffectivePrice(
+    {
+      priceMode,
+      priceAmount: pick(input.priceAmount, existing.priceAmount),
+      taxMention: pick(input.taxMention, existing.taxMention),
+      baseAmountHt,
+      charges,
+    },
+    baseAmountHt != null ? await getPricingVatRate() : DEFAULT_PRICING_VAT_RATE,
+  );
+  assertPlanPricingConsistent({ priceMode, priceAmount: effective.priceAmount });
   const optionalText = (value: string | undefined, fallback: string | null) =>
     value !== undefined ? value.trim() || null : fallback;
 
@@ -387,7 +499,7 @@ export async function updatePublicPricingPlan(
       `UPDATE public_pricing_plans SET slug=$2, name=$3, tagline=$4, price_mode=$5, price_from=$6,
         currency_code=$7, currency_label=$8, tax_mention=$9, price_note=$10, features=$11, perks=$12,
         highlighted=$13, badge_label=$14, variant=$15, cta_label=$16, cta_href=$17, locale=$18,
-        sort_order=$19, is_visible=$20, updated_at=NOW()
+        sort_order=$19, is_visible=$20, base_amount_ht=$21, charges=$22, updated_at=NOW()
        WHERE id=$1 RETURNING *`,
       [
         id,
@@ -395,10 +507,10 @@ export async function updatePublicPricingPlan(
         nextName,
         input.tagline?.trim() ?? existing.tagline,
         priceMode,
-        priceMode === "quote" ? null : priceAmount,
+        effective.priceAmount,
         pick(input.currencyCode, existing.currencyCode),
         pick(input.currencyLabel, existing.currencyLabel),
-        priceMode === "quote" ? "none" : pick(input.taxMention, existing.taxMention),
+        effective.taxMention,
         optionalText(input.priceNote, existing.priceNote),
         pick(input.features, existing.features),
         JSON.stringify(pick(input.perks, existing.perks)),
@@ -410,6 +522,8 @@ export async function updatePublicPricingPlan(
         pick(input.locale, existing.locale),
         pick(input.sortOrder, existing.sortOrder),
         pick(input.isVisible, existing.isVisible),
+        baseAmountHt,
+        JSON.stringify(charges),
       ],
     );
     return rows[0] ? mapPlan(rows[0]) : null;
