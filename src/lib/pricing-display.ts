@@ -112,6 +112,88 @@ export function daysSinceHostingCheck(checkedOn: string, now: Date = new Date())
   return Math.floor((now.getTime() - date.getTime()) / 86_400_000);
 }
 
+/** Valeur HT du nom de domaine offert la 1re année (panier Hostinger : 6,99 €). */
+export const DEFAULT_PRICING_DOMAIN_EUR = 6.99;
+/** Remise parrainage Hostinger (nouveaux clients, 1re commande, 12 / 24 / 48 mois). */
+export const DEFAULT_PRICING_REFERRAL_PERCENT = 20;
+/** Durées d'hébergement proposées dans les formules (mois). */
+export const HOSTING_MONTH_OPTIONS = [12, 24, 48] as const;
+
+/** Prix d'un pack Hostinger pour une durée, issus de l'API (centimes HT, prix appliqués). */
+export type HostingCatalogEntry = {
+  packId: string;
+  packName: string;
+  months: number;
+  currency: string;
+  /** Prix promo de la 1re période (avant parrainage). */
+  promoCents: number;
+  /** Prix de renouvellement de la période. */
+  renewalCents: number;
+  /** Prix « normal » barré : tarif mensuel × durée. */
+  listCents: number;
+  /** Nouveaux prix relevés par la synchro, en attente de validation (null si identiques). */
+  pending: { promoCents: number; renewalCents: number; listCents: number } | null;
+};
+
+/** Hébergement résolu pour une formule : prix HT en euros + durée. */
+export type ResolvedHosting = {
+  source: "catalog" | "manual";
+  packName: string | null;
+  months: number;
+  normalEur: number;
+  paidEur: number;
+  /** Renouvellement ramené à l'année (HT, €). */
+  renewalEurPerYear: number;
+};
+
+const cents = (value: number) => Math.round(value) / 100;
+
+/**
+ * Hébergement d'une formule : pack + durée du catalogue Hostinger (prix appliqués) si choisis
+ * et disponibles, sinon les prix manuels des réglages (12 mois). Parrainage = promo × (1 − %).
+ */
+export function resolvePlanHosting(
+  plan: { includeHosting: boolean; hostingPackId?: string | null; hostingMonths?: number | null },
+  settings: {
+    hostingEur: number;
+    hostingReferralEur: number;
+    hostingRenewalEur: number;
+    domainEur?: number;
+    referralPercent?: number;
+  },
+  catalog: HostingCatalogEntry[] = [],
+): ResolvedHosting | null {
+  if (!plan.includeHosting) return null;
+  const entry = plan.hostingPackId
+    ? catalog.find((c) => c.packId === plan.hostingPackId && c.months === (plan.hostingMonths ?? 12))
+    : undefined;
+  if (entry) {
+    const percent = settings.referralPercent ?? DEFAULT_PRICING_REFERRAL_PERCENT;
+    const domainCents = Math.round((settings.domainEur ?? DEFAULT_PRICING_DOMAIN_EUR) * 100);
+    return {
+      source: "catalog",
+      packName: entry.packName,
+      months: entry.months,
+      normalEur: cents(entry.listCents + domainCents),
+      paidEur: cents(Math.round((entry.promoCents * (10000 - toBp(percent))) / 10000)),
+      renewalEurPerYear: cents((entry.renewalCents * 12) / entry.months),
+    };
+  }
+  return {
+    source: "manual",
+    packName: null,
+    months: 12,
+    normalEur: settings.hostingEur,
+    paidEur: settings.hostingReferralEur,
+    renewalEurPerYear: settings.hostingRenewalEur,
+  };
+}
+
+/** Année à partir de laquelle le renouvellement s'applique (12 mois → 2e, 24 → 3e, 48 → 5e). */
+export function renewalFromYear(months: number): number {
+  return Math.floor(months / 12) + 1;
+}
+
 /** Montant HT en euros → TTC en FCFA (parité fixe puis TVA), arrondi au franc. */
 export function eurHtToXofTtc(eur: number, vatRate: number): number {
   return computePlanTtc(eurToXof(eur), [], vatRate).totalTtc;

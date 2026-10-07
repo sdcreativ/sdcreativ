@@ -33,6 +33,10 @@ import {
   updatePricingPlanApi,
   updatePricingReassuranceApi,
   updatePricingSettingsApi,
+  applyHostingCatalogApi,
+  fetchHostingCatalogApi,
+  syncHostingCatalogApi,
+  type HostingCatalogResponse,
 } from "@/lib/public-pricing-api";
 import { useDialog } from "@/components/ui/DialogProvider";
 import {
@@ -46,7 +50,11 @@ import {
   computePlanPricing,
   DEFAULT_PRICING_HOSTING_EUR,
   DEFAULT_PRICING_REFERRAL_NOTE,
+  DEFAULT_PRICING_DOMAIN_EUR,
   DEFAULT_PRICING_HOSTING_CHECKED_ON,
+  DEFAULT_PRICING_REFERRAL_PERCENT,
+  resolvePlanHosting,
+  type HostingCatalogEntry,
   DEFAULT_PRICING_HOSTING_REFERRAL_EUR,
   DEFAULT_PRICING_HOSTING_RENEWAL_EUR,
   daysSinceHostingCheck,
@@ -59,7 +67,7 @@ import {
   hostingDiscountPercent,
   resolvePlanPriceDisplay,
 } from "@/lib/pricing-display";
-import type { PricingSettings } from "@/lib/public-pricing";
+import type { PricingContext, PricingSettings } from "@/lib/public-pricing";
 import { cn } from "@/lib/utils";
 
 const fieldClass =
@@ -103,17 +111,19 @@ function formatAdminPrice(item: PublicPricingPlanRecord): string {
   return (price.compareAt ? `${price.compareAt} → ${final}` : final) + (price.note ? ` · ${price.note}` : "");
 }
 
-function formatAdminBreakdown(item: PublicPricingPlanRecord, settings: PricingSettings): string {
+function formatAdminBreakdown(item: PublicPricingPlanRecord, ctx: PricingContext): string {
+  const resolved = resolvePlanHosting(item, ctx, ctx.catalog);
   const b = computePlanPricing({
     baseHt: item.baseAmountHt ?? 0,
     charges: item.charges,
-    includeHosting: item.includeHosting,
-    hostingEur: settings.hostingEur,
-    hostingReferralEur: settings.hostingReferralEur,
-    vatRate: settings.vatRate,
+    includeHosting: resolved != null,
+    hostingEur: resolved?.normalEur ?? 0,
+    hostingReferralEur: resolved?.paidEur ?? 0,
+    vatRate: ctx.vatRate,
   });
+  const pack = resolved ? ` (${resolved.packName ?? "prix manuels"} ${resolved.months} mois)` : "";
   const hosting = b.hostingHt > 0
-    ? ` + hébergement ${formatPlanAmount(b.hostingHt)} − parrainage ${formatPlanAmount(b.discountHt)}`
+    ? ` + hébergement${pack} ${formatPlanAmount(b.hostingHt)} − parrainage ${formatPlanAmount(b.discountHt)}`
     : "";
   return `Calcul auto : base ${formatPlanAmount(b.baseHt)} HT + ${item.charges.length} charge(s) ${formatPlanAmount(b.otherChargesHt)} HT${hosting} + TVA ${b.vatRate.toLocaleString("fr-FR")} % ${formatPlanAmount(b.vatAmount)}`;
 }
@@ -126,7 +136,12 @@ const DEFAULT_SETTINGS: PricingSettings = {
   hostingRenewalEur: DEFAULT_PRICING_HOSTING_RENEWAL_EUR,
   hostingCheckedOn: DEFAULT_PRICING_HOSTING_CHECKED_ON,
   referralNote: DEFAULT_PRICING_REFERRAL_NOTE,
+  domainEur: DEFAULT_PRICING_DOMAIN_EUR,
+  referralPercent: DEFAULT_PRICING_REFERRAL_PERCENT,
 };
+
+const euros = (centsValue: number) =>
+  (centsValue / 100).toLocaleString("fr-FR", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
 /** Champs texte du formulaire de réglages (virgule décimale à la française). */
 function settingsToInput(s: PricingSettings) {
@@ -139,6 +154,8 @@ function settingsToInput(s: PricingSettings) {
     hostingRenewalEur: dec(s.hostingRenewalEur),
     hostingCheckedOn: s.hostingCheckedOn,
     referralNote: s.referralNote,
+    domainEur: dec(s.domainEur),
+    referralPercent: dec(s.referralPercent),
   };
 }
 
@@ -162,6 +179,8 @@ export function CrmPricingView() {
   const [settings, setSettings] = useState<PricingSettings>(DEFAULT_SETTINGS);
   const [settingsInput, setSettingsInput] = useState(() => settingsToInput(DEFAULT_SETTINGS));
   const [savingSettings, setSavingSettings] = useState(false);
+  const [catalog, setCatalog] = useState<HostingCatalogResponse>({ entries: [], syncedAt: null, apiConfigured: false });
+  const [catalogBusy, setCatalogBusy] = useState<"sync" | "apply" | null>(null);
   const [reassuranceForm, setReassuranceForm] = useState<ReassuranceForm>(emptyReassuranceForm);
   const [saving, setSaving] = useState(false);
   const [busyId, setBusyId] = useState<string | null>(null);
@@ -180,6 +199,8 @@ export function CrmPricingView() {
       ]);
       setSettings(vat);
       setSettingsInput(settingsToInput(vat));
+      // Le catalogue est facultatif : son échec ne doit pas bloquer la page.
+      fetchHostingCatalogApi().then(setCatalog).catch(() => undefined);
       setPlans(plansData);
       setReassurance(reassuranceData);
     } catch (err) {
@@ -389,6 +410,47 @@ export function CrmPricingView() {
   const toInputNumber = (value: string) => Number(value.replace(",", ".")) || 0;
   const renewalPreview = eurHtToXofTtc(toInputNumber(settingsInput.hostingRenewalEur), toInputNumber(settingsInput.vatRate));
   const hostingCheckAge = daysSinceHostingCheck(settings.hostingCheckedOn);
+  const pricingCtx: PricingContext = { ...settings, catalog: catalog.entries };
+  const pendingEntries = catalog.entries.filter((e) => e.pending);
+  const usedPacks = new Set(plans.filter((p) => p.includeHosting && p.hostingPackId).map((p) => p.hostingPackId));
+  const referralPrice = (promoCents: number) =>
+    Math.round((promoCents * (10000 - Math.round(settings.referralPercent * 100))) / 10000);
+
+  async function handleCatalogSync() {
+    setCatalogBusy("sync");
+    try {
+      const result = await syncHostingCatalogApi();
+      setCatalog(await fetchHostingCatalogApi());
+      setMessage(
+        result.changes.length
+          ? `Catalogue Hostinger synchronisé : ${result.changes.length} nouveau(x) prix en attente de validation.`
+          : `Catalogue Hostinger synchronisé (${result.packs} packs) : aucun changement de prix.`,
+      );
+    } catch (err) {
+      setMessage(err instanceof Error ? `Impossible : ${err.message}` : "Impossible de synchroniser le catalogue.");
+    } finally {
+      setCatalogBusy(null);
+    }
+  }
+
+  async function handleCatalogApply() {
+    const ok = await confirm({
+      title: "Appliquer les nouveaux prix Hostinger ?",
+      message: "Les prix en attente remplacent les prix actuels ; les formules concernées sont recalculées et publiées.",
+      confirmLabel: "Appliquer",
+    });
+    if (!ok) return;
+    setCatalogBusy("apply");
+    try {
+      const result = await applyHostingCatalogApi();
+      await load();
+      setMessage(`${result.pricesApplied} prix Hostinger appliqué(s), ${result.plansUpdated} formule(s) recalculée(s).`);
+    } catch (err) {
+      setMessage(err instanceof Error ? `Impossible : ${err.message}` : "Impossible d'appliquer les prix.");
+    } finally {
+      setCatalogBusy(null);
+    }
+  }
 
   async function handleSaveSettings(e: React.FormEvent) {
     e.preventDefault();
@@ -401,12 +463,14 @@ export function CrmPricingView() {
       hostingRenewalEur: toNumber(settingsInput.hostingRenewalEur),
       hostingCheckedOn: settingsInput.hostingCheckedOn,
       referralNote: settingsInput.referralNote.trim(),
+      domainEur: toNumber(settingsInput.domainEur),
+      referralPercent: toNumber(settingsInput.referralPercent),
     };
-    if (!Number.isFinite(next.vatRate) || next.vatRate < 0 || next.vatRate > 100) {
-      setMessage("Impossible : la TVA doit être comprise entre 0 et 100 %.");
+    if (![next.vatRate, next.referralPercent].every((v) => Number.isFinite(v) && v >= 0 && v <= 100)) {
+      setMessage("Impossible : la TVA et la remise parrainage doivent être comprises entre 0 et 100 %.");
       return;
     }
-    if (![next.hostingEur, next.hostingReferralEur, next.hostingRenewalEur].every((v) => Number.isFinite(v) && v >= 0)) {
+    if (![next.hostingEur, next.hostingReferralEur, next.hostingRenewalEur, next.domainEur].every((v) => Number.isFinite(v) && v >= 0)) {
       setMessage("Impossible : prix d’hébergement invalide.");
       return;
     }
@@ -505,6 +569,94 @@ export function CrmPricingView() {
         </p>
       )}
 
+      <section className="space-y-3 rounded-2xl border border-gray/60 bg-white p-4 shadow-sm">
+        <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
+          <div>
+            <h2 className="text-base font-bold text-foreground">Catalogue Hostinger (API)</h2>
+            <p className="mt-1 text-sm text-gray-text">
+              {catalog.apiConfigured
+                ? catalog.syncedAt
+                  ? `Dernière synchronisation : ${new Date(catalog.syncedAt).toLocaleString("fr-FR")}. Relevé automatique chaque jour.`
+                  : "Jamais synchronisé : lancez une première synchronisation."
+                : "Jeton HOSTINGER_API_TOKEN absent : les prix manuels des réglages sont utilisés."}
+            </p>
+          </div>
+          <div className="flex flex-wrap gap-2">
+            <button
+              type="button"
+              onClick={() => void handleCatalogSync()}
+              disabled={!catalog.apiConfigured || catalogBusy !== null}
+              className="inline-flex items-center gap-1.5 rounded-xl border border-gray/60 bg-white px-3 py-2 text-sm font-medium hover:bg-gray-light disabled:opacity-60"
+            >
+              <RefreshCw className={cn("h-4 w-4", catalogBusy === "sync" && "animate-spin")} aria-hidden />
+              Synchroniser maintenant
+            </button>
+            {pendingEntries.length > 0 && (
+              <button
+                type="button"
+                onClick={() => void handleCatalogApply()}
+                disabled={catalogBusy !== null}
+                className="inline-flex items-center gap-1.5 rounded-xl bg-primary px-3 py-2 text-sm font-semibold text-white disabled:opacity-60"
+              >
+                {catalogBusy === "apply" && <Loader2 className="h-4 w-4 animate-spin" aria-hidden />}
+                Appliquer les nouveaux prix ({pendingEntries.length})
+              </button>
+            )}
+          </div>
+        </div>
+        {pendingEntries.length > 0 && (
+          <div className="rounded-xl border border-amber-300 bg-amber-50 px-4 py-3 text-sm text-amber-900" role="alert">
+            <p className="font-semibold">Hostinger a changé ses prix — non publiés tant que vous ne les appliquez pas :</p>
+            <ul className="mt-1 list-inside list-disc">
+              {pendingEntries.map((e) => (
+                <li key={`${e.packId}-${e.months}`}>
+                  {e.packName} {e.months} mois : promo {euros(e.promoCents)} € → <strong>{euros(e.pending!.promoCents)} €</strong>,
+                  renouvellement {euros(e.renewalCents)} € → <strong>{euros(e.pending!.renewalCents)} €</strong>
+                  {usedPacks.has(e.packId) && " (utilisé par une formule)"}
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
+        {catalog.entries.length > 0 && (
+          <div className="overflow-x-auto">
+            <table className="w-full min-w-[640px] text-left text-sm">
+              <thead className="text-xs uppercase tracking-wide text-gray-text">
+                <tr>
+                  <th className="py-1.5 pr-3">Pack</th>
+                  <th className="py-1.5 pr-3">Durée</th>
+                  <th className="py-1.5 pr-3 text-right">Prix normal</th>
+                  <th className="py-1.5 pr-3 text-right">Promo</th>
+                  <th className="py-1.5 pr-3 text-right">Avec parrainage</th>
+                  <th className="py-1.5 text-right">Renouvellement</th>
+                </tr>
+              </thead>
+              <tbody>
+                {catalog.entries
+                  .filter((e: HostingCatalogEntry) => e.promoCents < e.renewalCents || usedPacks.has(e.packId))
+                  .map((e: HostingCatalogEntry) => (
+                    <tr key={`${e.packId}-${e.months}`} className={cn("border-t border-gray/30", usedPacks.has(e.packId) && "font-medium")}>
+                      <td className="py-1.5 pr-3">
+                        {e.packName}
+                        {usedPacks.has(e.packId) && <span className="ml-1 text-xs text-primary">· utilisé</span>}
+                      </td>
+                      <td className="py-1.5 pr-3">{e.months} mois</td>
+                      <td className="py-1.5 pr-3 text-right">{euros(e.listCents + Math.round(settings.domainEur * 100))} €</td>
+                      <td className="py-1.5 pr-3 text-right">{euros(e.promoCents)} €</td>
+                      <td className="py-1.5 pr-3 text-right">{euros(referralPrice(e.promoCents))} €</td>
+                      <td className="py-1.5 text-right">{euros(e.renewalCents)} €</td>
+                    </tr>
+                  ))}
+              </tbody>
+            </table>
+            <p className="mt-1 text-xs text-gray-text">
+              Prix HT en euros. Prix normal = tarif mensuel × durée + domaine offert ({euros(Math.round(settings.domainEur * 100))} €).
+              Parrainage −{settings.referralPercent.toLocaleString("fr-FR")} % sur la 1ʳᵉ commande ; pas de remise au renouvellement.
+            </p>
+          </div>
+        )}
+      </section>
+
       <form
         onSubmit={(e) => void handleSaveSettings(e)}
         className="space-y-4 rounded-2xl border border-gray/60 bg-white p-4 shadow-sm"
@@ -540,7 +692,7 @@ export function CrmPricingView() {
 
         <fieldset className="rounded-xl border border-gray/40 p-3">
           <legend className="px-1 text-xs font-semibold uppercase tracking-wide text-gray-text">
-            Hébergement Hostinger 1 an (prix HT relevés au panier)
+            Hébergement — prix manuels 12 mois (utilisés si aucun pack du catalogue n’est choisi)
           </legend>
           <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
             <label className="block">
@@ -576,6 +728,26 @@ export function CrmPricingView() {
                 type="date"
                 value={settingsInput.hostingCheckedOn}
                 onChange={(e) => setSettingsInput((p) => ({ ...p, hostingCheckedOn: e.target.value }))}
+                className={fieldClass}
+              />
+            </label>
+          </div>
+          <div className="mt-3 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+            <label className="block">
+              <span className="mb-1 block text-xs font-medium text-gray-text">Domaine offert (€ HT, catalogue)</span>
+              <input
+                inputMode="decimal"
+                value={settingsInput.domainEur}
+                onChange={(e) => setSettingsInput((p) => ({ ...p, domainEur: decimalInput(e.target.value) }))}
+                className={fieldClass}
+              />
+            </label>
+            <label className="block">
+              <span className="mb-1 block text-xs font-medium text-gray-text">Remise parrainage (%, catalogue)</span>
+              <input
+                inputMode="decimal"
+                value={settingsInput.referralPercent}
+                onChange={(e) => setSettingsInput((p) => ({ ...p, referralPercent: decimalInput(e.target.value, 6) }))}
                 className={fieldClass}
               />
             </label>
@@ -652,7 +824,7 @@ export function CrmPricingView() {
                     {item.priceMode !== "quote" && (
                       <p className="mt-1 text-xs text-gray-text">
                         {item.baseAmountHt != null
-                          ? formatAdminBreakdown(item, settings)
+                          ? formatAdminBreakdown(item, pricingCtx)
                           : "Prix saisi manuellement — « Charges & TVA » pour le calculer à partir du HT et des charges."}
                       </p>
                     )}
@@ -722,7 +894,7 @@ export function CrmPricingView() {
         <CrmPricingPlanForm
           key={planFormKey}
           creating={creating}
-          settings={settings}
+          settings={pricingCtx}
           initial={planForm}
           focusPricing={focusPricing}
           saving={saving}

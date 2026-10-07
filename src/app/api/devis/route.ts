@@ -18,7 +18,7 @@ import {
 } from "@/lib/rate-limit";
 import { createDevisSchema } from "@/lib/validations/devis";
 import { formatPlanAmount, PRICING_REFERRAL_OFFER } from "@/lib/pricing-display";
-import { getPricingSettings, getVisiblePricingPlanBySlug, planQuoteLines } from "@/lib/public-pricing";
+import { getPricingContext, getVisiblePricingPlanBySlug, planQuoteLines } from "@/lib/public-pricing";
 
 export async function POST(request: Request) {
   try {
@@ -66,7 +66,7 @@ export async function POST(request: Request) {
       try {
         const [plan, pricingSettings] = await Promise.all([
           getVisiblePricingPlanBySlug(data.pricingPlan),
-          getPricingSettings(),
+          getPricingContext(),
         ]);
         const built = plan ? planQuoteLines(plan, pricingSettings) : null;
         if (plan && built) planEstimate = { planName: plan.name, ...built };

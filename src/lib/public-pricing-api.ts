@@ -4,6 +4,7 @@ import type {
   PublicPricingReassuranceRecord,
 } from "@/lib/public-pricing";
 import { parseFetchJson } from "@/lib/fetch-json";
+import type { HostingCatalogEntry } from "@/lib/pricing-display";
 
 export async function fetchPricingPlansAdmin(locale?: string): Promise<PublicPricingPlanRecord[]> {
   const search = new URLSearchParams();
@@ -148,4 +149,25 @@ export async function updatePricingSettingsApi(
     body: JSON.stringify(input),
   });
   return parseFetchJson<PricingSettings & { plansUpdated: number }>(res);
+}
+
+export type HostingCatalogResponse = {
+  entries: HostingCatalogEntry[];
+  syncedAt: string | null;
+  apiConfigured: boolean;
+};
+
+export async function fetchHostingCatalogApi(): Promise<HostingCatalogResponse> {
+  const res = await fetch("/api/admin/pricing-hosting-catalog", { credentials: "include" });
+  return parseFetchJson<HostingCatalogResponse>(res);
+}
+
+export async function syncHostingCatalogApi(): Promise<{ packs: number; prices: number; changes: unknown[] }> {
+  const res = await fetch("/api/admin/pricing-hosting-catalog/sync", { method: "POST", credentials: "include" });
+  return parseFetchJson<{ packs: number; prices: number; changes: unknown[] }>(res);
+}
+
+export async function applyHostingCatalogApi(): Promise<{ pricesApplied: number; plansUpdated: number }> {
+  const res = await fetch("/api/admin/pricing-hosting-catalog/apply", { method: "POST", credentials: "include" });
+  return parseFetchJson<{ pricesApplied: number; plansUpdated: number }>(res);
 }

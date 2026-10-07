@@ -81,6 +81,8 @@ describe("toPricingPlan", () => {
     baseAmountHt: null,
     charges: [],
     includeHosting: false,
+    hostingPackId: null,
+    hostingMonths: null,
     compareAtAmount: null,
     discountLabel: null,
     features: ["Order management"],
@@ -112,7 +114,11 @@ describe("toPricingPlan", () => {
       hostingEur: 150.87,
       hostingReferralEur: 35.88,
       hostingRenewalEur: 119.88,
+      hostingCheckedOn: "2026-10-07",
       referralNote: "-{pourcentage} % grâce à notre partenariat Hostinger",
+      domainEur: 6.99,
+      referralPercent: 20,
+      catalog: [],
     };
     const [hosting, maintenance] = toPricingPlan(withPerks, settings).perks;
     expect(hosting?.href).toBe(url);
@@ -171,6 +177,8 @@ describe("charges et TVA", () => {
     hostingRenewalEur: 119.88,
     hostingCheckedOn: "2026-10-07",
     referralNote: "-{pourcentage} % grâce à notre partenariat Hostinger",
+    domainEur: 6.99,
+    referralPercent: 20,
   };
 
   it("valide la date de relevé des prix", () => {
@@ -216,6 +224,9 @@ describe("devis pré-rempli depuis une formule", () => {
     hostingRenewalEur: 119.88,
     hostingCheckedOn: "2026-10-07",
     referralNote: "",
+    domainEur: 6.99,
+    referralPercent: 20,
+    catalog: [],
   };
   const plan: PublicPricingPlanRecord = {
     id: "00000000-0000-0000-0000-000000000002",
@@ -231,6 +242,8 @@ describe("devis pré-rempli depuis une formule", () => {
     baseAmountHt: 144256,
     charges: [{ id: "lic", label: "Licence thème", amount: 20000 }],
     includeHosting: true,
+    hostingPackId: null,
+    hostingMonths: null,
     compareAtAmount: 287000,
     discountLabel: null,
     features: ["SEO initial"],

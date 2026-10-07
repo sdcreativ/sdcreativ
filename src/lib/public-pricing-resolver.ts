@@ -7,7 +7,7 @@ import {
 } from "@/content/pricing";
 import { isDatabaseConfigured } from "@/lib/db";
 import {
-  getPricingSettings,
+  getPricingContext,
   listPublicPricingPlans,
   listPublicPricingReassurance,
   toPricingPlan,
@@ -29,7 +29,7 @@ async function loadPricingPlans(locale: string): Promise<PricingPlan[]> {
   try {
     const [records, settings] = await Promise.all([
       listPublicPricingPlans({ locale, visibleOnly: true }),
-      getPricingSettings(),
+      getPricingContext(),
     ]);
     if (records.length > 0) return records.map((record) => toPricingPlan(record, settings));
   } catch (error) {
