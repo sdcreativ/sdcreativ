@@ -133,8 +133,8 @@ export function PricingPlanCard({ plan, locale = "fr", className }: Props) {
                   {perk.renewalPerYear != null && (
                     <p className="mt-0.5 text-xs leading-snug text-gray-text">
                       {en
-                        ? `Renewal from year 2: about ${formatPlanAmount(perk.renewalPerYear)} ${currency} incl. VAT per year`
-                        : `Renouvellement à partir de la 2ᵉ année : env. ${formatPlanAmount(perk.renewalPerYear)} ${currency} TTC/an`}
+                        ? `Renewal from year ${perk.renewalFromYear ?? 2}: about ${formatPlanAmount(perk.renewalPerYear)} ${currency} incl. VAT per year`
+                        : `Renouvellement à partir de la ${perk.renewalFromYear ?? 2}ᵉ année : env. ${formatPlanAmount(perk.renewalPerYear)} ${currency} TTC/an`}
                     </p>
                   )}
                 </div>

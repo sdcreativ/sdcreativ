@@ -17,13 +17,16 @@ import {
   baseHtFromTtc,
   computePlanPricing,
   eurToXof,
+  HOSTING_MONTH_OPTIONS,
+  renewalFromYear,
+  resolvePlanHosting,
   formatPlanAmount,
   formatReferralNote,
   hostingDiscountPercent,
   hostingTtcPrices,
   eurHtToXofTtc,
 } from "@/lib/pricing-display";
-import type { PricingSettings } from "@/lib/public-pricing";
+import type { PricingContext } from "@/lib/public-pricing";
 import { cn } from "@/lib/utils";
 
 export type PlanForm = {
@@ -45,8 +48,11 @@ export type PlanForm = {
   autoCalc: boolean;
   baseAmountHt: string;
   charges: { id: string; label: string; amount: string }[];
-  /** Ajoute l'hébergement Hostinger 1 an (réglages) avec la remise parrainage. */
+  /** Ajoute l'hébergement Hostinger avec la remise parrainage. */
   includeHosting: boolean;
+  /** Pack du catalogue Hostinger ("" = prix manuels des réglages) et durée en mois. */
+  hostingPackId: string;
+  hostingMonths: number;
   /** Pastille près du prix quand une remise s'applique, ex. « Hébergement -20 % ». */
   discountLabel: string;
   perks: PricingPerk[];
@@ -84,6 +90,8 @@ export const emptyPlanForm = (locale: "fr" | "en" = "fr"): PlanForm => ({
   baseAmountHt: "",
   charges: [],
   includeHosting: false,
+  hostingPackId: "",
+  hostingMonths: 12,
   discountLabel: "",
   perks: [],
   features: [""],
@@ -110,6 +118,8 @@ export function planToForm(r: PublicPricingPlanRecord): PlanForm {
     baseAmountHt: r.baseAmountHt != null ? String(r.baseAmountHt) : "",
     charges: r.charges.map((c) => ({ id: c.id, label: c.label, amount: String(c.amount) })),
     includeHosting: r.includeHosting,
+    hostingPackId: r.hostingPackId ?? "",
+    hostingMonths: r.hostingMonths ?? 12,
     discountLabel: r.discountLabel ?? "",
     perks: r.perks,
     features: r.features.length ? r.features : [""],
@@ -133,15 +143,29 @@ function cleanCharges(form: PlanForm) {
 }
 
 /** Détail HT → TTC si le calcul automatique est actif, sinon null. */
-export function formBreakdown(form: PlanForm, settings: PricingSettings) {
+/** Hébergement résolu pour le formulaire (`force` : affiché même si la case n'est pas cochée). */
+function formHosting(form: PlanForm, ctx: PricingContext, force = false) {
+  return resolvePlanHosting(
+    {
+      includeHosting: force || form.includeHosting,
+      hostingPackId: form.hostingPackId || null,
+      hostingMonths: form.hostingMonths,
+    },
+    ctx,
+    ctx.catalog,
+  );
+}
+
+export function formBreakdown(form: PlanForm, ctx: PricingContext) {
   if (!form.autoCalc || form.priceMode === "quote" || form.baseAmountHt === "") return null;
+  const hosting = formHosting(form, ctx);
   return computePlanPricing({
     baseHt: Number(form.baseAmountHt),
     charges: cleanCharges(form),
-    includeHosting: form.includeHosting,
-    hostingEur: settings.hostingEur,
-    hostingReferralEur: settings.hostingReferralEur,
-    vatRate: settings.vatRate,
+    includeHosting: hosting != null,
+    hostingEur: hosting?.normalEur ?? 0,
+    hostingReferralEur: hosting?.paidEur ?? 0,
+    vatRate: ctx.vatRate,
   });
 }
 
@@ -165,6 +189,8 @@ export function planFormToPayload(form: PlanForm) {
     baseAmountHt: auto && form.baseAmountHt !== "" ? Number(form.baseAmountHt) : null,
     charges: cleanCharges(form),
     includeHosting: auto && form.includeHosting,
+    hostingPackId: form.hostingPackId || null,
+    hostingMonths: form.hostingPackId ? form.hostingMonths : null,
     discountLabel: form.discountLabel.trim(),
     perks: cleanPerks(form.perks),
     features: form.features.map((f) => f.trim()).filter(Boolean),
@@ -173,7 +199,8 @@ export function planFormToPayload(form: PlanForm) {
   };
 }
 
-function formToPreviewPlan(form: PlanForm, settings: PricingSettings): PricingPlan {
+function formToPreviewPlan(form: PlanForm, settings: PricingContext): PricingPlan {
+  const hosting = formHosting(form, settings);
   const referralUrl = settings.referralUrl;
   const payload = planFormToPayload(form);
   const breakdown = formBreakdown(form, settings);
@@ -190,16 +217,19 @@ function formToPreviewPlan(form: PlanForm, settings: PricingSettings): PricingPl
       if (!perk.referralLink) return perk;
       const note =
         breakdown && breakdown.discountHt > 0
-          ? formatReferralNote(settings.referralNote, hostingDiscountPercent(settings.hostingEur, settings.hostingReferralEur))
+          ? formatReferralNote(settings.referralNote, hostingDiscountPercent(hosting?.normalEur ?? 0, hosting?.paidEur ?? 0))
           : "";
-      const prices = note ? hostingTtcPrices(settings.hostingEur, settings.hostingReferralEur, settings.vatRate) : null;
+      const prices = note && hosting ? hostingTtcPrices(hosting.normalEur, hosting.paidEur, settings.vatRate) : null;
       return {
         ...perk,
         ...(referralUrl ? { href: referralUrl } : {}),
         ...(note ? { note } : {}),
         ...(prices && prices.before > prices.after ? { priceBefore: prices.before, priceAfter: prices.after } : {}),
-        ...(breakdown && breakdown.hostingHt > 0 && settings.hostingRenewalEur > 0
-          ? { renewalPerYear: eurHtToXofTtc(settings.hostingRenewalEur, settings.vatRate) }
+        ...(breakdown && breakdown.hostingHt > 0 && hosting && hosting.renewalEurPerYear > 0
+          ? {
+              renewalPerYear: eurHtToXofTtc(hosting.renewalEurPerYear, settings.vatRate),
+              renewalFromYear: renewalFromYear(hosting.months),
+            }
           : {}),
       };
     }),
@@ -229,8 +259,8 @@ function validate(form: PlanForm): string | null {
 
 type Props = {
   creating: boolean;
-  /** Réglages globaux (TVA, hébergement Hostinger, parrainage) du haut de la page Tarifs. */
-  settings: PricingSettings;
+  /** Réglages globaux + catalogue Hostinger appliqué (haut de la page Tarifs). */
+  settings: PricingContext;
   initial: PlanForm;
   /** Ouvre directement la section charges / calcul automatique (bouton « Charges & TVA »). */
   focusPricing?: boolean;
@@ -244,10 +274,10 @@ type Props = {
  * Passe en calcul auto. L'hébergement est inclus par défaut (avantage « Hébergement inclus »),
  * et la base est pré-remplie pour que le prix actuel devienne le prix barré (sans remise).
  */
-function withAutoCalc(form: PlanForm, settings: PricingSettings): PlanForm {
+function withAutoCalc(form: PlanForm, settings: PricingContext): PlanForm {
   const canPrefill = form.baseAmountHt === "" && Number(form.priceAmount) > 0;
   const includeHosting = form.autoCalc ? form.includeHosting : true;
-  const hostingHt = includeHosting ? eurToXof(settings.hostingEur) : 0;
+  const hostingHt = includeHosting ? eurToXof(formHosting(form, settings, true)?.normalEur ?? 0) : 0;
   const base = canPrefill ? Math.max(0, baseHtFromTtc(Number(form.priceAmount), settings.vatRate) - hostingHt) : null;
   return {
     ...form,
@@ -280,9 +310,13 @@ export function CrmPricingPlanForm({
   const isQuote = form.priceMode === "quote";
   const breakdown = formBreakdown(form, settings);
   const { vatRate } = settings;
-  const referralPercent = hostingDiscountPercent(settings.hostingEur, settings.hostingReferralEur);
-  const hostingXof = eurToXof(settings.hostingEur);
-  const hostingPaidXof = eurToXof(settings.hostingReferralEur);
+  const shownHosting = formHosting(form, settings, true);
+  const referralPercent = hostingDiscountPercent(shownHosting?.normalEur ?? 0, shownHosting?.paidEur ?? 0);
+  const hostingXof = eurToXof(shownHosting?.normalEur ?? 0);
+  const hostingPaidXof = eurToXof(shownHosting?.paidEur ?? 0);
+  const catalogPacks = [...new Map(settings.catalog.map((c) => [c.packId, c.packName])).entries()];
+  const packMonths = settings.catalog.filter((c) => c.packId === form.hostingPackId).map((c) => c.months);
+  const packMissing = Boolean(form.hostingPackId) && shownHosting?.source !== "catalog";
   const eur = (value: number) => value.toLocaleString("fr-FR", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
   const error = localError || serverError;
 
@@ -425,14 +459,52 @@ export function CrmPricingPlanForm({
                       className="mt-0.5 rounded border-gray/60 text-primary"
                     />
                     <span>
-                      <span className="font-medium">Inclure l’hébergement Hostinger 1 an</span>
+                      <span className="font-medium">Inclure l’hébergement Hostinger</span>
                       <span className="block text-xs text-gray-text">
-                        Prix normal {eur(settings.hostingEur)} € HT ≈ {formatPlanAmount(hostingXof)} FCFA → avec le lien de
-                        parrainage {eur(settings.hostingReferralEur)} € HT ≈ {formatPlanAmount(hostingPaidXof)} FCFA
-                        (−{referralPercent.toLocaleString("fr-FR")} %, 1 € = 655,957 FCFA). Remise sur l’hébergement seulement.
+                        {shownHosting?.packName ?? "Prix manuels des réglages"} · {shownHosting?.months ?? 12} mois — prix normal{" "}
+                        {eur(shownHosting?.normalEur ?? 0)} € HT ≈ {formatPlanAmount(hostingXof)} FCFA → avec le lien de
+                        parrainage {eur(shownHosting?.paidEur ?? 0)} € HT ≈ {formatPlanAmount(hostingPaidXof)} FCFA
+                        (−{referralPercent.toLocaleString("fr-FR")} %, 1 € = 655,957 FCFA). Remise sur l’hébergement seulement,
+                        1ʳᵉ commande.
                       </span>
                     </span>
                   </label>
+                  {form.includeHosting && (
+                    <div className="grid gap-3 sm:grid-cols-2">
+                      <CrmFormField label="Pack Hostinger" hint={settings.catalog.length ? undefined : "Catalogue non synchronisé : prix manuels utilisés."}>
+                        <select
+                          value={form.hostingPackId}
+                          onChange={(e) => set("hostingPackId", e.target.value)}
+                          className={crmFieldClass}
+                        >
+                          <option value="">Prix manuels (réglages, 12 mois)</option>
+                          {catalogPacks.map(([id, name]) => (
+                            <option key={id} value={id}>{name}</option>
+                          ))}
+                          {packMissing && <option value={form.hostingPackId}>{form.hostingPackId} (non synchronisé)</option>}
+                        </select>
+                      </CrmFormField>
+                      <CrmFormField label="Durée incluse">
+                        <select
+                          value={form.hostingMonths}
+                          onChange={(e) => set("hostingMonths", Number(e.target.value))}
+                          disabled={!form.hostingPackId}
+                          className={cn(crmFieldClass, "disabled:opacity-60")}
+                        >
+                          {HOSTING_MONTH_OPTIONS.map((m) => (
+                            <option key={m} value={m} disabled={Boolean(form.hostingPackId) && packMonths.length > 0 && !packMonths.includes(m)}>
+                              {m} mois
+                            </option>
+                          ))}
+                        </select>
+                      </CrmFormField>
+                      {packMissing && (
+                        <p className="text-xs text-amber-800 sm:col-span-2">
+                          Ce pack / cette durée n’est pas encore dans le catalogue synchronisé : les prix manuels sont utilisés.
+                        </p>
+                      )}
+                    </div>
+                  )}
                   <div className="space-y-2">
                     <p className="text-sm font-medium text-foreground">Autres charges HT (sans remise)</p>
                     {form.charges.map((charge, index) => (

@@ -11,9 +11,16 @@ import { slugifyBlogTitle } from "@/lib/blog-posts-types";
 import { SUPPORTED_CURRENCIES } from "@/lib/currencies";
 import { isDatabaseConfigured, withDb } from "@/lib/db";
 import type { QuoteLine } from "@/lib/quote-calculator";
+import { listHostingCatalog } from "@/lib/hostinger-catalog";
 import { LUCIDE_ICON_NAME_ENUM, LUCIDE_ICON_NAMES, type LucideIconName } from "@/lib/lucide-icon-map";
 import {
   computePlanPricing,
+  DEFAULT_PRICING_DOMAIN_EUR,
+  DEFAULT_PRICING_REFERRAL_PERCENT,
+  HOSTING_MONTH_OPTIONS,
+  renewalFromYear,
+  resolvePlanHosting,
+  type HostingCatalogEntry,
   DEFAULT_PRICING_HOSTING_EUR,
   DEFAULT_PRICING_REFERRAL_NOTE,
   DEFAULT_PRICING_HOSTING_CHECKED_ON,
@@ -46,8 +53,11 @@ export type PublicPricingPlanRecord = {
   /** Calcul automatique : quand renseigné, priceAmount = (base + charges) × (1 + TVA). */
   baseAmountHt: number | null;
   charges: PricingCharge[];
-  /** Ajoute l'hébergement Hostinger 1 an (réglages) avec sa remise parrainage. */
+  /** Ajoute l'hébergement Hostinger avec sa remise parrainage. */
   includeHosting: boolean;
+  /** Pack du catalogue Hostinger (null = prix manuels des réglages) et durée en mois. */
+  hostingPackId: string | null;
+  hostingMonths: number | null;
   /** Prix barré calculé (TTC sans remise parrainage), null sans remise. */
   compareAtAmount: number | null;
   discountLabel: string | null;
@@ -90,6 +100,8 @@ type PlanRow = {
   base_amount_ht: number | null;
   charges: unknown;
   include_hosting: boolean;
+  hosting_pack_id: string | null;
+  hosting_months: number | null;
   price_compare_at: number | null;
   discount_label: string | null;
   features: string[];
@@ -167,6 +179,8 @@ function mapPlan(row: PlanRow): PublicPricingPlanRecord {
     baseAmountHt: row.base_amount_ht,
     charges: parseCharges(row.charges),
     includeHosting: row.include_hosting,
+    hostingPackId: row.hosting_pack_id,
+    hostingMonths: row.hosting_months,
     compareAtAmount: row.price_compare_at,
     discountLabel: row.discount_label,
     features: row.features ?? [],
@@ -201,24 +215,18 @@ function mapReassurance(row: ReassuranceRow): PublicPricingReassuranceRecord {
  * `settings` : réglages courants. Les avantages marqués `referralLink` (hébergement) reçoivent le
  * lien de parrainage, et la mention de remise quand la remise s'applique à cette formule.
  */
-export function toPricingPlan(
-  record: PublicPricingPlanRecord,
-  settings?: Pick<
-    PricingSettings,
-    "referralUrl" | "referralNote" | "hostingEur" | "hostingReferralEur" | "hostingRenewalEur" | "vatRate"
-  >,
-): PricingPlan {
-  const discounted = record.compareAtAmount != null && record.includeHosting;
+export function toPricingPlan(record: PublicPricingPlanRecord, ctx?: PricingContext): PricingPlan {
+  const settings = ctx;
+  const hosting = ctx ? planHosting(record, ctx) : null;
+  const discounted = record.compareAtAmount != null && hosting != null;
   const note =
-    discounted && settings
-      ? formatReferralNote(settings.referralNote, hostingDiscountPercent(settings.hostingEur, settings.hostingReferralEur))
+    discounted && settings && hosting
+      ? formatReferralNote(settings.referralNote, hostingDiscountPercent(hosting.normalEur, hosting.paidEur))
       : "";
   const renewalPerYear =
-    record.includeHosting && settings && settings.hostingRenewalEur > 0
-      ? eurHtToXofTtc(settings.hostingRenewalEur, settings.vatRate)
-      : 0;
+    hosting && settings && hosting.renewalEurPerYear > 0 ? eurHtToXofTtc(hosting.renewalEurPerYear, settings.vatRate) : 0;
   const hostingPrices =
-    discounted && settings ? hostingTtcPrices(settings.hostingEur, settings.hostingReferralEur, settings.vatRate) : null;
+    discounted && settings && hosting ? hostingTtcPrices(hosting.normalEur, hosting.paidEur, settings.vatRate) : null;
   const en = record.locale === "en";
   return {
     id: record.slug,
@@ -240,7 +248,9 @@ export function toPricingPlan(
             ...(hostingPrices && hostingPrices.before > hostingPrices.after
               ? { priceBefore: hostingPrices.before, priceAfter: hostingPrices.after }
               : {}),
-            ...(renewalPerYear > 0 ? { renewalPerYear } : {}),
+            ...(renewalPerYear > 0 && hosting
+              ? { renewalPerYear, renewalFromYear: renewalFromYear(hosting.months) }
+              : {}),
           }
         : perk,
     ),
@@ -277,6 +287,12 @@ const pricingPlanFields = z.object({
   baseAmountHt: z.number().int().min(0).max(1_000_000_000).nullable(),
   discountLabel: z.string().trim().max(60),
   includeHosting: z.boolean(),
+  hostingPackId: z.string().trim().regex(/^[a-z0-9-]{1,80}$/, "Pack d'hébergement invalide.").nullable(),
+  hostingMonths: z
+    .number()
+    .int()
+    .refine((m) => (HOSTING_MONTH_OPTIONS as readonly number[]).includes(m), "Durée d'hébergement : 12, 24 ou 48 mois.")
+    .nullable(),
   charges: z
     .array(
       z.object({
@@ -313,6 +329,8 @@ export const createPublicPricingPlanSchema = pricingPlanFields.extend({
   baseAmountHt: pricingPlanFields.shape.baseAmountHt.optional(),
   discountLabel: pricingPlanFields.shape.discountLabel.optional(),
   includeHosting: pricingPlanFields.shape.includeHosting.default(false),
+  hostingPackId: pricingPlanFields.shape.hostingPackId.default(null),
+  hostingMonths: pricingPlanFields.shape.hostingMonths.default(null),
   charges: pricingPlanFields.shape.charges.default([]),
   perks: pricingPlanFields.shape.perks.default([]),
   highlighted: pricingPlanFields.shape.highlighted.default(false),
@@ -365,6 +383,10 @@ export const pricingSettingsSchema = z
   hostingCheckedOn: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Date de relevé invalide (AAAA-MM-JJ)."),
   /** Mention sous l'avantage hébergement ; {pourcentage} = remise calculée. */
   referralNote: z.string().trim().max(160),
+  /** Valeur HT (€) du nom de domaine offert, ajoutée au prix normal barré des packs du catalogue. */
+  domainEur: z.number().min(0).max(1_000).multipleOf(0.01),
+  /** Remise parrainage (%) appliquée au prix promo des packs du catalogue. */
+  referralPercent: z.number().min(0).max(100).multipleOf(0.01),
   })
   .refine((v) => v.hostingReferralEur <= v.hostingEur, {
     message: "Le prix avec parrainage doit être inférieur ou égal au prix normal.",
@@ -381,7 +403,22 @@ const DEFAULT_PRICING_SETTINGS: PricingSettings = {
   hostingRenewalEur: DEFAULT_PRICING_HOSTING_RENEWAL_EUR,
   hostingCheckedOn: DEFAULT_PRICING_HOSTING_CHECKED_ON,
   referralNote: DEFAULT_PRICING_REFERRAL_NOTE,
+  domainEur: DEFAULT_PRICING_DOMAIN_EUR,
+  referralPercent: DEFAULT_PRICING_REFERRAL_PERCENT,
 };
+
+/** Réglages + prix appliqués du catalogue Hostinger : tout ce qu'il faut pour calculer une formule. */
+export type PricingContext = PricingSettings & { catalog: HostingCatalogEntry[] };
+
+const DEFAULT_PRICING_CONTEXT: PricingContext = { ...DEFAULT_PRICING_SETTINGS, catalog: [] };
+
+/** Hébergement résolu d'une formule (catalogue si pack choisi et connu, sinon prix manuels). */
+function planHosting(
+  plan: { includeHosting: boolean; hostingPackId?: string | null; hostingMonths?: number | null },
+  ctx: PricingContext,
+) {
+  return resolvePlanHosting(plan, ctx, ctx.catalog);
+}
 
 type EffectivePrice = { priceAmount: number | null; compareAtAmount: number | null; taxMention: PricingTaxMention };
 
@@ -398,18 +435,21 @@ function resolveEffectivePrice(
     baseAmountHt: number | null | undefined;
     charges: PricingCharge[];
     includeHosting: boolean;
+    hostingPackId?: string | null;
+    hostingMonths?: number | null;
   },
-  settings: PricingSettings,
+  ctx: PricingContext,
 ): EffectivePrice {
   if (plan.priceMode === "quote") return { priceAmount: null, compareAtAmount: null, taxMention: "none" };
   if (plan.baseAmountHt != null) {
+    const hosting = planHosting(plan, ctx);
     const b = computePlanPricing({
       baseHt: plan.baseAmountHt,
       charges: plan.charges,
-      includeHosting: plan.includeHosting,
-      hostingEur: settings.hostingEur,
-      hostingReferralEur: settings.hostingReferralEur,
-      vatRate: settings.vatRate,
+      includeHosting: hosting != null,
+      hostingEur: hosting?.normalEur ?? 0,
+      hostingReferralEur: hosting?.paidEur ?? 0,
+      vatRate: ctx.vatRate,
     });
     return {
       priceAmount: b.totalTtc,
@@ -428,6 +468,8 @@ type CrmSettingsPricingRow = {
   pricing_hosting_renewal_eur: string | number;
   pricing_hosting_checked_on: string;
   pricing_referral_note: string;
+  pricing_domain_eur: string | number;
+  pricing_referral_percent: string | number;
 };
 
 /** Réglages tarifs globaux (crm_settings) : TVA, hébergement et parrainage Hostinger. */
@@ -437,7 +479,7 @@ export async function getPricingSettings(): Promise<PricingSettings> {
     const { rows } = await query<CrmSettingsPricingRow>(
       `SELECT pricing_vat_rate, pricing_referral_url, pricing_hosting_eur, pricing_hosting_referral_eur,
          pricing_hosting_renewal_eur, to_char(pricing_hosting_checked_on, 'YYYY-MM-DD') AS pricing_hosting_checked_on,
-         pricing_referral_note
+         pricing_referral_note, pricing_domain_eur, pricing_referral_percent
        FROM crm_settings WHERE id = 1`,
     );
     const row = rows[0];
@@ -450,8 +492,36 @@ export async function getPricingSettings(): Promise<PricingSettings> {
       hostingRenewalEur: Number(row.pricing_hosting_renewal_eur),
       hostingCheckedOn: row.pricing_hosting_checked_on,
       referralNote: row.pricing_referral_note,
+      domainEur: Number(row.pricing_domain_eur),
+      referralPercent: Number(row.pricing_referral_percent),
     };
   });
+}
+
+/** Réglages + catalogue Hostinger appliqué (prix en attente exclus). */
+export async function getPricingContext(): Promise<PricingContext> {
+  if (!isDatabaseConfigured()) return DEFAULT_PRICING_CONTEXT;
+  const [settings, catalog] = await Promise.all([getPricingSettings(), listHostingCatalog()]);
+  return { ...settings, catalog };
+}
+
+/** Recalcule le TTC et le prix barré des formules en calcul automatique. Retourne leur nombre. */
+export async function recomputeAutoPlans(ctx?: PricingContext): Promise<number> {
+  const context = ctx ?? (await getPricingContext());
+  const autoPlans = (await listPublicPricingPlans()).filter(
+    (plan) => plan.baseAmountHt != null && plan.priceMode !== "quote",
+  );
+  await withDb(async (query) => {
+    for (const plan of autoPlans) {
+      const effective = resolveEffectivePrice(plan, context);
+      await query(
+        `UPDATE public_pricing_plans SET price_from=$2, price_compare_at=$3, tax_mention='ttc', updated_at=NOW()
+         WHERE id=$1`,
+        [plan.id, effective.priceAmount, effective.compareAtAmount],
+      );
+    }
+  });
+  return autoPlans.length;
 }
 
 /** Enregistre les réglages puis recalcule le TTC (et le prix barré) des formules en calcul automatique. */
@@ -462,11 +532,12 @@ export async function updatePricingSettings(
     await query(
       `INSERT INTO crm_settings (id, pricing_vat_rate, pricing_referral_url, pricing_hosting_eur,
          pricing_hosting_referral_eur, pricing_referral_note, pricing_hosting_renewal_eur,
-         pricing_hosting_checked_on, updated_at)
-       VALUES (1, $1, $2, $3, $4, $5, $6, $7, NOW())
+         pricing_hosting_checked_on, pricing_domain_eur, pricing_referral_percent, updated_at)
+       VALUES (1, $1, $2, $3, $4, $5, $6, $7, $8, $9, NOW())
        ON CONFLICT (id) DO UPDATE SET pricing_vat_rate = $1, pricing_referral_url = $2,
          pricing_hosting_eur = $3, pricing_hosting_referral_eur = $4, pricing_referral_note = $5,
-         pricing_hosting_renewal_eur = $6, pricing_hosting_checked_on = $7, updated_at = NOW()`,
+         pricing_hosting_renewal_eur = $6, pricing_hosting_checked_on = $7, pricing_domain_eur = $8,
+         pricing_referral_percent = $9, updated_at = NOW()`,
       [
         input.vatRate,
         input.referralUrl,
@@ -475,24 +546,14 @@ export async function updatePricingSettings(
         input.referralNote,
         input.hostingRenewalEur,
         input.hostingCheckedOn,
+        input.domainEur,
+        input.referralPercent,
       ],
     );
   });
 
-  const autoPlans = (await listPublicPricingPlans()).filter(
-    (plan) => plan.baseAmountHt != null && plan.priceMode !== "quote",
-  );
-  await withDb(async (query) => {
-    for (const plan of autoPlans) {
-      const effective = resolveEffectivePrice(plan, input);
-      await query(
-        `UPDATE public_pricing_plans SET price_from=$2, price_compare_at=$3, tax_mention='ttc', updated_at=NOW()
-         WHERE id=$1`,
-        [plan.id, effective.priceAmount, effective.compareAtAmount],
-      );
-    }
-  });
-  return { ...input, plansUpdated: autoPlans.length };
+  const plansUpdated = await recomputeAutoPlans({ ...input, catalog: await listHostingCatalog() });
+  return { ...input, plansUpdated };
 }
 
 /**
@@ -502,24 +563,28 @@ export async function updatePricingSettings(
  */
 export function planQuoteLines(
   record: PublicPricingPlanRecord,
-  settings: PricingSettings,
+  ctx: PricingContext,
 ): { lines: QuoteLine[]; subtotal: number } | null {
+  const settings = ctx;
   if (record.priceMode === "quote") return null;
   const lines: QuoteLine[] = [];
   if (record.baseAmountHt != null) {
+    const hosting = planHosting(record, ctx);
     const b = computePlanPricing({
       baseHt: record.baseAmountHt,
       charges: record.charges,
-      includeHosting: record.includeHosting,
-      hostingEur: settings.hostingEur,
-      hostingReferralEur: settings.hostingReferralEur,
-      vatRate: settings.vatRate,
+      includeHosting: hosting != null,
+      hostingEur: hosting?.normalEur ?? 0,
+      hostingReferralEur: hosting?.paidEur ?? 0,
+      vatRate: ctx.vatRate,
     });
     lines.push({ label: `Formule ${record.name} — prestation`, amount: record.baseAmountHt });
     for (const charge of record.charges) lines.push({ label: charge.label, amount: charge.amount });
     if (b.hostingHt > 0) {
       const note = b.hostingPaidHt < b.hostingHt ? ` (tarif parrainage, au lieu de ${formatPlanAmount(b.hostingHt)} HT)` : "";
-      lines.push({ label: `Hébergement Hostinger 1 an + nom de domaine${note}`, amount: b.hostingPaidHt });
+      const pack = hosting?.packName ? ` ${hosting.packName}` : "";
+      const duration = hosting && hosting.months !== 12 ? `${hosting.months} mois` : "1 an";
+      lines.push({ label: `Hébergement Hostinger${pack} ${duration} + nom de domaine${note}`, amount: b.hostingPaidHt });
     }
   } else if (record.priceAmount != null && record.priceAmount > 0) {
     const ht = record.taxMention === "ttc" ? baseHtFromTtc(record.priceAmount, settings.vatRate) : record.priceAmount;
@@ -620,7 +685,7 @@ export async function createPublicPricingPlan(
 ): Promise<PublicPricingPlanRecord> {
   const effective = resolveEffectivePrice(
     { ...input, priceAmount: input.priceAmount ?? null, baseAmountHt: input.baseAmountHt ?? null },
-    input.baseAmountHt != null ? await getPricingSettings() : DEFAULT_PRICING_SETTINGS,
+    input.baseAmountHt != null ? await getPricingContext() : DEFAULT_PRICING_CONTEXT,
   );
   assertPlanPricingConsistent({ priceMode: input.priceMode, priceAmount: effective.priceAmount });
   const en = input.locale === "en";
@@ -637,8 +702,9 @@ export async function createPublicPricingPlan(
     const { rows } = await query<PlanRow>(
       `INSERT INTO public_pricing_plans (slug, name, tagline, price_mode, price_from, currency_code, currency_label,
          tax_mention, price_note, base_amount_ht, charges, features, perks, highlighted, badge_label, variant,
-         cta_label, cta_href, locale, sort_order, is_visible, price_compare_at, discount_label, include_hosting)
-       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21,$22,$23,$24) RETURNING *`,
+         cta_label, cta_href, locale, sort_order, is_visible, price_compare_at, discount_label, include_hosting,
+         hosting_pack_id, hosting_months)
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21,$22,$23,$24,$25,$26) RETURNING *`,
       [
         slug,
         input.name.trim(),
@@ -664,6 +730,8 @@ export async function createPublicPricingPlan(
         effective.compareAtAmount,
         input.discountLabel?.trim() || null,
         input.includeHosting,
+        input.hostingPackId,
+        input.hostingMonths,
       ],
     );
     return mapPlan(rows[0]!);
@@ -683,6 +751,8 @@ export async function updatePublicPricingPlan(
   const baseAmountHt = pick(input.baseAmountHt, existing.baseAmountHt);
   const charges = pick(input.charges, existing.charges);
   const includeHosting = pick(input.includeHosting, existing.includeHosting);
+  const hostingPackId = pick(input.hostingPackId, existing.hostingPackId);
+  const hostingMonths = pick(input.hostingMonths, existing.hostingMonths);
   const effective = resolveEffectivePrice(
     {
       priceMode,
@@ -691,8 +761,10 @@ export async function updatePublicPricingPlan(
       baseAmountHt,
       charges,
       includeHosting,
+      hostingPackId,
+      hostingMonths,
     },
-    baseAmountHt != null ? await getPricingSettings() : DEFAULT_PRICING_SETTINGS,
+    baseAmountHt != null ? await getPricingContext() : DEFAULT_PRICING_CONTEXT,
   );
   assertPlanPricingConsistent({ priceMode, priceAmount: effective.priceAmount });
   const optionalText = (value: string | undefined, fallback: string | null) =>
@@ -704,7 +776,7 @@ export async function updatePublicPricingPlan(
         currency_code=$7, currency_label=$8, tax_mention=$9, price_note=$10, features=$11, perks=$12,
         highlighted=$13, badge_label=$14, variant=$15, cta_label=$16, cta_href=$17, locale=$18,
         sort_order=$19, is_visible=$20, base_amount_ht=$21, charges=$22, price_compare_at=$23,
-        discount_label=$24, include_hosting=$25, updated_at=NOW()
+        discount_label=$24, include_hosting=$25, hosting_pack_id=$26, hosting_months=$27, updated_at=NOW()
        WHERE id=$1 RETURNING *`,
       [
         id,
@@ -732,6 +804,8 @@ export async function updatePublicPricingPlan(
         effective.compareAtAmount,
         optionalText(input.discountLabel, existing.discountLabel),
         includeHosting,
+        hostingPackId,
+        hostingMonths,
       ],
     );
     return rows[0] ? mapPlan(rows[0]) : null;

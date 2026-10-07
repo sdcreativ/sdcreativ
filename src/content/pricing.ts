@@ -20,8 +20,9 @@ export type PricingPerk = {
   /** Prix TTC de l'avantage sans / avec remise (affichage barré façon Hostinger), résolus à la lecture. */
   priceBefore?: number;
   priceAfter?: number;
-  /** Coût TTC annuel de renouvellement de l'hébergement à partir de la 2e année. */
+  /** Coût TTC annuel de renouvellement de l'hébergement, et année à partir de laquelle il s'applique. */
   renewalPerYear?: number;
+  renewalFromYear?: number;
 };
 
 export type PricingPlan = {
