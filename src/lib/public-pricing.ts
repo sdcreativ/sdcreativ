@@ -20,6 +20,7 @@ import {
   DEFAULT_PRICING_VAT_RATE,
   formatReferralNote,
   hostingDiscountPercent,
+  hostingTtcPrices,
   isSafePlanCtaHref,
   type PricingCharge,
 } from "@/lib/pricing-display";
@@ -196,13 +197,15 @@ function mapReassurance(row: ReassuranceRow): PublicPricingReassuranceRecord {
  */
 export function toPricingPlan(
   record: PublicPricingPlanRecord,
-  settings?: Pick<PricingSettings, "referralUrl" | "referralNote" | "hostingEur" | "hostingReferralEur">,
+  settings?: Pick<PricingSettings, "referralUrl" | "referralNote" | "hostingEur" | "hostingReferralEur" | "vatRate">,
 ): PricingPlan {
   const discounted = record.compareAtAmount != null && record.includeHosting;
   const note =
     discounted && settings
       ? formatReferralNote(settings.referralNote, hostingDiscountPercent(settings.hostingEur, settings.hostingReferralEur))
       : "";
+  const hostingPrices =
+    discounted && settings ? hostingTtcPrices(settings.hostingEur, settings.hostingReferralEur, settings.vatRate) : null;
   const en = record.locale === "en";
   return {
     id: record.slug,
@@ -221,6 +224,9 @@ export function toPricingPlan(
             ...perk,
             ...(settings?.referralUrl ? { href: settings.referralUrl } : {}),
             ...(note ? { note } : {}),
+            ...(hostingPrices && hostingPrices.before > hostingPrices.after
+              ? { priceBefore: hostingPrices.before, priceAfter: hostingPrices.after }
+              : {}),
           }
         : perk,
     ),

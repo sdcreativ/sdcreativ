@@ -107,6 +107,7 @@ describe("toPricingPlan", () => {
     const url = "https://www.hostinger.com/fr?REFERRALCODE=BMJAGENCEZMT";
     const settings = {
       referralUrl: url,
+      vatRate: 18,
       hostingEur: 150.87,
       hostingReferralEur: 35.88,
       referralNote: "-{pourcentage} % grâce à notre partenariat Hostinger",
@@ -121,6 +122,9 @@ describe("toPricingPlan", () => {
     const discounted = { ...withPerks, includeHosting: true, priceMode: "fixed" as const, priceAmount: 264729, compareAtAmount: 287000 };
     const [hostingOn, maintenanceOn] = toPricingPlan(discounted, settings).perks;
     expect(hostingOn?.note).toBe("-76 % grâce à notre partenariat Hostinger");
+    expect(hostingOn).toMatchObject({ priceBefore: 116778, priceAfter: 27772 }); // TTC, façon Hostinger
+    expect(maintenanceOn?.priceBefore).toBeUndefined();
+    expect(hosting?.priceBefore).toBeUndefined(); // sans remise : pas de prix barré
     expect(maintenanceOn?.note).toBeUndefined();
   });
 

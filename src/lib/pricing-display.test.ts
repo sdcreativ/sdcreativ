@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { buildPlanCtaHref, formatReferralNote, baseHtFromTtc, computePlanPricing, computePlanTtc, eurToXof, hostingDiscountPercent, formatPlanAmount, isSafePlanCtaHref, resolvePlanPriceDisplay } from "@/lib/pricing-display";
+import { buildPlanCtaHref, formatReferralNote, baseHtFromTtc, computePlanPricing, computePlanTtc, eurToXof, hostingDiscountPercent, hostingTtcPrices, formatPlanAmount, isSafePlanCtaHref, resolvePlanPriceDisplay } from "@/lib/pricing-display";
 import { PRICE_ON_REQUEST_LABEL, PRICE_ON_REQUEST_LABEL_EN } from "@/lib/format";
 
 const base = {
@@ -201,5 +201,18 @@ describe("mention de remise", () => {
       "-20 % grâce à notre partenariat Hostinger",
     );
     expect(formatReferralNote("Remise de {pourcentage} %", 12.5)).toBe("Remise de 12,5 %");
+  });
+});
+
+describe("affichage de la remise façon Hostinger", () => {
+  it("calcule l'économie affichée dans la pastille", () => {
+    const display = resolvePlanPriceDisplay({ ...base, priceMode: "fixed", priceAmount: 197995, compareAtAmount: 287000 });
+    expect(display.kind === "amount" && plain(display.savings ?? "")).toBe("89 005");
+    const none = resolvePlanPriceDisplay({ ...base, priceMode: "fixed", priceAmount: 287000 });
+    expect(none.kind === "amount" && none.savings).toBeNull();
+  });
+
+  it("donne les prix TTC de l'hébergement sans / avec parrainage", () => {
+    expect(hostingTtcPrices(150.87, 35.88, 18)).toEqual({ before: 116778, after: 27772 });
   });
 });

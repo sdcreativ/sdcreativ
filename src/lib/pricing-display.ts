@@ -11,6 +11,8 @@ export type PlanPriceDisplay =
       amount: string;
       /** Prix avant remise formaté, à afficher barré (null sans remise). */
       compareAt: string | null;
+      /** Économie formatée (prix barré − prix final), null sans remise. */
+      savings: string | null;
       /** Devise + mention fiscale (ex. « FCFA TTC »). */
       suffix: string;
       note: string | null;
@@ -42,6 +44,10 @@ export function resolvePlanPriceDisplay(
     prefix: plan.priceMode === "from" ? (locale === "en" ? "From" : "À partir de") : null,
     amount: formatPlanAmount(amount),
     compareAt: plan.compareAtAmount != null && plan.compareAtAmount > amount ? formatPlanAmount(plan.compareAtAmount) : null,
+    savings:
+      plan.compareAtAmount != null && plan.compareAtAmount > amount
+        ? formatPlanAmount(plan.compareAtAmount - amount)
+        : null,
     suffix: [currency, TAX_LABELS[plan.taxMention]].filter(Boolean).join(" "),
     note,
   };
@@ -164,6 +170,17 @@ export type PlanPricingBreakdown = PlanTtcBreakdown & {
   /** Hébergement 1 an au prix parrainage, en FCFA. */
   hostingPaidHt: number;
 };
+
+/** Prix TTC de l'hébergement sans / avec parrainage, pour l'affichage barré sous l'avantage. */
+export function hostingTtcPrices(
+  hostingEur: number,
+  hostingReferralEur: number,
+  vatRate: number,
+): { before: number; after: number } {
+  const normal = eurToXof(hostingEur);
+  const paid = Math.min(eurToXof(hostingReferralEur), normal);
+  return { before: computePlanTtc(normal, [], vatRate).totalTtc, after: computePlanTtc(paid, [], vatRate).totalTtc };
+}
 
 /** Remise de l'hébergement en % (arrondie), déduite des deux prix. */
 export function hostingDiscountPercent(hostingEur: number, hostingReferralEur: number): number {

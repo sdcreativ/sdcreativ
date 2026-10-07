@@ -17,6 +17,9 @@ export type PricingPerk = {
   href?: string;
   /** Mention de remise parrainage (réglages), résolue quand la remise s'applique à la formule. */
   note?: string;
+  /** Prix TTC de l'avantage sans / avec remise (affichage barré façon Hostinger), résolus à la lecture. */
+  priceBefore?: number;
+  priceAfter?: number;
 };
 
 export type PricingPlan = {
