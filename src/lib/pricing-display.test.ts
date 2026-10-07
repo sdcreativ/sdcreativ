@@ -1,5 +1,9 @@
 import { describe, expect, it } from "vitest";
-import { buildPlanCtaHref, formatReferralNote, baseHtFromTtc, computePlanPricing, computePlanTtc, eurToXof, hostingDiscountPercent, hostingTtcPrices, formatPlanAmount, isSafePlanCtaHref, resolvePlanPriceDisplay } from "@/lib/pricing-display";
+import {
+  DEFAULT_PRICING_HOSTING_EUR,
+  DEFAULT_PRICING_HOSTING_REFERRAL_EUR,
+} from "@/lib/pricing-display";
+import { buildPlanCtaHref, formatReferralNote, baseHtFromTtc, computePlanPricing, computePlanTtc, eurToXof, hostingDiscountPercent, hostingTtcPrices, daysSinceHostingCheck, eurHtToXofTtc, formatPlanAmount, isSafePlanCtaHref, resolvePlanPriceDisplay } from "@/lib/pricing-display";
 import { PRICE_ON_REQUEST_LABEL, PRICE_ON_REQUEST_LABEL_EN } from "@/lib/format";
 
 const base = {
@@ -214,5 +218,46 @@ describe("affichage de la remise façon Hostinger", () => {
 
   it("donne les prix TTC de l'hébergement sans / avec parrainage", () => {
     expect(hostingTtcPrices(150.87, 35.88, 18)).toEqual({ before: 116778, after: 27772 });
+  });
+});
+
+describe("renouvellement et relevé des prix", () => {
+  it("convertit le renouvellement HT en € vers un TTC en FCFA", () => {
+    expect(eurHtToXofTtc(119.88, 18)).toBe(92790);
+  });
+
+  it("compte les jours depuis le relevé", () => {
+    expect(daysSinceHostingCheck("2026-10-07", new Date("2026-12-10T12:00:00Z"))).toBe(64);
+    expect(daysSinceHostingCheck("pas-une-date")).toBeNull();
+  });
+});
+
+describe("valeurs relevées en Côte d'Ivoire (défauts)", () => {
+  const ci = {
+    hostingEur: DEFAULT_PRICING_HOSTING_EUR,
+    hostingReferralEur: DEFAULT_PRICING_HOSTING_REFERRAL_EUR,
+    vatRate: 18,
+    includeHosting: true,
+    charges: [],
+  };
+
+  it("28,70 € avec parrainage → 18 826 FCFA, remise totale -81 %", () => {
+    expect(DEFAULT_PRICING_HOSTING_REFERRAL_EUR).toBe(28.7);
+    expect(eurToXof(28.7)).toBe(18826);
+    expect(hostingDiscountPercent(ci.hostingEur, ci.hostingReferralEur)).toBe(81);
+    expect(hostingTtcPrices(ci.hostingEur, ci.hostingReferralEur, 18)).toEqual({ before: 116778, after: 22215 });
+  });
+
+  it("Essentiel / Professionnel / Business avec les bases de l'option A", () => {
+    const cases = [
+      { base: 144256, before: 287000, after: 192437 },
+      { base: 282392, before: 450000, after: 355437 },
+      { base: 570527, before: 789999, after: 695437 },
+    ];
+    for (const { base, before, after } of cases) {
+      const b = computePlanPricing({ ...ci, baseHt: base });
+      expect(b.totalTtcBeforeDiscount).toBe(before);
+      expect(b.totalTtc).toBe(after);
+    }
   });
 });

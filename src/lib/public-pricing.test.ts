@@ -4,6 +4,7 @@ import {
   createPublicPricingPlanSchema,
   PricingPlanValidationError,
   pricingSettingsSchema,
+  planQuoteLines,
   toPricingPlan,
   updatePublicPricingPlanSchema,
   type PublicPricingPlanRecord,
@@ -110,6 +111,7 @@ describe("toPricingPlan", () => {
       vatRate: 18,
       hostingEur: 150.87,
       hostingReferralEur: 35.88,
+      hostingRenewalEur: 119.88,
       referralNote: "-{pourcentage} % grâce à notre partenariat Hostinger",
     };
     const [hosting, maintenance] = toPricingPlan(withPerks, settings).perks;
@@ -125,6 +127,8 @@ describe("toPricingPlan", () => {
     expect(hostingOn).toMatchObject({ priceBefore: 116778, priceAfter: 27772 }); // TTC, façon Hostinger
     expect(maintenanceOn?.priceBefore).toBeUndefined();
     expect(hosting?.priceBefore).toBeUndefined(); // sans remise : pas de prix barré
+    expect(hosting?.renewalPerYear).toBeUndefined(); // hébergement non inclus : pas de renouvellement
+    expect(hostingOn?.renewalPerYear).toBe(92790); // 119,88 € HT → 78 636 FCFA × 1,18
     expect(maintenanceOn?.note).toBeUndefined();
   });
 
@@ -164,8 +168,14 @@ describe("charges et TVA", () => {
     referralUrl: "https://www.hostinger.com/fr?REFERRALCODE=BMJAGENCEZMT",
     hostingEur: 150.87,
     hostingReferralEur: 35.88,
+    hostingRenewalEur: 119.88,
+    hostingCheckedOn: "2026-10-07",
     referralNote: "-{pourcentage} % grâce à notre partenariat Hostinger",
   };
+
+  it("valide la date de relevé des prix", () => {
+    expect(pricingSettingsSchema.safeParse({ ...settings, hostingCheckedOn: "07/10/2026" }).success).toBe(false);
+  });
 
   it("borne la TVA et exige un prix parrainé ≤ prix normal", () => {
     expect(pricingSettingsSchema.safeParse(settings).success).toBe(true);
@@ -194,5 +204,65 @@ describe("charges et TVA", () => {
     });
     expect(parsed.charges?.[0]).toEqual({ id: "c", label: "Licence", amount: 25000 });
     expect(parsed.includeHosting).toBe(true);
+  });
+});
+
+describe("devis pré-rempli depuis une formule", () => {
+  const settings = {
+    vatRate: 18,
+    referralUrl: "",
+    hostingEur: 150.87,
+    hostingReferralEur: 35.88,
+    hostingRenewalEur: 119.88,
+    hostingCheckedOn: "2026-10-07",
+    referralNote: "",
+  };
+  const plan: PublicPricingPlanRecord = {
+    id: "00000000-0000-0000-0000-000000000002",
+    slug: "essentiel",
+    name: "Essentiel",
+    tagline: "Pour démarrer.",
+    priceMode: "fixed",
+    priceAmount: 197995,
+    currencyCode: "XOF",
+    currencyLabel: "FCFA",
+    taxMention: "ttc",
+    priceNote: null,
+    baseAmountHt: 144256,
+    charges: [{ id: "lic", label: "Licence thème", amount: 20000 }],
+    includeHosting: true,
+    compareAtAmount: 287000,
+    discountLabel: null,
+    features: ["SEO initial"],
+    perks: [],
+    highlighted: false,
+    badgeLabel: null,
+    variant: "primary",
+    ctaLabel: null,
+    ctaHref: null,
+    locale: "fr",
+    sortOrder: 0,
+    isVisible: true,
+    createdAt: new Date(0).toISOString(),
+    updatedAt: new Date(0).toISOString(),
+  };
+
+  it("calcul auto : base + charges + hébergement au tarif parrainage (HT)", () => {
+    const built = planQuoteLines(plan, settings);
+    expect(built?.lines).toEqual([
+      { label: "Formule Essentiel — prestation", amount: 144256 },
+      { label: "Licence thème", amount: 20000 },
+      { label: expect.stringContaining("Hébergement Hostinger 1 an") as unknown as string, amount: 23536 },
+    ]);
+    expect(built?.subtotal).toBe(144256 + 20000 + 23536);
+  });
+
+  it("prix saisi TTC : une ligne HT déduite", () => {
+    const built = planQuoteLines({ ...plan, baseAmountHt: null, charges: [], priceAmount: 287000 }, settings);
+    expect(built).toEqual({ lines: [{ label: "Formule Essentiel", amount: 243220 }], subtotal: 243220 });
+  });
+
+  it("sur devis : rien à pré-remplir", () => {
+    expect(planQuoteLines({ ...plan, priceMode: "quote" }, settings)).toBeNull();
   });
 });

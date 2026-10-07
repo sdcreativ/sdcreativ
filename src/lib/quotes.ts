@@ -621,6 +621,8 @@ export type DevisQuoteInput = {
   timeline: string;
   message?: string;
   leadId?: string | null;
+  /** Métadonnées supplémentaires (ex. formule tarifaire et offre d'origine). */
+  metadata?: Record<string, unknown>;
 };
 
 export async function createQuoteFromDevis(input: DevisQuoteInput): Promise<Quote | null> {
@@ -646,6 +648,7 @@ export async function createQuoteFromDevis(input: DevisQuoteInput): Promise<Quot
       metadata: {
         source: "configurateur",
         formattedSubtotal: input.subtotal,
+        ...input.metadata,
       },
     });
   } catch (error) {

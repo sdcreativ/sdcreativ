@@ -21,6 +21,7 @@ import {
   formatReferralNote,
   hostingDiscountPercent,
   hostingTtcPrices,
+  eurHtToXofTtc,
 } from "@/lib/pricing-display";
 import type { PricingSettings } from "@/lib/public-pricing";
 import { cn } from "@/lib/utils";
@@ -197,6 +198,9 @@ function formToPreviewPlan(form: PlanForm, settings: PricingSettings): PricingPl
         ...(referralUrl ? { href: referralUrl } : {}),
         ...(note ? { note } : {}),
         ...(prices && prices.before > prices.after ? { priceBefore: prices.before, priceAfter: prices.after } : {}),
+        ...(breakdown && breakdown.hostingHt > 0 && settings.hostingRenewalEur > 0
+          ? { renewalPerYear: eurHtToXofTtc(settings.hostingRenewalEur, settings.vatRate) }
+          : {}),
       };
     }),
     priceNote: payload.priceNote || undefined,
