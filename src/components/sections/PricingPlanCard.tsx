@@ -2,7 +2,7 @@ import { Check } from "lucide-react";
 import type { PricingPlan } from "@/content/pricing";
 import { Button } from "@/components/ui/Button";
 import { getLucideIcon } from "@/lib/lucide-icon-map";
-import { buildPlanCtaHref, resolvePlanPriceDisplay } from "@/lib/pricing-display";
+import { buildPlanCtaHref, formatPlanAmount, resolvePlanPriceDisplay } from "@/lib/pricing-display";
 import { cn } from "@/lib/utils";
 
 type Props = {
@@ -26,6 +26,10 @@ export function PricingPlanCard({ plan, locale = "fr", className }: Props) {
   const tintBg = accent ? "bg-accent/5" : "bg-primary-light";
   const discountLabel = price.kind === "amount" && price.compareAt ? plan.discountLabel?.trim() : "";
   const en = locale === "en";
+  const currency = plan.currencyLabel || plan.currencyCode;
+  const savings = price.kind === "amount" ? price.savings : null;
+  // Pastille « Économisez … » façon Hostinger : vert foncé sur vert pâle (contraste AA).
+  const savingsClass = "rounded-full bg-emerald-50 px-2.5 py-0.5 text-xs font-semibold text-emerald-800";
 
   return (
     <div
@@ -53,12 +57,17 @@ export function PricingPlanCard({ plan, locale = "fr", className }: Props) {
       <div className="mt-5">
         {price.kind === "amount" ? (
           <>
-            {(price.prefix || discountLabel) && (
+            {(price.prefix || discountLabel || savings) && (
               <p className="flex flex-wrap items-center gap-2 text-sm text-gray-text">
                 {price.prefix}
                 {discountLabel && (
                   <span className={cn("rounded-full px-2.5 py-0.5 text-xs font-semibold", tintBg, perkTone)}>
                     {discountLabel}
+                  </span>
+                )}
+                {savings && (
+                  <span className={savingsClass}>
+                    {en ? "Save" : "Économisez"} {savings} {currency}
                   </span>
                 )}
               </p>
@@ -109,6 +118,25 @@ export function PricingPlanCard({ plan, locale = "fr", className }: Props) {
                   </p>
                   {perk.detail && <p className="mt-0.5 text-xs leading-snug text-gray-text">{perk.detail}</p>}
                   {perk.note && <p className={cn("mt-0.5 text-xs font-semibold leading-snug", perkTone)}>{perk.note}</p>}
+                  {perk.priceBefore != null && perk.priceAfter != null && (
+                    <p className="mt-0.5 text-xs leading-snug">
+                      <span className="sr-only">{en ? "Regular price: " : "Prix normal : "}</span>
+                      <del className="text-gray-text">
+                        {formatPlanAmount(perk.priceBefore)} {currency}
+                      </del>{" "}
+                      <span className="sr-only">{en ? "your price: " : "votre prix : "}</span>
+                      <span className={cn("font-semibold", perkTone)}>
+                        {formatPlanAmount(perk.priceAfter)} {currency} TTC
+                      </span>
+                    </p>
+                  )}
+                  {perk.renewalPerYear != null && (
+                    <p className="mt-0.5 text-xs leading-snug text-gray-text">
+                      {en
+                        ? `Renewal from year 2: about ${formatPlanAmount(perk.renewalPerYear)} ${currency} incl. VAT per year`
+                        : `Renouvellement à partir de la 2ᵉ année : env. ${formatPlanAmount(perk.renewalPerYear)} ${currency} TTC/an`}
+                    </p>
+                  )}
                 </div>
               </li>
             );

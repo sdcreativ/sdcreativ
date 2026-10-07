@@ -11,6 +11,8 @@ export type PlanPriceDisplay =
       amount: string;
       /** Prix avant remise formaté, à afficher barré (null sans remise). */
       compareAt: string | null;
+      /** Économie formatée (prix barré − prix final), null sans remise. */
+      savings: string | null;
       /** Devise + mention fiscale (ex. « FCFA TTC »). */
       suffix: string;
       note: string | null;
@@ -42,6 +44,10 @@ export function resolvePlanPriceDisplay(
     prefix: plan.priceMode === "from" ? (locale === "en" ? "From" : "À partir de") : null,
     amount: formatPlanAmount(amount),
     compareAt: plan.compareAtAmount != null && plan.compareAtAmount > amount ? formatPlanAmount(plan.compareAtAmount) : null,
+    savings:
+      plan.compareAtAmount != null && plan.compareAtAmount > amount
+        ? formatPlanAmount(plan.compareAtAmount - amount)
+        : null,
     suffix: [currency, TAX_LABELS[plan.taxMention]].filter(Boolean).join(" "),
     note,
   };
@@ -58,8 +64,11 @@ export const DEFAULT_PRICING_VAT_RATE = 18;
 
 /** Lien de parrainage Hostinger SD CREATIV (nouveau compte client). */
 export const DEFAULT_PRICING_REFERRAL_URL = "https://www.hostinger.com/fr?REFERRALCODE=BMJAGENCEZMT";
-/** Mention sous l'avantage hébergement ; {pourcentage} est remplacé par la remise calculée. */
-export const DEFAULT_PRICING_REFERRAL_NOTE = "-{pourcentage} % grâce à notre partenariat Hostinger";
+/**
+ * Mention sous l'avantage hébergement ({pourcentage} = remise totale calculée, si utilisé).
+ * Seuls 20 % viennent du parrainage, le reste est la promo publique Hostinger : on le dit.
+ */
+export const DEFAULT_PRICING_REFERRAL_NOTE = "Tarif promo Hostinger + 20 % de remise parrainage SD CREATIV";
 /** Valeur du paramètre `offre` transmis au devis quand la remise parrainage s'applique. */
 export const PRICING_REFERRAL_OFFER = "parrainage-hebergement";
 
@@ -87,7 +96,26 @@ export function buildPlanCtaHref(href: string, planSlug: string, withOffer: bool
  * 6,99 €) et payé avec le lien de parrainage. Seul poste concerné par la remise.
  */
 export const DEFAULT_PRICING_HOSTING_EUR = 150.87;
-export const DEFAULT_PRICING_HOSTING_REFERRAL_EUR = 35.88;
+/** Relevé en Côte d'Ivoire : promo 35,88 € − parrainage 20 % = 28,70 € (taxes 0 €). */
+export const DEFAULT_PRICING_HOSTING_REFERRAL_EUR = 28.7;
+/** Renouvellement Hostinger après 12 mois : 9,99 €/mois × 12 (HT). */
+export const DEFAULT_PRICING_HOSTING_RENEWAL_EUR = 119.88;
+/** Date du relevé des prix Hostinger (AAAA-MM-JJ). */
+export const DEFAULT_PRICING_HOSTING_CHECKED_ON = "2026-10-07";
+/** Au-delà, l'admin invite à revérifier les prix Hostinger (promos fréquentes). */
+export const PRICING_HOSTING_CHECK_MAX_DAYS = 60;
+
+/** Jours écoulés depuis le relevé des prix (null si date invalide). */
+export function daysSinceHostingCheck(checkedOn: string, now: Date = new Date()): number | null {
+  const date = new Date(`${checkedOn}T00:00:00Z`);
+  if (Number.isNaN(date.getTime())) return null;
+  return Math.floor((now.getTime() - date.getTime()) / 86_400_000);
+}
+
+/** Montant HT en euros → TTC en FCFA (parité fixe puis TVA), arrondi au franc. */
+export function eurHtToXofTtc(eur: number, vatRate: number): number {
+  return computePlanTtc(eurToXof(eur), [], vatRate).totalTtc;
+}
 
 /** Parité fixe FCFA (XOF) / euro. */
 const EUR_TO_XOF = SUGGESTED_RATES_TO_XOF.EUR;
@@ -164,6 +192,17 @@ export type PlanPricingBreakdown = PlanTtcBreakdown & {
   /** Hébergement 1 an au prix parrainage, en FCFA. */
   hostingPaidHt: number;
 };
+
+/** Prix TTC de l'hébergement sans / avec parrainage, pour l'affichage barré sous l'avantage. */
+export function hostingTtcPrices(
+  hostingEur: number,
+  hostingReferralEur: number,
+  vatRate: number,
+): { before: number; after: number } {
+  const normal = eurToXof(hostingEur);
+  const paid = Math.min(eurToXof(hostingReferralEur), normal);
+  return { before: computePlanTtc(normal, [], vatRate).totalTtc, after: computePlanTtc(paid, [], vatRate).totalTtc };
+}
 
 /** Remise de l'hébergement en % (arrondie), déduite des deux prix. */
 export function hostingDiscountPercent(hostingEur: number, hostingReferralEur: number): number {

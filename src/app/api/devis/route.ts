@@ -6,6 +6,7 @@ import {
 import { calculateQuote } from "@/lib/quote-calculator";
 import { getSiteQuoteConfigSettings } from "@/lib/site-quote-config-settings";
 import { htmlRow, sendEmail } from "@/lib/email";
+import { escapeHtml } from "@/lib/blog-content";
 import { createLead } from "@/lib/leads";
 import { createQuoteFromDevis } from "@/lib/quotes";
 import { rejectIfBot } from "@/lib/form-guard";
@@ -16,7 +17,8 @@ import {
   rateLimitExceededResponse,
 } from "@/lib/rate-limit";
 import { createDevisSchema } from "@/lib/validations/devis";
-import { PRICING_REFERRAL_OFFER } from "@/lib/pricing-display";
+import { formatPlanAmount, PRICING_REFERRAL_OFFER } from "@/lib/pricing-display";
+import { getPricingSettings, getVisiblePricingPlanBySlug, planQuoteLines } from "@/lib/public-pricing";
 
 export async function POST(request: Request) {
   try {
@@ -58,11 +60,34 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Type de projet invalide." }, { status: 400 });
     }
 
+    // Demande venant d'une carte tarifs : devis pré-rempli avec les lignes HT de la formule.
+    let planEstimate: { planName: string; lines: { label: string; amount: number }[]; subtotal: number } | null = null;
+    if (data.pricingPlan) {
+      try {
+        const [plan, pricingSettings] = await Promise.all([
+          getVisiblePricingPlanBySlug(data.pricingPlan),
+          getPricingSettings(),
+        ]);
+        const built = plan ? planQuoteLines(plan, pricingSettings) : null;
+        if (plan && built) planEstimate = { planName: plan.name, ...built };
+      } catch (error) {
+        console.error("[devis] pré-remplissage formule impossible:", error);
+      }
+    }
+
     const pageTier = quoteConfig.pageTiers.find((t) => t.id === data.pageTierId);
     const addonLabels = data.addonIds
       .map((id) => quoteConfig.addons.find((a) => a.id === id)?.label)
       .filter(Boolean)
       .join(", ");
+
+    const planBlock = planEstimate
+      ? `<h3>Formule ${escapeHtml(planEstimate.planName)} — devis pré-rempli (HT)</h3>
+        <ul>${planEstimate.lines
+          .map((line) => `<li>${escapeHtml(line.label)} : ${formatPlanAmount(line.amount)} FCFA</li>`)
+          .join("")}</ul>
+        <p><strong>Sous-total :</strong> ${formatPlanAmount(planEstimate.subtotal)} FCFA HT</p>`
+      : "";
 
     const estimateBlock = quote.hasPricedEstimate
       ? `<h3>Estimation calculée</h3>
@@ -90,7 +115,7 @@ export async function POST(request: Request) {
         ${htmlRow("Options", addonLabels || "—")}
         ${htmlRow("Budget indicatif client", getBudgetLabel(data.budget))}
         ${htmlRow("Délai souhaité", getTimelineLabel(data.timeline))}
-        ${estimateBlock}
+        ${planBlock || estimateBlock}
         ${data.message ? `<p><strong>Précisions :</strong><br>${data.message.replace(/\n/g, "<br>")}</p>` : ""}
       `,
     });
@@ -113,7 +138,7 @@ export async function POST(request: Request) {
       budget: data.budget,
       timeline: data.timeline,
       message: data.message || null,
-      estimatedValue: quote.hasPricedEstimate ? quote.subtotal : null,
+      estimatedValue: planEstimate ? planEstimate.subtotal : quote.hasPricedEstimate ? quote.subtotal : null,
       metadata: {
         projectTypeId: data.projectTypeId,
         pageTierId: data.pageTierId,
@@ -135,14 +160,17 @@ export async function POST(request: Request) {
       projectLabel: quote.projectLabel,
       pageTierId: data.pageTierId,
       addonIds: data.addonIds,
-      lines: quote.lines,
-      subtotal: quote.subtotal,
-      estimateMin: quote.estimateMin,
-      estimateMax: quote.estimateMax,
+      lines: planEstimate ? planEstimate.lines : quote.lines,
+      subtotal: planEstimate ? planEstimate.subtotal : quote.subtotal,
+      estimateMin: planEstimate ? planEstimate.subtotal : quote.estimateMin,
+      estimateMax: planEstimate ? planEstimate.subtotal : quote.estimateMax,
       budget: data.budget,
       timeline: data.timeline,
       message: data.message,
       leadId: lead?.id ?? null,
+      ...(data.pricingPlan
+        ? { metadata: { pricingPlan: data.pricingPlan, ...(data.pricingOffer ? { pricingOffer: data.pricingOffer } : {}) } }
+        : {}),
     });
 
     return NextResponse.json({

@@ -10,16 +10,23 @@ import {
 import { slugifyBlogTitle } from "@/lib/blog-posts-types";
 import { SUPPORTED_CURRENCIES } from "@/lib/currencies";
 import { isDatabaseConfigured, withDb } from "@/lib/db";
+import type { QuoteLine } from "@/lib/quote-calculator";
 import { LUCIDE_ICON_NAME_ENUM, LUCIDE_ICON_NAMES, type LucideIconName } from "@/lib/lucide-icon-map";
 import {
   computePlanPricing,
   DEFAULT_PRICING_HOSTING_EUR,
   DEFAULT_PRICING_REFERRAL_NOTE,
+  DEFAULT_PRICING_HOSTING_CHECKED_ON,
   DEFAULT_PRICING_HOSTING_REFERRAL_EUR,
+  DEFAULT_PRICING_HOSTING_RENEWAL_EUR,
   DEFAULT_PRICING_REFERRAL_URL,
   DEFAULT_PRICING_VAT_RATE,
   formatReferralNote,
   hostingDiscountPercent,
+  hostingTtcPrices,
+  baseHtFromTtc,
+  eurHtToXofTtc,
+  formatPlanAmount,
   isSafePlanCtaHref,
   type PricingCharge,
 } from "@/lib/pricing-display";
@@ -196,13 +203,22 @@ function mapReassurance(row: ReassuranceRow): PublicPricingReassuranceRecord {
  */
 export function toPricingPlan(
   record: PublicPricingPlanRecord,
-  settings?: Pick<PricingSettings, "referralUrl" | "referralNote" | "hostingEur" | "hostingReferralEur">,
+  settings?: Pick<
+    PricingSettings,
+    "referralUrl" | "referralNote" | "hostingEur" | "hostingReferralEur" | "hostingRenewalEur" | "vatRate"
+  >,
 ): PricingPlan {
   const discounted = record.compareAtAmount != null && record.includeHosting;
   const note =
     discounted && settings
       ? formatReferralNote(settings.referralNote, hostingDiscountPercent(settings.hostingEur, settings.hostingReferralEur))
       : "";
+  const renewalPerYear =
+    record.includeHosting && settings && settings.hostingRenewalEur > 0
+      ? eurHtToXofTtc(settings.hostingRenewalEur, settings.vatRate)
+      : 0;
+  const hostingPrices =
+    discounted && settings ? hostingTtcPrices(settings.hostingEur, settings.hostingReferralEur, settings.vatRate) : null;
   const en = record.locale === "en";
   return {
     id: record.slug,
@@ -221,6 +237,10 @@ export function toPricingPlan(
             ...perk,
             ...(settings?.referralUrl ? { href: settings.referralUrl } : {}),
             ...(note ? { note } : {}),
+            ...(hostingPrices && hostingPrices.before > hostingPrices.after
+              ? { priceBefore: hostingPrices.before, priceAfter: hostingPrices.after }
+              : {}),
+            ...(renewalPerYear > 0 ? { renewalPerYear } : {}),
           }
         : perk,
     ),
@@ -339,6 +359,10 @@ export const pricingSettingsSchema = z
   hostingEur: z.number().min(0).max(100_000).multipleOf(0.01),
   /** Même hébergement, prix HT payé avec le lien de parrainage. */
   hostingReferralEur: z.number().min(0).max(100_000).multipleOf(0.01),
+  /** Renouvellement HT (€/an) à partir de la 2e année, affiché pour la transparence. */
+  hostingRenewalEur: z.number().min(0).max(100_000).multipleOf(0.01),
+  /** Date du relevé des prix Hostinger (AAAA-MM-JJ). */
+  hostingCheckedOn: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Date de relevé invalide (AAAA-MM-JJ)."),
   /** Mention sous l'avantage hébergement ; {pourcentage} = remise calculée. */
   referralNote: z.string().trim().max(160),
   })
@@ -354,6 +378,8 @@ const DEFAULT_PRICING_SETTINGS: PricingSettings = {
   referralUrl: DEFAULT_PRICING_REFERRAL_URL,
   hostingEur: DEFAULT_PRICING_HOSTING_EUR,
   hostingReferralEur: DEFAULT_PRICING_HOSTING_REFERRAL_EUR,
+  hostingRenewalEur: DEFAULT_PRICING_HOSTING_RENEWAL_EUR,
+  hostingCheckedOn: DEFAULT_PRICING_HOSTING_CHECKED_ON,
   referralNote: DEFAULT_PRICING_REFERRAL_NOTE,
 };
 
@@ -399,6 +425,8 @@ type CrmSettingsPricingRow = {
   pricing_referral_url: string;
   pricing_hosting_eur: string | number;
   pricing_hosting_referral_eur: string | number;
+  pricing_hosting_renewal_eur: string | number;
+  pricing_hosting_checked_on: string;
   pricing_referral_note: string;
 };
 
@@ -408,6 +436,7 @@ export async function getPricingSettings(): Promise<PricingSettings> {
   return withDb(async (query) => {
     const { rows } = await query<CrmSettingsPricingRow>(
       `SELECT pricing_vat_rate, pricing_referral_url, pricing_hosting_eur, pricing_hosting_referral_eur,
+         pricing_hosting_renewal_eur, to_char(pricing_hosting_checked_on, 'YYYY-MM-DD') AS pricing_hosting_checked_on,
          pricing_referral_note
        FROM crm_settings WHERE id = 1`,
     );
@@ -418,6 +447,8 @@ export async function getPricingSettings(): Promise<PricingSettings> {
       referralUrl: row.pricing_referral_url,
       hostingEur: Number(row.pricing_hosting_eur),
       hostingReferralEur: Number(row.pricing_hosting_referral_eur),
+      hostingRenewalEur: Number(row.pricing_hosting_renewal_eur),
+      hostingCheckedOn: row.pricing_hosting_checked_on,
       referralNote: row.pricing_referral_note,
     };
   });
@@ -430,11 +461,21 @@ export async function updatePricingSettings(
   await withDb(async (query) => {
     await query(
       `INSERT INTO crm_settings (id, pricing_vat_rate, pricing_referral_url, pricing_hosting_eur,
-         pricing_hosting_referral_eur, pricing_referral_note, updated_at)
-       VALUES (1, $1, $2, $3, $4, $5, NOW())
+         pricing_hosting_referral_eur, pricing_referral_note, pricing_hosting_renewal_eur,
+         pricing_hosting_checked_on, updated_at)
+       VALUES (1, $1, $2, $3, $4, $5, $6, $7, NOW())
        ON CONFLICT (id) DO UPDATE SET pricing_vat_rate = $1, pricing_referral_url = $2,
-         pricing_hosting_eur = $3, pricing_hosting_referral_eur = $4, pricing_referral_note = $5, updated_at = NOW()`,
-      [input.vatRate, input.referralUrl, input.hostingEur, input.hostingReferralEur, input.referralNote],
+         pricing_hosting_eur = $3, pricing_hosting_referral_eur = $4, pricing_referral_note = $5,
+         pricing_hosting_renewal_eur = $6, pricing_hosting_checked_on = $7, updated_at = NOW()`,
+      [
+        input.vatRate,
+        input.referralUrl,
+        input.hostingEur,
+        input.hostingReferralEur,
+        input.referralNote,
+        input.hostingRenewalEur,
+        input.hostingCheckedOn,
+      ],
     );
   });
 
@@ -452,6 +493,53 @@ export async function updatePricingSettings(
     }
   });
   return { ...input, plansUpdated: autoPlans.length };
+}
+
+/**
+ * Lignes HT d'un devis CRM pré-rempli depuis une formule (bouton « Demander un devis »).
+ * Calcul auto : base, charges, hébergement au tarif parrainage. Prix saisi : une ligne HT
+ * déduite du TTC affiché. Sur devis : null (rien à pré-remplir).
+ */
+export function planQuoteLines(
+  record: PublicPricingPlanRecord,
+  settings: PricingSettings,
+): { lines: QuoteLine[]; subtotal: number } | null {
+  if (record.priceMode === "quote") return null;
+  const lines: QuoteLine[] = [];
+  if (record.baseAmountHt != null) {
+    const b = computePlanPricing({
+      baseHt: record.baseAmountHt,
+      charges: record.charges,
+      includeHosting: record.includeHosting,
+      hostingEur: settings.hostingEur,
+      hostingReferralEur: settings.hostingReferralEur,
+      vatRate: settings.vatRate,
+    });
+    lines.push({ label: `Formule ${record.name} — prestation`, amount: record.baseAmountHt });
+    for (const charge of record.charges) lines.push({ label: charge.label, amount: charge.amount });
+    if (b.hostingHt > 0) {
+      const note = b.hostingPaidHt < b.hostingHt ? ` (tarif parrainage, au lieu de ${formatPlanAmount(b.hostingHt)} HT)` : "";
+      lines.push({ label: `Hébergement Hostinger 1 an + nom de domaine${note}`, amount: b.hostingPaidHt });
+    }
+  } else if (record.priceAmount != null && record.priceAmount > 0) {
+    const ht = record.taxMention === "ttc" ? baseHtFromTtc(record.priceAmount, settings.vatRate) : record.priceAmount;
+    lines.push({ label: `Formule ${record.name}`, amount: ht });
+  }
+  const priced = lines.filter((line) => line.amount > 0);
+  if (!priced.length) return null;
+  return { lines: priced, subtotal: priced.reduce((sum, line) => sum + line.amount, 0) };
+}
+
+/** Formule publiée (visible) par slug — pour pré-remplir un devis depuis le site. */
+export async function getVisiblePricingPlanBySlug(slug: string): Promise<PublicPricingPlanRecord | null> {
+  if (!isDatabaseConfigured()) return null;
+  return withDb(async (query) => {
+    const { rows } = await query<PlanRow>(
+      `SELECT * FROM public_pricing_plans WHERE slug = $1 AND is_visible = true LIMIT 1`,
+      [slug],
+    );
+    return rows[0] ? mapPlan(rows[0]) : null;
+  });
 }
 
 export const createPublicPricingReassuranceSchema = z.object({

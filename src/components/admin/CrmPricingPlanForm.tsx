@@ -20,6 +20,8 @@ import {
   formatPlanAmount,
   formatReferralNote,
   hostingDiscountPercent,
+  hostingTtcPrices,
+  eurHtToXofTtc,
 } from "@/lib/pricing-display";
 import type { PricingSettings } from "@/lib/public-pricing";
 import { cn } from "@/lib/utils";
@@ -190,7 +192,16 @@ function formToPreviewPlan(form: PlanForm, settings: PricingSettings): PricingPl
         breakdown && breakdown.discountHt > 0
           ? formatReferralNote(settings.referralNote, hostingDiscountPercent(settings.hostingEur, settings.hostingReferralEur))
           : "";
-      return { ...perk, ...(referralUrl ? { href: referralUrl } : {}), ...(note ? { note } : {}) };
+      const prices = note ? hostingTtcPrices(settings.hostingEur, settings.hostingReferralEur, settings.vatRate) : null;
+      return {
+        ...perk,
+        ...(referralUrl ? { href: referralUrl } : {}),
+        ...(note ? { note } : {}),
+        ...(prices && prices.before > prices.after ? { priceBefore: prices.before, priceAfter: prices.after } : {}),
+        ...(breakdown && breakdown.hostingHt > 0 && settings.hostingRenewalEur > 0
+          ? { renewalPerYear: eurHtToXofTtc(settings.hostingRenewalEur, settings.vatRate) }
+          : {}),
+      };
     }),
     priceNote: payload.priceNote || undefined,
     features: payload.features.length ? payload.features : ["Prestation"],

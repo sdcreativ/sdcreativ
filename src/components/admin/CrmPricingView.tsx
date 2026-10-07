@@ -46,7 +46,12 @@ import {
   computePlanPricing,
   DEFAULT_PRICING_HOSTING_EUR,
   DEFAULT_PRICING_REFERRAL_NOTE,
+  DEFAULT_PRICING_HOSTING_CHECKED_ON,
   DEFAULT_PRICING_HOSTING_REFERRAL_EUR,
+  DEFAULT_PRICING_HOSTING_RENEWAL_EUR,
+  daysSinceHostingCheck,
+  eurHtToXofTtc,
+  PRICING_HOSTING_CHECK_MAX_DAYS,
   DEFAULT_PRICING_REFERRAL_URL,
   DEFAULT_PRICING_VAT_RATE,
   formatPlanAmount,
@@ -113,6 +118,32 @@ function formatAdminBreakdown(item: PublicPricingPlanRecord, settings: PricingSe
   return `Calcul auto : base ${formatPlanAmount(b.baseHt)} HT + ${item.charges.length} charge(s) ${formatPlanAmount(b.otherChargesHt)} HT${hosting} + TVA ${b.vatRate.toLocaleString("fr-FR")} % ${formatPlanAmount(b.vatAmount)}`;
 }
 
+const DEFAULT_SETTINGS: PricingSettings = {
+  vatRate: DEFAULT_PRICING_VAT_RATE,
+  referralUrl: DEFAULT_PRICING_REFERRAL_URL,
+  hostingEur: DEFAULT_PRICING_HOSTING_EUR,
+  hostingReferralEur: DEFAULT_PRICING_HOSTING_REFERRAL_EUR,
+  hostingRenewalEur: DEFAULT_PRICING_HOSTING_RENEWAL_EUR,
+  hostingCheckedOn: DEFAULT_PRICING_HOSTING_CHECKED_ON,
+  referralNote: DEFAULT_PRICING_REFERRAL_NOTE,
+};
+
+/** Champs texte du formulaire de réglages (virgule décimale à la française). */
+function settingsToInput(s: PricingSettings) {
+  const dec = (n: number) => String(n).replace(".", ",");
+  return {
+    vatRate: dec(s.vatRate),
+    referralUrl: s.referralUrl,
+    hostingEur: dec(s.hostingEur),
+    hostingReferralEur: dec(s.hostingReferralEur),
+    hostingRenewalEur: dec(s.hostingRenewalEur),
+    hostingCheckedOn: s.hostingCheckedOn,
+    referralNote: s.referralNote,
+  };
+}
+
+const decimalInput = (value: string, max = 9) => value.replace(/[^\d.,]/g, "").slice(0, max);
+
 export function CrmPricingView() {
   const { confirm, alert } = useDialog();
   const [plans, setPlans] = useState<PublicPricingPlanRecord[]>([]);
@@ -128,20 +159,8 @@ export function CrmPricingView() {
   const [planFormKey, setPlanFormKey] = useState(0);
   const [focusPricing, setFocusPricing] = useState(false);
   const [planError, setPlanError] = useState("");
-  const [settings, setSettings] = useState<PricingSettings>({
-    vatRate: DEFAULT_PRICING_VAT_RATE,
-    referralUrl: DEFAULT_PRICING_REFERRAL_URL,
-    hostingEur: DEFAULT_PRICING_HOSTING_EUR,
-    hostingReferralEur: DEFAULT_PRICING_HOSTING_REFERRAL_EUR,
-    referralNote: DEFAULT_PRICING_REFERRAL_NOTE,
-  });
-  const [settingsInput, setSettingsInput] = useState({
-    vatRate: String(DEFAULT_PRICING_VAT_RATE),
-    referralUrl: DEFAULT_PRICING_REFERRAL_URL,
-    hostingEur: String(DEFAULT_PRICING_HOSTING_EUR).replace(".", ","),
-    hostingReferralEur: String(DEFAULT_PRICING_HOSTING_REFERRAL_EUR).replace(".", ","),
-    referralNote: DEFAULT_PRICING_REFERRAL_NOTE,
-  });
+  const [settings, setSettings] = useState<PricingSettings>(DEFAULT_SETTINGS);
+  const [settingsInput, setSettingsInput] = useState(() => settingsToInput(DEFAULT_SETTINGS));
   const [savingSettings, setSavingSettings] = useState(false);
   const [reassuranceForm, setReassuranceForm] = useState<ReassuranceForm>(emptyReassuranceForm);
   const [saving, setSaving] = useState(false);
@@ -160,13 +179,7 @@ export function CrmPricingView() {
         fetchPricingSettingsApi(),
       ]);
       setSettings(vat);
-      setSettingsInput({
-        vatRate: String(vat.vatRate).replace(".", ","),
-        referralUrl: vat.referralUrl,
-        hostingEur: String(vat.hostingEur).replace(".", ","),
-        hostingReferralEur: String(vat.hostingReferralEur).replace(".", ","),
-        referralNote: vat.referralNote,
-      });
+      setSettingsInput(settingsToInput(vat));
       setPlans(plansData);
       setReassurance(reassuranceData);
     } catch (err) {
@@ -373,6 +386,10 @@ export function CrmPricingView() {
     Number(settingsInput.hostingReferralEur.replace(",", ".")) || 0,
   );
 
+  const toInputNumber = (value: string) => Number(value.replace(",", ".")) || 0;
+  const renewalPreview = eurHtToXofTtc(toInputNumber(settingsInput.hostingRenewalEur), toInputNumber(settingsInput.vatRate));
+  const hostingCheckAge = daysSinceHostingCheck(settings.hostingCheckedOn);
+
   async function handleSaveSettings(e: React.FormEvent) {
     e.preventDefault();
     const toNumber = (v: string) => Math.round(Number(v.replace(",", ".")) * 100) / 100;
@@ -381,13 +398,15 @@ export function CrmPricingView() {
       referralUrl: settingsInput.referralUrl.trim(),
       hostingEur: toNumber(settingsInput.hostingEur),
       hostingReferralEur: toNumber(settingsInput.hostingReferralEur),
+      hostingRenewalEur: toNumber(settingsInput.hostingRenewalEur),
+      hostingCheckedOn: settingsInput.hostingCheckedOn,
       referralNote: settingsInput.referralNote.trim(),
     };
     if (!Number.isFinite(next.vatRate) || next.vatRate < 0 || next.vatRate > 100) {
       setMessage("Impossible : la TVA doit être comprise entre 0 et 100 %.");
       return;
     }
-    if (![next.hostingEur, next.hostingReferralEur].every((v) => Number.isFinite(v) && v >= 0)) {
+    if (![next.hostingEur, next.hostingReferralEur, next.hostingRenewalEur].every((v) => Number.isFinite(v) && v >= 0)) {
       setMessage("Impossible : prix d’hébergement invalide.");
       return;
     }
@@ -478,6 +497,14 @@ export function CrmPricingView() {
       {message && <p className={cn("text-sm", message.includes("Impossible") ? "text-red-600" : "text-emerald-700")} role="status">{message}</p>}
       {error && <p className="text-sm text-red-600">{error}</p>}
 
+      {hostingCheckAge != null && hostingCheckAge > PRICING_HOSTING_CHECK_MAX_DAYS && (
+        <p className="rounded-xl border border-amber-300 bg-amber-50 px-4 py-3 text-sm text-amber-900" role="alert">
+          Les prix Hostinger ont été relevés il y a {hostingCheckAge} jours ({settings.hostingCheckedOn}). Hostinger change
+          souvent ses promotions : vérifiez le panier avec le lien de parrainage, mettez à jour les prix ci-dessous et la date
+          du relevé.
+        </p>
+      )}
+
       <form
         onSubmit={(e) => void handleSaveSettings(e)}
         className="space-y-4 rounded-2xl border border-gray/60 bg-white p-4 shadow-sm"
@@ -485,16 +512,17 @@ export function CrmPricingView() {
         <div>
           <h2 className="text-base font-bold text-foreground">Réglages tarifs</h2>
           <p className="mt-1 text-sm text-gray-text">
-            Communs à toutes les formules. Calcul automatique : TTC = (prix de base HT + charges HT + hébergement − remise parrainage sur l’hébergement) × (1 + TVA).
+            Communs à toutes les formules. Calcul automatique : TTC = (prix de base HT + charges HT + hébergement au tarif
+            parrainage) × (1 + TVA).
           </p>
         </div>
-        <div className="grid gap-3 sm:grid-cols-[7rem_minmax(0,1fr)_9rem_10rem_auto] sm:items-end">
+        <div className="grid gap-3 sm:grid-cols-[7rem_minmax(0,1fr)]">
           <label className="block">
             <span className="mb-1 block text-xs font-semibold uppercase tracking-wide text-gray-text">TVA (%)</span>
             <input
               inputMode="decimal"
               value={settingsInput.vatRate}
-              onChange={(e) => setSettingsInput((p) => ({ ...p, vatRate: e.target.value.replace(/[^\d.,]/g, "").slice(0, 6) }))}
+              onChange={(e) => setSettingsInput((p) => ({ ...p, vatRate: decimalInput(e.target.value, 6) }))}
               className={fieldClass}
             />
           </label>
@@ -508,29 +536,57 @@ export function CrmPricingView() {
               placeholder="https://www.hostinger.com/fr?REFERRALCODE=…"
             />
           </label>
-          <label className="block">
-            <span className="mb-1 block text-xs font-semibold uppercase tracking-wide text-gray-text">Hébergement normal (€ HT)</span>
-            <input
-              inputMode="decimal"
-              value={settingsInput.hostingEur}
-              onChange={(e) => setSettingsInput((p) => ({ ...p, hostingEur: e.target.value.replace(/[^\d.,]/g, "").slice(0, 9) }))}
-              className={fieldClass}
-            />
-          </label>
-          <label className="block">
-            <span className="mb-1 block text-xs font-semibold uppercase tracking-wide text-gray-text">Avec parrainage (€ HT)</span>
-            <input
-              inputMode="decimal"
-              value={settingsInput.hostingReferralEur}
-              onChange={(e) => setSettingsInput((p) => ({ ...p, hostingReferralEur: e.target.value.replace(/[^\d.,]/g, "").slice(0, 9) }))}
-              className={fieldClass}
-            />
-          </label>
-          <button type="submit" disabled={savingSettings || loading} className="inline-flex items-center justify-center gap-2 rounded-xl bg-primary px-4 py-2.5 text-sm font-semibold text-white disabled:opacity-60">
-            {savingSettings && <Loader2 className="h-4 w-4 animate-spin" aria-hidden />}
-            Appliquer
-          </button>
         </div>
+
+        <fieldset className="rounded-xl border border-gray/40 p-3">
+          <legend className="px-1 text-xs font-semibold uppercase tracking-wide text-gray-text">
+            Hébergement Hostinger 1 an (prix HT relevés au panier)
+          </legend>
+          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+            <label className="block">
+              <span className="mb-1 block text-xs font-medium text-gray-text">Prix normal (€ HT)</span>
+              <input
+                inputMode="decimal"
+                value={settingsInput.hostingEur}
+                onChange={(e) => setSettingsInput((p) => ({ ...p, hostingEur: decimalInput(e.target.value) }))}
+                className={fieldClass}
+              />
+            </label>
+            <label className="block">
+              <span className="mb-1 block text-xs font-medium text-gray-text">Avec parrainage (€ HT)</span>
+              <input
+                inputMode="decimal"
+                value={settingsInput.hostingReferralEur}
+                onChange={(e) => setSettingsInput((p) => ({ ...p, hostingReferralEur: decimalInput(e.target.value) }))}
+                className={fieldClass}
+              />
+            </label>
+            <label className="block">
+              <span className="mb-1 block text-xs font-medium text-gray-text">Renouvellement 2ᵉ année (€ HT/an)</span>
+              <input
+                inputMode="decimal"
+                value={settingsInput.hostingRenewalEur}
+                onChange={(e) => setSettingsInput((p) => ({ ...p, hostingRenewalEur: decimalInput(e.target.value) }))}
+                className={fieldClass}
+              />
+            </label>
+            <label className="block">
+              <span className="mb-1 block text-xs font-medium text-gray-text">Prix relevés le</span>
+              <input
+                type="date"
+                value={settingsInput.hostingCheckedOn}
+                onChange={(e) => setSettingsInput((p) => ({ ...p, hostingCheckedOn: e.target.value }))}
+                className={fieldClass}
+              />
+            </label>
+          </div>
+          <p className="mt-2 text-xs text-gray-text">
+            Convertis à 655,957 FCFA pour 1 €. Remise calculée : −{settingsPercent.toLocaleString("fr-FR")} % sur
+            l’hébergement des formules où « Inclure l’hébergement Hostinger » est coché. Renouvellement affiché sur le site :
+            ≈ {formatPlanAmount(renewalPreview)} FCFA TTC/an.
+          </p>
+        </fieldset>
+
         <label className="block">
           <span className="mb-1 block text-xs font-semibold uppercase tracking-wide text-gray-text">
             Mention sous l’avantage hébergement (quand la remise s’applique)
@@ -543,15 +599,15 @@ export function CrmPricingView() {
             placeholder={DEFAULT_PRICING_REFERRAL_NOTE}
           />
           <span className="mt-1 block text-xs text-gray-text">
-            {"{pourcentage}"} est remplacé par la remise parrainage. Aperçu :{" "}
-            « {formatReferralNote(settingsInput.referralNote, settingsPercent)} »
+            {"{pourcentage}"} est remplacé par la remise calculée. Aperçu : « {formatReferralNote(settingsInput.referralNote, settingsPercent)} »
           </span>
         </label>
-        <p className="text-xs text-gray-text">
-          Hébergement Hostinger 1 an (Pack + nom de domaine), prix HT relevés au panier, convertis à 655,957 FCFA pour 1 €.
-          Remise calculée : −{settingsPercent.toLocaleString("fr-FR")} %, appliquée uniquement à l’hébergement des formules où
-          « Inclure l’hébergement Hostinger » est coché.
-        </p>
+        <div className="flex justify-end">
+          <button type="submit" disabled={savingSettings || loading} className="inline-flex items-center justify-center gap-2 rounded-xl bg-primary px-4 py-2.5 text-sm font-semibold text-white disabled:opacity-60">
+            {savingSettings && <Loader2 className="h-4 w-4 animate-spin" aria-hidden />}
+            Appliquer
+          </button>
+        </div>
       </form>
 
       {/* Section formules */}
