@@ -195,6 +195,9 @@ export async function signPortalQuote(input: SignPortalQuoteInput): Promise<Quot
     });
   }
 
+  // Avantage promis via un code (ex. maintenance 2e année -50 %) : enregistré pour application automatique.
+  void import("@/lib/client-benefits").then(({ registerQuoteBenefitSafely }) => registerQuoteBenefitSafely(updated));
+
   void notifyAdminQuoteSigned(updated, signerName);
   void createAdminBillingNotification({
     eventType: "quote.signed",

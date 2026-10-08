@@ -512,6 +512,11 @@ export async function updateQuote(
 
     const quote = mapQuote(rows[0]);
 
+    if (nextStatus === "signed" || nextStatus === "accepted" || nextStatus === "validated") {
+      // Avantage promis via un code : enregistré pour application automatique (idempotent).
+      void import("@/lib/client-benefits").then(({ registerQuoteBenefitSafely }) => registerQuoteBenefitSafely(quote));
+    }
+
     if (
       (nextStatus === "signed" || nextStatus === "accepted" || nextStatus === "validated") &&
       quote.leadId

@@ -21,9 +21,11 @@ export async function GET(request: Request) {
     if (result.processed > 0) {
       const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? "https://sdcreativ.com";
       await sendEmail({
-        subject: `[SD CREATIV CRM] ${result.processed} facture(s) récurrente(s) générée(s)`,
-        html: `<p>${result.processed} facture(s) d'abonnement ont été créées : ${result.invoicesCreated.join(", ")}</p>
-               <p><a href="${siteUrl}/admin/crm/factures">Voir les factures</a></p>`,
+        subject: `[SD CREATIV CRM] ${result.processed} facture(s) récurrente(s) à valider`,
+        html: `<p>${result.processed} facture(s) d'abonnement ont été préparées <strong>en brouillon</strong> :
+               ${result.invoicesCreated.join(", ")}.</p>
+               ${result.benefitsApplied > 0 ? `<p>${result.benefitsApplied} facture(s) de maintenance incluent la remise d'un avantage promis.</p>` : ""}
+               <p>Relisez-les puis envoyez-les au client : <a href="${siteUrl}/admin/crm/factures">voir les factures</a>.</p>`,
       });
     }
 
