@@ -3,7 +3,7 @@ import {
   DEFAULT_PRICING_HOSTING_EUR,
   DEFAULT_PRICING_HOSTING_REFERRAL_EUR,
 } from "@/lib/pricing-display";
-import { buildPlanCtaHref, formatReferralNote, baseHtFromTtc, computePlanPricing, computePlanTtc, eurToXof, hostingDiscountPercent, hostingTtcPrices, daysSinceHostingCheck, eurHtToXofTtc, formatPlanAmount, isSafePlanCtaHref, resolvePlanPriceDisplay } from "@/lib/pricing-display";
+import { buildPlanCtaHref, formatReferralNote, baseHtFromTtc, computePlanPricing, computePlanTtc, eurToXof, hostingDiscountPercent, hostingTtcPrices, daysSinceHostingCheck, eurHtToXofTtc, renewalXofPerYear, formatPlanAmount, isSafePlanCtaHref, resolvePlanPriceDisplay } from "@/lib/pricing-display";
 import { PRICE_ON_REQUEST_LABEL, PRICE_ON_REQUEST_LABEL_EN } from "@/lib/format";
 
 const base = {
@@ -259,5 +259,12 @@ describe("valeurs relevées en Côte d'Ivoire (défauts)", () => {
       expect(b.totalTtcBeforeDiscount).toBe(before);
       expect(b.totalTtc).toBe(after);
     }
+  });
+});
+
+describe("renouvellement facturé par Hostinger au client (2e année)", () => {
+  it("hébergement + domaine, sans TVA SD CREATIV", () => {
+    expect(renewalXofPerYear(119.88, 16.99)).toBe(89781); // Premium : 136,87 €
+    expect(renewalXofPerYear(287.88, 16.99)).toBe(199982); // Cloud Startup : 304,87 €
   });
 });

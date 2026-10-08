@@ -118,6 +118,7 @@ describe("toPricingPlan", () => {
       referralNote: "-{pourcentage} % grâce à notre partenariat Hostinger",
       domainEur: 6.99,
       referralPercent: 20,
+      domainRenewalEur: 16.99,
       catalog: [],
     };
     const [hosting, maintenance] = toPricingPlan(withPerks, settings).perks;
@@ -134,7 +135,8 @@ describe("toPricingPlan", () => {
     expect(maintenanceOn?.priceBefore).toBeUndefined();
     expect(hosting?.priceBefore).toBeUndefined(); // sans remise : pas de prix barré
     expect(hosting?.renewalPerYear).toBeUndefined(); // hébergement non inclus : pas de renouvellement
-    expect(hostingOn?.renewalPerYear).toBe(92790); // 119,88 € HT → 78 636 FCFA × 1,18
+    // Facturé par Hostinger au client, sans TVA : (119,88 € + domaine 16,99 €) → 89 781 FCFA
+    expect(hostingOn?.renewalPerYear).toBe(89781);
     expect(maintenanceOn?.note).toBeUndefined();
   });
 
@@ -179,6 +181,7 @@ describe("charges et TVA", () => {
     referralNote: "-{pourcentage} % grâce à notre partenariat Hostinger",
     domainEur: 6.99,
     referralPercent: 20,
+    domainRenewalEur: 16.99,
   };
 
   it("valide la date de relevé des prix", () => {
@@ -226,6 +229,7 @@ describe("devis pré-rempli depuis une formule", () => {
     referralNote: "",
     domainEur: 6.99,
     referralPercent: 20,
+    domainRenewalEur: 16.99,
     catalog: [],
   };
   const plan: PublicPricingPlanRecord = {

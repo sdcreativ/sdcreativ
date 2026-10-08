@@ -24,7 +24,7 @@ import {
   formatReferralNote,
   hostingDiscountPercent,
   hostingTtcPrices,
-  eurHtToXofTtc,
+  renewalXofPerYear,
 } from "@/lib/pricing-display";
 import type { PricingContext } from "@/lib/public-pricing";
 import { cn } from "@/lib/utils";
@@ -227,7 +227,7 @@ function formToPreviewPlan(form: PlanForm, settings: PricingContext): PricingPla
         ...(prices && prices.before > prices.after ? { priceBefore: prices.before, priceAfter: prices.after } : {}),
         ...(breakdown && breakdown.hostingHt > 0 && hosting && hosting.renewalEurPerYear > 0
           ? {
-              renewalPerYear: eurHtToXofTtc(hosting.renewalEurPerYear, settings.vatRate),
+              renewalPerYear: renewalXofPerYear(hosting.renewalEurPerYear, settings.domainRenewalEur),
               renewalFromYear: renewalFromYear(hosting.months),
             }
           : {}),

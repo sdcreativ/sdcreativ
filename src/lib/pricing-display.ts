@@ -112,6 +112,8 @@ export function daysSinceHostingCheck(checkedOn: string, now: Date = new Date())
   return Math.floor((now.getTime() - date.getTime()) / 86_400_000);
 }
 
+/** Renouvellement annuel du nom de domaine .com (catalogue Hostinger : 16,99 €). */
+export const DEFAULT_PRICING_DOMAIN_RENEWAL_EUR = 16.99;
 /** Valeur HT du nom de domaine offert la 1re année (panier Hostinger : 6,99 €). */
 export const DEFAULT_PRICING_DOMAIN_EUR = 6.99;
 /** Remise parrainage Hostinger (nouveaux clients, 1re commande, 12 / 24 / 48 mois). */
@@ -187,6 +189,14 @@ export function resolvePlanHosting(
     paidEur: settings.hostingReferralEur,
     renewalEurPerYear: settings.hostingRenewalEur,
   };
+}
+
+/**
+ * Coût annuel du renouvellement payé par le client, en FCFA : hébergement + nom de domaine,
+ * facturés directement par Hostinger (aucune TVA SD CREATIV, pas de taxe Hostinger en Côte d'Ivoire).
+ */
+export function renewalXofPerYear(hostingRenewalEurPerYear: number, domainRenewalEur: number): number {
+  return eurToXof(Math.round((hostingRenewalEurPerYear + domainRenewalEur) * 100) / 100);
 }
 
 /** Année à partir de laquelle le renouvellement s'applique (12 mois → 2e, 24 → 3e, 48 → 5e). */
