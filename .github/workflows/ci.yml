@@ -167,6 +167,9 @@ jobs:
           NEXT_PUBLIC_SITE_URL: https://sdcreativ.com
           ADMIN_SECRET: ${{ secrets.CRM_E2E_ADMIN_SECRET }}
           DATABASE_URL: postgresql://sdcreativ:sdcreativ@localhost:5432/sdcreativ
+          # Le build initialise la base : sans ce jeton, l'admin de test serait créé avec un
+          # changement de mot de passe forcé.
+          CRM_E2E_LOGIN_TOKEN: ${{ secrets.CRM_E2E_LOGIN_TOKEN }}
 
       - name: Run CRM e2e
         run: npm run test:e2e:crm
