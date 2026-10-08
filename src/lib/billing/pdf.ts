@@ -1,4 +1,5 @@
 import { access } from "node:fs/promises";
+import { hasLetterhead, LETTERHEAD_MARKER, LETTERHEAD_PAGE_MARGINS, LETTERHEAD_PDF_CSS } from "@/lib/billing/letterhead";
 
 export type RenderedDocument = {
   buffer: Buffer;
@@ -63,11 +64,28 @@ export async function renderHtmlToDocument(html: string): Promise<RenderedDocume
       await page.setContent(html, { waitUntil: "load", timeout: 60_000 });
       await page.waitForSelector("img", { timeout: 5_000 }).catch(() => undefined);
       await new Promise((r) => setTimeout(r, 400));
+
+      // Papier à en-tête : en-tête et pied répétés sur chaque page, marges du modèle.
+      const letterhead = hasLetterhead(html)
+        ? await page.evaluate((marker) => ({
+            header: document.getElementById(`${marker}-header`)?.innerHTML ?? "",
+            footer: document.getElementById(`${marker}-footer`)?.innerHTML ?? "",
+          }), LETTERHEAD_MARKER)
+        : null;
+      if (letterhead) await page.addStyleTag({ content: LETTERHEAD_PDF_CSS });
+
       const pdf = await page.pdf({
         format: "A4",
         printBackground: true,
         preferCSSPageSize: true,
-        margin: { top: "14mm", bottom: "14mm", left: "12mm", right: "12mm" },
+        ...(letterhead
+          ? {
+              displayHeaderFooter: true,
+              headerTemplate: letterhead.header,
+              footerTemplate: letterhead.footer,
+              margin: { ...LETTERHEAD_PAGE_MARGINS },
+            }
+          : { margin: { top: "14mm", bottom: "14mm", left: "12mm", right: "12mm" } }),
       });
       const buffer = Buffer.from(pdf);
       if (!looksLikePdf(buffer)) {

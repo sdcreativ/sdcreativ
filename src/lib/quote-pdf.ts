@@ -2,10 +2,8 @@ import type { Quote } from "@/lib/quotes";
 import { formatQuoteAmount, formatQuoteDate } from "@/content/quotes-labels";
 import { QUOTE_STATUS_LABELS } from "@/content/quotes-labels";
 import type { InvoiceDocumentCompany } from "@/lib/billing/document-company";
-import {
-  buildDefaultDocumentCompany,
-  buildDocumentCompanyHeader,
-} from "@/lib/billing/document-pdf-header";
+import { buildDefaultDocumentCompany } from "@/lib/billing/document-pdf-header";
+import { applyLetterhead } from "@/lib/billing/letterhead";
 import type { PdfVerification } from "@/lib/billing/verification-html";
 import { injectVerificationBlock } from "@/lib/billing/verification-html";
 
@@ -15,7 +13,17 @@ export type QuotePdfOptions = {
   company?: InvoiceDocumentCompany;
 };
 
+/** Devis sur papier à en-tête officiel (en-tête et pied répétés sur chaque page du PDF). */
 export function buildQuotePdfHtml(
+  quote: Quote,
+  siteUrl: string,
+  options?: QuotePdfOptions,
+): string {
+  return applyLetterhead(injectVerificationBlock(buildQuoteBodyHtml(quote, siteUrl, options), options?.verification));
+}
+
+/** Corps du devis, sans papier à en-tête (ajouté en dernier, après blocs de signature / vérification). */
+function buildQuoteBodyHtml(
   quote: Quote,
   siteUrl: string,
   options?: QuotePdfOptions,
@@ -26,7 +34,7 @@ export function buildQuotePdfHtml(
     ? quote.lines
         .map(
           (line) =>
-            `<tr><td style="padding:8px 12px;border-bottom:1px solid #e5e7eb">${escapeHtml(line.label)}</td><td style="padding:8px 12px;border-bottom:1px solid #e5e7eb;text-align:right;font-weight:600">${formatQuoteAmount(line.amount, quote.currency)}</td></tr>`,
+            `<tr><td style="padding:8px 12px;border-bottom:1px solid #e5e7eb">${escapeHtml(line.label)}</td><td style="padding:8px 12px;border-bottom:1px solid #e5e7eb;text-align:right;font-weight:600;white-space:nowrap">${formatQuoteAmount(line.amount, quote.currency)}</td></tr>`,
         )
         .join("")
     : `<tr><td colspan="2" style="padding:12px;color:#6b7280">Montant forfaitaire</td></tr>`;
@@ -61,8 +69,6 @@ export function buildQuotePdfHtml(
   </style>
 </head>
 <body>
-  ${buildDocumentCompanyHeader(company)}
-
   <p style="margin:0 0 6px;font-size:11px;font-weight:700;letter-spacing:0.14em;text-transform:uppercase;color:${company.primaryColor}">Devis</p>
   <h2 style="font-size:1.25rem;margin:0 0 0.5rem;color:#0f172a">Devis ${escapeHtml(quote.reference)}</h2>
   <p style="color:#6b7280;font-size:0.875rem;margin:0 0 1.5rem">
@@ -86,13 +92,13 @@ export function buildQuotePdfHtml(
   ${quote.message ? `<div style="margin-top:2rem;padding:1rem;background:#f9fafb;border-radius:8px"><strong>Notes :</strong><br/>${escapeHtml(quote.message)}</div>` : ""}
 
   <div class="footer">
-    ${escapeHtml(company.agencyName)} — Devis valable 30 jours. TVA non applicable (art. 293 B du CGI) sauf mention contraire.
+    ${escapeHtml(company.agencyName)} — Devis valable 30 jours. Montants hors taxes (HT) ; la TVA en vigueur en Côte d'Ivoire s'applique sur la facture.
   </div>
   ${options?.forArchive ? "" : "<script>window.onload=function(){window.print()}</script>"}
 </body>
 </html>`;
 
-  return injectVerificationBlock(html, options?.verification);
+  return html;
 }
 
 export function buildSignedQuotePdfHtml(
@@ -106,7 +112,7 @@ export function buildSignedQuotePdfHtml(
   },
   options?: QuotePdfOptions,
 ): string {
-  const base = buildQuotePdfHtml(
+  const base = buildQuoteBodyHtml(
     { ...quote, status: "signed" },
     siteUrl,
     { ...options, forArchive: true },
@@ -121,7 +127,9 @@ export function buildSignedQuotePdfHtml(
     <img src="${signature.signatureDataUrl}" alt="Signature" style="max-height:80px;max-width:280px;border-bottom:1px solid #9ca3af" />
   </div>`;
 
-  return base.replace("</body>", `${signedBlock}</body>`);
+  return applyLetterhead(
+    injectVerificationBlock(base.replace("</body>", `${signedBlock}</body>`), options?.verification),
+  );
 }
 
 function escapeHtml(value: string): string {

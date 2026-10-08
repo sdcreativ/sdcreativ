@@ -2,6 +2,7 @@ import {
   EMPLOYEE_COMPENSATION_PERIOD_LABELS,
   EMPLOYEE_CONTRACT_TYPE_LABELS,
 } from "@/content/employee-contracts-labels";
+import { applyLetterhead, LETTERHEAD } from "@/lib/billing/letterhead";
 import type { InvoiceDocumentCompany } from "@/lib/billing/document-company";
 import { formatMoney } from "@/lib/currencies";
 import type { SupportedCurrency } from "@/lib/currencies";
@@ -43,10 +44,11 @@ function buildVars(
 
   const base: Record<string, string> = {
     employerName: company.agencyName || "SD CREATIV",
-    employerAddress: company.address || "Abidjan, Côte d'Ivoire",
-    employerEmail: company.email || "contact@sdcreativ.com",
-    employerPhone: company.phone || "—",
-    employerRccm: company.rccm || "non renseigné",
+    // Repli sur les mentions officielles du papier à en-tête quand les réglages sont vides.
+    employerAddress: company.address || LETTERHEAD.headOffice,
+    employerEmail: company.email || LETTERHEAD.email,
+    employerPhone: company.phone || LETTERHEAD.phones[0],
+    employerRccm: company.rccm || LETTERHEAD.rccm,
     employerNcc: company.ncc || "non renseigné",
     employeeName: contract.userName || "Collaborateur",
     employeeEmail: contract.userEmail || "—",
@@ -75,47 +77,6 @@ function buildVars(
       base,
     ),
   };
-}
-
-function buildCompanyLetterhead(company: InvoiceDocumentCompany): string {
-  const contactLines = [
-    company.address?.trim(),
-    company.phone?.trim(),
-    company.email?.trim(),
-    company.siteUrl?.replace(/^https?:\/\//, "").trim(),
-  ].filter(Boolean) as string[];
-
-  const legalParts: string[] = [];
-  if (company.rccm?.trim()) legalParts.push(`RCCM ${company.rccm.trim()}`);
-  if (company.ncc?.trim()) legalParts.push(`NCC ${company.ncc.trim()}`);
-
-  return `
-  <header style="margin-bottom:22px;padding-bottom:16px;border-bottom:2px solid ${escapeHtml(company.primaryColor)}">
-    <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:20px">
-      <div style="display:flex;align-items:center;gap:16px;min-width:0">
-        <div style="flex-shrink:0;width:72px;height:72px;border-radius:12px;border:1px solid #e2e8f0;background:#ffffff;padding:8px;display:flex;align-items:center;justify-content:center">
-          <img src="${company.logoUrl.startsWith("data:") ? company.logoUrl : escapeHtml(company.logoUrl)}" alt="${escapeHtml(company.agencyName)}" style="max-width:100%;max-height:100%;object-fit:contain" />
-        </div>
-        <div style="min-width:0">
-          <p style="margin:0;font-family:system-ui,-apple-system,sans-serif;font-size:18px;font-weight:800;letter-spacing:-0.02em;color:${escapeHtml(company.primaryColor)};line-height:1.2">${escapeHtml(company.agencyName)}</p>
-          ${
-            company.tagline
-              ? `<p style="margin:4px 0 0;font-family:system-ui,sans-serif;font-size:12px;color:#64748b">${escapeHtml(company.tagline)}</p>`
-              : ""
-          }
-          ${
-            legalParts.length
-              ? `<p style="margin:8px 0 0;font-family:system-ui,sans-serif;font-size:10px;color:#94a3b8;letter-spacing:0.02em">${escapeHtml(legalParts.join(" · "))}</p>`
-              : ""
-          }
-        </div>
-      </div>
-      <div style="text-align:right;font-family:system-ui,sans-serif;font-size:11px;line-height:1.65;color:#475569;flex-shrink:0;max-width:42%">
-        ${contactLines.map((line) => `<p style="margin:0">${escapeHtml(line)}</p>`).join("")}
-        ${company.hours?.trim() ? `<p style="margin:4px 0 0;color:#94a3b8">${escapeHtml(company.hours.trim())}</p>` : ""}
-      </div>
-    </div>
-  </header>`;
 }
 
 export function buildEmployeeContractPdfHtml(
@@ -147,7 +108,6 @@ export function buildEmployeeContractPdfHtml(
 
   const vars = buildVars(contract, resolvedCompany);
   const typeLabel = EMPLOYEE_CONTRACT_TYPE_LABELS[contract.contractType];
-  const letterhead = buildCompanyLetterhead(resolvedCompany);
   const companyHost = resolvedCompany.siteUrl.replace(/^https?:\/\//, "") || siteUrl.replace(/^https?:\/\//, "");
 
   const clausesHtml = contract.clauses
@@ -199,7 +159,8 @@ export function buildEmployeeContractPdfHtml(
     </div>
   </div>`;
 
-  return `<!DOCTYPE html>
+  // Papier à en-tête officiel : coordonnées et mentions légales (RCCM, IDU) en en-tête / pied de chaque page.
+  return applyLetterhead(`<!DOCTYPE html>
 <html lang="fr">
 <head><meta charset="utf-8"/><title>${escapeHtml(contract.reference)} — Contrat ${escapeHtml(typeLabel)}</title>
 <style>
@@ -284,7 +245,6 @@ export function buildEmployeeContractPdfHtml(
 </style></head>
 <body>
   <div class="sheet">
-  ${letterhead}
 
   <p class="eyebrow">Contrat de travail / engagement — ${escapeHtml(typeLabel)}</p>
   <h1>${escapeHtml(contract.title)}</h1>
@@ -297,7 +257,7 @@ export function buildEmployeeContractPdfHtml(
   <div class="card">
     <table>
       <tr><td>Employeur</td><td><strong>${escapeHtml(resolvedCompany.agencyName)}</strong>${resolvedCompany.tagline ? `<br/><span style="color:#64748b">${escapeHtml(resolvedCompany.tagline)}</span>` : ""}<br/>${escapeHtml(resolvedCompany.address || "—")}<br/>${escapeHtml(resolvedCompany.email)}${resolvedCompany.phone ? ` · ${escapeHtml(resolvedCompany.phone)}` : ""}</td></tr>
-      <tr><td>Identifiants légaux</td><td>RCCM : ${escapeHtml(resolvedCompany.rccm || "—")}<br/>NCC : ${escapeHtml(resolvedCompany.ncc || "—")}</td></tr>
+      <tr><td>Identifiants légaux</td><td>RCCM : ${escapeHtml(resolvedCompany.rccm || LETTERHEAD.rccm)}<br/>IDU : ${escapeHtml(LETTERHEAD.idu)}${resolvedCompany.ncc ? `<br/>NCC : ${escapeHtml(resolvedCompany.ncc)}` : ""}</td></tr>
       <tr><td>Collaborateur</td><td><strong>${escapeHtml(vars.employeeName)}</strong><br/>${escapeHtml(vars.employeeEmail)}</td></tr>
       <tr><td>Poste</td><td>${escapeHtml(contract.jobTitle || "—")}${contract.department ? ` · ${escapeHtml(contract.department)}` : ""}</td></tr>
       <tr><td>Période</td><td>Du ${escapeHtml(formatDateFr(contract.startDate))} au ${escapeHtml(contract.endDate ? formatDateFr(contract.endDate) : "durée indéterminée")}</td></tr>
@@ -317,14 +277,7 @@ export function buildEmployeeContractPdfHtml(
   </div>
 
   ${sigBlock}
-  <p class="footer">
-    <strong style="color:#64748b">${escapeHtml(resolvedCompany.agencyName)}</strong>
-    ${resolvedCompany.address ? ` · ${escapeHtml(resolvedCompany.address)}` : ""}
-    ${resolvedCompany.rccm ? ` · RCCM ${escapeHtml(resolvedCompany.rccm)}` : ""}
-    ${resolvedCompany.ncc ? ` · NCC ${escapeHtml(resolvedCompany.ncc)}` : ""}
-    ${resolvedCompany.email ? ` · ${escapeHtml(resolvedCompany.email)}` : ""}
-    <br/>${escapeHtml(contract.reference)} · ${escapeHtml(typeLabel)} · Exemplaire électronique
-  </p>
+  <p class="footer">${escapeHtml(contract.reference)} · ${escapeHtml(typeLabel)} · Exemplaire électronique</p>
   </div>
-</body></html>`;
+</body></html>`);
 }
