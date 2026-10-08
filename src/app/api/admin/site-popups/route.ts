@@ -1,14 +1,15 @@
 import { crmApiAuth } from "@/lib/crm-api-auth";
 import { NextResponse } from "next/server";
 import { isDatabaseConfigured } from "@/lib/db";
-import { createSitePopup, listSitePopups } from "@/lib/site-popups";
+import { createSitePopup, getPopupPerformance, listSitePopups } from "@/lib/site-popups";
 import { createSitePopupSchema } from "@/lib/site-popups-types";
 
 export async function GET() {
   const authError = await crmApiAuth.site.read();
   if (authError) return authError;
   if (!isDatabaseConfigured()) return NextResponse.json({ error: "Base de données non configurée." }, { status: 503 });
-  return NextResponse.json({ popups: await listSitePopups() });
+  const [popups, performance] = await Promise.all([listSitePopups(), getPopupPerformance()]);
+  return NextResponse.json({ popups, performance });
 }
 
 export async function POST(request: Request) {

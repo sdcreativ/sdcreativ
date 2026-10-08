@@ -54,6 +54,12 @@ const select = `
   LEFT JOIN projects p ON p.id = s.project_id
 `;
 
+/** Colonne DATE (minuit heure locale côté pilote pg) → « AAAA-MM-JJ » sans décalage de fuseau. */
+function localDay(value: Date): string {
+  const pad = (n: number) => String(n).padStart(2, "0");
+  return `${value.getFullYear()}-${pad(value.getMonth() + 1)}-${pad(value.getDate())}`;
+}
+
 function mapSubscription(row: SubscriptionRow): Subscription {
   return {
     id: row.id,
@@ -66,7 +72,7 @@ function mapSubscription(row: SubscriptionRow): Subscription {
     amount: row.amount,
     interval: row.interval,
     status: row.status,
-    nextBillingDate: row.next_billing_date.toISOString().slice(0, 10),
+    nextBillingDate: localDay(row.next_billing_date),
     renewalReminderDays: row.renewal_reminder_days,
     tvaRate: Number(row.tva_rate),
     lines: row.lines ?? [],

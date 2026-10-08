@@ -6,6 +6,7 @@ import type {
   SiteSocialLinks,
 } from "@/lib/site-public-types";
 import { LOGO, SITE } from "@/lib/constants";
+import { LETTERHEAD, resolveLetterhead } from "@/lib/letterhead-info";
 
 function envOrDefault(name: string, fallback: string): string {
   const value = process.env[name];
@@ -36,13 +37,22 @@ export function getEnvSitePublicDefaults(): SitePublicSettings {
       "https://instagram.com/sdcreativ",
     ),
     youtube: envOrDefault("NEXT_PUBLIC_SOCIAL_YOUTUBE", "https://youtube.com/@sdcreativ"),
-    rccm: envOrDefault("NEXT_PUBLIC_LEGAL_RCCM", ""),
+    rccm: envOrDefault("NEXT_PUBLIC_LEGAL_RCCM", LETTERHEAD.rccm),
     ncc: envOrDefault("NEXT_PUBLIC_LEGAL_NCC", ""),
     hostName: envOrDefault("NEXT_PUBLIC_HOST_NAME", "Hostinger International Ltd."),
     hostAddress: envOrDefault(
       "NEXT_PUBLIC_HOST_ADDRESS",
       "61 Lordou Vironos Street, 6023 Larnaca, Chypre",
     ),
+    legalName: LETTERHEAD.legalName,
+    legalForm: LETTERHEAD.legalForm,
+    headOffice: LETTERHEAD.headOffice,
+    idu: LETTERHEAD.idu,
+    letterheadTagline: LETTERHEAD.tagline,
+    letterheadWebsite: LETTERHEAD.website,
+    letterheadEmail: LETTERHEAD.email,
+    letterheadPhone: LETTERHEAD.phones[0] ?? "",
+    letterheadPhone2: LETTERHEAD.phones[1] ?? "",
   };
 }
 
@@ -120,6 +130,7 @@ export function resolveSitePublic(
     contact: buildContact(merged),
     social: buildSocial(merged),
     legal: buildLegal(merged),
+    letterhead: resolveLetterhead(merged),
     fromDatabase: hasStored,
   };
 }

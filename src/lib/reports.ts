@@ -413,7 +413,6 @@ export async function getReportsSummary(
       invoiceParams,
     );
     const paidRevenue = Number(paidRows[0]?.paid_xof ?? paidRows[0]?.paid ?? 0);
-    const invoicedSubtotal = Number(paidRows[0]?.subtotal ?? 0);
     const totalRevenue = revenueQuotes + revenueProjects;
 
     const { rows: vendorCostRows } = await query<{ costs: string }>(

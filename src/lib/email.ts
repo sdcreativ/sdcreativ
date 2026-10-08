@@ -11,6 +11,11 @@ type SendEmailParams = {
   }>;
   /** false = ne pas envelopper avec logo / pied société (défaut: true). */
   chrome?: boolean;
+  /**
+   * E-mail marketing : ajoute le lien « Se désinscrire » et les en-têtes List-Unsubscribe (un clic,
+   * RFC 8058) pour cette adresse.
+   */
+  unsubscribe?: { email: string; locale?: "fr" | "en" };
 };
 
 export type SendEmailResult =
@@ -64,6 +69,7 @@ export async function sendEmailDetailed({
   to,
   attachments,
   chrome = true,
+  unsubscribe,
 }: SendEmailParams): Promise<SendEmailResult> {
   const apiKey = process.env.RESEND_API_KEY;
   const from = getFromAddress();
@@ -72,10 +78,22 @@ export async function sendEmailDetailed({
     : [process.env.CONTACT_TO_EMAIL ?? "contact@sdcreativ.com"];
 
   let finalHtml = html;
+  let headers: Record<string, string> | undefined;
+  if (unsubscribe) {
+    const { unsubscribeFooterHtml, unsubscribeLinks } = await import("@/lib/email-unsubscribe");
+    const links = unsubscribeLinks(unsubscribe.email);
+    if (links) {
+      finalHtml = `${finalHtml}${unsubscribeFooterHtml(links.pageUrl, unsubscribe.locale)}`;
+      headers = {
+        "List-Unsubscribe": `<${links.oneClickUrl}>`,
+        "List-Unsubscribe-Post": "List-Unsubscribe=One-Click",
+      };
+    }
+  }
   const inlineAttachments: NonNullable<SendEmailParams["attachments"]> = [];
   if (chrome) {
     const { applyEmailChrome } = await import("@/lib/email-chrome-apply");
-    const wrapped = await applyEmailChrome(html);
+    const wrapped = await applyEmailChrome(finalHtml);
     finalHtml = wrapped.html;
     for (const file of wrapped.inlineAttachments) {
       inlineAttachments.push({
@@ -124,6 +142,7 @@ export async function sendEmailDetailed({
       subject,
       html: finalHtml,
       text: htmlToPlainText(finalHtml),
+      ...(headers ? { headers } : {}),
     };
 
   const allAttachments = [...inlineAttachments, ...(attachments ?? [])];

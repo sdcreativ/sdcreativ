@@ -1,8 +1,5 @@
 import { describe, expect, it } from "vitest";
-import {
-  MAX_CALENDAR_MAIL_ATTACHMENTS_BYTES,
-  validateCalendarMailAttachments,
-} from "@/lib/calendar-mail-limits";
+import { validateCalendarMailAttachments } from "@/lib/calendar-mail-limits";
 
 describe("calendar-mail-limits", () => {
   it("accepte un total sous la limite", () => {

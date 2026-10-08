@@ -41,6 +41,22 @@ function writeState(id: string, patch: PopupState) {
   }
 }
 
+const BUCKET_KEY = "sdcreativ-popup-bucket";
+
+/** Seau A/B du visiteur (0-99), tiré une fois puis mémorisé : il voit toujours la même version. */
+function visitorBucket(): number {
+  try {
+    const raw = localStorage.getItem(BUCKET_KEY);
+    const stored = raw === null ? Number.NaN : Number(raw);
+    if (Number.isInteger(stored) && stored >= 0 && stored < 100) return stored;
+    const bucket = Math.floor(Math.random() * 100);
+    localStorage.setItem(BUCKET_KEY, String(bucket));
+    return bucket;
+  } catch {
+    return 0;
+  }
+}
+
 /** Nombre de visites (une par session de navigation). */
 function countVisit(): number {
   try {
@@ -141,7 +157,7 @@ export function SitePopup() {
     if (forbidden || !consentDecided) return;
     let cancelled = false;
     shownRef.current = false;
-    fetch(`/api/public/popup?path=${encodeURIComponent(pathname)}&locale=${locale}`)
+    fetch(`/api/public/popup?path=${encodeURIComponent(pathname)}&locale=${locale}&v=${visitorBucket()}`)
       .then((r) => (r.ok ? r.json() : { popup: null }))
       .then((json: { popup: PublicSitePopup | null }) => {
         if (!cancelled) setPopup(json.popup);

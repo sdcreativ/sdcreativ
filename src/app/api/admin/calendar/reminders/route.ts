@@ -1,5 +1,4 @@
 import { NextResponse } from "next/server";
-import { requireAdminAuth } from "@/lib/admin-auth";
 import { crmApiAuth } from "@/lib/crm-api-auth";
 import { listCalendarItems } from "@/lib/calendar";
 import { buildRemindersForItems } from "@/lib/calendar-reminders";

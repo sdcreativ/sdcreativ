@@ -19,11 +19,13 @@ export const PRICE_ON_REQUEST_LABEL_EN = "Free custom quote";
  * Politique site public : aucun prix n’est affiché.
  * Les montants restent éditables en CRM / catalogue interne.
  */
+// eslint-disable-next-line @typescript-eslint/no-unused-vars -- signature conservée : aucun prix affiché pour l'instant
 export function hasPublicPrice(_amount: number | null | undefined): boolean {
   return false;
 }
 
 /** Toujours le libellé devis (jamais de montant sur le site public). */
+// eslint-disable-next-line @typescript-eslint/no-unused-vars -- idem
 export function formatPriceFrom(_amount: number | null | undefined): string {
   return PRICE_ON_REQUEST_LABEL;
 }

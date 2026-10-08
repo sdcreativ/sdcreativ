@@ -6,21 +6,19 @@ import path from "node:path";
  * Valeurs relevées dans le modèle Word : A4, marges 52 / 27 / 22 / 22 mm, logo 28 × 28 mm,
  * police Aptos (repli Open Sans sur le serveur), filet bleu #145BAC 1,6 pt, pied #D7DFE8.
  * Utilisé pour tous les documents administratifs : devis, factures, contrats clients et de travail.
+ * Les textes (coordonnées, mentions légales) se modifient dans Paramètres → Site public.
  */
-export const LETTERHEAD = {
-  tagline: "SOLUTIONS DIGITALES • WEB • CLOUD • IA",
-  website: "www.sdcreativ.com",
-  email: "contact@sdcreativ.com",
-  phones: ["+225 0565911347", "+225 0768704858"],
-  legalName: "SDCREATIV",
-  legalForm: "• SARL au capital de 1 000 000 F CFA",
-  headOffice: "Abidjan Cocody Angré, 22ème arrondissement SICOGI, LGT 344, Côte d’Ivoire",
-  rccm: "CI-ABJ-03-2026-B12-06135",
-  idu: "CI-2026-0074317 R",
-} as const;
+export { LETTERHEAD, resolveLetterhead } from "@/lib/letterhead-info";
+export type { LetterheadInfo, LetterheadSettingsSource } from "@/lib/letterhead-info";
+import { LETTERHEAD, type LetterheadInfo } from "@/lib/letterhead-info";
 
-const ADDRESS_LINE = `Siège social : ${LETTERHEAD.headOffice}\u2002•\u2002${LETTERHEAD.website}`;
-const REGISTRATION = `RCCM : ${LETTERHEAD.rccm}\u2003•\u2003IDU : ${LETTERHEAD.idu}`;
+function escapeText(value: string): string {
+  return value
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;");
+}
 
 const COLORS = { blue: "#145BAC", navy: "#0C2142", grey: "#526275", rule: "#D7DFE8" } as const;
 // Guillemets simples : la valeur est insérée dans des attributs style="…".
@@ -46,41 +44,46 @@ export function getLetterheadLogoDataUrl(): string {
   return cachedLogo;
 }
 
-function headerInner(logoSrc: string): string {
+function headerInner(logoSrc: string, info: LetterheadInfo): string {
   const contact = (text: string) =>
-    `<div style="font-size:8pt;line-height:1.42;color:${COLORS.grey}">${text}</div>`;
+    `<div style="font-size:8pt;line-height:1.42;color:${COLORS.grey}">${escapeText(text)}</div>`;
   return `
   <div style="display:flex;align-items:center;justify-content:space-between">
     <div>
       ${logoSrc ? `<img src="${logoSrc}" alt="SD CREATIV" style="display:block;width:28mm;height:28mm" />` : ""}
-      <div style="margin-top:3mm;font-size:7pt;font-weight:700;letter-spacing:0.02em;color:${COLORS.grey};white-space:nowrap">${LETTERHEAD.tagline}</div>
+      <div style="margin-top:3mm;font-size:7pt;font-weight:700;letter-spacing:0.02em;color:${COLORS.grey};white-space:nowrap">${escapeText(info.tagline)}</div>
     </div>
     <div style="text-align:right">
-      <div style="font-size:9pt;line-height:1.42;font-weight:700;color:${COLORS.blue}">${LETTERHEAD.website}</div>
-      ${contact(LETTERHEAD.email)}
-      ${LETTERHEAD.phones.map(contact).join("")}
+      <div style="font-size:9pt;line-height:1.42;font-weight:700;color:${COLORS.blue}">${escapeText(info.website)}</div>
+      ${contact(info.email)}
+      ${info.phones.map(contact).join("")}
     </div>
   </div>
   <div style="margin-top:9.8mm;border-bottom:1.6pt solid ${COLORS.blue}"></div>`;
 }
 
-function footerInner(): string {
+function footerInner(info: LetterheadInfo): string {
+  const address = `Siège social : ${info.headOffice} • ${info.website}`;
+  const registration = `RCCM : ${info.rccm} • IDU : ${info.idu}`;
   return `
   <div style="border-top:0.6pt solid ${COLORS.rule};padding-top:2.5mm;text-align:center">
-    <div style="font-size:8pt;font-weight:700;line-height:1.4;color:${COLORS.navy}">${LETTERHEAD.legalName} ${LETTERHEAD.legalForm}</div>
-    <div style="margin-top:0.6mm;font-size:7.5pt;line-height:1.25;color:${COLORS.grey}">${ADDRESS_LINE}</div>
-    <div style="font-size:7pt;line-height:1.25;color:${COLORS.grey}">${REGISTRATION}</div>
+    <div style="font-size:8pt;font-weight:700;line-height:1.4;color:${COLORS.navy}">${escapeText(info.legalName)} • ${escapeText(info.legalForm)}</div>
+    <div style="margin-top:0.6mm;font-size:7.5pt;line-height:1.25;color:${COLORS.grey}">${escapeText(address)}</div>
+    <div style="font-size:7pt;line-height:1.25;color:${COLORS.grey}">${escapeText(registration)}</div>
   </div>`;
 }
 
 /** Gabarits Chromium (en-tête / pied répétés sur chaque page). Unités physiques : rendu à l'échelle réelle. */
-export function letterheadPdfTemplates(logoSrc: string): { headerTemplate: string; footerTemplate: string } {
+export function letterheadPdfTemplates(
+  logoSrc: string,
+  info: LetterheadInfo = LETTERHEAD,
+): { headerTemplate: string; footerTemplate: string } {
   const base = `font-family:${FONT};-webkit-print-color-adjust:exact;print-color-adjust:exact;box-sizing:border-box;width:100%`;
   return {
     // Décalages calibrés par superposition avec le PDF du modèle (logo à 12,7 mm, filet à 55,8 mm).
-    headerTemplate: `<div style="${base};padding:7.2mm 22mm 0">${headerInner(logoSrc)}</div>`,
+    headerTemplate: `<div style="${base};padding:7.2mm 22mm 0">${headerInner(logoSrc, info)}</div>`,
     // Chromium aligne le pied en bas de la marge : on le remonte (filet à 270 mm comme le modèle).
-    footerTemplate: `<div style="${base};padding:0 22mm 7.6mm">${footerInner()}</div>`,
+    footerTemplate: `<div style="${base};padding:0 22mm 7.6mm">${footerInner(info)}</div>`,
   };
 }
 
@@ -97,16 +100,20 @@ export function hasLetterhead(html: string): boolean {
  * - aperçu / impression navigateur : en-tête en haut et pied en bas du document (blocs .sd-lh-inline),
  *   masqués par le moteur PDF pour éviter les doublons.
  */
-export function applyLetterhead(html: string, logoSrc = getLetterheadLogoDataUrl()): string {
-  const { headerTemplate, footerTemplate } = letterheadPdfTemplates(logoSrc);
+export function applyLetterhead(
+  html: string,
+  info: LetterheadInfo = LETTERHEAD,
+  logoSrc = getLetterheadLogoDataUrl(),
+): string {
+  const { headerTemplate, footerTemplate } = letterheadPdfTemplates(logoSrc, info);
   const style = `
   <style id="${MARKER}-style">
     .sd-lh-inline { font-family: ${FONT}; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
     .sd-lh-inline.sd-lh-top { margin: 0 0 8mm; }
     .sd-lh-inline.sd-lh-bottom { margin: 12mm 0 0; }
   </style>`;
-  const inlineHeader = `<div class="sd-lh-inline sd-lh-top">${headerInner(logoSrc)}</div>`;
-  const inlineFooter = `<div class="sd-lh-inline sd-lh-bottom">${footerInner()}</div>`;
+  const inlineHeader = `<div class="sd-lh-inline sd-lh-top">${headerInner(logoSrc, info)}</div>`;
+  const inlineFooter = `<div class="sd-lh-inline sd-lh-bottom">${footerInner(info)}</div>`;
   const templates =
     `<template id="${MARKER}-header">${headerTemplate}</template>` +
     `<template id="${MARKER}-footer">${footerTemplate}</template>`;

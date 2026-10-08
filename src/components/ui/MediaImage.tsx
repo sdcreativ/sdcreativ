@@ -9,7 +9,7 @@ function isSvgSrc(src: string): boolean {
 type Props = Omit<ImageProps, "loader">;
 
 /** Image publique : `/_next/image` en local, resize Sharp via `/api/media` pour le S3. */
-export function MediaImage({ src, unoptimized, ...props }: Props) {
+export function MediaImage({ src, alt, unoptimized, ...props }: Props) {
   const srcStr = typeof src === "string" ? src : "";
   const proxied = Boolean(srcStr && isProxiedMediaUrl(srcStr));
   const svg = proxied && isSvgSrc(srcStr);
@@ -18,6 +18,7 @@ export function MediaImage({ src, unoptimized, ...props }: Props) {
     <Image
       {...props}
       src={src}
+      alt={alt}
       loader={proxied && !svg ? mediaImageLoader : undefined}
       unoptimized={unoptimized ?? svg}
     />

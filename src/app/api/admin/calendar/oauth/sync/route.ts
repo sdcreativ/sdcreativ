@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
-import { getAdminSession, requireAdminAuth } from "@/lib/admin-auth";
+import { getAdminSession } from "@/lib/admin-auth";
 import { crmApiAuth } from "@/lib/crm-api-auth";
 import type { CalendarOAuthProvider } from "@/lib/calendar-oauth-config";
 import { syncCalendarOAuthForUser } from "@/lib/calendar-sync";

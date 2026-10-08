@@ -16,7 +16,10 @@ export const POPUP_PROJECT_TYPES = [
 ] as const;
 
 /** Pages où un popup n'apparaît jamais (espaces privés, outils internes). */
-export const POPUP_FORBIDDEN_PREFIXES = ["/admin", "/espace-client", "/espace-equipe", "/espace-prestataire", "/presentation", "/c/", "/promo/", "/rsvp/", "/verifier/"];
+export const POPUP_FORBIDDEN_PREFIXES = ["/admin", "/espace-client", "/espace-equipe", "/espace-prestataire", "/presentation", "/c/", "/promo/", "/rsvp/", "/verifier/", "/desinscription"];
+
+/** Relances e-mail après inscription (jours), tant que le code n'a pas servi. */
+export const POPUP_REMINDER_DAYS = [3, 20] as const;
 
 const pathList = z
   .array(z.string().trim().regex(/^\/[A-Za-z0-9/_-]*$/, "Chemin invalide (ex. /tarifs)."))
@@ -54,6 +57,16 @@ const popupFields = z.object({
   benefitPercent: z.number().min(1).max(100).multipleOf(0.01).nullable(),
   benefitStartMonths: z.number().int().min(0).max(120).nullable(),
   benefitDurationMonths: z.number().int().min(1).max(120).nullable(),
+  /** Test A/B : les popups actifs ayant la même clé se partagent les visiteurs à parts égales. */
+  abTestKey: z
+    .string()
+    .trim()
+    .toLowerCase()
+    .regex(/^[a-z0-9-]{0,40}$/, "Clé de test : lettres, chiffres et tirets (40 max).")
+    .nullable()
+    .transform((v) => v || null),
+  /** Relances J+3 et J+20 tant que le code n'a pas servi. */
+  remindersEnabled: z.boolean(),
 });
 
 export const createSitePopupSchema = popupFields
@@ -91,6 +104,8 @@ export type PublicSitePopup = Omit<
   | "benefitPercent"
   | "benefitStartMonths"
   | "benefitDurationMonths"
+  | "abTestKey"
+  | "remindersEnabled"
 >;
 
 export const DEFAULT_SITE_POPUP: SitePopupInput = {
@@ -125,7 +140,45 @@ export const DEFAULT_SITE_POPUP: SitePopupInput = {
   benefitPercent: null,
   benefitStartMonths: null,
   benefitDurationMonths: null,
+  abTestKey: null,
+  remindersEnabled: true,
 };
+
+/**
+ * Popup à montrer : le 1er actif qui correspond à la page ; s'il fait partie d'un test A/B, la version
+ * est choisie par le « seau » du visiteur (0-99, mémorisé dans son navigateur) → toujours la même.
+ */
+export function pickPopupForVisitor<P extends Pick<SitePopupInput, "includePaths" | "excludePaths" | "abTestKey">>(
+  popups: P[],
+  path: string,
+  bucket: number,
+): P | null {
+  const matching = popups.filter((p) => popupMatchesPath(p, path));
+  const first = matching[0];
+  if (!first?.abTestKey) return first ?? null;
+  const variants = matching.filter((p) => p.abTestKey === first.abTestKey);
+  const safeBucket = Number.isInteger(bucket) && bucket >= 0 ? bucket : 0;
+  return variants[safeBucket % variants.length] ?? first;
+}
+
+/**
+ * Relance due pour un inscrit (0 = J+3, 1 = J+20), ou null. Une seule relance par passage : un inscrit
+ * ancien jamais relancé reçoit uniquement la dernière (pas deux e-mails d'affilée).
+ */
+export function dueReminderStage(
+  signup: { createdAt: string; codeExpiresAt: string; reminderCount: number },
+  now: number = Date.now(),
+): { stage: number; nextCount: number } | null {
+  const ageDays = (now - new Date(signup.createdAt).getTime()) / 86_400_000;
+  // Inutile de relancer pour un code qui expire dans moins d'un jour.
+  if (new Date(signup.codeExpiresAt).getTime() - now < 86_400_000) return null;
+  let stage = -1;
+  POPUP_REMINDER_DAYS.forEach((day, i) => {
+    if (ageDays >= day) stage = i;
+  });
+  if (stage < 0 || signup.reminderCount > stage) return null;
+  return { stage, nextCount: stage + 1 };
+}
 
 /** Correspondance de chemin par préfixe (« /tarifs » couvre « /tarifs » et « /tarifs/… »). */
 function matchesPrefix(path: string, prefix: string): boolean {

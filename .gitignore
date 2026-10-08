@@ -85,3 +85,8 @@ Thumbs.db
 
 # --- Key ---
 key.json
+
+# Captures d'écran brutes (macOS) : jamais dans public/ (servi tel quel) ni dans le dépôt public.
+/public/**/Capture d*
+/public/**/Screenshot*
+/.local/

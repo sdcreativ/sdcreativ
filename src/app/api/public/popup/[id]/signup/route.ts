@@ -83,6 +83,7 @@ export async function POST(request: Request, { params }: Props) {
         ${whatsappUrl ? `<p>Ou écrivez-nous sur <a href="${whatsappUrl}">WhatsApp</a> en mentionnant votre code.</p>` : ""}
         <p>À très vite,<br>L'équipe SD CREATIV</p>
       `,
+      unsubscribe: { email: data.email, locale: popup.locale === "en" ? "en" : "fr" },
     }).catch((err) => console.error("[popup/signup] email visiteur", err));
 
     if (!reused) {

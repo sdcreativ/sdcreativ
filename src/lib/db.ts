@@ -69,11 +69,13 @@ async function ensureSchema(): Promise<void> {
       const passwordHash = await hashPassword(adminSecret);
       const email = (process.env.CRM_BOOTSTRAP_EMAIL ?? "admin@sdcreativ.com").toLowerCase();
       const name = process.env.CRM_BOOTSTRAP_NAME ?? "Administrateur SD CREATIV";
+      // Comme ensureBootstrapAdmin : en mode e2e (CI), pas de changement de mot de passe forcé.
+      const { isCrmE2eEnabled } = await import("@/lib/crm-e2e");
       await client.query(
         `INSERT INTO crm_users (email, password_hash, name, role, active, must_change_password)
-         VALUES ($1, $2, $3, 'admin', true, true)
+         VALUES ($1, $2, $3, 'admin', true, $4)
          ON CONFLICT (email) DO NOTHING`,
-        [email, passwordHash, name],
+        [email, passwordHash, name, !isCrmE2eEnabled()],
       );
     }
   }

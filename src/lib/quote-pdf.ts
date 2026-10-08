@@ -19,7 +19,10 @@ export function buildQuotePdfHtml(
   siteUrl: string,
   options?: QuotePdfOptions,
 ): string {
-  return applyLetterhead(injectVerificationBlock(buildQuoteBodyHtml(quote, siteUrl, options), options?.verification));
+  return applyLetterhead(
+    injectVerificationBlock(buildQuoteBodyHtml(quote, siteUrl, options), options?.verification),
+    options?.company?.letterhead,
+  );
 }
 
 /** Corps du devis, sans papier à en-tête (ajouté en dernier, après blocs de signature / vérification). */
@@ -129,6 +132,7 @@ export function buildSignedQuotePdfHtml(
 
   return applyLetterhead(
     injectVerificationBlock(base.replace("</body>", `${signedBlock}</body>`), options?.verification),
+    options?.company?.letterhead,
   );
 }
 

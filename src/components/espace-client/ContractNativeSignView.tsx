@@ -183,6 +183,15 @@ export function ContractNativeSignView({ token }: { token: string }) {
 
             {step === "review" && (
               <div className="space-y-3">
+                <a
+                  href={`/api/espace-client/sign/contract/${encodeURIComponent(token)}/document`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex w-full items-center justify-center gap-2 rounded-xl border border-primary/40 py-2.5 text-sm font-semibold text-primary"
+                >
+                  <FileSignature className="h-4 w-4" aria-hidden />
+                  Lire le contrat complet (PDF)
+                </a>
                 <label className="block text-sm">
                   <span className="text-xs font-semibold text-gray-text">Nom complet</span>
                   <input
