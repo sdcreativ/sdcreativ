@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { applyLetterhead, getLetterheadLogoDataUrl, hasLetterhead, LETTERHEAD, letterheadPdfTemplates } from "@/lib/billing/letterhead";
+import { applyLetterhead, getLetterheadLogoDataUrl, hasLetterhead, LETTERHEAD, letterheadPdfTemplates, resolveLetterhead } from "@/lib/billing/letterhead";
 import { buildQuotePdfHtml, buildSignedQuotePdfHtml } from "@/lib/quote-pdf";
 import { buildContractPdfHtml } from "@/lib/signature/contract-pdf";
 import type { Quote } from "@/lib/quotes";
@@ -77,5 +77,43 @@ describe("documents administratifs sur papier à en-tête", () => {
       "https://sdcreativ.com",
     );
     expect(hasLetterhead(html)).toBe(true);
+  });
+});
+
+describe("papier à en-tête modifiable (Paramètres du site)", () => {
+  it("un champ vide reprend la valeur du modèle", () => {
+    expect(resolveLetterhead(null)).toEqual({ ...LETTERHEAD, phones: [...LETTERHEAD.phones] });
+    expect(resolveLetterhead({ rccm: "  ", letterheadPhone: "", letterheadPhone2: "" }).rccm).toBe(LETTERHEAD.rccm);
+    // ancien format du modèle avec puce : la puce est ajoutée au rendu, pas stockée
+    expect(resolveLetterhead({ legalForm: "• SARL" }).legalForm).toBe("SARL");
+  });
+
+  it("les valeurs saisies remplacent le modèle, échappées dans l'en-tête et le pied", () => {
+    const info = resolveLetterhead({
+      legalForm: "SARL au capital de 5 000 000 F CFA",
+      headOffice: "Abidjan Plateau <Tour A>",
+      letterheadPhone: "+225 0102030405",
+      ncc: "1234567 A",
+    });
+    expect(info.phones).toEqual(["+225 0102030405"]);
+    expect(info.ncc).toBe("1234567 A");
+    const html = applyLetterhead(doc, info);
+    expect(html).toContain("SDCREATIV • SARL au capital de 5 000 000 F CFA");
+    expect(html).toContain("Abidjan Plateau &lt;Tour A&gt;");
+    expect(html).not.toContain("<Tour A>");
+    expect(html).not.toContain("+225 0768704858");
+  });
+
+  it("le contrat de maintenance reprend NCC et siège saisis", () => {
+    const info = resolveLetterhead({ ncc: "1234567 A", headOffice: "Abidjan Plateau" });
+    const contract = {
+      id: "c", reference: "CTR-1", clientId: "x", clientName: "Client", projectId: null, projectName: null, quoteId: null,
+      title: "Maintenance", status: "draft", startDate: "2026-10-08", endDate: null, amount: null, reminderDaysBefore: 30,
+      signedAt: null, sentAt: null, notes: null, createdAt: "2026-10-08T10:00:00Z", updatedAt: "2026-10-08T10:00:00Z",
+      metadata: { maintenance: { level: "essentiel", siteName: "Site", includedMonths: 12, billingInterval: "yearly", priceHt: 300000, vatRate: 18, noticeDays: 30 } },
+    } as unknown as Contract;
+    const html = buildContractPdfHtml(contract, "https://sdcreativ.com", undefined, info);
+    expect(html).toContain("NCC 1234567 A");
+    expect(html).toContain("Siège social : Abidjan Plateau");
   });
 });

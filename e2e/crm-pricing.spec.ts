@@ -89,7 +89,8 @@ test.describe("CRM — Tarifs (charges, TVA, hébergement parrainé)", () => {
         await expect(card).toBeVisible({ timeout: 15_000 });
         await card.getByRole("button", { name: /Charges & TVA/ }).click();
 
-        const dialog = page.getByRole("dialog");
+        // Le bandeau cookies est aussi un dialogue : on vise le formulaire par son titre.
+        const dialog = page.getByRole("dialog", { name: "Modifier la formule" });
         await expect(dialog).toBeVisible();
         await expect(dialog.getByLabel(/Inclure l’hébergement Hostinger/)).toBeChecked();
         await expect(dialog.getByText("Total TTC affiché")).toBeVisible();

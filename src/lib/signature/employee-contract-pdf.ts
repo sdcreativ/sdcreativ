@@ -42,14 +42,15 @@ function buildVars(
       ? contract.benefits.map((b) => `• ${b}`).join("\n")
       : "• Aucun avantage accessoire particulier au-delà de la loi";
 
+  const letterhead = company.letterhead ?? LETTERHEAD;
   const base: Record<string, string> = {
     employerName: company.agencyName || "SD CREATIV",
-    // Repli sur les mentions officielles du papier à en-tête quand les réglages sont vides.
-    employerAddress: company.address || LETTERHEAD.headOffice,
-    employerEmail: company.email || LETTERHEAD.email,
-    employerPhone: company.phone || LETTERHEAD.phones[0],
-    employerRccm: company.rccm || LETTERHEAD.rccm,
-    employerNcc: company.ncc || "non renseigné",
+    // Identité légale : celle du papier à en-tête (Paramètres du site), siège social complet compris.
+    employerAddress: letterhead.headOffice,
+    employerEmail: company.email || letterhead.email,
+    employerPhone: company.phone || letterhead.phones[0] || "",
+    employerRccm: letterhead.rccm,
+    employerNcc: letterhead.ncc || company.ncc || "non renseigné",
     employeeName: contract.userName || "Collaborateur",
     employeeEmail: contract.userEmail || "—",
     jobTitle: contract.jobTitle || "Collaborateur",
@@ -256,8 +257,8 @@ export function buildEmployeeContractPdfHtml(
 
   <div class="card">
     <table>
-      <tr><td>Employeur</td><td><strong>${escapeHtml(resolvedCompany.agencyName)}</strong>${resolvedCompany.tagline ? `<br/><span style="color:#64748b">${escapeHtml(resolvedCompany.tagline)}</span>` : ""}<br/>${escapeHtml(resolvedCompany.address || "—")}<br/>${escapeHtml(resolvedCompany.email)}${resolvedCompany.phone ? ` · ${escapeHtml(resolvedCompany.phone)}` : ""}</td></tr>
-      <tr><td>Identifiants légaux</td><td>RCCM : ${escapeHtml(resolvedCompany.rccm || LETTERHEAD.rccm)}<br/>IDU : ${escapeHtml(LETTERHEAD.idu)}${resolvedCompany.ncc ? `<br/>NCC : ${escapeHtml(resolvedCompany.ncc)}` : ""}</td></tr>
+      <tr><td>Employeur</td><td><strong>${escapeHtml(resolvedCompany.agencyName)}</strong>${resolvedCompany.tagline ? `<br/><span style="color:#64748b">${escapeHtml(resolvedCompany.tagline)}</span>` : ""}<br/>${escapeHtml(vars.employerAddress)}<br/>${escapeHtml(resolvedCompany.email)}${resolvedCompany.phone ? ` · ${escapeHtml(resolvedCompany.phone)}` : ""}</td></tr>
+      <tr><td>Identifiants légaux</td><td>RCCM : ${escapeHtml(vars.employerRccm)}<br/>IDU : ${escapeHtml((resolvedCompany.letterhead ?? LETTERHEAD).idu)}${vars.employerNcc !== "non renseigné" ? `<br/>NCC : ${escapeHtml(vars.employerNcc)}` : ""}</td></tr>
       <tr><td>Collaborateur</td><td><strong>${escapeHtml(vars.employeeName)}</strong><br/>${escapeHtml(vars.employeeEmail)}</td></tr>
       <tr><td>Poste</td><td>${escapeHtml(contract.jobTitle || "—")}${contract.department ? ` · ${escapeHtml(contract.department)}` : ""}</td></tr>
       <tr><td>Période</td><td>Du ${escapeHtml(formatDateFr(contract.startDate))} au ${escapeHtml(contract.endDate ? formatDateFr(contract.endDate) : "durée indéterminée")}</td></tr>
@@ -279,5 +280,5 @@ export function buildEmployeeContractPdfHtml(
   ${sigBlock}
   <p class="footer">${escapeHtml(contract.reference)} · ${escapeHtml(typeLabel)} · Exemplaire électronique</p>
   </div>
-</body></html>`);
+</body></html>`, resolvedCompany.letterhead);
 }

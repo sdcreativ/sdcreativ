@@ -47,7 +47,6 @@ import {
   Loader2,
   Mail,
   MessageCircle,
-  Phone,
   Plus,
   RefreshCw,
   Trash2,

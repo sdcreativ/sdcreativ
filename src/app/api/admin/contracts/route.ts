@@ -6,6 +6,7 @@ import {
   createContractSchema,
   listContracts,
 } from "@/lib/contracts";
+import { resolveMaintenanceTerms } from "@/lib/maintenance-contracts";
 
 export async function GET(request: Request) {
   const authError = await crmApiAuth.invoices.read();
@@ -43,7 +44,19 @@ export async function POST(request: Request) {
         { status: 400 },
       );
     }
-    const contract = await createContract(parsed.data);
+    const { maintenance, ...fields } = parsed.data;
+    if (maintenance && !fields.startDate) {
+      return NextResponse.json(
+        { error: "Indiquez la date de prise d'effet de la maintenance (mise en ligne du site)." },
+        { status: 400 },
+      );
+    }
+    const contract = await createContract({
+      ...fields,
+      maintenance: maintenance
+        ? await resolveMaintenanceTerms(maintenance, { clientId: fields.clientId, quoteId: fields.quoteId })
+        : null,
+    });
     return NextResponse.json({ contract }, { status: 201 });
   } catch (error) {
     console.error("[api/admin/contracts] POST", error);

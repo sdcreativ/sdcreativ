@@ -1,24 +1,28 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import { Eye, EyeOff, Gift, Loader2, Pencil, Plus, RefreshCw, Trash2 } from "lucide-react";
+import { Eye, EyeOff, FlaskConical, Gift, Loader2, Pencil, Plus, RefreshCw, Trash2 } from "lucide-react";
 import { useDialog } from "@/components/ui/DialogProvider";
 import { CrmFormField, CrmFormHeader, crmFieldClass } from "@/components/admin/crm-site-form-ui";
 import { SitePopupCard } from "@/components/popups/SitePopupCard";
 import { parseFetchJson } from "@/lib/fetch-json";
-import type { PopupSignup } from "@/lib/site-popups";
+import type { PopupPerformance, PopupSignup } from "@/lib/site-popups";
 import type { ClientBenefit } from "@/lib/client-benefits";
 import { BENEFIT_STATUS_LABELS } from "@/lib/client-benefits-types";
 import {
   DEFAULT_SITE_POPUP,
   POPUP_PROJECT_TYPES,
+  POPUP_REMINDER_DAYS,
   type SitePopup,
   type SitePopupInput,
 } from "@/lib/site-popups-types";
 import { cn } from "@/lib/utils";
 
 const api = {
-  list: async () => (await parseFetchJson<{ popups: SitePopup[] }>(await fetch("/api/admin/site-popups", { credentials: "include" }))).popups,
+  list: async () =>
+    parseFetchJson<{ popups: SitePopup[]; performance: PopupPerformance[] }>(
+      await fetch("/api/admin/site-popups", { credentials: "include" }),
+    ),
   signups: async () =>
     (await parseFetchJson<{ signups: PopupSignup[] }>(await fetch("/api/admin/site-popups/signups", { credentials: "include" }))).signups,
   save: async (id: string | null, data: Partial<SitePopupInput>) =>
@@ -44,6 +48,21 @@ const frDate = (iso: string) => new Date(`${iso}T12:00:00Z`).toLocaleDateString(
 
 const rate = (signups: number, impressions: number) =>
   impressions > 0 ? `${((signups / impressions) * 100).toLocaleString("fr-FR", { maximumFractionDigits: 1 })} %` : "—";
+
+const fcfa = (amount: number) => `${amount.toLocaleString("fr-FR")} FCFA`;
+
+/** Groupes de test A/B (au moins 2 popups partageant la même clé). */
+function abGroups(popups: SitePopup[]): Array<{ key: string; variants: SitePopup[] }> {
+  const byKey = new Map<string, SitePopup[]>();
+  for (const p of popups) {
+    if (!p.abTestKey) continue;
+    byKey.set(p.abTestKey, [...(byKey.get(p.abTestKey) ?? []), p]);
+  }
+  return [...byKey.entries()].filter(([, v]) => v.length > 1).map(([key, variants]) => ({ key, variants }));
+}
+
+/** Affichages minimum par version avant de désigner un gagnant. */
+const AB_MIN_IMPRESSIONS = 100;
 
 const toLines = (paths: string[]) => paths.join("\n");
 const fromLines = (text: string) =>
@@ -174,6 +193,23 @@ function PopupForm({
             </fieldset>
 
             <fieldset className="space-y-4 border-t border-gray/30 pt-5">
+              <legend className={legend}>Relances et test A/B</legend>
+              <label className="flex items-start gap-2 text-sm">
+                <input type="checkbox" checked={form.remindersEnabled} onChange={(e) => set("remindersEnabled", e.target.checked)} className="mt-0.5 rounded border-gray/60 text-primary" />
+                <span>
+                  Relancer par e-mail à J+{POPUP_REMINDER_DAYS[0]} puis J+{POPUP_REMINDER_DAYS[1]} si le code n’a pas servi
+                  <span className="block text-xs text-gray-text">Arrêt automatique dès qu’un devis est demandé, si le code expire ou si la personne se désinscrit (lien dans chaque e-mail).</span>
+                </span>
+              </label>
+              <CrmFormField
+                label="Clé de test A/B (facultatif)"
+                hint="Donnez la même clé à 2 popups actifs de même langue sur les mêmes pages (ex. maintenance-vs-hebergement) : les visiteurs sont répartis à parts égales, chacun voit toujours la même version."
+              >
+                <input value={form.abTestKey ?? ""} maxLength={40} onChange={(e) => set("abTestKey", e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, "-") || null)} className={crmFieldClass} placeholder="ex. maintenance-vs-hebergement" />
+              </CrmFormField>
+            </fieldset>
+
+            <fieldset className="space-y-4 border-t border-gray/30 pt-5">
               <legend className={legend}>Ciblage</legend>
               <div className="grid gap-4 sm:grid-cols-3">
                 <CrmFormField label="Visiteurs">
@@ -220,6 +256,7 @@ function PopupForm({
 export function CrmPopupsView() {
   const { confirm } = useDialog();
   const [popups, setPopups] = useState<SitePopup[]>([]);
+  const [performance, setPerformance] = useState<Map<string, PopupPerformance>>(new Map());
   const [signups, setSignups] = useState<PopupSignup[] | null>(null);
   const [benefits, setBenefits] = useState<ClientBenefit[] | null>(null);
   const [loading, setLoading] = useState(true);
@@ -234,7 +271,9 @@ export function CrmPopupsView() {
   const load = useCallback(async () => {
     setLoading(true);
     try {
-      setPopups(await api.list());
+      const data = await api.list();
+      setPopups(data.popups);
+      setPerformance(new Map((data.performance ?? []).map((p) => [p.popupId, p])));
       setSignups(await api.signups().catch(() => null));
       setBenefits(await api.benefits().catch(() => null));
       setLoadedAt(Date.now());
@@ -338,6 +377,7 @@ export function CrmPopupsView() {
                     {p.name}
                     <span className={cn("ml-2 rounded-full px-2 py-0.5 text-xs font-medium", p.isActive ? "bg-emerald-50 text-emerald-800" : "bg-gray-light text-gray-text")}>{p.isActive ? "Actif" : "Inactif"}</span>
                     <span className="ml-1 rounded-full bg-gray-light px-2 py-0.5 text-xs font-medium text-gray-text">{p.locale.toUpperCase()}</span>
+                    {p.abTestKey && <span className="ml-1 rounded-full bg-violet-50 px-2 py-0.5 text-xs font-medium text-violet-800">Test A/B : {p.abTestKey}</span>}
                   </h3>
                   <p className="mt-1 text-sm text-gray-text">{p.title}</p>
                   <p className="mt-1 text-xs text-gray-text">Avantage : {p.offerLabel} · code {p.codePrefix}-…, {p.codeValidDays} j</p>
@@ -349,6 +389,18 @@ export function CrmPopupsView() {
                   <div><dt className="text-xs text-gray-text">Conversion</dt><dd className="font-semibold text-primary">{rate(p.signups, p.impressions)}</dd></div>
                 </dl>
               </div>
+              {(() => {
+                const perf = performance.get(p.id);
+                return (
+                  <p className="mt-3 rounded-xl bg-gray-light/50 px-3 py-2 text-xs text-gray-text">
+                    Du popup au devis : <strong className="text-foreground">{perf?.codesUsed ?? 0}</strong> code(s) utilisé(s) ·{" "}
+                    <strong className="text-foreground">{perf?.quotes ?? 0}</strong> devis ·{" "}
+                    <strong className="text-emerald-800">{perf?.quotesSigned ?? 0} signé(s)</strong>
+                    {perf && perf.signedAmountXof > 0 ? ` (${fcfa(perf.signedAmountXof)} HT)` : ""} ·{" "}
+                    {p.remindersEnabled ? `${perf?.reminders ?? 0} relance(s) envoyée(s)` : "relances désactivées"}
+                  </p>
+                );
+              })()}
               <div className="mt-3 flex flex-wrap gap-1.5">
                 <button type="button" onClick={() => open(p)} className="inline-flex items-center gap-1 rounded-lg border border-gray/60 px-2 py-1 text-xs font-medium hover:bg-gray-light"><Pencil className="h-3 w-3" aria-hidden />Modifier</button>
                 <button type="button" onClick={() => void toggle(p)} disabled={busyId === p.id} className="inline-flex items-center gap-1 rounded-lg border border-gray/60 px-2 py-1 text-xs font-medium hover:bg-gray-light disabled:opacity-60">{p.isActive ? <><EyeOff className="h-3 w-3" aria-hidden />Désactiver</> : <><Eye className="h-3 w-3" aria-hidden />Activer</>}</button>
@@ -358,6 +410,54 @@ export function CrmPopupsView() {
           ))
         )}
       </section>
+
+      {abGroups(popups).map((group) => {
+        const rows = group.variants.map((v) => ({
+          popup: v,
+          rate: v.impressions > 0 ? v.signups / v.impressions : 0,
+          perf: performance.get(v.id),
+        }));
+        const enough = rows.every((r) => r.popup.impressions >= AB_MIN_IMPRESSIONS);
+        const best = enough ? rows.reduce((a, b) => (b.rate > a.rate ? b : a)) : null;
+        return (
+          <section key={group.key} className="space-y-3">
+            <h2 className="flex items-center gap-2 text-lg font-bold text-foreground">
+              <FlaskConical className="h-5 w-5 text-violet-700" aria-hidden />
+              Test A/B « {group.key} »
+            </h2>
+            <div className="overflow-x-auto rounded-2xl border border-gray/60 bg-white">
+              <table className="w-full min-w-[680px] text-left text-sm">
+                <thead className="text-xs uppercase tracking-wide text-gray-text">
+                  <tr className="border-b border-gray/40">
+                    <th className="px-3 py-2">Version</th><th className="px-3 py-2">Offre</th><th className="px-3 py-2">Affichages</th><th className="px-3 py-2">Inscriptions</th><th className="px-3 py-2">Taux</th><th className="px-3 py-2">Devis signés</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {rows.map((r) => (
+                    <tr key={r.popup.id} className={cn("border-t border-gray/30", best?.popup.id === r.popup.id && "bg-emerald-50/60")}>
+                      <td className="px-3 py-2 font-medium">
+                        {r.popup.name}
+                        {!r.popup.isActive && <span className="ml-1 text-xs text-gray-text">(inactif)</span>}
+                        {best?.popup.id === r.popup.id && <span className="ml-2 rounded-full bg-emerald-100 px-2 py-0.5 text-xs font-semibold text-emerald-800">En tête</span>}
+                      </td>
+                      <td className="px-3 py-2">{r.popup.offerLabel}</td>
+                      <td className="px-3 py-2">{r.popup.impressions}</td>
+                      <td className="px-3 py-2">{r.popup.signups}</td>
+                      <td className="px-3 py-2 font-semibold text-primary">{rate(r.popup.signups, r.popup.impressions)}</td>
+                      <td className="px-3 py-2">{r.perf?.quotesSigned ?? 0}{r.perf && r.perf.signedAmountXof > 0 ? ` · ${fcfa(r.perf.signedAmountXof)}` : ""}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+            <p className="text-xs text-gray-text">
+              {enough
+                ? "Gagnant au taux d’inscription. Vérifiez aussi les devis signés avant de désactiver l’autre version."
+                : `Pas encore assez de données : attendez au moins ${AB_MIN_IMPRESSIONS} affichages par version avant de conclure.`}
+            </p>
+          </section>
+        );
+      })}
 
       <section className="space-y-3">
         <h2 className="text-lg font-bold text-foreground">Avantages promis</h2>
@@ -422,7 +522,16 @@ export function CrmPopupsView() {
                       <td className="px-3 py-2">{s.email}{s.phone && <span className="block text-xs text-gray-text">{s.phone}</span>}</td>
                       <td className="px-3 py-2">{s.projectType ?? "—"}</td>
                       <td className="px-3 py-2 font-mono">{s.code}</td>
-                      <td className="px-3 py-2">{s.codeUsedAt ? "Utilisé (devis)" : expired ? "Expiré" : `Valable jusqu’au ${new Date(s.codeExpiresAt).toLocaleDateString("fr-FR")}`}</td>
+                      <td className="px-3 py-2">
+                        {s.codeUsedAt ? "Utilisé (devis)" : expired ? "Expiré" : `Valable jusqu’au ${new Date(s.codeExpiresAt).toLocaleDateString("fr-FR")}`}
+                        {(s.reminderCount > 0 || s.unsubscribedAt) && (
+                          <span className="block text-xs text-gray-text">
+                            {s.reminderCount > 0 ? `${s.reminderCount} relance(s)` : ""}
+                            {s.reminderCount > 0 && s.unsubscribedAt ? " · " : ""}
+                            {s.unsubscribedAt ? "Désinscrit" : ""}
+                          </span>
+                        )}
+                      </td>
                     </tr>
                   );
                 })}

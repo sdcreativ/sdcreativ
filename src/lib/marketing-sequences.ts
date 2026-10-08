@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { withDb } from "@/lib/db";
 import { sendEmail } from "@/lib/email";
+import { isEmailUnsubscribed } from "@/lib/email-unsubscribe";
 import { createLeadActivity } from "@/lib/lead-activities";
 import { getLeadById } from "@/lib/leads";
 import { listFiredReminderKeysForChannel, markRemindersFired } from "@/lib/crm-reminders";
@@ -140,6 +141,12 @@ export async function processMarketingSequences(now = new Date()): Promise<{ sen
         skipped += 1;
         continue;
       }
+      // Désinscrit : la séquence s'arrête (plus aucun envoi marketing).
+      if (await isEmailUnsubscribed(lead.email)) {
+        await query(`UPDATE lead_sequence_enrollments SET completed_at = NOW() WHERE id = $1`, [enrollment.id]);
+        skipped += 1;
+        continue;
+      }
 
       const vars = {
         name: lead.name,
@@ -151,6 +158,7 @@ export async function processMarketingSequences(now = new Date()): Promise<{ sen
         to: lead.email,
         subject: renderTemplate(step.subject, vars),
         html: renderTemplate(step.htmlBody, vars),
+        unsubscribe: { email: lead.email },
       });
 
       if (!ok) {

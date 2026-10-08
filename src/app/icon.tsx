@@ -49,7 +49,7 @@ function rasterIcon(dataUrl: string) {
           borderRadius: 6,
         }}
       >
-        {/* eslint-disable-next-line @next/next/no-img-element */}
+        { }
         <img
           src={dataUrl}
           width={26}

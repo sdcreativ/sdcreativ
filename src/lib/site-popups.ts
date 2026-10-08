@@ -5,7 +5,7 @@ import type { BenefitTerms } from "@/lib/client-benefits-types";
 import {
   DEFAULT_SITE_POPUP,
   generatePopupCode,
-  popupMatchesPath,
+  pickPopupForVisitor,
   type createSitePopupSchema,
   type PublicSitePopup,
   type SitePopup,
@@ -47,6 +47,8 @@ type PopupRow = {
   benefit_percent: string | number | null;
   benefit_start_months: number | null;
   benefit_duration_months: number | null;
+  ab_test_key: string | null;
+  reminders_enabled: boolean;
   created_at: Date;
   updated_at: Date;
 };
@@ -88,6 +90,8 @@ const mapPopup = (r: PopupRow): SitePopup => ({
   benefitPercent: numOrNull(r.benefit_percent),
   benefitStartMonths: r.benefit_start_months,
   benefitDurationMonths: r.benefit_duration_months,
+  abTestKey: r.ab_test_key || null,
+  remindersEnabled: r.reminders_enabled,
   createdAt: r.created_at.toISOString(),
   updatedAt: r.updated_at.toISOString(),
 });
@@ -124,6 +128,8 @@ const COLUMNS = {
   benefitPercent: "benefit_percent",
   benefitStartMonths: "benefit_start_months",
   benefitDurationMonths: "benefit_duration_months",
+  abTestKey: "ab_test_key",
+  remindersEnabled: "reminders_enabled",
 } as const satisfies Record<keyof typeof DEFAULT_SITE_POPUP, string>;
 
 type ColumnKey = keyof typeof COLUMNS;
@@ -175,8 +181,12 @@ export async function deleteSitePopup(id: string): Promise<boolean> {
   });
 }
 
-/** 1er popup actif de la langue qui correspond à la page (ordre d'affichage). */
-export async function getActivePopupForPath(path: string, locale: "fr" | "en"): Promise<PublicSitePopup | null> {
+/** Popup actif de la langue pour cette page (ordre d'affichage), version A/B selon le seau du visiteur. */
+export async function getActivePopupForPath(
+  path: string,
+  locale: "fr" | "en",
+  bucket = 0,
+): Promise<PublicSitePopup | null> {
   if (!isDatabaseConfigured()) return null;
   const popups = await withDb(async (query) => {
     const { rows } = await query<PopupRow>(
@@ -185,12 +195,12 @@ export async function getActivePopupForPath(path: string, locale: "fr" | "en"): 
     );
     return rows.map(mapPopup);
   });
-  const popup = popups.find((p) => popupMatchesPath(p, path));
+  const popup = pickPopupForVisitor(popups, path, bucket);
   if (!popup) return null;
   /* eslint-disable @typescript-eslint/no-unused-vars -- retrait des champs internes */
   const {
     impressions, closes, signups, createdAt, updatedAt, name, sortOrder, isActive, codePrefix, includePaths, excludePaths,
-    benefitKind, benefitPercent, benefitStartMonths, benefitDurationMonths,
+    benefitKind, benefitPercent, benefitStartMonths, benefitDurationMonths, abTestKey, remindersEnabled,
     ...pub
   } = popup;
   /* eslint-enable @typescript-eslint/no-unused-vars */
@@ -219,6 +229,9 @@ export type PopupSignup = {
   pagePath: string | null;
   leadId: string | null;
   benefit: BenefitTerms;
+  reminderCount: number;
+  lastReminderAt: string | null;
+  unsubscribedAt: string | null;
   createdAt: string;
 };
 
@@ -240,6 +253,9 @@ type SignupRow = {
   benefit_percent: string | number | null;
   benefit_start_months: number | null;
   benefit_duration_months: number | null;
+  reminder_count: number;
+  last_reminder_at: Date | null;
+  unsubscribed_at: Date | null;
   created_at: Date;
 };
 
@@ -263,6 +279,9 @@ const mapSignup = (r: SignupRow): PopupSignup => ({
     startMonths: r.benefit_start_months,
     durationMonths: r.benefit_duration_months,
   },
+  reminderCount: r.reminder_count ?? 0,
+  lastReminderAt: r.last_reminder_at ? r.last_reminder_at.toISOString() : null,
+  unsubscribedAt: r.unsubscribed_at ? r.unsubscribed_at.toISOString() : null,
   createdAt: r.created_at.toISOString(),
 });
 
@@ -357,5 +376,98 @@ export async function findValidPopupCode(code: string): Promise<PopupSignup | nu
 export async function markPopupCodeUsed(code: string): Promise<void> {
   await withDb(async (query) => {
     await query(`UPDATE site_popup_signups SET code_used_at = NOW() WHERE code = $1 AND code_used_at IS NULL`, [code]);
+  });
+}
+
+/** Inscrits pouvant recevoir une relance : code non utilisé, encore valable, popup avec relances actives. */
+export async function listSignupsForReminders(): Promise<Array<PopupSignup & { popupName: string | null }>> {
+  if (!isDatabaseConfigured()) return [];
+  return withDb(async (query) => {
+    const { rows } = await query<SignupRow & { popup_name: string | null }>(
+      `SELECT s.*, p.name AS popup_name
+       FROM site_popup_signups s
+       JOIN site_popups p ON p.id = s.popup_id
+       WHERE p.reminders_enabled = true
+         AND s.code_used_at IS NULL AND s.unsubscribed_at IS NULL
+         AND s.code_expires_at > NOW() + INTERVAL '1 day'
+         AND s.reminder_count < $1
+         -- Le visiteur a déjà demandé un devis (même sans son code) : pas de relance.
+         AND NOT EXISTS (SELECT 1 FROM quotes q WHERE lower(q.email) = lower(s.email) AND q.created_at >= s.created_at)`,
+      [2],
+    );
+    return rows.map((r) => ({ ...mapSignup(r), popupName: r.popup_name }));
+  });
+}
+
+export async function markSignupReminded(id: string, reminderCount: number): Promise<void> {
+  await withDb(async (query) => {
+    await query(
+      `UPDATE site_popup_signups SET reminder_count = GREATEST(reminder_count, $2), last_reminder_at = NOW() WHERE id = $1`,
+      [id, reminderCount],
+    );
+  });
+}
+
+export type PopupPerformance = {
+  popupId: string;
+  codesUsed: number;
+  reminders: number;
+  quotes: number;
+  quotesSigned: number;
+  /** Montant HT des devis signés, converti en FCFA. */
+  signedAmountXof: number;
+};
+
+/** Signés = signé, validé, accepté ou facturé. */
+const SIGNED_QUOTE_STATUSES = ["signed", "validated", "accepted", "invoiced"];
+
+/**
+ * Du popup au chiffre d'affaires : codes utilisés, devis demandés et devis signés attribués à chaque popup
+ * (devis portant le code, ou rattaché au lead créé par l'inscription).
+ */
+export async function getPopupPerformance(): Promise<PopupPerformance[]> {
+  if (!isDatabaseConfigured()) return [];
+  return withDb(async (query) => {
+    const { rows } = await query<{
+      popup_id: string;
+      codes_used: number;
+      reminders: number;
+      quotes: number;
+      quotes_signed: number;
+      signed_amount_xof: string | null;
+    }>(
+      `WITH signups AS (
+         SELECT popup_id, COUNT(code_used_at)::int AS codes_used, COALESCE(SUM(reminder_count), 0)::int AS reminders
+         FROM site_popup_signups WHERE popup_id IS NOT NULL GROUP BY popup_id
+       ),
+       attributed AS (
+         SELECT DISTINCT s.popup_id, q.id, q.status,
+           CASE WHEN COALESCE(q.currency, 'XOF') = 'XOF' THEN q.subtotal
+                -- Euro sans taux figé : parité fixe 1 € = 655,957 FCFA.
+                ELSE ROUND(q.subtotal * COALESCE(q.exchange_rate_to_xof, CASE WHEN q.currency = 'EUR' THEN 655.957 ELSE 0 END))
+           END AS amount_xof
+         FROM site_popup_signups s
+         JOIN quotes q ON q.metadata->>'promoCode' = s.code OR (s.lead_id IS NOT NULL AND q.lead_id = s.lead_id)
+         WHERE s.popup_id IS NOT NULL
+       ),
+       quotes AS (
+         SELECT popup_id, COUNT(*)::int AS quotes,
+           COUNT(*) FILTER (WHERE status = ANY($1))::int AS quotes_signed,
+           SUM(amount_xof) FILTER (WHERE status = ANY($1)) AS signed_amount_xof
+         FROM attributed GROUP BY popup_id
+       )
+       SELECT s.popup_id, s.codes_used, s.reminders,
+         COALESCE(q.quotes, 0) AS quotes, COALESCE(q.quotes_signed, 0) AS quotes_signed, q.signed_amount_xof
+       FROM signups s LEFT JOIN quotes q ON q.popup_id = s.popup_id`,
+      [SIGNED_QUOTE_STATUSES],
+    );
+    return rows.map((r) => ({
+      popupId: r.popup_id,
+      codesUsed: r.codes_used,
+      reminders: r.reminders,
+      quotes: r.quotes,
+      quotesSigned: r.quotes_signed,
+      signedAmountXof: Number(r.signed_amount_xof ?? 0),
+    }));
   });
 }

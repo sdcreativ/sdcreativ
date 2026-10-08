@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { isDatabaseConfigured } from "@/lib/db";
 import { markContractSignedFromWebhook } from "@/lib/esign/send-contract";
+import { ensureMaintenanceSubscriptionSafely } from "@/lib/maintenance-contracts";
 import { markEmployeeContractSignedFromWebhook } from "@/lib/esign/send-employee-contract";
 import { verifyYousignWebhookSecret } from "@/lib/esign/yousign";
 
@@ -58,6 +59,7 @@ export async function POST(request: Request) {
     });
 
     if (contract) {
+      await ensureMaintenanceSubscriptionSafely(contract.id);
       return NextResponse.json({
         ok: true,
         contractId: contract.id,

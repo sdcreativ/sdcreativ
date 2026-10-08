@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { withDb, isDatabaseConfigured } from "@/lib/db";
 import { sendEmail } from "@/lib/email";
+import { isEmailUnsubscribed } from "@/lib/email-unsubscribe";
 import { createLeadActivity } from "@/lib/lead-activities";
 import { createTask } from "@/lib/tasks";
 import { createAdminBillingNotification } from "@/lib/billing/notifications";
@@ -441,7 +442,7 @@ export async function sendCampaignEmails(
 
     for (const row of rows) {
       const key = reminderKey(campaignId, row.id);
-      if (fired.has(key)) {
+      if (fired.has(key) || (await isEmailUnsubscribed(row.email))) {
         skipped += 1;
         continue;
       }
@@ -469,6 +470,7 @@ export async function sendCampaignEmails(
         to: row.email,
         subject: renderTemplate(campaign.emailSubject, vars),
         html: renderTemplate(campaign.emailHtml, vars),
+        unsubscribe: { email: row.email },
       });
 
       if (!ok) {

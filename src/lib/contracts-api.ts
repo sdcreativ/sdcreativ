@@ -86,3 +86,16 @@ export async function sendContractForNativeSignApi(
   });
   return parseJson<{ contract: Contract; signUrl: string }>(res);
 }
+
+/** Contrat de maintenance signé → abonnement de facturation (idempotent). */
+export async function createMaintenanceSubscriptionApi(
+  contractId: string,
+): Promise<{ status: "created" | "existing"; contract: Contract }> {
+  const res = await fetch(`/api/admin/contracts/${contractId}`, {
+    method: "POST",
+    credentials: "include",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ action: "maintenance-subscription" }),
+  });
+  return parseJson(res);
+}

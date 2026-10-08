@@ -4,11 +4,13 @@ import { getClientById } from "@/lib/clients";
 import { withDb } from "@/lib/db";
 import { sendEmail, escapeHtml } from "@/lib/email";
 import { renderHtmlToDocument } from "@/lib/billing/pdf";
+import { getDocumentLetterhead } from "@/lib/billing/document-company";
 import { isS3Configured, sanitizeFilename, uploadObjectBuffer } from "@/lib/s3";
 import { buildContractPdfHtml } from "@/lib/signature/contract-pdf";
 import { verifySignatureOtp } from "@/lib/signature/otp";
 import { logSignatureEvent } from "@/lib/signature/events";
 import { NATIVE_SIGN_LINK_TTL_HOURS } from "@/lib/signature/types";
+import { ensureMaintenanceSubscriptionSafely } from "@/lib/maintenance-contracts";
 
 function hashToken(token: string): string {
   return createHash("sha256").update(token).digest("hex");
@@ -144,13 +146,14 @@ export async function signContractNative(input: {
   const signedAt = new Date();
   const signerEmail = otp.email;
   const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? "https://sdcreativ.com";
+  const letterhead = await getDocumentLetterhead();
 
   const draftHtml = buildContractPdfHtml(contract, siteUrl, {
     signerName,
     signedAt: signedAt.toISOString(),
     signatureHash: "pending",
     signatureDataUrl: input.signatureData,
-  });
+  }, letterhead);
   const draftDoc = await renderHtmlToDocument(draftHtml);
   const documentSha256 = createHash("sha256").update(draftDoc.buffer).digest("hex");
   const signatureHash = createHash("sha256")
@@ -165,7 +168,7 @@ export async function signContractNative(input: {
     signatureHash,
     signatureDataUrl: input.signatureData,
     documentSha256,
-  });
+  }, letterhead);
   const rendered = await renderHtmlToDocument(finalHtml);
   const finalDocumentSha256 = createHash("sha256").update(rendered.buffer).digest("hex");
 
@@ -229,6 +232,8 @@ export async function signContractNative(input: {
     userAgent: input.userAgent,
     payload: { signatureHash, documentSha256: finalDocumentSha256 },
   });
+  // Contrat de maintenance : l'abonnement de facturation est créé dès la signature.
+  await ensureMaintenanceSubscriptionSafely(contract.id);
 
   return (await getContractById(contract.id))!;
 }

@@ -3,6 +3,7 @@ import type { QueryResultRow } from "pg";
 import { withDb } from "@/lib/db";
 import type { ContractStatus, AmendmentStatus } from "@/content/contracts-labels";
 import { CONTRACT_STATUSES } from "@/content/contracts-labels";
+import { maintenanceTermsInputSchema, type MaintenanceTerms } from "@/lib/maintenance-contract";
 
 export type Contract = {
   id: string;
@@ -89,6 +90,16 @@ const contractSelect = `
   LEFT JOIN projects p ON p.id = ct.project_id
 `;
 
+/**
+ * Colonne DATE → « AAAA-MM-JJ ». Le pilote pg crée ces dates à minuit HEURE LOCALE : toISOString
+ * décalerait d'un jour hors UTC (échéances de maintenance, rappels).
+ */
+function day(value: Date | null): string | null {
+  if (!value) return null;
+  const pad = (n: number) => String(n).padStart(2, "0");
+  return `${value.getFullYear()}-${pad(value.getMonth() + 1)}-${pad(value.getDate())}`;
+}
+
 function mapContract(row: ContractRow): Contract {
   return {
     id: row.id,
@@ -100,8 +111,8 @@ function mapContract(row: ContractRow): Contract {
     quoteId: row.quote_id,
     title: row.title,
     status: row.status,
-    startDate: row.start_date?.toISOString().slice(0, 10) ?? null,
-    endDate: row.end_date?.toISOString().slice(0, 10) ?? null,
+    startDate: day(row.start_date),
+    endDate: day(row.end_date),
     amount: row.amount,
     reminderDaysBefore: row.reminder_days_before,
     signedAt: row.signed_at?.toISOString() ?? null,
@@ -126,7 +137,7 @@ function mapAmendment(row: AmendmentRow): ContractAmendment {
     title: row.title,
     description: row.description,
     amountDelta: row.amount_delta,
-    effectiveDate: row.effective_date?.toISOString().slice(0, 10) ?? null,
+    effectiveDate: day(row.effective_date),
     status: row.status,
     createdAt: row.created_at.toISOString(),
   };
@@ -154,6 +165,8 @@ export const createContractSchema = z.object({
   amount: z.number().int().min(0).optional().nullable(),
   reminderDaysBefore: z.number().int().min(1).max(365).optional(),
   notes: z.string().trim().max(5000).optional().nullable(),
+  /** Contrat de maintenance : conditions structurées (clauses, facturation, abonnement). */
+  maintenance: maintenanceTermsInputSchema.optional().nullable(),
 });
 
 export const updateContractSchema = z.object({
@@ -165,7 +178,11 @@ export const updateContractSchema = z.object({
   amount: z.number().int().min(0).optional().nullable(),
   reminderDaysBefore: z.number().int().min(1).max(365).optional(),
   notes: z.string().trim().max(5000).optional().nullable(),
+  maintenance: maintenanceTermsInputSchema.optional().nullable(),
 });
+
+/** Les conditions d'un contrat signé ne se modifient plus : passer par un avenant. */
+export class ContractLockedError extends Error {}
 
 export const createAmendmentSchema = z.object({
   title: z.string().trim().min(2).max(200),
@@ -206,7 +223,7 @@ export async function getContractById(id: string): Promise<Contract | null> {
 }
 
 export async function createContract(
-  input: z.infer<typeof createContractSchema>,
+  input: Omit<z.infer<typeof createContractSchema>, "maintenance"> & { maintenance?: MaintenanceTerms | null },
 ): Promise<Contract> {
   return withDb(async (query) => {
     const reference = await nextReference(query);
@@ -214,8 +231,8 @@ export async function createContract(
     const { rows } = await query<ContractRow>(
       `INSERT INTO crm_contracts (
         reference, client_id, project_id, quote_id, title, status,
-        start_date, end_date, amount, reminder_days_before, notes
-      ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11) RETURNING *`,
+        start_date, end_date, amount, reminder_days_before, notes, metadata
+      ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12) RETURNING *`,
       [
         reference,
         input.clientId,
@@ -228,6 +245,7 @@ export async function createContract(
         input.amount ?? null,
         input.reminderDaysBefore ?? 30,
         input.notes ?? null,
+        JSON.stringify(input.maintenance ? { maintenance: input.maintenance } : {}),
       ],
     );
     const { rows: full } = await query<ContractRow>(
@@ -283,6 +301,24 @@ export async function updateContract(
       params.push(input.notes);
       sets.push(`notes = $${params.length}`);
     }
+    if (input.maintenance !== undefined) {
+      const { rows: current } = await query<{ status: ContractStatus }>(
+        `SELECT status FROM crm_contracts WHERE id = $1`,
+        [id],
+      );
+      if (current[0] && ["signed", "linked"].includes(current[0].status)) {
+        throw new ContractLockedError("Contrat signé : ses conditions de maintenance passent par un avenant.");
+      }
+      if (input.maintenance === null) {
+        sets.push(`metadata = metadata - 'maintenance'`);
+      } else {
+        // Fusion : l'avantage figé et l'abonnement créé par le serveur sont conservés.
+        params.push(JSON.stringify(input.maintenance));
+        sets.push(
+          `metadata = jsonb_set(metadata, '{maintenance}', COALESCE(metadata->'maintenance', '{}'::jsonb) || $${params.length}::jsonb)`,
+        );
+      }
+    }
 
     if (sets.length === 0) return getContractById(id);
 
@@ -293,6 +329,21 @@ export async function updateContract(
     );
     return getContractById(id);
   });
+}
+
+/** Champs gérés par le serveur dans les conditions de maintenance (avantage figé, abonnement). */
+export async function patchContractMaintenance(
+  id: string,
+  patch: Partial<Pick<MaintenanceTerms, "benefit" | "subscriptionId">>,
+): Promise<void> {
+  await withDb((query) =>
+    query(
+      `UPDATE crm_contracts
+       SET metadata = jsonb_set(metadata, '{maintenance}', (metadata->'maintenance') || $2::jsonb), updated_at = NOW()
+       WHERE id = $1 AND metadata ? 'maintenance'`,
+      [id, JSON.stringify(patch)],
+    ),
+  );
 }
 
 export async function listContractAmendments(contractId: string): Promise<ContractAmendment[]> {

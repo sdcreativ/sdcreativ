@@ -48,6 +48,16 @@ export const updateSitePublicSchema = z.object({
   ncc: z.string().trim().max(120),
   hostName: z.string().trim().min(1).max(200),
   hostAddress: z.string().trim().max(300),
+  // Papier à en-tête : champ vide = valeur du modèle Word.
+  legalName: z.string().trim().max(120).default(""),
+  legalForm: z.string().trim().max(200).default(""),
+  headOffice: z.string().trim().max(300).default(""),
+  idu: z.string().trim().max(120).default(""),
+  letterheadTagline: z.string().trim().max(120).default(""),
+  letterheadWebsite: z.string().trim().max(120).default(""),
+  letterheadEmail: z.union([z.literal(""), z.string().trim().email().max(255)]).default(""),
+  letterheadPhone: z.string().trim().max(40).default(""),
+  letterheadPhone2: z.string().trim().max(40).default(""),
 });
 
 async function loadSitePublicSettings(): Promise<ResolvedSitePublic> {
@@ -91,10 +101,20 @@ export async function getSitePublicSettingsForAdmin(): Promise<SitePublicSetting
     linkedin: resolved.social.linkedin,
     instagram: resolved.social.instagram,
     youtube: resolved.social.youtube,
-    rccm: resolved.legal.rccm,
+    // Le formulaire affiche le RCCM réellement imprimé sur les documents.
+    rccm: resolved.legal.rccm || resolved.letterhead.rccm,
     ncc: resolved.legal.ncc,
     hostName: resolved.legal.hostName,
     hostAddress: resolved.legal.hostAddress,
+    legalName: resolved.letterhead.legalName,
+    legalForm: resolved.letterhead.legalForm,
+    headOffice: resolved.letterhead.headOffice,
+    idu: resolved.letterhead.idu,
+    letterheadTagline: resolved.letterhead.tagline,
+    letterheadWebsite: resolved.letterhead.website,
+    letterheadEmail: resolved.letterhead.email,
+    letterheadPhone: resolved.letterhead.phones[0] ?? "",
+    letterheadPhone2: resolved.letterhead.phones[1] ?? "",
   };
 }
 

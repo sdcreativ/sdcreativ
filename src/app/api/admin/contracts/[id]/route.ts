@@ -1,7 +1,9 @@
 import { crmApiAuth } from "@/lib/crm-api-auth";
 import { NextResponse } from "next/server";
 import { isDatabaseConfigured } from "@/lib/db";
+import { ensureMaintenanceSubscription, ensureMaintenanceSubscriptionSafely } from "@/lib/maintenance-contracts";
 import {
+  ContractLockedError,
   createContractAmendment,
   createAmendmentSchema,
   getContractById,
@@ -52,12 +54,20 @@ export async function PATCH(request: Request, { params }: Params) {
         { status: 400 },
       );
     }
-    const contract = await updateContract(id, parsed.data);
+    let contract = await updateContract(id, parsed.data);
     if (!contract) {
       return NextResponse.json({ error: "Contrat introuvable." }, { status: 404 });
     }
+    // Signature enregistrée à la main (papier) : même automatisation que la signature électronique.
+    if (parsed.data.status === "signed" || parsed.data.status === "linked") {
+      await ensureMaintenanceSubscriptionSafely(id);
+      contract = (await getContractById(id)) ?? contract;
+    }
     return NextResponse.json({ contract });
   } catch (error) {
+    if (error instanceof ContractLockedError) {
+      return NextResponse.json({ error: error.message }, { status: 409 });
+    }
     console.error("[api/admin/contracts/[id]] PATCH", error);
     return NextResponse.json({ error: "Erreur serveur." }, { status: 500 });
   }
@@ -74,6 +84,13 @@ export async function POST(request: Request, { params }: Params) {
   try {
     const { id } = await params;
     const body = await request.json();
+    if (body.action === "maintenance-subscription") {
+      const result = await ensureMaintenanceSubscription(id);
+      if (result.status === "skipped") {
+        return NextResponse.json({ error: result.reason }, { status: 409 });
+      }
+      return NextResponse.json({ status: result.status, contract: result.contract });
+    }
     if (body.action !== "amendment") {
       return NextResponse.json({ error: "Action non supportée." }, { status: 400 });
     }

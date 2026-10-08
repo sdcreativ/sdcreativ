@@ -178,7 +178,7 @@ export function buildInvoicePdfHtml(
 </body>
 </html>`;
 
-  return applyLetterhead(injectVerificationBlock(html, options?.verification));
+  return applyLetterhead(injectVerificationBlock(html, options?.verification), company.letterhead);
 }
 
 function escapeHtml(value: string): string {

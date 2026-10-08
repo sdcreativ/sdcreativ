@@ -194,6 +194,28 @@ export async function markBenefitApplied(benefitId: string, invoiceId: string): 
   });
 }
 
+/**
+ * Avantage maintenance encore à honorer pour ce client (par fiche ou e-mail), en priorité celui du devis
+ * d'origine : il est repris dans le contrat de maintenance pour que la promesse y figure noir sur blanc.
+ */
+export async function findMaintenanceBenefitForClient(
+  client: { id: string; email: string },
+  quoteId?: string | null,
+): Promise<ClientBenefit | null> {
+  if (!isDatabaseConfigured()) return null;
+  return withDb(async (query) => {
+    const { rows } = await query<Row>(
+      `SELECT * FROM client_benefits
+       WHERE status IN ('pending','active') AND kind = 'maintenance_discount'
+         AND (client_id = $1 OR lower(email) = lower($2))
+       ORDER BY (quote_id IS NOT DISTINCT FROM $3::uuid) DESC, starts_on ASC
+       LIMIT 1`,
+      [client.id, client.email, quoteId ?? null],
+    );
+    return rows[0] ? mapRow(rows[0]) : null;
+  });
+}
+
 export async function cancelClientBenefit(id: string): Promise<boolean> {
   return withDb(async (query) => {
     const { rowCount } = await query(

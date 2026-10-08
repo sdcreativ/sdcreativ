@@ -25,6 +25,8 @@ export const E2E_SIGNATURE_PNG =
 
 export async function loginCrm(page: Page): Promise<void> {
   const { email, password, e2eLoginToken } = crmE2eCredentials();
+  // Bandeau cookies (affiché aussi dans l'admin) : il recouvrirait les boutons en bas des modales.
+  await page.addInitScript(() => localStorage.setItem("sdcreativ-cookie-consent", "accepted"));
   const res = await page.request.post("/api/admin/login", {
     data: { email, password, e2eLoginToken },
   });
@@ -32,6 +34,14 @@ export async function loginCrm(page: Page): Promise<void> {
   const body = (await res.json()) as { success?: boolean; requires2fa?: boolean };
   expect(body.success, "bypass 2FA e2e attendu (CRM_E2E_LOGIN_TOKEN)").toBe(true);
   expect(body.requires2fa).toBeFalsy();
+
+  // Build de production servi en http://127.0.0.1 : le cookie de session est « Secure ». Le navigateur
+  // l'envoie (hôte local), mais pas page.request → on le réinscrit sans Secure pour les appels API.
+  const cookies = await page.context().cookies();
+  const insecure = cookies.filter((c) => c.secure && (c.domain === "127.0.0.1" || c.domain === "localhost"));
+  if (insecure.length) {
+    await page.context().addCookies(insecure.map((c) => ({ ...c, secure: false })));
+  }
 }
 
 export async function createE2eClient(page: Page): Promise<{

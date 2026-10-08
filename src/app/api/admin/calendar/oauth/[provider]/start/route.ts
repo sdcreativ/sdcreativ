@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { getAdminSession, requireAdminAuth } from "@/lib/admin-auth";
+import { getAdminSession } from "@/lib/admin-auth";
 import { crmApiAuth } from "@/lib/crm-api-auth";
 import {
   CALENDAR_OAUTH_PROVIDERS,

@@ -9,6 +9,7 @@ import {
   uploadYousignDocument,
 } from "@/lib/esign/yousign";
 import { buildContractPdfHtml } from "@/lib/signature/contract-pdf";
+import { getDocumentLetterhead } from "@/lib/billing/document-company";
 
 function splitName(full: string): { firstName: string; lastName: string } {
   const parts = full.trim().split(/\s+/).filter(Boolean);
@@ -45,7 +46,7 @@ export async function sendContractForEsign(input: {
   }
 
   const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? "https://sdcreativ.com";
-  const html = buildContractPdfHtml(contract, siteUrl);
+  const html = buildContractPdfHtml(contract, siteUrl, undefined, await getDocumentLetterhead());
   const doc = await renderHtmlToDocument(html);
   if (doc.mimeType !== "application/pdf") {
     throw new Error(

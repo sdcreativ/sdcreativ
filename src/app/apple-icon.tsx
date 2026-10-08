@@ -56,7 +56,7 @@ export default async function AppleIcon() {
           borderRadius: 36,
         }}
       >
-        {/* eslint-disable-next-line @next/next/no-img-element */}
+        { }
         <img
           src={dataUrl}
           width={140}

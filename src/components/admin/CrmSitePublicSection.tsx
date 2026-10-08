@@ -224,30 +224,62 @@ export function SitePublicSection() {
       </fieldset>
 
       <fieldset className="space-y-4">
-        <legend className="text-sm font-semibold text-foreground">Mentions légales</legend>
+        <legend className="text-sm font-semibold text-foreground">Identité légale &amp; papier à en-tête</legend>
+        <p className="text-xs text-gray-text">
+          Imprimé en en-tête et en pied de page des devis, factures et contrats (clients, maintenance,
+          travail). Un champ laissé vide reprend la valeur du modèle officiel.{" "}
+          <a
+            href="/api/admin/letterhead-preview"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="font-semibold text-primary underline"
+          >
+            Aperçu du papier à en-tête (PDF)
+          </a>{" "}
+          — enregistrez d&apos;abord pour voir vos modifications.
+        </p>
         <div className="grid gap-3 sm:grid-cols-2">
-          <label className="block">
-            <span className="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-gray-text">
-              RCCM
-            </span>
-            <input
-              value={form.rccm}
-              onChange={(e) => updateField("rccm", e.target.value)}
-              className={fieldClass}
-              aria-label="RCCM"
-            />
-          </label>
-          <label className="block">
-            <span className="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-gray-text">
-              NCC
-            </span>
-            <input
-              value={form.ncc}
-              onChange={(e) => updateField("ncc", e.target.value)}
-              className={fieldClass}
-              aria-label="NCC"
-            />
-          </label>
+          {(
+            [
+              ["legalName", "Raison sociale (RCCM)", "SDCREATIV", false],
+              ["legalForm", "Forme juridique et capital", "SARL au capital de 1 000 000 F CFA", false],
+              ["headOffice", "Siège social (adresse complète)", "Abidjan Cocody Angré, …", true],
+              ["rccm", "RCCM", "CI-ABJ-…", false],
+              ["idu", "IDU", "CI-2026-…", false],
+              ["ncc", "NCC (compte contribuable)", "À renseigner", false],
+              ["letterheadTagline", "Accroche sous le logo", "SOLUTIONS DIGITALES • WEB • CLOUD • IA", true],
+              ["letterheadWebsite", "Site affiché", "www.sdcreativ.com", false],
+              ["letterheadEmail", "E-mail affiché", "contact@sdcreativ.com", false],
+              ["letterheadPhone", "Téléphone 1", "+225 …", false],
+              ["letterheadPhone2", "Téléphone 2 (facultatif)", "+225 …", false],
+            ] as const
+          ).map(([key, label, placeholder, wide]) => (
+            <label key={key} className={cn("block", wide && "sm:col-span-2")}>
+              <span className="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-gray-text">
+                {label}
+              </span>
+              <input
+                type={key === "letterheadEmail" ? "email" : "text"}
+                value={form[key]}
+                onChange={(e) => updateField(key, e.target.value)}
+                className={fieldClass}
+                placeholder={placeholder}
+                aria-label={label}
+              />
+            </label>
+          ))}
+        </div>
+        {!form.ncc.trim() && (
+          <p className="rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-900">
+            Le NCC n&apos;est pas renseigné : les contrats de travail affichent « non renseigné » et il
+            n&apos;apparaît pas sur les factures.
+          </p>
+        )}
+      </fieldset>
+
+      <fieldset className="space-y-4">
+        <legend className="text-sm font-semibold text-foreground">Hébergeur du site (mentions légales)</legend>
+        <div className="grid gap-3 sm:grid-cols-2">
           <label className="block">
             <span className="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-gray-text">
               Hébergeur

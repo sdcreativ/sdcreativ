@@ -56,7 +56,7 @@ export async function replaceProjectPaymentMilestones(
 ): Promise<ProjectPaymentMilestone[]> {
   return withDb(async (query) => {
     await query(`DELETE FROM project_payment_milestones WHERE project_id = $1`, [projectId]);
-    const serialized = items.map((item, i) => ({
+    const serialized = items.map((item) => ({
       label: item.label,
       amount: item.amount,
       status: item.status,

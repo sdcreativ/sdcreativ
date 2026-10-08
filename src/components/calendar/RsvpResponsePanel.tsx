@@ -115,6 +115,8 @@ export function RsvpResponsePanel({
     startTransition(() => {
       void submit(initialStatus);
     });
+    // submit est recréée à chaque rendu ; l'envoi automatique est garanti unique par autoSubmitted.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [initialStatus, data, doneLabel]);
 
   if (error && !data) {

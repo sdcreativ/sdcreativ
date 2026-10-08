@@ -4,6 +4,7 @@ import { getCrmSettings } from "@/lib/crm-settings";
 import type { CrmBranding } from "@/lib/crm-settings-types";
 import { getSitePublicSettings } from "@/lib/site-public-settings";
 import type { ResolvedSitePublic } from "@/lib/site-public-types";
+import { LETTERHEAD, type LetterheadInfo } from "@/lib/letterhead-info";
 
 export type InvoiceDocumentCompany = {
   agencyName: string;
@@ -18,6 +19,8 @@ export type InvoiceDocumentCompany = {
   hours: string;
   rccm: string;
   ncc: string;
+  /** Mentions du papier à en-tête (Paramètres du site) ; absent = valeurs du modèle. */
+  letterhead?: LetterheadInfo;
 };
 
 export function resolveDocumentLogoUrl(
@@ -65,8 +68,9 @@ export function mergeInvoiceDocumentCompany(
     email: site.contact.email,
     address: site.contact.address,
     hours: site.contact.hours,
-    rccm: site.legal.rccm,
-    ncc: site.legal.ncc,
+    rccm: site.letterhead.rccm,
+    ncc: site.letterhead.ncc,
+    letterhead: site.letterhead,
   };
 }
 
@@ -84,6 +88,15 @@ export async function getInvoiceDocumentCompany(
     ...company,
     logoUrl: embedded || company.logoUrl,
   };
+}
+
+/** Papier à en-tête à jour des Paramètres du site (contrats clients, documents autonomes). */
+export async function getDocumentLetterhead(): Promise<LetterheadInfo> {
+  try {
+    return (await getSitePublicSettings()).letterhead;
+  } catch {
+    return LETTERHEAD;
+  }
 }
 
 /** Société + logo embarqué (data-URI) pour PDF / contrats autonomes. */
