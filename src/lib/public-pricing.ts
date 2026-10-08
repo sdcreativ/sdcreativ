@@ -32,7 +32,8 @@ import {
   hostingDiscountPercent,
   hostingTtcPrices,
   baseHtFromTtc,
-  eurHtToXofTtc,
+  renewalXofPerYear,
+  DEFAULT_PRICING_DOMAIN_RENEWAL_EUR,
   formatPlanAmount,
   isSafePlanCtaHref,
   type PricingCharge,
@@ -224,7 +225,9 @@ export function toPricingPlan(record: PublicPricingPlanRecord, ctx?: PricingCont
       ? formatReferralNote(settings.referralNote, hostingDiscountPercent(hosting.normalEur, hosting.paidEur))
       : "";
   const renewalPerYear =
-    hosting && settings && hosting.renewalEurPerYear > 0 ? eurHtToXofTtc(hosting.renewalEurPerYear, settings.vatRate) : 0;
+    hosting && settings && hosting.renewalEurPerYear > 0
+      ? renewalXofPerYear(hosting.renewalEurPerYear, settings.domainRenewalEur)
+      : 0;
   const hostingPrices =
     discounted && settings && hosting ? hostingTtcPrices(hosting.normalEur, hosting.paidEur, settings.vatRate) : null;
   const en = record.locale === "en";
@@ -387,6 +390,8 @@ export const pricingSettingsSchema = z
   domainEur: z.number().min(0).max(1_000).multipleOf(0.01),
   /** Remise parrainage (%) appliquée au prix promo des packs du catalogue. */
   referralPercent: z.number().min(0).max(100).multipleOf(0.01),
+  /** Renouvellement annuel HT (€) du nom de domaine, facturé par Hostinger au client dès la 2e année. */
+  domainRenewalEur: z.number().min(0).max(1_000).multipleOf(0.01),
   })
   .refine((v) => v.hostingReferralEur <= v.hostingEur, {
     message: "Le prix avec parrainage doit être inférieur ou égal au prix normal.",
@@ -405,6 +410,7 @@ const DEFAULT_PRICING_SETTINGS: PricingSettings = {
   referralNote: DEFAULT_PRICING_REFERRAL_NOTE,
   domainEur: DEFAULT_PRICING_DOMAIN_EUR,
   referralPercent: DEFAULT_PRICING_REFERRAL_PERCENT,
+  domainRenewalEur: DEFAULT_PRICING_DOMAIN_RENEWAL_EUR,
 };
 
 /** Réglages + prix appliqués du catalogue Hostinger : tout ce qu'il faut pour calculer une formule. */
@@ -470,6 +476,7 @@ type CrmSettingsPricingRow = {
   pricing_referral_note: string;
   pricing_domain_eur: string | number;
   pricing_referral_percent: string | number;
+  pricing_domain_renewal_eur: string | number;
 };
 
 /** Réglages tarifs globaux (crm_settings) : TVA, hébergement et parrainage Hostinger. */
@@ -479,7 +486,7 @@ export async function getPricingSettings(): Promise<PricingSettings> {
     const { rows } = await query<CrmSettingsPricingRow>(
       `SELECT pricing_vat_rate, pricing_referral_url, pricing_hosting_eur, pricing_hosting_referral_eur,
          pricing_hosting_renewal_eur, to_char(pricing_hosting_checked_on, 'YYYY-MM-DD') AS pricing_hosting_checked_on,
-         pricing_referral_note, pricing_domain_eur, pricing_referral_percent
+         pricing_referral_note, pricing_domain_eur, pricing_referral_percent, pricing_domain_renewal_eur
        FROM crm_settings WHERE id = 1`,
     );
     const row = rows[0];
@@ -494,6 +501,7 @@ export async function getPricingSettings(): Promise<PricingSettings> {
       referralNote: row.pricing_referral_note,
       domainEur: Number(row.pricing_domain_eur),
       referralPercent: Number(row.pricing_referral_percent),
+      domainRenewalEur: Number(row.pricing_domain_renewal_eur),
     };
   });
 }
@@ -532,12 +540,12 @@ export async function updatePricingSettings(
     await query(
       `INSERT INTO crm_settings (id, pricing_vat_rate, pricing_referral_url, pricing_hosting_eur,
          pricing_hosting_referral_eur, pricing_referral_note, pricing_hosting_renewal_eur,
-         pricing_hosting_checked_on, pricing_domain_eur, pricing_referral_percent, updated_at)
-       VALUES (1, $1, $2, $3, $4, $5, $6, $7, $8, $9, NOW())
+         pricing_hosting_checked_on, pricing_domain_eur, pricing_referral_percent, pricing_domain_renewal_eur, updated_at)
+       VALUES (1, $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, NOW())
        ON CONFLICT (id) DO UPDATE SET pricing_vat_rate = $1, pricing_referral_url = $2,
          pricing_hosting_eur = $3, pricing_hosting_referral_eur = $4, pricing_referral_note = $5,
          pricing_hosting_renewal_eur = $6, pricing_hosting_checked_on = $7, pricing_domain_eur = $8,
-         pricing_referral_percent = $9, updated_at = NOW()`,
+         pricing_referral_percent = $9, pricing_domain_renewal_eur = $10, updated_at = NOW()`,
       [
         input.vatRate,
         input.referralUrl,
@@ -548,6 +556,7 @@ export async function updatePricingSettings(
         input.hostingCheckedOn,
         input.domainEur,
         input.referralPercent,
+        input.domainRenewalEur,
       ],
     );
   });

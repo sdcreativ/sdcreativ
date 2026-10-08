@@ -27,7 +27,7 @@ const plan: PricingPlan = {
       note: "-76 % grâce à notre partenariat Hostinger",
       priceBefore: 116778,
       priceAfter: 27772,
-      renewalPerYear: 92790,
+      renewalPerYear: 89781,
     },
   ],
   ctaLabel: "Demander un devis",
@@ -50,7 +50,9 @@ describe("PricingPlanCard — remise façon Hostinger", () => {
     expect(text(html)).toContain("-76 % grâce à notre partenariat Hostinger");
     expect(text(html)).toContain("116 778 FCFA");
     expect(text(html)).toContain("27 772 FCFA TTC");
-    expect(text(html)).toContain("Renouvellement à partir de la 2ᵉ année : env. 92 790 FCFA TTC/an");
+    expect(text(html)).toContain(
+      "Renouvellement à partir de la 2ᵉ année : env. 89 781 FCFA/an (hébergement + domaine, facturés directement par Hostinger)",
+    );
   });
 
   it("lien de parrainage sponsorisé et bouton devis avec formule + offre", () => {

@@ -58,7 +58,8 @@ import {
   DEFAULT_PRICING_HOSTING_REFERRAL_EUR,
   DEFAULT_PRICING_HOSTING_RENEWAL_EUR,
   daysSinceHostingCheck,
-  eurHtToXofTtc,
+  renewalXofPerYear,
+  DEFAULT_PRICING_DOMAIN_RENEWAL_EUR,
   PRICING_HOSTING_CHECK_MAX_DAYS,
   DEFAULT_PRICING_REFERRAL_URL,
   DEFAULT_PRICING_VAT_RATE,
@@ -138,6 +139,7 @@ const DEFAULT_SETTINGS: PricingSettings = {
   referralNote: DEFAULT_PRICING_REFERRAL_NOTE,
   domainEur: DEFAULT_PRICING_DOMAIN_EUR,
   referralPercent: DEFAULT_PRICING_REFERRAL_PERCENT,
+  domainRenewalEur: DEFAULT_PRICING_DOMAIN_RENEWAL_EUR,
 };
 
 const euros = (centsValue: number) =>
@@ -156,6 +158,7 @@ function settingsToInput(s: PricingSettings) {
     referralNote: s.referralNote,
     domainEur: dec(s.domainEur),
     referralPercent: dec(s.referralPercent),
+    domainRenewalEur: dec(s.domainRenewalEur),
   };
 }
 
@@ -408,7 +411,10 @@ export function CrmPricingView() {
   );
 
   const toInputNumber = (value: string) => Number(value.replace(",", ".")) || 0;
-  const renewalPreview = eurHtToXofTtc(toInputNumber(settingsInput.hostingRenewalEur), toInputNumber(settingsInput.vatRate));
+  const renewalPreview = renewalXofPerYear(
+    toInputNumber(settingsInput.hostingRenewalEur),
+    toInputNumber(settingsInput.domainRenewalEur),
+  );
   const hostingCheckAge = daysSinceHostingCheck(settings.hostingCheckedOn);
   const pricingCtx: PricingContext = { ...settings, catalog: catalog.entries };
   const pendingEntries = catalog.entries.filter((e) => e.pending);
@@ -465,12 +471,13 @@ export function CrmPricingView() {
       referralNote: settingsInput.referralNote.trim(),
       domainEur: toNumber(settingsInput.domainEur),
       referralPercent: toNumber(settingsInput.referralPercent),
+      domainRenewalEur: toNumber(settingsInput.domainRenewalEur),
     };
     if (![next.vatRate, next.referralPercent].every((v) => Number.isFinite(v) && v >= 0 && v <= 100)) {
       setMessage("Impossible : la TVA et la remise parrainage doivent être comprises entre 0 et 100 %.");
       return;
     }
-    if (![next.hostingEur, next.hostingReferralEur, next.hostingRenewalEur, next.domainEur].every((v) => Number.isFinite(v) && v >= 0)) {
+    if (![next.hostingEur, next.hostingReferralEur, next.hostingRenewalEur, next.domainEur, next.domainRenewalEur].every((v) => Number.isFinite(v) && v >= 0)) {
       setMessage("Impossible : prix d’hébergement invalide.");
       return;
     }
@@ -751,11 +758,21 @@ export function CrmPricingView() {
                 className={fieldClass}
               />
             </label>
+            <label className="block">
+              <span className="mb-1 block text-xs font-medium text-gray-text">Renouvellement domaine (€/an)</span>
+              <input
+                inputMode="decimal"
+                value={settingsInput.domainRenewalEur}
+                onChange={(e) => setSettingsInput((p) => ({ ...p, domainRenewalEur: decimalInput(e.target.value) }))}
+                className={fieldClass}
+              />
+            </label>
           </div>
           <p className="mt-2 text-xs text-gray-text">
             Convertis à 655,957 FCFA pour 1 €. Remise calculée : −{settingsPercent.toLocaleString("fr-FR")} % sur
             l’hébergement des formules où « Inclure l’hébergement Hostinger » est coché. Renouvellement affiché sur le site :
-            ≈ {formatPlanAmount(renewalPreview)} FCFA TTC/an.
+            ≈ {formatPlanAmount(renewalPreview)} FCFA/an (hébergement + domaine, facturés directement par Hostinger au
+            client, sans TVA SD CREATIV).
           </p>
         </fieldset>
 
