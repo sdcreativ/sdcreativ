@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { BENEFIT_KINDS } from "@/lib/client-benefits-types";
 
 /** Popup de capture (façon Mailchimp) — partagé admin / site public (aucun accès base ici). */
 export const POPUP_LAYOUTS = ["modal", "slide"] as const;
@@ -48,6 +49,11 @@ const popupFields = z.object({
   excludePaths: pathList,
   frequencyDays: z.number().int().min(0).max(365),
   sortOrder: z.number().int().min(0).max(999),
+  /** Avantage structuré appliqué automatiquement (ex. maintenance -50 % du 12e au 24e mois). */
+  benefitKind: z.enum(BENEFIT_KINDS),
+  benefitPercent: z.number().min(1).max(100).multipleOf(0.01).nullable(),
+  benefitStartMonths: z.number().int().min(0).max(120).nullable(),
+  benefitDurationMonths: z.number().int().min(1).max(120).nullable(),
 });
 
 export const createSitePopupSchema = popupFields
@@ -68,7 +74,24 @@ export type SitePopup = SitePopupInput & {
 };
 
 /** Ce que le site public reçoit (sans statistiques). */
-export type PublicSitePopup = Omit<SitePopup, "impressions" | "closes" | "signups" | "createdAt" | "updatedAt" | "name" | "sortOrder" | "isActive" | "codePrefix" | "includePaths" | "excludePaths">;
+export type PublicSitePopup = Omit<
+  SitePopup,
+  | "impressions"
+  | "closes"
+  | "signups"
+  | "createdAt"
+  | "updatedAt"
+  | "name"
+  | "sortOrder"
+  | "isActive"
+  | "codePrefix"
+  | "includePaths"
+  | "excludePaths"
+  | "benefitKind"
+  | "benefitPercent"
+  | "benefitStartMonths"
+  | "benefitDurationMonths"
+>;
 
 export const DEFAULT_SITE_POPUP: SitePopupInput = {
   name: "Nouveau popup",
@@ -98,6 +121,10 @@ export const DEFAULT_SITE_POPUP: SitePopupInput = {
   excludePaths: ["/devis", "/contact", "/en/devis", "/en/contact"],
   frequencyDays: 14,
   sortOrder: 0,
+  benefitKind: "none",
+  benefitPercent: null,
+  benefitStartMonths: null,
+  benefitDurationMonths: null,
 };
 
 /** Correspondance de chemin par préfixe (« /tarifs » couvre « /tarifs » et « /tarifs/… »). */

@@ -7,6 +7,8 @@ import { CrmFormField, CrmFormHeader, crmFieldClass } from "@/components/admin/c
 import { SitePopupCard } from "@/components/popups/SitePopupCard";
 import { parseFetchJson } from "@/lib/fetch-json";
 import type { PopupSignup } from "@/lib/site-popups";
+import type { ClientBenefit } from "@/lib/client-benefits";
+import { BENEFIT_STATUS_LABELS } from "@/lib/client-benefits-types";
 import {
   DEFAULT_SITE_POPUP,
   POPUP_PROJECT_TYPES,
@@ -32,7 +34,13 @@ const api = {
     ).popup,
   remove: async (id: string) =>
     parseFetchJson(await fetch(`/api/admin/site-popups/${id}`, { method: "DELETE", credentials: "include" })),
+  benefits: async () =>
+    (await parseFetchJson<{ benefits: ClientBenefit[] }>(await fetch("/api/admin/client-benefits", { credentials: "include" }))).benefits,
+  cancelBenefit: async (id: string) =>
+    parseFetchJson(await fetch(`/api/admin/client-benefits/${id}`, { method: "DELETE", credentials: "include" })),
 };
+
+const frDate = (iso: string) => new Date(`${iso}T12:00:00Z`).toLocaleDateString("fr-FR");
 
 const rate = (signups: number, impressions: number) =>
   impressions > 0 ? `${((signups / impressions) * 100).toLocaleString("fr-FR", { maximumFractionDigits: 1 })} %` : "—";
@@ -107,6 +115,34 @@ function PopupForm({
                 <CrmFormField label="Bouton d'envoi"><input required minLength={2} maxLength={60} value={form.ctaLabel} onChange={(e) => set("ctaLabel", e.target.value)} className={crmFieldClass} /></CrmFormField>
                 <CrmFormField label="Préfixe du code" hint="Ex. SDC → SDC-AWA-7K2Q"><input required value={form.codePrefix} onChange={(e) => set("codePrefix", e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, "").slice(0, 12))} className={crmFieldClass} /></CrmFormField>
                 <CrmFormField label="Validité du code (jours)"><input type="number" min={1} max={365} value={form.codeValidDays} onChange={(e) => set("codeValidDays", Math.max(1, Number(e.target.value) || 1))} className={crmFieldClass} /></CrmFormField>
+              </div>
+              <div className="rounded-xl border border-primary/30 bg-primary-light/40 p-4">
+                <p className="text-sm font-semibold text-foreground">Avantage appliqué automatiquement</p>
+                <p className="mt-1 text-xs text-gray-text">
+                  Ce que le code donne réellement : il est figé à l’inscription, enregistré à la signature du devis, puis appliqué
+                  tout seul aux factures de maintenance (brouillons). Rappels au client et à vous 30 jours avant.
+                </p>
+                <div className="mt-3 grid gap-3 sm:grid-cols-4">
+                  <CrmFormField label="Type">
+                    <select value={form.benefitKind} onChange={(e) => set("benefitKind", e.target.value as FormState["benefitKind"])} className={crmFieldClass}>
+                      <option value="none">Aucun (offre manuelle)</option>
+                      <option value="maintenance_discount">Remise sur la maintenance</option>
+                    </select>
+                  </CrmFormField>
+                  {form.benefitKind === "maintenance_discount" && (
+                    <>
+                      <CrmFormField label="Remise (%)"><input required type="number" min={1} max={100} value={form.benefitPercent ?? ""} onChange={(e) => set("benefitPercent", num(e.target.value))} className={crmFieldClass} /></CrmFormField>
+                      <CrmFormField label="Début (mois après signature)"><input required type="number" min={0} max={120} value={form.benefitStartMonths ?? ""} onChange={(e) => set("benefitStartMonths", num(e.target.value))} className={crmFieldClass} /></CrmFormField>
+                      <CrmFormField label="Durée (mois)"><input required type="number" min={1} max={120} value={form.benefitDurationMonths ?? ""} onChange={(e) => set("benefitDurationMonths", num(e.target.value))} className={crmFieldClass} /></CrmFormField>
+                    </>
+                  )}
+                </div>
+                {form.benefitKind === "maintenance_discount" && form.benefitPercent != null && form.benefitStartMonths != null && form.benefitDurationMonths != null && (
+                  <p className="mt-2 text-xs font-medium text-primary">
+                    → -{form.benefitPercent} % sur la maintenance, du {form.benefitStartMonths}ᵉ au {form.benefitStartMonths + form.benefitDurationMonths}ᵉ mois
+                    après la signature du devis. Vérifiez que le texte du popup dit la même chose.
+                  </p>
+                )}
               </div>
               <div className="grid gap-4 sm:grid-cols-2">
                 <CrmFormField label="Titre après inscription"><input required minLength={2} maxLength={140} value={form.successTitle} onChange={(e) => set("successTitle", e.target.value)} className={crmFieldClass} /></CrmFormField>
@@ -185,6 +221,7 @@ export function CrmPopupsView() {
   const { confirm } = useDialog();
   const [popups, setPopups] = useState<SitePopup[]>([]);
   const [signups, setSignups] = useState<PopupSignup[] | null>(null);
+  const [benefits, setBenefits] = useState<ClientBenefit[] | null>(null);
   const [loading, setLoading] = useState(true);
   const [message, setMessage] = useState("");
   const [editing, setEditing] = useState<{ id: string | null; form: FormState; key: number } | null>(null);
@@ -199,6 +236,7 @@ export function CrmPopupsView() {
     try {
       setPopups(await api.list());
       setSignups(await api.signups().catch(() => null));
+      setBenefits(await api.benefits().catch(() => null));
       setLoadedAt(Date.now());
     } catch (err) {
       setMessage(err instanceof Error ? `Impossible : ${err.message}` : "Impossible de charger les popups.");
@@ -247,6 +285,18 @@ export function CrmPopupsView() {
     } finally {
       setBusyId(null);
     }
+  }
+
+  async function cancelBenefit(b: ClientBenefit) {
+    const ok = await confirm({
+      title: "Annuler cet avantage ?",
+      message: `La remise « ${b.label} » ne sera plus appliquée aux factures de ${b.clientName || b.email}. À réserver aux devis annulés.`,
+      confirmLabel: "Annuler l'avantage",
+      variant: "danger",
+    });
+    if (!ok) return;
+    await api.cancelBenefit(b.id);
+    await load();
   }
 
   const open = (p: SitePopup | null) => {
@@ -306,6 +356,45 @@ export function CrmPopupsView() {
               </div>
             </article>
           ))
+        )}
+      </section>
+
+      <section className="space-y-3">
+        <h2 className="text-lg font-bold text-foreground">Avantages promis</h2>
+        <p className="text-sm text-gray-text">
+          Créés à la signature d’un devis portant un code. Appliqués automatiquement aux factures de maintenance du client
+          pendant la période ; rappel 30 jours avant, alerte si une période se termine sans application.
+        </p>
+        {benefits === null ? (
+          <p className="text-sm text-gray-text">Liste réservée aux comptes ayant accès aux clients.</p>
+        ) : benefits.length === 0 ? (
+          <p className="text-sm text-gray-text">Aucun avantage promis pour l’instant.</p>
+        ) : (
+          <div className="overflow-x-auto rounded-2xl border border-gray/60 bg-white">
+            <table className="w-full min-w-[760px] text-left text-sm">
+              <thead className="text-xs uppercase tracking-wide text-gray-text">
+                <tr className="border-b border-gray/40">
+                  <th className="px-3 py-2">Client</th><th className="px-3 py-2">Avantage</th><th className="px-3 py-2">Période</th><th className="px-3 py-2">Statut</th><th className="px-3 py-2">Factures remisées</th><th className="px-3 py-2" />
+                </tr>
+              </thead>
+              <tbody>
+                {benefits.map((b) => (
+                  <tr key={b.id} className="border-t border-gray/30">
+                    <td className="px-3 py-2">{b.clientName || b.email}<span className="block text-xs text-gray-text">{b.email}{b.clientId ? "" : " · fiche client à créer"}</span></td>
+                    <td className="px-3 py-2">-{b.percent.toLocaleString("fr-FR")} % maintenance<span className="block font-mono text-xs text-gray-text">{b.promoCode}</span></td>
+                    <td className="px-3 py-2 whitespace-nowrap">{frDate(b.startsOn)} → {frDate(b.endsOn)}</td>
+                    <td className={cn("px-3 py-2", b.status === "missed" && "font-semibold text-red-700")}>{BENEFIT_STATUS_LABELS[b.status]}</td>
+                    <td className="px-3 py-2 text-center">{b.appliedCount}</td>
+                    <td className="px-3 py-2 text-right">
+                      {(b.status === "pending" || b.status === "active") && (
+                        <button type="button" onClick={() => void cancelBenefit(b)} className="rounded-lg border border-red-200 px-2 py-1 text-xs font-medium text-red-600 hover:bg-red-50">Annuler</button>
+                      )}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         )}
       </section>
 

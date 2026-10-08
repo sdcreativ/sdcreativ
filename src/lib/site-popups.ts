@@ -1,6 +1,7 @@
 import { randomBytes } from "node:crypto";
 import { z } from "zod";
 import { isDatabaseConfigured, withDb } from "@/lib/db";
+import type { BenefitTerms } from "@/lib/client-benefits-types";
 import {
   DEFAULT_SITE_POPUP,
   generatePopupCode,
@@ -42,9 +43,15 @@ type PopupRow = {
   closes: number;
   signups: number;
   sort_order: number;
+  benefit_kind: string;
+  benefit_percent: string | number | null;
+  benefit_start_months: number | null;
+  benefit_duration_months: number | null;
   created_at: Date;
   updated_at: Date;
 };
+
+const numOrNull = (v: string | number | null) => (v == null ? null : Number(v));
 
 const mapPopup = (r: PopupRow): SitePopup => ({
   id: r.id,
@@ -77,6 +84,10 @@ const mapPopup = (r: PopupRow): SitePopup => ({
   closes: r.closes,
   signups: r.signups,
   sortOrder: r.sort_order,
+  benefitKind: r.benefit_kind === "maintenance_discount" ? "maintenance_discount" : "none",
+  benefitPercent: numOrNull(r.benefit_percent),
+  benefitStartMonths: r.benefit_start_months,
+  benefitDurationMonths: r.benefit_duration_months,
   createdAt: r.created_at.toISOString(),
   updatedAt: r.updated_at.toISOString(),
 });
@@ -109,6 +120,10 @@ const COLUMNS = {
   excludePaths: "exclude_paths",
   frequencyDays: "frequency_days",
   sortOrder: "sort_order",
+  benefitKind: "benefit_kind",
+  benefitPercent: "benefit_percent",
+  benefitStartMonths: "benefit_start_months",
+  benefitDurationMonths: "benefit_duration_months",
 } as const satisfies Record<keyof typeof DEFAULT_SITE_POPUP, string>;
 
 type ColumnKey = keyof typeof COLUMNS;
@@ -173,8 +188,11 @@ export async function getActivePopupForPath(path: string, locale: "fr" | "en"): 
   const popup = popups.find((p) => popupMatchesPath(p, path));
   if (!popup) return null;
   /* eslint-disable @typescript-eslint/no-unused-vars -- retrait des champs internes */
-  const { impressions, closes, signups, createdAt, updatedAt, name, sortOrder, isActive, codePrefix, includePaths, excludePaths, ...pub } =
-    popup;
+  const {
+    impressions, closes, signups, createdAt, updatedAt, name, sortOrder, isActive, codePrefix, includePaths, excludePaths,
+    benefitKind, benefitPercent, benefitStartMonths, benefitDurationMonths,
+    ...pub
+  } = popup;
   /* eslint-enable @typescript-eslint/no-unused-vars */
   return pub;
 }
@@ -200,6 +218,7 @@ export type PopupSignup = {
   locale: string;
   pagePath: string | null;
   leadId: string | null;
+  benefit: BenefitTerms;
   createdAt: string;
 };
 
@@ -217,6 +236,10 @@ type SignupRow = {
   locale: string;
   page_path: string | null;
   lead_id: string | null;
+  benefit_kind: string;
+  benefit_percent: string | number | null;
+  benefit_start_months: number | null;
+  benefit_duration_months: number | null;
   created_at: Date;
 };
 
@@ -234,6 +257,12 @@ const mapSignup = (r: SignupRow): PopupSignup => ({
   locale: r.locale,
   pagePath: r.page_path,
   leadId: r.lead_id,
+  benefit: {
+    kind: r.benefit_kind === "maintenance_discount" ? "maintenance_discount" : "none",
+    percent: numOrNull(r.benefit_percent),
+    startMonths: r.benefit_start_months,
+    durationMonths: r.benefit_duration_months,
+  },
   createdAt: r.created_at.toISOString(),
 });
 
@@ -266,8 +295,8 @@ export async function createPopupSignup(
       const code = generatePopupCode(popup.codePrefix, input.name, randomBytes(4));
       const { rows } = await query<SignupRow>(
         `INSERT INTO site_popup_signups (popup_id, name, email, phone, project_type, offer_label, code,
-           code_expires_at, locale, page_path)
-         VALUES ($1,$2,$3,$4,$5,$6,$7, NOW() + make_interval(days => $8), $9, $10)
+           code_expires_at, locale, page_path, benefit_kind, benefit_percent, benefit_start_months, benefit_duration_months)
+         VALUES ($1,$2,$3,$4,$5,$6,$7, NOW() + make_interval(days => $8), $9, $10, $11, $12, $13, $14)
          ON CONFLICT (code) DO NOTHING RETURNING *`,
         [
           popup.id,
@@ -280,6 +309,10 @@ export async function createPopupSignup(
           popup.codeValidDays,
           popup.locale,
           input.pagePath ?? null,
+          popup.benefitKind,
+          popup.benefitPercent,
+          popup.benefitStartMonths,
+          popup.benefitDurationMonths,
         ],
       );
       if (rows[0]) {

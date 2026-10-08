@@ -2,6 +2,8 @@ import { z } from "zod";
 import { withDb } from "@/lib/db";
 import { createInvoice, updateInvoice, type InvoiceLine } from "@/lib/invoices";
 import { getClientById } from "@/lib/clients";
+import { benefitsApplicableTo, markBenefitApplied } from "@/lib/client-benefits";
+import { applyBenefitToLines, isMaintenanceSubscription } from "@/lib/client-benefits-types";
 import type { SubscriptionInterval, SubscriptionStatus } from "@/content/subscriptions-labels";
 import { SUBSCRIPTION_INTERVALS, SUBSCRIPTION_STATUSES } from "@/content/subscriptions-labels";
 
@@ -230,6 +232,8 @@ export type SubscriptionBillingResult = {
   processed: number;
   invoicesCreated: string[];
   renewalAlerts: number;
+  /** Factures de maintenance remisées grâce à un avantage promis. */
+  benefitsApplied: number;
 };
 
 export async function processSubscriptionBilling(
@@ -240,26 +244,46 @@ export async function processSubscriptionBilling(
   const due = subscriptions.filter((s) => s.nextBillingDate <= today);
   const invoicesCreated: string[] = [];
   let renewalAlerts = 0;
+  let benefitsApplied = 0;
 
   for (const sub of due) {
     const client = await getClientById(sub.clientId);
     if (!client) continue;
 
+    let lines: InvoiceLine[] = sub.lines.length ? sub.lines : [{ label: sub.title, amount: sub.amount }];
+    // Avantage promis (ex. maintenance 2e année -50 %) : appliqué automatiquement, code cité sur la facture.
+    const benefits = isMaintenanceSubscription(sub)
+      ? await benefitsApplicableTo({ id: client.id, email: client.email }, sub.nextBillingDate)
+      : [];
+    const benefit = benefits[0];
+    if (benefit) lines = applyBenefitToLines(lines, benefit.percent, benefit.promoCode).lines;
+
+    // Brouillon : chaque facture récurrente est relue et validée avant envoi au client.
     const invoice = await createInvoice({
       clientId: sub.clientId,
       projectId: sub.projectId,
       name: client.name,
       email: client.email,
       company: client.company,
-      lines: sub.lines.length ? sub.lines : [{ label: sub.title, amount: sub.amount }],
+      lines,
       tvaRate: sub.tvaRate,
-      status: "sent",
+      status: "draft",
       dueDate: today,
-      notes: `Facture récurrente — ${sub.title}`,
+      notes: benefit
+        ? `Facture récurrente — ${sub.title}. ${benefit.label} (code ${benefit.promoCode}).`
+        : `Facture récurrente — ${sub.title}`,
     });
     await updateInvoice(invoice.id, {
-      metadata: { subscriptionId: sub.id, recurring: true },
+      metadata: {
+        subscriptionId: sub.id,
+        recurring: true,
+        ...(benefit ? { clientBenefitId: benefit.id, promoCode: benefit.promoCode } : {}),
+      },
     });
+    if (benefit) {
+      await markBenefitApplied(benefit.id, invoice.id);
+      benefitsApplied += 1;
+    }
     invoicesCreated.push(invoice.reference);
 
     await updateSubscription(sub.id, {
@@ -276,5 +300,5 @@ export async function processSubscriptionBilling(
     }
   }
 
-  return { processed: due.length, invoicesCreated, renewalAlerts };
+  return { processed: due.length, invoicesCreated, renewalAlerts, benefitsApplied };
 }
