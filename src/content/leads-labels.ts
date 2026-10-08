@@ -21,6 +21,7 @@ export const LEAD_SOURCE_LABELS: Record<
   whatsapp: "WhatsApp",
   live_chat_3cx: "Live Chat 3CX",
   call_3cx: "Appel 3CX",
+  popup: "Popup site (code avantage)",
 };
 
 export const LEAD_PIPELINE_COLUMNS: Array<{

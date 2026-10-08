@@ -18,6 +18,7 @@ import {
 } from "@/lib/rate-limit";
 import { createDevisSchema } from "@/lib/validations/devis";
 import { formatPlanAmount, PRICING_REFERRAL_OFFER } from "@/lib/pricing-display";
+import { findValidPopupCode, markPopupCodeUsed } from "@/lib/site-popups";
 import { getPricingContext, getVisiblePricingPlanBySlug, planQuoteLines } from "@/lib/public-pricing";
 
 export async function POST(request: Request) {
@@ -59,6 +60,9 @@ export async function POST(request: Request) {
     if (!quote) {
       return NextResponse.json({ error: "Type de projet invalide." }, { status: 400 });
     }
+
+    // Code avantage (popup) : valide = existe, non expiré, non utilisé.
+    const promo = data.promoCode ? await findValidPopupCode(data.promoCode).catch(() => null) : null;
 
     // Demande venant d'une carte tarifs : devis pré-rempli avec les lignes HT de la formule.
     let planEstimate: { planName: string; lines: { label: string; amount: number }[]; subtotal: number } | null = null;
@@ -108,6 +112,7 @@ export async function POST(request: Request) {
         ${htmlRow("Email", data.email)}
         ${htmlRow("Téléphone", data.phone)}
         ${htmlRow("Entreprise", data.company)}
+        ${htmlRow("Code avantage", data.promoCode ? `${data.promoCode} — ${promo ? `valide : ${promo.offerLabel}` : "INVALIDE ou expiré"}` : undefined)}
         ${htmlRow("Formule tarifaire", data.pricingPlan)}
         ${htmlRow("Offre", data.pricingOffer === PRICING_REFERRAL_OFFER ? "Remise parrainage hébergement Hostinger" : undefined)}
         ${htmlRow("Type de projet", quote.projectLabel)}
@@ -148,8 +153,10 @@ export async function POST(request: Request) {
         lines: quote.lines,
         ...(data.pricingPlan ? { pricingPlan: data.pricingPlan } : {}),
         ...(data.pricingOffer ? { pricingOffer: data.pricingOffer } : {}),
+        ...(data.promoCode ? { promoCode: data.promoCode, promoValid: Boolean(promo), promoOffer: promo?.offerLabel ?? null } : {}),
       },
     });
+    if (promo) await markPopupCodeUsed(promo.code).catch((err) => console.error("[devis] code avantage", err));
 
     void createQuoteFromDevis({
       name: data.name,
@@ -168,9 +175,11 @@ export async function POST(request: Request) {
       timeline: data.timeline,
       message: data.message,
       leadId: lead?.id ?? null,
-      ...(data.pricingPlan
-        ? { metadata: { pricingPlan: data.pricingPlan, ...(data.pricingOffer ? { pricingOffer: data.pricingOffer } : {}) } }
-        : {}),
+      metadata: {
+        ...(data.pricingPlan ? { pricingPlan: data.pricingPlan } : {}),
+        ...(data.pricingOffer ? { pricingOffer: data.pricingOffer } : {}),
+        ...(promo ? { promoCode: promo.code, promoOffer: promo.offerLabel } : {}),
+      },
     });
 
     return NextResponse.json({

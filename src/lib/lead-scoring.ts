@@ -7,6 +7,8 @@ const SOURCE_SCORE: Record<LeadSource, number> = {
   call_3cx: 24,
   live_chat_3cx: 22,
   whatsapp: 20,
+  // Inscrit au popup : intérêt déclaré (code avantage demandé), moins engagé qu'une demande de devis.
+  popup: 16,
   manual: 14,
   waitlist: 8,
 };

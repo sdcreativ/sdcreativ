@@ -1,4 +1,5 @@
 import { PRICING_REFERRAL_OFFER } from "@/lib/pricing-display";
+import { POPUP_CODE_PATTERN } from "@/lib/site-popups-types";
 import { z } from "zod";
 import { timelineOptions } from "@/content/contact-options";
 import type { SiteQuoteConfigSettings } from "@/lib/site-quote-config-types";
@@ -36,6 +37,8 @@ export function createDevisSchema(config: Pick<SiteQuoteConfigSettings, "project
     pricingPlan: z.string().regex(/^[a-z0-9-]{1,120}$/).optional().catch(undefined),
     /** Offre associée, ex. remise parrainage hébergement. Ignorée si inconnue. */
     pricingOffer: z.enum([PRICING_REFERRAL_OFFER]).optional().catch(undefined),
+    /** Code avantage reçu via un popup (vérifié côté serveur). Ignoré si mal formé. */
+    promoCode: z.string().trim().toUpperCase().regex(POPUP_CODE_PATTERN).optional().catch(undefined),
   }).superRefine((data, ctx) => {
     if (data.pageTierId && !pageTierIds.has(data.pageTierId)) {
       ctx.addIssue({ code: "custom", message: "Palier de pages invalide.", path: ["pageTierId"] });
