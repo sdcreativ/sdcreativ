@@ -20,6 +20,7 @@ export const LEAD_SOURCES = [
   "whatsapp",
   "live_chat_3cx",
   "call_3cx",
+  "popup",
 ] as const;
 
 export type LeadStatus = (typeof LEAD_STATUSES)[number];

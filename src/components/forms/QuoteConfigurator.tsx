@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState, type FormEvent } from "react";
 import { useSearchParams } from "next/navigation";
 import { PRICING_REFERRAL_OFFER } from "@/lib/pricing-display";
+import { POPUP_CODE_PATTERN } from "@/lib/site-popups-types";
 import {
   Calculator,
   CheckCircle,
@@ -82,6 +83,9 @@ export function QuoteConfigurator({
   // Formule / offre transmises par le bouton d'une carte tarifs (validées côté serveur).
   const pricingPlan = /^[a-z0-9-]{1,120}$/.test(searchParams.get("formule") ?? "") ? searchParams.get("formule")! : undefined;
   const pricingOffer = searchParams.get("offre") === PRICING_REFERRAL_OFFER ? PRICING_REFERRAL_OFFER : undefined;
+  const promoCode = POPUP_CODE_PATTERN.test((searchParams.get("code") ?? "").toUpperCase())
+    ? searchParams.get("code")!.toUpperCase()
+    : undefined;
 
   useEffect(() => {
     const type = searchParams.get("type");
@@ -153,6 +157,7 @@ export function QuoteConfigurator({
       message: data.get("message"),
       pricingPlan,
       pricingOffer,
+      promoCode,
       _hp: data.get("_hp"),
       turnstileToken: turnstileToken || undefined,
     };
@@ -259,6 +264,13 @@ export function QuoteConfigurator({
           </p>
         </div>
 
+        {promoCode && !isPresentation && (
+          <p className="rounded-xl bg-emerald-50 px-4 py-3 text-sm text-emerald-800" role="note">
+            {locale === "en" ? "Your personal code " : "Votre code personnel "}
+            <strong className="font-mono">{promoCode}</strong>
+            {locale === "en" ? " will be applied to your request." : " sera pris en compte dans votre demande."}
+          </p>
+        )}
         {pricingPlan && !isPresentation && (
           <p className="rounded-xl bg-primary-light px-4 py-3 text-sm text-primary" role="note">
             {locale === "en" ? "Selected plan: " : "Formule choisie : "}

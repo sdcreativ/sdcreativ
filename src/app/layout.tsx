@@ -4,6 +4,7 @@ import { FooterGate } from "@/components/layout/FooterGate";
 import { DeferredFloatingWidgets } from "@/components/layout/DeferredFloatingWidgets";
 import { SkipLink } from "@/components/layout/SkipLink";
 import { CookieConsent } from "@/components/layout/CookieConsent";
+import { SitePopup } from "@/components/popups/SitePopup";
 import { AppProviders } from "@/components/layout/AppProviders";
 import { Analytics } from "@/components/analytics/Analytics";
 import { TrackCtaListener } from "@/components/analytics/TrackCtaListener";
@@ -69,6 +70,7 @@ export default async function RootLayout({
           <FooterGate sitePublic={sitePublic} />
           <DeferredFloatingWidgets />
           <CookieConsent />
+          <SitePopup />
           <Analytics />
           <TrackCtaListener />
         </AppProviders>
