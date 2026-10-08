@@ -17,7 +17,6 @@ export function GET(request: Request) {
  * des messageries (RFC 8058 : jeton dans l'URL, corps List-Unsubscribe=One-Click).
  */
 export async function POST(request: Request) {
-  if (!isDatabaseConfigured()) return NextResponse.json({ error: "Service indisponible." }, { status: 503 });
   const limited = consumeRateLimit("public-unsubscribe", getClientIp(request), PUBLIC_FORM_RATE_LIMIT);
   if (limited.limited) return rateLimitExceededResponse(limited.retryAfterSec);
 
@@ -28,6 +27,7 @@ export async function POST(request: Request) {
   }
   const email = verifyUnsubscribeToken(token);
   if (!email) return NextResponse.json({ error: "Lien de désinscription invalide." }, { status: 400 });
+  if (!isDatabaseConfigured()) return NextResponse.json({ error: "Service indisponible." }, { status: 503 });
 
   try {
     await unsubscribeEmail(email);

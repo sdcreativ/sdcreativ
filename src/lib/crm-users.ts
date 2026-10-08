@@ -597,11 +597,21 @@ export async function ensureBootstrapAdmin(): Promise<void> {
   if (!secret) return;
 
   await withDb(async (query) => {
+    const email = process.env.CRM_BOOTSTRAP_EMAIL ?? "admin@sdcreativ.com";
     const { rows } = await query<{ count: string }>(`SELECT COUNT(*)::text AS count FROM crm_users`);
-    if (Number(rows[0]?.count ?? 0) > 0) return;
+    if (Number(rows[0]?.count ?? 0) > 0) {
+      // Mode e2e uniquement : l'admin a pu être créé avant (initialisation de la base pendant le build CI,
+      // sans le jeton e2e) avec un changement de mot de passe forcé qui bloquerait les tests.
+      if (isCrmE2eEnabled()) {
+        await query(
+          `UPDATE crm_users SET must_change_password = false WHERE lower(email) = lower($1) AND must_change_password = true`,
+          [email],
+        );
+      }
+      return;
+    }
 
     const passwordHash = await hashPassword(secret);
-    const email = process.env.CRM_BOOTSTRAP_EMAIL ?? "admin@sdcreativ.com";
     const name = process.env.CRM_BOOTSTRAP_NAME ?? "Administrateur SD CREATIV";
     // En mode e2e (CRM_E2E_LOGIN_TOKEN), ne pas forcer le changement de MDP (parcours Playwright).
     const mustChangePassword = !isCrmE2eEnabled();
