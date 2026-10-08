@@ -138,7 +138,9 @@ describe("employee contract clause templates", () => {
       rccm: "CI-ABJ-2020-B-12345",
       ncc: "1234567A",
     });
-    expect(html).toContain('src="https://sdcreativ.com/images/logo.png"');
+    // Papier à en-tête officiel (logo d'origine embarqué, répété sur chaque page du PDF).
+    expect(html).toContain('id="sd-letterhead-header"');
+    expect(html).toContain("IDU : CI-2026-0074317 R");
     expect(html).toContain("Article 1");
     expect(html).toContain("Côte d'Ivoire");
     expect(html).toContain("RH-ADA-001");

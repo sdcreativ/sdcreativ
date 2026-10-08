@@ -5,10 +5,8 @@ import {
   INVOICE_STATUS_LABELS,
 } from "@/content/invoices-labels";
 import type { InvoiceDocumentCompany } from "@/lib/billing/document-company";
-import {
-  buildDefaultDocumentCompany,
-  buildDocumentCompanyHeader,
-} from "@/lib/billing/document-pdf-header";
+import { buildDefaultDocumentCompany } from "@/lib/billing/document-pdf-header";
+import { applyLetterhead } from "@/lib/billing/letterhead";
 import type { PdfVerification } from "@/lib/billing/verification-html";
 import { injectVerificationBlock } from "@/lib/billing/verification-html";
 
@@ -71,7 +69,6 @@ export function buildInvoicePdfHtml(
   </style>
 </head>
 <body>
-  ${buildDocumentCompanyHeader(company)}
 
   <section style="display:flex;align-items:flex-start;justify-content:space-between;gap:24px;margin-bottom:28px">
     <div>
@@ -181,7 +178,7 @@ export function buildInvoicePdfHtml(
 </body>
 </html>`;
 
-  return injectVerificationBlock(html, options?.verification);
+  return applyLetterhead(injectVerificationBlock(html, options?.verification));
 }
 
 function escapeHtml(value: string): string {

@@ -1,5 +1,6 @@
 import type { Contract } from "@/lib/contracts";
 import { formatInvoiceAmount } from "@/content/invoices-labels";
+import { applyLetterhead } from "@/lib/billing/letterhead";
 
 function escapeHtml(value: string): string {
   return value
@@ -38,7 +39,7 @@ export function buildContractPdfHtml(
   </div>`
     : "";
 
-  return `<!DOCTYPE html>
+  return applyLetterhead(`<!DOCTYPE html>
 <html lang="fr">
 <head><meta charset="utf-8"/><title>${escapeHtml(contract.reference)}</title>
 <style>
@@ -63,5 +64,5 @@ export function buildContractPdfHtml(
   ${contract.notes ? `<p style="margin-top:24px">${escapeHtml(contract.notes)}</p>` : ""}
   ${sigBlock}
   <p class="footer">Document généré pour signature électronique — SD CREATIV</p>
-</body></html>`;
+</body></html>`);
 }
