@@ -8,7 +8,7 @@ import { HoneypotField } from "@/components/forms/HoneypotField";
 import { TurnstileWidget } from "@/components/forms/TurnstileWidget";
 import { useFormTurnstile } from "@/components/forms/useFormTurnstile";
 import { getCookieConsent } from "@/components/layout/CookieConsent";
-import { SitePopupCard } from "@/components/popups/SitePopupCard";
+import { POPUP_INPUT_CLASS, POPUP_LABEL_CLASS, SitePopupCard } from "@/components/popups/SitePopupCard";
 import { isActiveEnglishPath } from "@/i18n/routes";
 import {
   POPUP_FORBIDDEN_PREFIXES,
@@ -121,8 +121,7 @@ const COPY = {
   },
 } as const;
 
-const inputClass =
-  "w-full rounded-xl border border-gray/60 bg-white px-3 py-2.5 text-sm text-foreground focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20";
+const inputClass = POPUP_INPUT_CLASS;
 
 type Result = { code: string; expiresAt: string; devisUrl: string; whatsappUrl: string };
 
@@ -318,25 +317,31 @@ export function SitePopup() {
     >
       {result ? (
         <div className="space-y-4">
-          <div className="rounded-xl border border-dashed border-primary/40 bg-primary-light p-4 text-center">
-            <p className="text-xs font-semibold uppercase tracking-wide text-gray-text">{t.yourCode}</p>
-            <p className="mt-1 font-mono text-2xl font-extrabold tracking-widest text-foreground">{result.code}</p>
-            <p className="mt-1 text-xs text-gray-text">
+          <div className="rounded-xl border-2 border-dashed border-[#0175BA]/40 bg-white p-4 text-center">
+            <p className="text-xs font-semibold uppercase tracking-wide text-[#595959]">{t.yourCode}</p>
+            <p className="mt-1 font-mono text-2xl font-extrabold tracking-widest text-[#010101]">{result.code}</p>
+            <p className="mt-1 text-xs text-[#595959]">
               {popup.offerLabel} · {t.validUntil} {expires}
             </p>
             <button
               type="button"
               onClick={() => void copyCode()}
-              className="mt-2 inline-flex items-center gap-1.5 rounded-lg px-2 py-1 text-xs font-semibold text-primary hover:bg-white"
+              className="mt-2 inline-flex items-center gap-1.5 rounded-lg px-2 py-1 text-xs font-semibold text-[#0175BA] hover:bg-[#0175BA]/10"
             >
               {copied ? <Check className="h-3.5 w-3.5" aria-hidden /> : <Copy className="h-3.5 w-3.5" aria-hidden />}
               {copied ? t.copied : t.copy}
             </button>
           </div>
           <div className="flex flex-col gap-2 sm:flex-row">
-            <Button href={result.devisUrl} variant={popup.variant === "accent" ? "accent" : "primary"} className="flex-1 justify-center">
+            <a
+              href={result.devisUrl}
+              className={cn(
+                "inline-flex flex-1 items-center justify-center rounded-xl px-5 py-3.5 text-base font-bold text-white transition-colors",
+                popup.variant === "accent" ? "bg-[#E23944] hover:bg-[#C92F3A]" : "bg-[#0175BA] hover:bg-[#0471B3]",
+              )}
+            >
               {t.useCode}
-            </Button>
+            </a>
             {result.whatsappUrl && (
               <Button href={result.whatsappUrl} variant="whatsappLight" className="flex-1 justify-center">
                 <MessageCircle className="h-4 w-4" aria-hidden />
@@ -346,16 +351,16 @@ export function SitePopup() {
           </div>
         </div>
       ) : (
-        <form onSubmit={(e) => void submit(e)} className="relative space-y-3" noValidate={false}>
+        <form onSubmit={(e) => void submit(e)} className="relative space-y-4" noValidate={false}>
           <HoneypotField />
           {step === 1 ? (
             <>
               <label className="block">
-                <span className="mb-1 block text-xs font-medium text-gray-text">{t.name}</span>
+                <span className={POPUP_LABEL_CLASS}>{t.name}</span>
                 <input required minLength={2} maxLength={120} autoComplete="given-name" value={form.name} onChange={(e) => set("name", e.target.value)} className={inputClass} />
               </label>
               <label className="block">
-                <span className="mb-1 block text-xs font-medium text-gray-text">{t.email}</span>
+                <span className={POPUP_LABEL_CLASS}>{t.email}</span>
                 <input required type="email" maxLength={255} autoComplete="email" value={form.email} onChange={(e) => set("email", e.target.value)} className={inputClass} />
               </label>
             </>
@@ -363,13 +368,13 @@ export function SitePopup() {
             <>
               {popup.askPhone && (
                 <label className="block">
-                  <span className="mb-1 block text-xs font-medium text-gray-text">{t.phone}</span>
+                  <span className={POPUP_LABEL_CLASS}>{t.phone}</span>
                   <input type="tel" maxLength={40} autoComplete="tel" value={form.phone} onChange={(e) => set("phone", e.target.value)} className={inputClass} placeholder="+225 07 00 00 00 00" />
                 </label>
               )}
               {popup.askProject && (
                 <fieldset>
-                  <legend className="mb-1 block text-xs font-medium text-gray-text">{t.project}</legend>
+                  <legend className={POPUP_LABEL_CLASS}>{t.project}</legend>
                   <div className="flex flex-wrap gap-2">
                     {POPUP_PROJECT_TYPES.map((type) => (
                       <button
@@ -379,7 +384,9 @@ export function SitePopup() {
                         onClick={() => set("projectType", form.projectType === type ? "" : type)}
                         className={cn(
                           "rounded-full border px-3 py-1.5 text-xs font-medium",
-                          form.projectType === type ? "border-primary bg-primary text-white" : "border-gray/60 bg-white text-foreground hover:bg-gray-light",
+                          form.projectType === type
+                            ? "border-[#0175BA] bg-[#0175BA] text-white"
+                            : "border-[#C9D3E3] bg-white text-[#010101] hover:border-[#0175BA]",
                         )}
                       >
                         {type}
@@ -393,7 +400,7 @@ export function SitePopup() {
           {(step === 2 || !hasStep2) && (
             <>
               <label className="flex items-start gap-2 text-xs leading-relaxed text-gray-text">
-                <input type="checkbox" required checked={form.consent} onChange={(e) => set("consent", e.target.checked)} className="mt-0.5 rounded border-gray/60 text-primary" />
+                <input type="checkbox" required checked={form.consent} onChange={(e) => set("consent", e.target.checked)} className="mt-0.5 rounded border-[#C9D3E3] text-[#0175BA]" />
                 {popup.consentText}
               </label>
               {required && <TurnstileWidget onToken={setTurnstileToken} onExpire={onExpire} />}
@@ -406,14 +413,21 @@ export function SitePopup() {
           )}
           <div className="flex gap-2 pt-1">
             {step === 2 && (
-              <button type="button" onClick={() => setStep(1)} className="rounded-xl border border-gray/60 px-4 py-2.5 text-sm font-medium hover:bg-gray-light">
+              <button type="button" onClick={() => setStep(1)} className="rounded-xl border border-[#C9D3E3] bg-white px-4 py-3.5 text-base font-medium text-[#010101] hover:border-[#0175BA]">
                 {t.back}
               </button>
             )}
-            <Button type="submit" disabled={loading} variant={popup.variant === "accent" ? "accent" : "primary"} className="flex-1 justify-center">
-              {loading && <Loader2 className="h-4 w-4 animate-spin" aria-hidden />}
+            <button
+              type="submit"
+              disabled={loading}
+              className={cn(
+                "inline-flex flex-1 items-center justify-center gap-2 rounded-xl px-5 py-3.5 text-lg font-bold text-white shadow-sm transition-colors disabled:opacity-60",
+                popup.variant === "accent" ? "bg-[#E23944] hover:bg-[#C92F3A]" : "bg-[#0175BA] hover:bg-[#0471B3]",
+              )}
+            >
+              {loading && <Loader2 className="h-5 w-5 animate-spin" aria-hidden />}
               {step === 1 && hasStep2 ? t.next : popup.ctaLabel}
-            </Button>
+            </button>
           </div>
         </form>
       )}
