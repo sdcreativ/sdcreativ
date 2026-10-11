@@ -6,9 +6,11 @@ on:
   pull_request:
     branches: [main, master]
 
+# Un groupe par type d'événement et par branche : la CI d'une PR ne peut plus annuler celle de main.
+# La CI de main n'est jamais annulée : c'est elle qui déclenche le déploiement (workflow Deploy).
 concurrency:
-  group: ci-${{ github.workflow }}-${{ github.ref }}
-  cancel-in-progress: true
+  group: ci-${{ github.workflow }}-${{ github.event_name }}-${{ github.head_ref || github.ref }}
+  cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
 
 jobs:
   quality:
