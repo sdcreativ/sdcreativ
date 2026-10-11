@@ -35,6 +35,8 @@ import {
 import { fetchCrmClients } from "@/lib/clients-api";
 import type { Client } from "@/lib/clients";
 import { QuoteEmailComposer } from "@/components/admin/QuoteEmailComposer";
+import { QuotePricingModal } from "@/components/admin/QuotePricingModal";
+import { canPriceQuote, quotePromoText } from "@/lib/quote-pricing";
 import {
   getComposerSubtotal,
   getQuoteLinesFromComposer,
@@ -58,6 +60,7 @@ import { KanbanDropColumn, KANBAN_DRAG_MIME } from "@/lib/kanban-dnd";
 import { cn } from "@/lib/utils";
 import { useDialog } from "@/components/ui/DialogProvider";
 import {
+  Calculator,
   Download,
   FileText,
   GripVertical,
@@ -559,6 +562,7 @@ function QuoteDetailPanel({
 }) {
   const [notes, setNotes] = useState(quote.notes ?? "");
   const [showEmail, setShowEmail] = useState(false);
+  const [showPricing, setShowPricing] = useState(false);
   const [creatingInvoice, setCreatingInvoice] = useState(false);
   const [validating, setValidating] = useState(false);
   const [goLiveLoading, setGoLiveLoading] = useState(false);
@@ -693,7 +697,7 @@ function QuoteDetailPanel({
   }
 
   const rangeLabel =
-    quote.estimateMin != null && quote.estimateMax != null
+    quote.estimateMin != null && quote.estimateMax != null && quote.estimateMin !== quote.estimateMax
       ? `${formatQuoteAmount(quote.estimateMin, quote.currency).replace(" HT", "")} – ${formatQuoteAmount(quote.estimateMax, quote.currency)}`
       : null;
   const xofEquivalent = amountToXof(
@@ -755,7 +759,35 @@ function QuoteDetailPanel({
                 Équivalent : {formatMoney(xofEquivalent, "XOF")}
               </p>
             ) : null}
-            {rangeLabel && <p className="mt-1 text-xs text-gray-text">Fourchette : {rangeLabel}</p>}
+            {rangeLabel && quote.subtotal > 0 && (
+              <p className="mt-1 text-xs text-gray-text">Fourchette : {rangeLabel}</p>
+            )}
+            {quotePromoText(quote) && (
+              <p className="mt-2 rounded-lg bg-white/70 px-2.5 py-1.5 text-xs font-medium text-foreground">
+                Avantage : {quotePromoText(quote)}
+              </p>
+            )}
+            {quote.subtotal <= 0 && (
+              <p className="mt-2 text-sm font-medium text-foreground">
+                Demande à chiffrer : le client a indiqué son besoin, le montant reste à établir.
+              </p>
+            )}
+            {canPriceQuote(quote) && (
+              <button
+                type="button"
+                disabled={saving}
+                onClick={() => setShowPricing(true)}
+                className={cn(
+                  "mt-3 inline-flex items-center justify-center gap-2 rounded-xl px-4 py-2.5 text-sm font-semibold disabled:opacity-50",
+                  quote.subtotal <= 0
+                    ? "w-full bg-primary text-white hover:bg-primary-dark"
+                    : "border border-primary/30 bg-white text-primary hover:bg-primary-light/40",
+                )}
+              >
+                <Calculator className="h-4 w-4" aria-hidden />
+                {quote.subtotal <= 0 ? "Chiffrer le devis" : "Modifier le chiffrage"}
+              </button>
+            )}
           </div>
 
           <label className="block">
@@ -842,7 +874,8 @@ function QuoteDetailPanel({
           {canPublish && (
             <button
               type="button"
-              disabled={saving || publishing}
+              disabled={saving || publishing || quote.subtotal <= 0}
+              title={quote.subtotal <= 0 ? "Chiffrez le devis avant de le publier." : undefined}
               onClick={() => void handlePublish()}
               className="inline-flex w-full items-center justify-center gap-2 rounded-xl bg-primary py-3 text-sm font-semibold text-white hover:bg-primary-dark disabled:opacity-50"
             >
@@ -1129,6 +1162,16 @@ function QuoteDetailPanel({
       </div>
       </div>
 
+      {showPricing && (
+        <QuotePricingModal
+          quote={quote}
+          onClose={() => setShowPricing(false)}
+          onSaved={(updated) => {
+            setShowPricing(false);
+            onUpdated(updated);
+          }}
+        />
+      )}
       {showEmail && (
         <QuoteEmailComposer
           quoteId={quote.id}
@@ -1209,6 +1252,7 @@ function CreateQuoteModal({
             ? null
             : Number(exchangeRate) || suggestedRateToXof(currency),
         legalEntityId: String(data.get("legalEntityId") || "") || null,
+        promoCode: String(data.get("promoCode") || "").trim() || undefined,
       });
       onCreated(quote);
     } catch (err) {
@@ -1356,6 +1400,15 @@ function CreateQuoteModal({
             />
           </div>
 
+          <input
+            name="promoCode"
+            placeholder="Code avantage du client (popup), ex. SDC-XXXXXX"
+            aria-label="Code avantage"
+            onChange={(e) => {
+              e.target.value = e.target.value.toUpperCase();
+            }}
+            className={`${fieldClass} mt-4 font-mono`}
+          />
           <textarea
             name="notes"
             placeholder="Notes internes"

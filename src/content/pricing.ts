@@ -78,14 +78,18 @@ const quoteEn: Pick<
   ctaHref: "/en/devis",
 };
 
-/** Catalogue code — repli si la base est vide, et source de « Importer depuis le code ». */
+/**
+ * Catalogue code — repli si la base est vide, et source de « Importer depuis le code ».
+ * Tenu aligné sur les formules publiées (base au 11/10/2026) : c'est aussi ce que sert la page
+ * pré-rendue au build, avant la première revalidation.
+ */
 export const pricingPlans: PricingPlan[] = [
   {
     id: "essentiel",
     name: "Essentiel",
-    tagline: "Pour démarrer.",
-    priceMode: "from",
-    priceAmount: 287000,
+    tagline: "Lancez votre présence en ligne.",
+    priceMode: "fixed",
+    priceAmount: 221635,
     ...priceFr,
     variant: "primary",
     perks: perksFr,
@@ -102,9 +106,9 @@ export const pricingPlans: PricingPlan[] = [
   {
     id: "professionnel",
     name: "Professionnel",
-    tagline: "Pour accélérer.",
+    tagline: "Développez votre visibilité et vos contacts.",
     priceMode: "fixed",
-    priceAmount: 450000,
+    priceAmount: 351435,
     ...priceFr,
     variant: "primary",
     highlighted: true,
@@ -118,16 +122,16 @@ export const pricingPlans: PricingPlan[] = [
       "Galerie & portfolio",
       "Module blog",
       "Sécurité renforcée",
-      "Optimisation SEO avancée",
+      "Optimisation SEO",
       "Support prioritaire 3 mois",
     ],
   },
   {
     id: "business",
     name: "Business",
-    tagline: "Pour vendre.",
+    tagline: "Vendez vos produits en ligne.",
     priceMode: "fixed",
-    priceAmount: 790000,
+    priceAmount: 674849,
     ...priceFr,
     variant: "accent",
     perks: perksFr,
@@ -141,6 +145,7 @@ export const pricingPlans: PricingPlan[] = [
       "Gestion des commandes",
       "Accompagnement dédié",
       "Formation administration",
+      "Optimisation SEO avancée",
     ],
   },
 ];

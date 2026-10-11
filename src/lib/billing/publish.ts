@@ -1,6 +1,6 @@
 import { buildQuoteEmailHtml } from "@/lib/quote-email";
 import { getPdfDocumentCompany } from "@/lib/billing/document-company";
-import { buildQuotePdfHtml } from "@/lib/quote-pdf";
+import { buildQuotePdfHtml, quotePromoText } from "@/lib/quote-pdf";
 import { sendEmail } from "@/lib/email";
 import { getClientById } from "@/lib/clients";
 import { portalNotificationPrefAllows } from "@/lib/client-portal-settings";
@@ -53,12 +53,14 @@ async function markQuotePublished(
 }
 
 function buildPublishEmailBody(quote: Quote, siteUrl: string, portalUrl: string): string {
+  const promo = quotePromoText(quote);
+  const promoLine = promo ? `\nAvantage : ${promo}` : "";
   return `Bonjour ${quote.name.split(" ")[0] ?? quote.name},
 
 Votre devis ${quote.reference} est disponible dans votre espace client SD CREATIV.
 
 Montant HT : ${formatQuoteAmount(quote.subtotal, quote.currency)}
-Projet : ${quote.projectLabel}
+Projet : ${quote.projectLabel}${promoLine}
 
 Consultez et signez votre devis ici :
 ${portalUrl}
@@ -81,6 +83,10 @@ export async function publishQuote(input: {
     throw new BillingWorkflowError(
       `Ce devis ne peut pas être publié depuis le statut « ${quote.status} ».`,
     );
+  }
+
+  if (quote.subtotal <= 0) {
+    throw new BillingWorkflowError("Chiffrez le devis avant de le publier (montant à 0).");
   }
 
   assertQuoteTransition(quote.status, "sent");

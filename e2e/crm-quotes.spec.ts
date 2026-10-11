@@ -84,4 +84,44 @@ test.describe("CRM — login → devis → signature", () => {
     expect(proofBody.proof.signerName).toContain("E2E");
     expect(proofBody.proof.provider).toBeTruthy();
   });
+
+  test("chiffrage d'une demande du configurateur (montant à 0)", async ({ page }) => {
+    await loginCrm(page);
+    const stamp = Date.now();
+    const res = await page.request.post("/api/admin/quotes", {
+      data: {
+        name: `Demande E2E ${stamp}`,
+        email: `e2e-chiffrage-${stamp}@example.com`,
+        projectTypeId: "e-commerce",
+        projectLabel: "E-commerce",
+        lines: [{ label: "E-commerce", amount: 0 }],
+        subtotal: 0,
+        budget: "1000",
+        status: "follow_up",
+        currency: "XOF",
+      },
+    });
+    expect(res.ok(), await res.text()).toBeTruthy();
+    const { quote } = (await res.json()) as { quote: { id: string; reference: string } };
+
+    await page.goto(`/admin/crm/devis?id=${quote.id}`);
+    await expect(page.getByText("Demande à chiffrer")).toBeVisible({ timeout: 15_000 });
+    await expect(page.getByRole("button", { name: /Publier le devis/ })).toBeDisabled();
+
+    await page.getByRole("button", { name: "Chiffrer le devis" }).click();
+    await expect(page.getByText("Demande du client")).toBeVisible();
+    const firstLine = page.getByRole("listitem").filter({ has: page.getByLabel("Prix unit. HT") }).first();
+    await firstLine.getByLabel("Libellé").fill("Boutique en ligne");
+    await firstLine.getByLabel("Prix unit. HT").fill("1500000");
+    await page.getByRole("button", { name: /Enregistrer le chiffrage/ }).click();
+
+    await expect(page.getByText("Demande à chiffrer")).toBeHidden({ timeout: 15_000 });
+    await expect(page.getByRole("button", { name: "Modifier le chiffrage" })).toBeVisible();
+    await expect(page.getByRole("button", { name: /Publier le devis/ })).toBeEnabled();
+
+    const saved = await page.request.get(`/api/admin/quotes/${quote.id}`);
+    const body = (await saved.json()) as { quote: { reference: string; subtotal: number; status: string } };
+    expect(body.quote).toMatchObject({ reference: quote.reference, status: "follow_up" });
+    expect(body.quote.subtotal).toBeGreaterThanOrEqual(1_500_000);
+  });
 });

@@ -1,6 +1,7 @@
 import { crmApiAuth } from "@/lib/crm-api-auth";
 import { NextResponse } from "next/server";
 import { isDatabaseConfigured } from "@/lib/db";
+import { checkPromoForQuote, markPromoUsed, promoMetadata, QuotePromoError } from "@/lib/quote-promo";
 import { createQuote, createQuoteSchema, listQuotesFiltered, type QuoteListFilters } from "@/lib/quotes";
 import { QUOTE_STATUSES, type QuoteStatus } from "@/content/quotes-labels";
 
@@ -57,9 +58,24 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: firstError }, { status: 400 });
     }
 
-    const quote = await createQuote(parsed.data);
+    // Code avantage (popup) annoncé par le client : vérifié puis écrit sur le devis.
+    const rawPromo = typeof body?.promoCode === "string" ? body.promoCode.trim() : "";
+    const promo = rawPromo
+      ? await checkPromoForQuote(
+          { email: parsed.data.email, leadId: parsed.data.leadId ?? null, metadata: parsed.data.metadata ?? {} },
+          rawPromo,
+        )
+      : null;
+
+    const quote = await createQuote(
+      promo ? { ...parsed.data, metadata: { ...(parsed.data.metadata ?? {}), ...promoMetadata(promo) } } : parsed.data,
+    );
+    await markPromoUsed(promo);
     return NextResponse.json({ quote }, { status: 201 });
   } catch (error) {
+    if (error instanceof QuotePromoError) {
+      return NextResponse.json({ error: error.message }, { status: 400 });
+    }
     console.error("[api/admin/quotes] POST", error);
     return NextResponse.json({ error: "Erreur serveur." }, { status: 500 });
   }

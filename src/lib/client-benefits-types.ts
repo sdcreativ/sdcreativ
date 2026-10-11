@@ -94,3 +94,20 @@ export function applyBenefitToLines<L extends { label: string; amount: number }>
   });
   return { lines: discounted, discount };
 }
+
+const ORDINAL_YEARS = ["1re", "2e", "3e", "4e", "5e"];
+
+/**
+ * Promesse en clair, écrite sur le devis : « -50 % sur la maintenance de la 2e année ».
+ * Calculée depuis les conditions figées (le libellé du popup peut avoir changé depuis l'inscription).
+ */
+export function describeBenefit(terms: BenefitTerms, fallbackLabel?: string | null): string | null {
+  if (!hasBenefit(terms)) return fallbackLabel?.trim() || null;
+  const pct = `-${terms.percent.toLocaleString("fr-FR")} %`;
+  const year = terms.startMonths / 12;
+  if (terms.durationMonths === 12 && Number.isInteger(year) && ORDINAL_YEARS[year]) {
+    return `${pct} sur la maintenance de la ${ORDINAL_YEARS[year]} année`;
+  }
+  const from = terms.startMonths === 0 ? "dès la signature" : `à partir du ${terms.startMonths + 1}e mois`;
+  return `${pct} sur la maintenance pendant ${terms.durationMonths} mois, ${from}`;
+}

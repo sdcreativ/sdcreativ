@@ -1,10 +1,11 @@
 import { z } from "zod";
 import type { QueryResultRow } from "pg";
-import { withDb } from "@/lib/db";
+import { withDb, withDbTransaction } from "@/lib/db";
 import type { QuoteStatus } from "@/content/quotes-labels";
 import { QUOTE_STATUSES } from "@/content/quotes-labels";
 import { updateLead } from "@/lib/leads";
 import type { QuoteLine } from "@/lib/quote-calculator";
+import { canPriceQuote, pricedQuoteLines, type QuotePricingInput } from "@/lib/quote-pricing";
 import {
   normalizeCurrency,
   resolveExchangeRateToXof,
@@ -527,6 +528,64 @@ export async function updateQuote(
     }
 
     return quote;
+  });
+}
+
+export class QuotePricingError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = "QuotePricingError";
+  }
+}
+
+/**
+ * Chiffre (ou rechiffre) un devis existant : lignes, intitulé et devise. Même référence, même prospect.
+ * Refusé après signature ou archivage ; le montant est recalculé côté serveur.
+ */
+export async function updateQuotePricing(
+  id: string,
+  input: QuotePricingInput,
+): Promise<{ quote: Quote; previousSubtotal: number; previousCurrency: string } | null> {
+  const { lines, subtotal } = pricedQuoteLines(input.lines);
+  if (subtotal <= 0) throw new QuotePricingError("Le montant du devis doit être supérieur à 0.");
+
+  return withDbTransaction(async (query) => {
+    const { rows: existingRows } = await query<QuoteRow>(`SELECT * FROM quotes WHERE id = $1 FOR UPDATE`, [id]);
+    const existing = existingRows[0];
+    if (!existing) return null;
+    const current = mapQuote(existing);
+    if (!canPriceQuote(current)) {
+      throw new QuotePricingError("Ce devis est signé, facturé ou archivé : son chiffrage ne peut plus être modifié.");
+    }
+
+    const currency = normalizeCurrency(input.currency);
+    const rate = resolveExchangeRateToXof(
+      currency,
+      input.exchangeRateToXof !== undefined
+        ? input.exchangeRateToXof
+        : currency === current.currency
+          ? current.exchangeRateToXof
+          : null,
+    );
+    const metadata = { ...(current.metadata ?? {}), pricedAt: new Date().toISOString() };
+
+    const { rows } = await query<QuoteRow>(
+      `UPDATE quotes SET
+        project_label = $2,
+        lines = $3::jsonb,
+        subtotal = $4,
+        estimate_min = $4,
+        estimate_max = $4,
+        currency = $5,
+        exchange_rate_to_xof = $6,
+        exchange_rate_at = CASE WHEN $6::numeric IS NULL THEN NULL ELSE NOW() END,
+        metadata = $7::jsonb,
+        updated_at = NOW()
+      WHERE id = $1
+      RETURNING *`,
+      [id, input.projectLabel, JSON.stringify(lines), subtotal, currency, rate, JSON.stringify(metadata)],
+    );
+    return { quote: mapQuote(rows[0]), previousSubtotal: current.subtotal, previousCurrency: current.currency };
   });
 }
 
