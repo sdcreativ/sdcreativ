@@ -840,7 +840,7 @@ function CreateTaskModal({
 
           {selectedClientId && !quotesLoading && clientQuotes.length === 1 && selectedQuote && (
             <p className="rounded-xl border border-emerald-200 bg-emerald-50 px-3 py-2 text-xs text-emerald-900">
-              Devis lié : <strong>{selectedQuote.reference}</strong> ({formatQuoteAmount(selectedQuote.subtotal)} HT)
+              Devis lié : <strong>{selectedQuote.reference}</strong> ({formatQuoteAmount(selectedQuote.subtotal)})
             </p>
           )}
 

@@ -109,7 +109,7 @@ export function CrmQuoteTemplatesPanel({ onApply, compact }: Props) {
               </div>
               <div className="px-4 py-3">
                 <p className="text-xs text-gray-text">
-                  {template.lineCount} ligne(s) · {formatQuoteAmount(template.totalAmount)} HT
+                  {template.lineCount} ligne(s) · {formatQuoteAmount(template.totalAmount)}
                 </p>
                 <p className="mt-1 text-[11px] text-gray-text">
                   {SERVICE_CATALOG_CATEGORY_LABELS[template.category]}
