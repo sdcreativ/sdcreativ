@@ -92,6 +92,8 @@ type SignupBenefitRow = {
 async function promoCodeForQuote(quote: Quote): Promise<string | null> {
   const fromQuote = quote.metadata?.promoCode;
   if (typeof fromQuote === "string" && fromQuote) return fromQuote;
+  // Code retiré du devis dans le CRM : celui du prospect ne s'applique plus.
+  if (quote.metadata && "promoCode" in quote.metadata) return null;
   if (!quote.leadId) return null;
   const lead = await getLeadById(quote.leadId).catch(() => null);
   const fromLead = lead?.metadata?.promoCode;

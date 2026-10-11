@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { describeBenefit } from "@/lib/client-benefits-types";
 import { attributionFromBody } from "@/lib/attribution";
 import {
   getBudgetLabel,
@@ -155,7 +156,7 @@ export async function POST(request: Request) {
         lines: quote.lines,
         ...(data.pricingPlan ? { pricingPlan: data.pricingPlan } : {}),
         ...(data.pricingOffer ? { pricingOffer: data.pricingOffer } : {}),
-        ...(data.promoCode ? { promoCode: data.promoCode, promoValid: Boolean(promo), promoOffer: promo?.offerLabel ?? null } : {}),
+        ...(data.promoCode ? { promoCode: data.promoCode, promoValid: Boolean(promo), promoOffer: promo ? describeBenefit(promo.benefit, promo.offerLabel) : null } : {}),
       },
     });
     if (promo) await markPopupCodeUsed(promo.code).catch((err) => console.error("[devis] code avantage", err));
@@ -180,7 +181,7 @@ export async function POST(request: Request) {
       metadata: {
         ...(data.pricingPlan ? { pricingPlan: data.pricingPlan } : {}),
         ...(data.pricingOffer ? { pricingOffer: data.pricingOffer } : {}),
-        ...(promo ? { promoCode: promo.code, promoOffer: promo.offerLabel } : {}),
+        ...(promo ? { promoCode: promo.code, promoOffer: describeBenefit(promo.benefit, promo.offerLabel) } : {}),
       },
     });
 

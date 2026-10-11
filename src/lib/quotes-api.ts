@@ -1,5 +1,7 @@
 import type { Quote } from "@/lib/quotes";
 import type { QuoteListFilters } from "@/lib/quotes";
+import type { QuotePricingInput, QuoteRequestSummary, SuggestedPricingLine } from "@/lib/quote-pricing";
+import type { QuotePromo } from "@/lib/quote-promo";
 import { parseFetchJson } from "@/lib/fetch-json";
 
 async function parseJson<T>(res: Response): Promise<T> {
@@ -210,3 +212,21 @@ export async function fetchQuoteSignatureProof(id: string) {
 }
 
 export type { QuoteListFilters };
+
+export async function fetchQuotePricingContext(
+  id: string,
+): Promise<{ request: QuoteRequestSummary; suggestedLines: SuggestedPricingLine[]; promo: QuotePromo | null }> {
+  const res = await fetch(`/api/admin/quotes/${id}/pricing`, { credentials: "include" });
+  return parseJson<{ request: QuoteRequestSummary; suggestedLines: SuggestedPricingLine[]; promo: QuotePromo | null }>(res);
+}
+
+export async function priceQuoteApi(id: string, input: QuotePricingInput): Promise<Quote> {
+  const res = await fetch(`/api/admin/quotes/${id}/pricing`, {
+    method: "PUT",
+    credentials: "include",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(input),
+  });
+  const json = await parseJson<{ quote: Quote }>(res);
+  return json.quote;
+}

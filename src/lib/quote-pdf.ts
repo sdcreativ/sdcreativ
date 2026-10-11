@@ -1,4 +1,5 @@
 import type { Quote } from "@/lib/quotes";
+import { quotePromoText } from "@/lib/quote-pricing";
 import { formatQuoteAmount, formatQuoteDate } from "@/content/quotes-labels";
 import { QUOTE_STATUS_LABELS } from "@/content/quotes-labels";
 import type { InvoiceDocumentCompany } from "@/lib/billing/document-company";
@@ -12,6 +13,8 @@ export type QuotePdfOptions = {
   verification?: PdfVerification;
   company?: InvoiceDocumentCompany;
 };
+
+export { quotePromoText };
 
 /** Devis sur papier à en-tête officiel (en-tête et pied répétés sur chaque page du PDF). */
 export function buildQuotePdfHtml(
@@ -46,6 +49,11 @@ function buildQuoteBodyHtml(
     quote.currency !== "XOF" && quote.exchangeRateToXof
       ? `<p style="text-align:right;color:#6b7280;font-size:0.75rem;margin-top:0.5rem">Taux figé : 1 ${escapeHtml(quote.currency)} = ${quote.exchangeRateToXof.toLocaleString("fr-FR")} XOF${quote.exchangeRateAt ? ` (${formatQuoteDate(quote.exchangeRateAt)})` : ""}</p>`
       : "";
+
+  const promo = quotePromoText(quote);
+  const promoBlock = promo
+    ? `<div style="margin-top:1.5rem;padding:0.9rem 1rem;border:1px solid ${company.primaryColor}33;border-left:4px solid ${company.primaryColor};border-radius:8px;background:#f8fafc"><strong>Avantage client</strong><br/>${escapeHtml(promo)}</div>`
+    : "";
 
   const html = `<!DOCTYPE html>
 <html lang="fr">
@@ -90,7 +98,9 @@ function buildQuoteBodyHtml(
 
   <p class="total">Total HT : ${formatQuoteAmount(quote.subtotal, quote.currency)}</p>
   ${fxNote}
-  ${quote.estimateMin && quote.estimateMax ? `<p style="text-align:right;color:#6b7280;font-size:0.875rem">Fourchette estimée : ${formatQuoteAmount(quote.estimateMin, quote.currency)} – ${formatQuoteAmount(quote.estimateMax, quote.currency)}</p>` : ""}
+  ${quote.estimateMin && quote.estimateMax && quote.estimateMin !== quote.estimateMax ? `<p style="text-align:right;color:#6b7280;font-size:0.875rem">Fourchette estimée : ${formatQuoteAmount(quote.estimateMin, quote.currency)} – ${formatQuoteAmount(quote.estimateMax, quote.currency)}</p>` : ""}
+
+  ${promoBlock}
 
   ${quote.message ? `<div style="margin-top:2rem;padding:1rem;background:#f9fafb;border-radius:8px"><strong>Notes :</strong><br/>${escapeHtml(quote.message)}</div>` : ""}
 

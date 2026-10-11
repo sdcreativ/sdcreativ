@@ -373,6 +373,15 @@ export async function findValidPopupCode(code: string): Promise<PopupSignup | nu
   });
 }
 
+/** Inscription liée à un code, quel que soit son état (valide, utilisé ou expiré). */
+export async function getPopupSignupByCode(code: string): Promise<PopupSignup | null> {
+  if (!isDatabaseConfigured()) return null;
+  return withDb(async (query) => {
+    const { rows } = await query<SignupRow>(`SELECT * FROM site_popup_signups WHERE code = $1 LIMIT 1`, [code]);
+    return rows[0] ? mapSignup(rows[0]) : null;
+  });
+}
+
 export async function markPopupCodeUsed(code: string): Promise<void> {
   await withDb(async (query) => {
     await query(`UPDATE site_popup_signups SET code_used_at = NOW() WHERE code = $1 AND code_used_at IS NULL`, [code]);
