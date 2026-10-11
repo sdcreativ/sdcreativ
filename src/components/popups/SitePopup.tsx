@@ -18,6 +18,7 @@ import {
   type PublicSitePopup,
 } from "@/lib/site-popups-types";
 import { cn } from "@/lib/utils";
+import { getStoredAttribution } from "@/lib/attribution-client";
 
 /* ── Stockage local (confort par visiteur ; tout est protégé : le popup marche sans) ── */
 type PopupState = { lastShownAt?: number; signedUp?: boolean };
@@ -267,6 +268,7 @@ export function SitePopup() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
+          attribution: getStoredAttribution(),
           name: form.name,
           email: form.email,
           phone: form.phone || undefined,

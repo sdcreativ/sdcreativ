@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { attributionFromBody } from "@/lib/attribution";
 import { escapeHtml, htmlRow, sendEmail } from "@/lib/email";
 import { rejectIfBot } from "@/lib/form-guard";
 import { createLead } from "@/lib/leads";
@@ -46,6 +47,7 @@ export async function POST(request: Request, { params }: Props) {
         console.error("[popup/signup] newsletter", err),
       );
       const lead = await createLead({
+        attribution: attributionFromBody(body),
         name: data.name,
         email: data.email,
         phone: data.phone ?? null,

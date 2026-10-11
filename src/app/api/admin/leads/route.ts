@@ -99,6 +99,8 @@ export async function POST(request: Request) {
       assignee: data.assignee,
       actorName: session?.name ?? null,
       metadata: data.metadata,
+      marketingOptIn: data.marketingOptIn,
+      acquisitionChannel: data.acquisitionChannel,
     });
 
     if (!lead) {

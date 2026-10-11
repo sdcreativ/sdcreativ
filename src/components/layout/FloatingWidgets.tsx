@@ -26,7 +26,9 @@ export function FloatingWidgets() {
   if (
     pathname.startsWith("/admin") ||
     pathname.startsWith("/espace-client") ||
-    pathname.startsWith("/presentation")
+    pathname.startsWith("/presentation") ||
+    // Page publicité : ses propres boutons WhatsApp, pas de chat ni de bouton flottant.
+    pathname.startsWith("/offre/")
   ) {
     return null;
   }

@@ -23,6 +23,7 @@ import { TurnstileWidget } from "@/components/forms/TurnstileWidget";
 import { useFormTurnstile } from "@/components/forms/useFormTurnstile";
 import { contactFormCopy, getContactSubjectOptions, type FormLocale } from "@/i18n/form-copy";
 import { cn } from "@/lib/utils";
+import { getStoredAttribution } from "@/lib/attribution-client";
 
 type FormState = "idle" | "loading" | "success" | "error";
 
@@ -97,6 +98,7 @@ export function ContactForm({
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
+          attribution: getStoredAttribution(),
           name: data.get("name"),
           email: data.get("email"),
           phone: data.get("phone"),

@@ -5,7 +5,14 @@ import type {
   PromoCampaign,
   PromoEnrollment,
 } from "@/lib/promo-campaigns";
+import type { AcquisitionPeriod, AcquisitionReport } from "@/lib/marketing-events";
 import { parseFetchJson } from "@/lib/fetch-json";
+
+export async function fetchAcquisitionReport(days: AcquisitionPeriod): Promise<AcquisitionReport> {
+  const res = await fetch(`/api/admin/marketing/acquisition?days=${days}`, { credentials: "include" });
+  const json = await parseFetchJson<{ report: AcquisitionReport }>(res);
+  return json.report;
+}
 
 export async function fetchNewsletterSubscribers(): Promise<NewsletterSubscriber[]> {
   const res = await fetch("/api/admin/marketing/subscribers", { credentials: "include" });

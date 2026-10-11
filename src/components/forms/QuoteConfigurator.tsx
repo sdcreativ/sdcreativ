@@ -34,6 +34,7 @@ import {
   getProjectType,
 } from "@/lib/quote-calculator";
 import { cn } from "@/lib/utils";
+import { getStoredAttribution } from "@/lib/attribution-client";
 
 type FormState = "idle" | "loading" | "success" | "error";
 
@@ -145,6 +146,7 @@ export function QuoteConfigurator({
     const data = new FormData(form);
 
     const payload = {
+      attribution: getStoredAttribution(),
       name: data.get("name"),
       email: data.get("email"),
       phone: data.get("phone"),

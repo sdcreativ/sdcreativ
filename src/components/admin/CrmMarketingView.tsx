@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import { Loader2, Mail, Megaphone, Trash2, UserPlus } from "lucide-react";
+import { BarChart3, Loader2, Mail, Megaphone, Trash2, UserPlus } from "lucide-react";
 import type { NewsletterSubscriber, WaitlistEntry } from "@/lib/marketing-subscribers";
 import {
   deleteWaitlistEntryApi,
@@ -10,6 +10,7 @@ import {
   patchNewsletterSubscriberApi,
 } from "@/lib/marketing-api";
 import { useDialog } from "@/components/ui/DialogProvider";
+import { CrmAcquisitionPanel } from "@/components/admin/CrmAcquisitionPanel";
 import { CrmMarketingSequencesPanel } from "@/components/admin/CrmMarketingSequencesPanel";
 import { CrmPromoCampaignsPanel } from "@/components/admin/CrmPromoCampaignsPanel";
 import { cn } from "@/lib/utils";
@@ -20,10 +21,10 @@ const INTEREST_LABELS: Record<string, string> = {
   general: "Intérêt général",
 };
 
-type Tab = "newsletter" | "waitlist" | "sequences" | "campaigns";
+type Tab = "acquisition" | "newsletter" | "waitlist" | "sequences" | "campaigns";
 
 export function CrmMarketingView() {
-  const [tab, setTab] = useState<Tab>("newsletter");
+  const [tab, setTab] = useState<Tab>("acquisition");
   const [subscribers, setSubscribers] = useState<NewsletterSubscriber[]>([]);
   const [waitlist, setWaitlist] = useState<WaitlistEntry[]>([]);
   const [loading, setLoading] = useState(true);
@@ -71,6 +72,7 @@ export function CrmMarketingView() {
       <nav className="flex gap-1 rounded-2xl border border-gray/30 bg-gray-light/30 p-1.5">
         {(
           [
+            { id: "acquisition" as const, label: "Acquisition", icon: BarChart3 },
             { id: "newsletter" as const, label: "Newsletter", icon: Mail },
             { id: "waitlist" as const, label: "Waitlist", icon: UserPlus },
             { id: "sequences" as const, label: "Séquences", icon: Mail },
@@ -103,6 +105,8 @@ export function CrmMarketingView() {
           <Loader2 className="h-5 w-5 animate-spin text-primary" aria-hidden />
           Chargement…
         </div>
+      ) : tab === "acquisition" ? (
+        <CrmAcquisitionPanel />
       ) : tab === "newsletter" ? (
         subscribers.length === 0 ? (
           <EmptyState>Aucun abonné newsletter pour le moment.</EmptyState>
