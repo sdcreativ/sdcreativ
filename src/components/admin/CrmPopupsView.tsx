@@ -4,7 +4,7 @@ import { useCallback, useEffect, useState } from "react";
 import { Eye, EyeOff, FlaskConical, Gift, Loader2, Pencil, Plus, RefreshCw, Trash2 } from "lucide-react";
 import { useDialog } from "@/components/ui/DialogProvider";
 import { CrmFormField, CrmFormHeader, crmFieldClass } from "@/components/admin/crm-site-form-ui";
-import { SitePopupCard } from "@/components/popups/SitePopupCard";
+import { POPUP_INPUT_CLASS, POPUP_LABEL_CLASS, SitePopupCard } from "@/components/popups/SitePopupCard";
 import { parseFetchJson } from "@/lib/fetch-json";
 import type { PopupPerformance, PopupSignup } from "@/lib/site-popups";
 import type { ClientBenefit } from "@/lib/client-benefits";
@@ -226,16 +226,22 @@ function PopupForm({
             <p className="mb-3 text-xs font-semibold uppercase tracking-wide text-gray-text">Aperçu</p>
             <div className="rounded-2xl bg-black/40 p-4">
               <SitePopupCard popup={form} onClose={() => undefined}>
-                <div className="space-y-3" aria-hidden>
-                  <div className={cn(crmFieldClass, "text-gray-text")}>Prénom</div>
-                  <div className={cn(crmFieldClass, "text-gray-text")}>E-mail</div>
+                <div className="space-y-4" aria-hidden>
+                  <div>
+                    <span className={POPUP_LABEL_CLASS}>Prénom</span>
+                    <div className={cn(POPUP_INPUT_CLASS, "h-12")} />
+                  </div>
+                  <div>
+                    <span className={POPUP_LABEL_CLASS}>E-mail</span>
+                    <div className={cn(POPUP_INPUT_CLASS, "h-12")} />
+                  </div>
                   {form.askProject && (
                     <div className="flex flex-wrap gap-1.5">
                       {POPUP_PROJECT_TYPES.slice(0, 3).map((t) => <span key={t} className="rounded-full border border-gray/60 px-2.5 py-1 text-xs">{t}</span>)}
                     </div>
                   )}
-                  <p className="text-xs leading-relaxed text-gray-text">☐ {form.consentText}</p>
-                  <div className={cn("rounded-lg py-2.5 text-center text-sm font-semibold text-white", form.variant === "accent" ? "bg-accent" : "bg-primary")}>{form.ctaLabel}</div>
+                  <p className="text-xs leading-relaxed text-[#595959]">☐ {form.consentText}</p>
+                  <div className={cn("rounded-xl py-3.5 text-center text-lg font-bold text-white", form.variant === "accent" ? "bg-[#E23944]" : "bg-[#0175BA]")}>{form.ctaLabel}</div>
                 </div>
               </SitePopupCard>
             </div>
