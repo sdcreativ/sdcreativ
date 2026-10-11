@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { ACQUISITION_CHANNELS, leadChannel, type AcquisitionChannel, type Attribution } from "@/lib/attribution";
 import { withDb, withDbTransaction, isDatabaseConfigured } from "@/lib/db";
 import { createLeadActivity } from "@/lib/lead-activities";
 import { LEAD_SOURCE_LABELS } from "@/content/leads-labels";
@@ -21,6 +22,7 @@ export const LEAD_SOURCES = [
   "live_chat_3cx",
   "call_3cx",
   "popup",
+  "landing",
 ] as const;
 
 export type LeadStatus = (typeof LEAD_STATUSES)[number];
@@ -43,6 +45,9 @@ export type Lead = {
   assigneeId: string | null;
   marketingOptIn: boolean;
   metadata: Record<string, unknown>;
+  /** Provenance (premier / dernier contact) et canal retenu — voir lib/attribution. */
+  attribution: Attribution | null;
+  acquisitionChannel: AcquisitionChannel | null;
   createdAt: string;
   updatedAt: string;
 };
@@ -64,6 +69,8 @@ type LeadRow = {
   assignee_id: string | null;
   marketing_opt_in?: boolean | null;
   metadata: Record<string, unknown> | null;
+  attribution?: Attribution | null;
+  acquisition_channel?: string | null;
   created_at: Date;
   updated_at: Date;
 };
@@ -86,6 +93,10 @@ function mapLead(row: LeadRow): Lead {
     assigneeId: row.assignee_id ?? null,
     marketingOptIn: Boolean(row.marketing_opt_in),
     metadata: row.metadata ?? {},
+    attribution: row.attribution ?? null,
+    acquisitionChannel: (ACQUISITION_CHANNELS as readonly string[]).includes(row.acquisition_channel ?? "")
+      ? (row.acquisition_channel as AcquisitionChannel)
+      : null,
     createdAt: row.created_at.toISOString(),
     updatedAt: row.updated_at.toISOString(),
   };
@@ -108,6 +119,10 @@ export type CreateLeadInput = {
   marketingOptIn?: boolean;
   actorName?: string | null;
   metadata?: Record<string, unknown>;
+  /** Provenance capturée sur le site (formulaires). */
+  attribution?: Attribution | null;
+  /** Canal saisi à la main (prospect arrivé hors du site) ; sinon déduit de `attribution`. */
+  acquisitionChannel?: AcquisitionChannel | null;
 };
 
 export const createLeadSchema = z.object({
@@ -126,6 +141,7 @@ export const createLeadSchema = z.object({
   assigneeId: z.string().uuid().optional().nullable(),
   marketingOptIn: z.boolean().optional().default(false),
   metadata: z.record(z.string(), z.unknown()).optional(),
+  acquisitionChannel: z.enum(ACQUISITION_CHANNELS).optional().nullable(),
 });
 
 export const updateLeadSchema = z.object({
@@ -141,6 +157,7 @@ export const updateLeadSchema = z.object({
   assignee: z.string().trim().max(100).optional().nullable(),
   assigneeId: z.string().uuid().optional().nullable(),
   marketingOptIn: z.boolean().optional(),
+  acquisitionChannel: z.enum(ACQUISITION_CHANNELS).optional().nullable(),
   metadata: z.record(z.string(), z.unknown()).optional(),
 });
 
@@ -158,8 +175,8 @@ export async function createLead(input: CreateLeadInput): Promise<Lead | null> {
         `INSERT INTO leads (
           name, email, phone, company, source, status,
           service, budget, timeline, message, estimated_value, assignee, assignee_id,
-          marketing_opt_in, metadata
-        ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15)
+          marketing_opt_in, metadata, attribution, acquisition_channel
+        ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17)
         RETURNING *`,
         [
           input.name,
@@ -177,6 +194,8 @@ export async function createLead(input: CreateLeadInput): Promise<Lead | null> {
           assigneeFields.assigneeId,
           input.marketingOptIn ?? false,
           JSON.stringify(input.metadata ?? {}),
+          input.attribution ? JSON.stringify(input.attribution) : null,
+          input.acquisitionChannel ?? leadChannel(input.attribution),
         ],
       );
       const lead = mapLead(rows[0]!);
@@ -389,6 +408,7 @@ export async function updateLead(
         assignee_id = $12,
         marketing_opt_in = $13,
         metadata = $14::jsonb,
+        acquisition_channel = $15,
         updated_at = NOW()
       WHERE id = $1
       RETURNING *`,
@@ -409,6 +429,7 @@ export async function updateLead(
           ? input.marketingOptIn
           : Boolean(existing.marketing_opt_in),
         JSON.stringify(mergedMetadata),
+        input.acquisitionChannel !== undefined ? input.acquisitionChannel : existing.acquisition_channel ?? null,
       ],
     );
 

@@ -8,6 +8,7 @@ import { SitePopup } from "@/components/popups/SitePopup";
 import { AppProviders } from "@/components/layout/AppProviders";
 import { Analytics } from "@/components/analytics/Analytics";
 import { TrackCtaListener } from "@/components/analytics/TrackCtaListener";
+import { AttributionTracker } from "@/components/analytics/AttributionTracker";
 import { DocumentLang } from "@/components/i18n/DocumentLang";
 import { OrganizationJsonLd, LocalBusinessJsonLd, WebSiteJsonLd } from "@/components/seo/JsonLd";
 import { SITE } from "@/lib/constants";
@@ -73,6 +74,7 @@ export default async function RootLayout({
           <SitePopup />
           <Analytics />
           <TrackCtaListener />
+          <AttributionTracker />
         </AppProviders>
       </body>
     </html>

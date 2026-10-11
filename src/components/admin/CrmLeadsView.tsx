@@ -20,6 +20,7 @@ import {
   updateLeadApi,
 } from "@/lib/leads-api";
 import { convertLeadToClient } from "@/lib/clients-api";
+import { CHANNEL_LABELS, MANUAL_CHANNELS, type AcquisitionChannel } from "@/lib/attribution";
 import type { DuplicateLeadGroup, Lead, LeadSource, LeadStatus } from "@/lib/leads";
 import {
   computeLeadScore,
@@ -568,6 +569,11 @@ export function CrmLeadsView() {
             setLeads((prev) => prev.map((l) => (l.id === updated.id ? updated : l)));
             setSelected(updated);
           }}
+          onChannelChange={async (acquisitionChannel) => {
+            const updated = await updateLeadApi(selected.id, { acquisitionChannel });
+            setLeads((prev) => prev.map((l) => (l.id === updated.id ? updated : l)));
+            setSelected(updated);
+          }}
           onDelete={() => void handleDelete(selected.id)}
           onEmailSent={() => setActivityRefreshKey((k) => k + 1)}
         />
@@ -697,6 +703,7 @@ function LeadDetailPanel({
   onStatusChange,
   onAssigneeChange,
   onMarketingOptInChange,
+  onChannelChange,
   onDelete,
   onEmailSent,
 }: {
@@ -707,6 +714,7 @@ function LeadDetailPanel({
   onStatusChange: (status: LeadStatus) => void;
   onAssigneeChange: (assignee: string | null) => void;
   onMarketingOptInChange: (marketingOptIn: boolean) => void | Promise<void>;
+  onChannelChange: (channel: AcquisitionChannel | null) => void | Promise<void>;
   onDelete: () => void;
   onEmailSent: () => void;
 }) {
@@ -808,6 +816,7 @@ function LeadDetailPanel({
             )}
             {lead.company && <DetailRow label="Entreprise" value={lead.company} />}
             <DetailRow label="Source" value={LEAD_SOURCE_LABELS[lead.source]} />
+            <LeadOriginSection lead={lead} saving={saving} onChannelChange={onChannelChange} />
             {presentationMeta && (
               <div className="rounded-xl border border-primary/15 bg-primary/5 p-3">
                 <p className="text-xs font-semibold uppercase tracking-wide text-primary">
@@ -1180,6 +1189,7 @@ function CreateLeadModal({
           ? Number(data.get("estimatedValue"))
           : null,
         marketingOptIn: data.get("marketingOptIn") === "on",
+        acquisitionChannel: (String(data.get("acquisitionChannel") || "") || null) as AcquisitionChannel | null,
       });
       onCreated(lead);
     } catch (err) {
@@ -1224,6 +1234,14 @@ function CreateLeadModal({
           <input name="company" placeholder="Entreprise" className={fieldClass} />
           <input name="service" placeholder="Service / projet" className={`${fieldClass} sm:col-span-2`} />
           <input name="estimatedValue" type="number" min={0} placeholder="Valeur estimée (FCFA)" className={fieldClass} />
+          <select name="acquisitionChannel" defaultValue="" aria-label="Origine du prospect" className={fieldClass}>
+            <option value="">Origine (comment nous a-t-il connus ?)</option>
+            {MANUAL_CHANNELS.map((channel) => (
+              <option key={channel} value={channel}>
+                {CHANNEL_LABELS[channel]}
+              </option>
+            ))}
+          </select>
         </div>
         <textarea
           name="message"
@@ -1248,6 +1266,57 @@ function CreateLeadModal({
           Enregistrer
         </button>
       </form>
+    </div>
+  );
+}
+
+/** Origine du prospect : canal (modifiable) et campagne publicitaire relevée sur le site. */
+function LeadOriginSection({
+  lead,
+  saving,
+  onChannelChange,
+}: {
+  lead: Lead;
+  saving: boolean;
+  onChannelChange: (channel: AcquisitionChannel | null) => void | Promise<void>;
+}) {
+  const touch = lead.attribution?.last ?? lead.attribution?.first;
+  const options = lead.acquisitionChannel && !MANUAL_CHANNELS.includes(lead.acquisitionChannel)
+    ? [lead.acquisitionChannel, ...MANUAL_CHANNELS]
+    : MANUAL_CHANNELS;
+  const details = [
+    touch?.campaign && `Campagne : ${touch.campaign}`,
+    touch?.source && `Source : ${touch.source}${touch.medium ? ` / ${touch.medium}` : ""}`,
+    touch?.content && `Annonce : ${touch.content}`,
+    touch?.referrer && `Venu de : ${touch.referrer}`,
+    touch?.landingPath && `Page d'arrivée : ${touch.landingPath}`,
+  ].filter(Boolean) as string[];
+
+  return (
+    <div>
+      <label className="block">
+        <span className="text-xs font-semibold uppercase tracking-wide text-gray-text">Origine</span>
+        <select
+          value={lead.acquisitionChannel ?? ""}
+          disabled={saving}
+          onChange={(e) => void onChannelChange((e.target.value || null) as AcquisitionChannel | null)}
+          className="mt-1 w-full rounded-xl border border-gray/60 px-3 py-2.5"
+        >
+          <option value="">Non renseignée</option>
+          {options.map((channel) => (
+            <option key={channel} value={channel}>
+              {CHANNEL_LABELS[channel]}
+            </option>
+          ))}
+        </select>
+      </label>
+      {details.length > 0 && (
+        <ul className="mt-1.5 space-y-0.5 text-xs text-gray-text">
+          {details.map((line) => (
+            <li key={line}>{line}</li>
+          ))}
+        </ul>
+      )}
     </div>
   );
 }

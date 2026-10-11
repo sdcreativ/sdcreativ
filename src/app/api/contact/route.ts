@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { attributionFromBody } from "@/lib/attribution";
 import { getContactSubjectLabel } from "@/content/contact-options";
 import { htmlRow, sendEmail } from "@/lib/email";
 import { safeCreateLead } from "@/lib/leads";
@@ -63,6 +64,7 @@ export async function POST(request: Request) {
       service: subjectLabel,
       message,
       metadata: { subject, channel: "contact_form" },
+      attribution: attributionFromBody(body),
     });
 
     return NextResponse.json({ success: true });

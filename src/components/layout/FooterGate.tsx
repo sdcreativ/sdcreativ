@@ -11,6 +11,7 @@ export function FooterGate({ sitePublic }: { sitePublic: ResolvedSitePublic }) {
     pathname.startsWith("/admin") ||
     pathname.startsWith("/espace-client") ||
     pathname.startsWith("/presentation") ||
+    pathname.startsWith("/offre/") ||
     pathname.startsWith("/c/")
   ) {
     return null;

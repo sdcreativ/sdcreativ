@@ -16,7 +16,7 @@ export const POPUP_PROJECT_TYPES = [
 ] as const;
 
 /** Pages où un popup n'apparaît jamais (espaces privés, outils internes). */
-export const POPUP_FORBIDDEN_PREFIXES = ["/admin", "/espace-client", "/espace-equipe", "/espace-prestataire", "/presentation", "/c/", "/promo/", "/rsvp/", "/verifier/", "/desinscription"];
+export const POPUP_FORBIDDEN_PREFIXES = ["/admin", "/espace-client", "/espace-equipe", "/espace-prestataire", "/presentation", "/c/", "/promo/", "/rsvp/", "/verifier/", "/desinscription", "/offre/"];
 
 /** Relances e-mail après inscription (jours), tant que le code n'a pas servi. */
 export const POPUP_REMINDER_DAYS = [3, 20] as const;

@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { attributionFromBody } from "@/lib/attribution";
 import {
   getBudgetLabel,
   getTimelineLabel,
@@ -133,6 +134,7 @@ export async function POST(request: Request) {
     }
 
     const lead = await createLead({
+      attribution: attributionFromBody(body),
       name: data.name,
       email: data.email,
       phone: data.phone || null,
