@@ -13,8 +13,9 @@ import {
   shouldShowAiAssistant,
 } from "@/lib/threecx/widget-config";
 import { isActiveEnglishPath } from "@/i18n/routes";
+import type { KadyAppearance } from "@/lib/kady-appearance";
 
-export function FloatingWidgets() {
+export function FloatingWidgets({ kadyAppearance }: { kadyAppearance?: KadyAppearance }) {
   const pathname = usePathname() ?? "";
   const [now, setNow] = useState(() => new Date());
 
@@ -46,12 +47,22 @@ export function FloatingWidgets() {
   const aiMode = resolveAiCommsMode({ date: now, threeCxActive });
   const chatLocale = isActiveEnglishPath(pathname) ? "en" : "fr";
 
+  // Kady à droite seulement si le Live Chat 3CX n'occupe pas déjà ce coin ; WhatsApp passe alors à gauche.
+  const kadyRight = showAi && kadyAppearance?.position === "right" && !threeCxActive;
+
   return (
     <>
       {threeCxActive ? <ThreeCxWidget pathname={pathname} now={now} /> : null}
-      {showAi ? <ChatWidget mode={aiMode} locale={chatLocale} /> : null}
-      <ScrollToTop dodgeThreeCx={threeCxActive} />
-      <WhatsAppFloat dodgeThreeCx={threeCxActive} />
+      {showAi ? (
+        <ChatWidget
+          mode={aiMode}
+          locale={chatLocale}
+          appearance={kadyAppearance}
+          side={kadyRight ? "right" : "left"}
+        />
+      ) : null}
+      <ScrollToTop dodgeThreeCx={threeCxActive} aboveChatSize={kadyRight ? kadyAppearance?.launcherSize : undefined} />
+      <WhatsAppFloat dodgeThreeCx={threeCxActive} swapWithChat={kadyRight} />
     </>
   );
 }

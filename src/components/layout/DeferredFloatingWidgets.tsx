@@ -4,6 +4,7 @@ import dynamic from "next/dynamic";
 import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
 import { ScrollToTop } from "@/components/layout/ScrollToTop";
+import type { KadyAppearance } from "@/lib/kady-appearance";
 
 const FloatingWidgets = dynamic(
   () => import("@/components/layout/FloatingWidgets").then((m) => m.FloatingWidgets),
@@ -23,7 +24,7 @@ function isPublicChromePath(pathname: string): boolean {
  * Bouton « haut de page » tout de suite.
  * Chat / WhatsApp / 3CX après idle (~2 s) ou première interaction — sans attendre un clic.
  */
-export function DeferredFloatingWidgets() {
+export function DeferredFloatingWidgets({ kadyAppearance }: { kadyAppearance?: KadyAppearance }) {
   const pathname = usePathname() ?? "";
   const [ready, setReady] = useState(false);
   const publicChrome = isPublicChromePath(pathname);
@@ -60,7 +61,7 @@ export function DeferredFloatingWidgets() {
   return (
     <>
       {!ready ? <ScrollToTop /> : null}
-      {ready ? <FloatingWidgets /> : null}
+      {ready ? <FloatingWidgets kadyAppearance={kadyAppearance} /> : null}
     </>
   );
 }

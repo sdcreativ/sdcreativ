@@ -6,6 +6,7 @@ import {
   type ChatKnowledgeEntry,
 } from "@/content/chat-knowledge";
 import { KADY_SYSTEM_EN, KADY_SYSTEM_FR, kadyAvailabilityHint } from "@/content/kady-profile";
+import { withAssistantName } from "@/lib/kady-appearance";
 import { attachChatActionLinks, polishChatAnswer } from "@/lib/chat-actions";
 import {
   isAdvisorChatAvailable,
@@ -120,13 +121,16 @@ export async function respondWithLlm(
   locale: ChatLocale = "fr",
   history: ChatTurn[] = [],
   mode: AiCommsMode = "default",
+  /** Nom choisi dans l'admin (CRM → Site → Kady) ; par défaut « Kady ». */
+  assistantName?: string,
 ): Promise<ChatResponse | null> {
   const apiKey = process.env.OPENAI_API_KEY;
   if (!apiKey) return null;
 
   const knowledge = locale === "en" ? chatKnowledgeEn : chatKnowledge;
-  const systemPrompt = `${locale === "en" ? SYSTEM_PROMPT_EN : SYSTEM_PROMPT_FR}\n\n${kadyAvailabilityHint(mode, locale)}`;
-  const context = knowledge.map((e) => `[${e.id}] ${e.answer}`).join("\n");
+  const named = (text: string) => (assistantName ? withAssistantName(text, assistantName) : text);
+  const systemPrompt = named(`${locale === "en" ? SYSTEM_PROMPT_EN : SYSTEM_PROMPT_FR}\n\n${kadyAvailabilityHint(mode, locale)}`);
+  const context = named(knowledge.map((e) => `[${e.id}] ${e.answer}`).join("\n"));
   const advisorVisible = isAdvisorChatAvailable(mode);
   const prior = history
     .filter((turn) => turn.content.trim())
@@ -183,20 +187,29 @@ export async function respondWithLlm(
   }
 }
 
+function escapeRegExp(value: string): string {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
 export async function getChatResponse(
   message: string,
   locale: ChatLocale = "fr",
   history: ChatTurn[] = [],
   mode: AiCommsMode = "default",
+  assistantName?: string,
 ): Promise<ChatResponse> {
-  const llm = await respondWithLlm(message, locale, history, mode);
+  const llm = await respondWithLlm(message, locale, history, mode, assistantName);
   if (llm) return llm;
 
-  const knowledge = respondFromKnowledge(message, locale);
+  // La base de connaissances connaît « Kady » : « Qui es-tu, Awa ? » doit trouver la même réponse.
+  const knowledge = respondFromKnowledge(
+    assistantName ? message.replace(new RegExp(`(?<![\\p{L}\\p{N}])${escapeRegExp(assistantName)}(?![\\p{L}\\p{N}])`, "giu"), "Kady") : message,
+    locale,
+  );
   return {
     ...knowledge,
     answer: polishChatAnswer(
-      knowledge.answer,
+      assistantName ? withAssistantName(knowledge.answer, assistantName) : knowledge.answer,
       isAdvisorChatAvailable(mode),
     ),
     openThreeCxLabel: shouldOfferAdvisorChat(

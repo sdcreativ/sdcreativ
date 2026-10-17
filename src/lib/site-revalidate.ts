@@ -3,6 +3,7 @@ import {
   PUBLIC_PRICING_PLANS_TAG,
   PUBLIC_PRICING_REASSURANCE_TAG,
 } from "@/lib/public-pricing-resolver";
+import { KADY_APPEARANCE_TAG } from "@/lib/kady-settings";
 import { SITE_AUDIT_SETTINGS_TAG } from "@/lib/site-audit-settings";
 import { SITE_PUBLIC_SETTINGS_TAG } from "@/lib/site-public-settings";
 import { SITE_QUOTE_CONFIG_TAG } from "@/lib/site-quote-config-settings";
@@ -145,4 +146,10 @@ export function revalidateLegalPages() {
   revalidatePath("/politique-confidentialite");
   revalidatePath("/en/legal");
   revalidatePath("/en/privacy");
+}
+
+/** Kady est présente sur toutes les pages publiques : le layout racine est invalidé. */
+export function revalidateKadyAppearance() {
+  revalidateTag(KADY_APPEARANCE_TAG, "max");
+  revalidatePath("/", "layout");
 }
