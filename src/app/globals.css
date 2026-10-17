@@ -404,3 +404,29 @@ body {
   width: 100%;
   height: auto;
 }
+
+/* Kady — animations du bouton d'ouverture (réglées dans CRM → Site → Kady). Discrètes et espacées. */
+@keyframes kady-pulse {
+  0%, 70%, 100% { box-shadow: 0 10px 15px -3px rgb(0 0 0 / 0.2), 0 0 0 0 color-mix(in srgb, var(--kady-accent) 55%, transparent); }
+  35% { box-shadow: 0 10px 15px -3px rgb(0 0 0 / 0.2), 0 0 0 12px color-mix(in srgb, var(--kady-accent) 0%, transparent); }
+}
+@keyframes kady-bounce {
+  0%, 20%, 100% { transform: translateY(0); }
+  8% { transform: translateY(-10px); }
+  14% { transform: translateY(0); }
+  17% { transform: translateY(-4px); }
+}
+@keyframes kady-wiggle {
+  0%, 16%, 100% { transform: rotate(0); }
+  4% { transform: rotate(-8deg); }
+  8% { transform: rotate(7deg); }
+  12% { transform: rotate(-4deg); }
+}
+.kady-anim-pulse { animation: kady-pulse 2.6s ease-out infinite; }
+.kady-anim-bounce { animation: kady-bounce 4s ease-in-out infinite; }
+.kady-anim-wiggle { animation: kady-wiggle 4s ease-in-out infinite; }
+.kady-anim-bounce:hover, .kady-anim-wiggle:hover { animation-play-state: paused; }
+
+@media (prefers-reduced-motion: reduce) {
+  .kady-anim-pulse, .kady-anim-bounce, .kady-anim-wiggle { animation: none; }
+}

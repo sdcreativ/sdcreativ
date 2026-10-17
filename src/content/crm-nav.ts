@@ -199,6 +199,8 @@ export function getCrmBreadcrumbs(pathname: string): CrmBreadcrumb[] {
           services: "Services",
           partenaires: "Partenaires",
           tarifs: "Tarifs",
+          popups: "Popups",
+          kady: "Assistante virtuelle",
           devis: "Configurateur de devis",
           "solutions-ia": "Solutions IA",
           formations: "Formations",

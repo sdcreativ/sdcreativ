@@ -14,6 +14,7 @@ import { OrganizationJsonLd, LocalBusinessJsonLd, WebSiteJsonLd } from "@/compon
 import { SITE } from "@/lib/constants";
 import { getSiteIconHref } from "@/lib/site-favicon";
 import { getSitePublicSettings } from "@/lib/site-public-settings";
+import { getKadyAppearance } from "@/lib/kady-settings";
 import { createMetadata } from "@/lib/metadata";
 import "./globals.css";
 
@@ -38,7 +39,7 @@ export default async function RootLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
-  const sitePublic = await getSitePublicSettings();
+  const [sitePublic, kadyAppearance] = await Promise.all([getSitePublicSettings(), getKadyAppearance()]);
 
   return (
     <html lang="fr" className={`${poppins.variable} scroll-smooth`} suppressHydrationWarning>
@@ -69,7 +70,7 @@ export default async function RootLayout({
             {children}
           </main>
           <FooterGate sitePublic={sitePublic} />
-          <DeferredFloatingWidgets />
+          <DeferredFloatingWidgets kadyAppearance={kadyAppearance} />
           <CookieConsent />
           <SitePopup />
           <Analytics />

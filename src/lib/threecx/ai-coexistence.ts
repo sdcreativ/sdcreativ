@@ -68,6 +68,8 @@ export function isAdvisorChatAvailable(mode: AiCommsMode): boolean {
 export function getAiGreeting(
   mode: AiCommsMode,
   locale: "fr" | "en" = "fr",
+  /** Nom et accueil personnalisés (CRM → Site → Kady) ; l'accueil remplace le texte du mode par défaut. */
+  assistant?: { name?: string; greeting?: string },
 ): {
   content: string;
   links: Array<{ label: string; href: string }>;
@@ -104,7 +106,8 @@ export function getAiGreeting(
 
     return {
       content:
-        `Hello! I'm ${CHATBOT.name}, SD CREATIV's virtual assistant. Ask about our services, quotes or timelines. ` +
+        assistant?.greeting?.trim() ||
+        `Hello! I'm ${assistant?.name || CHATBOT.name}, SD CREATIV's virtual assistant. Ask about our services, quotes or timelines. ` +
         "To speak with an advisor during business hours, open Contact or Quote — the live chat appears there — or use WhatsApp or booking.",
       links: [
         { label: "Book a call", href: "/en/book" },
@@ -146,7 +149,8 @@ export function getAiGreeting(
 
   return {
     content:
-      `Bonjour ! Je suis ${CHATBOT.name}, l’assistance virtuelle de SD CREATIV. Posez-moi vos questions sur nos services, tarifs ou délais. ` +
+      assistant?.greeting?.trim() ||
+      `Bonjour ! Je suis ${assistant?.name || CHATBOT.name}, l’assistance virtuelle de SD CREATIV. Posez-moi vos questions sur nos services, tarifs ou délais. ` +
       "Pour un conseiller en heures ouvrées, ouvrez Contact ou Devis — le chat humain s’affiche alors — ou utilisez WhatsApp / un rendez-vous.",
     links: [
       { label: "Prendre rendez-vous", href: "/rendez-vous" },

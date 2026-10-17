@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { getChatResponse } from "@/lib/chat-responder";
+import { getKadyAppearance } from "@/lib/kady-settings";
 import {
   PUBLIC_CHAT_RATE_LIMIT,
   consumeRateLimit,
@@ -38,6 +39,7 @@ export async function POST(request: Request) {
       locale,
       parsed.data.history,
       parsed.data.mode,
+      (await getKadyAppearance()).name,
     );
 
     return NextResponse.json({
