@@ -9,7 +9,7 @@ import {
 } from "@/lib/kady-appearance";
 import { getAiGreeting } from "@/lib/threecx/ai-coexistence";
 
-describe("apparence de Kady", () => {
+describe("apparence de Nari", () => {
   it("les valeurs par défaut sont valides et lisibles", () => {
     expect(kadyAppearanceSchema.safeParse(DEFAULT_KADY_APPEARANCE).success).toBe(true);
     expect(kadyContrastWarnings(DEFAULT_KADY_APPEARANCE)).toEqual([]);
@@ -39,7 +39,7 @@ describe("apparence de Kady", () => {
   });
 
   it("utilise le nom choisi dans les textes et l'accueil", () => {
-    expect(withAssistantName("Je m'appelle Kady, l'assistante de Kadyville.", "Awa")).toBe("Je m'appelle Awa, l'assistante de Kadyville.");
+    expect(withAssistantName("Je m'appelle Nari, l'assistante de Kadyville.", "Awa")).toBe("Je m'appelle Awa, l'assistante de Kadyville.");
     expect(getAiGreeting("default", "fr", { name: "Awa" }).content).toContain("Je suis Awa");
     expect(getAiGreeting("default", "fr", { name: "Awa", greeting: "Salut, moi c'est Awa !" }).content).toBe("Salut, moi c'est Awa !");
     // Hors horaires : l'accueil propre à la situation est conservé.
@@ -55,7 +55,7 @@ describe("nom personnalisé dans les réponses", () => {
     const res = await getChatResponse("Qui es-tu, Awa ?", "fr", [], "default", "Awa");
     process.env.OPENAI_API_KEY = previous;
     expect(res.answer).toContain("Awa");
-    expect(res.answer).not.toContain("Kady");
+    expect(res.answer).not.toContain("Nari");
   });
 });
 

@@ -23,6 +23,7 @@ export const LEAD_SOURCE_LABELS: Record<
   call_3cx: "Appel 3CX",
   popup: "Popup site (code avantage)",
   landing: "Page publicité (audit gratuit)",
+  chat: "Assistance virtuelle (chat du site)",
 };
 
 export const LEAD_PIPELINE_COLUMNS: Array<{

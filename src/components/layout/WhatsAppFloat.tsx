@@ -8,7 +8,7 @@ import { cn } from "@/lib/utils";
 type Props = {
   /** Option A : 3CX occupe le bas-droit → WhatsApp passe à gauche, au-dessus du chat IA. */
   dodgeThreeCx?: boolean;
-  /** Kady réglée à droite : WhatsApp prend sa place à gauche. */
+  /** Nari réglée à droite : WhatsApp prend sa place à gauche. */
   swapWithChat?: boolean;
 };
 

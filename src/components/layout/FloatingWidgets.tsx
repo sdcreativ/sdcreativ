@@ -47,7 +47,7 @@ export function FloatingWidgets({ kadyAppearance }: { kadyAppearance?: KadyAppea
   const aiMode = resolveAiCommsMode({ date: now, threeCxActive });
   const chatLocale = isActiveEnglishPath(pathname) ? "en" : "fr";
 
-  // Kady à droite seulement si le Live Chat 3CX n'occupe pas déjà ce coin ; WhatsApp passe alors à gauche.
+  // Nari à droite seulement si le Live Chat 3CX n'occupe pas déjà ce coin ; WhatsApp passe alors à gauche.
   const kadyRight = showAi && kadyAppearance?.position === "right" && !threeCxActive;
 
   return (

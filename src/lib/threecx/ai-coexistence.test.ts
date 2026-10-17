@@ -44,10 +44,10 @@ describe("ai-coexistence Phase 7", () => {
     ).toBe("default");
   });
 
-  it("présente Kady dans l’accueil par défaut", () => {
-    expect(getAiGreeting("default").content).toContain("Kady");
+  it("présente Nari dans l’accueil par défaut", () => {
+    expect(getAiGreeting("default").content).toContain("Nari");
     expect(getAiGreeting("default").content).toContain("assistance virtuelle");
-    expect(getAiGreeting("default", "en").content).toContain("Kady");
+    expect(getAiGreeting("default", "en").content).toContain("Nari");
   });
 
   it("signale le Live Chat seulement en mode handoff", () => {

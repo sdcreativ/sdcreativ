@@ -68,7 +68,7 @@ export function isAdvisorChatAvailable(mode: AiCommsMode): boolean {
 export function getAiGreeting(
   mode: AiCommsMode,
   locale: "fr" | "en" = "fr",
-  /** Nom et accueil personnalisés (CRM → Site → Kady) ; l'accueil remplace le texte du mode par défaut. */
+  /** Nom et accueil personnalisés (CRM → Site → Nari) ; l'accueil remplace le texte du mode par défaut. */
   assistant?: { name?: string; greeting?: string },
 ): {
   content: string;

@@ -9,17 +9,17 @@ export type ChatKnowledgeEntry = {
 
 /** Accueil générique — le widget utilise `getAiGreeting` (Phase 7) selon les horaires. */
 export const chatGreeting =
-  "Bonjour ! Je suis Kady, l'assistance virtuelle de SD CREATIV. Posez-moi vos questions sur nos services, tarifs ou délais — je suis là pour vous orienter.";
+  "Bonjour ! Je suis Nari, l'assistance virtuelle de SD CREATIV. Posez-moi vos questions sur nos services, tarifs ou délais — je suis là pour vous orienter.";
 
 export const chatSuggestions = [
-  "Qui es-tu, Kady ?",
+  "Qui es-tu, Nari ?",
   "Quels sont vos tarifs ?",
   "Combien de temps pour un site ?",
   "Proposez-vous des agents IA ?",
 ] as const;
 
 export const chatSuggestionsEn = [
-  "Who are you, Kady?",
+  "Who are you, Nari?",
   "How does pricing work?",
   "How long for a website?",
   "Do you build AI agents?",
@@ -31,7 +31,7 @@ export const chatKnowledge: ChatKnowledgeEntry[] = [
     keywords: [
       "qui es-tu", "qui es tu", "qui êtes-vous", "qui etes vous", "t'es qui", "tes qui",
       "tu es qui", "ton nom", "tu t'appelles", "tu t appelles", "présente-toi", "presente-toi",
-      "présentation", "presentation", "kady", "c'est qui", "c est qui",
+      "présentation", "presentation", "nari", "c'est qui", "c est qui",
     ],
     answer: KADY_BIO_FR,
     links: [
@@ -172,7 +172,7 @@ export const chatFallbackEn =
   "I could not find a precise answer. During business hours, the advisor chat opens on Home, Contact, Quote or Pricing. Otherwise: WhatsApp, contact form or online booking.";
 
 export const chatGreetingEn =
-  "Hello! I'm Kady, SD CREATIV's virtual assistant. Ask about our services, quotes or timelines — I will point you in the right direction.";
+  "Hello! I'm Nari, SD CREATIV's virtual assistant. Ask about our services, quotes or timelines — I will point you in the right direction.";
 
 /** Knowledge base EN (same ids as FR). */
 export const chatKnowledgeEn: ChatKnowledgeEntry[] = [
@@ -180,7 +180,7 @@ export const chatKnowledgeEn: ChatKnowledgeEntry[] = [
     id: "kady",
     keywords: [
       "who are you", "your name", "what's your name", "whats your name",
-      "introduce yourself", "kady", "are you human", "are you a bot",
+      "introduce yourself", "nari", "are you human", "are you a bot",
     ],
     answer: KADY_BIO_EN,
     links: [

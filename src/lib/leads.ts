@@ -23,6 +23,7 @@ export const LEAD_SOURCES = [
   "call_3cx",
   "popup",
   "landing",
+  "chat",
 ] as const;
 
 export type LeadStatus = (typeof LEAD_STATUSES)[number];

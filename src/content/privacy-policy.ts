@@ -33,7 +33,11 @@ export const privacyPolicySections: PrivacySection[] = [
       { label: "Contact & devis", details: "nom, email, téléphone, entreprise, type de projet, budget, délai, message" },
       { label: "Newsletter", details: "adresse email" },
       { label: "Candidatures", details: "identité, coordonnées, parcours, motivation, liens CV/LinkedIn" },
-      { label: "Kady (assistance virtuelle)", details: "contenu des messages échangés (temporaire, session navigateur)" },
+      {
+        label: "Assistance virtuelle (chat du site)",
+        details:
+          "contenu des messages échangés, page consultée et provenance de la visite (sans adresse IP) ; prénom, WhatsApp et e-mail si vous demandez à être recontacté",
+      },
       {
         label: "Chat & appels 3CX (si activé)",
         details:
@@ -94,7 +98,7 @@ export const privacyPolicySections: PrivacySection[] = [
       "Demandes contact / devis : 3 ans à compter du dernier échange",
       "Newsletter : jusqu'à désinscription ou 3 ans d'inactivité",
       "Candidatures : 2 ans maximum",
-      "Messages chat IA : durée de la session navigateur (non stockés en base)",
+      "Conversations avec l'assistance virtuelle : 90 jours après le dernier message ; conservées avec la demande de contact (3 ans) si vous demandez à être recontacté",
       "Conversations / appels 3CX (PBX) : selon la politique de conservation de l'instance Hosted 3CX",
       "Journaux CRM communication_events (métadonnées chat/appel, sans enregistrement audio) : max. 3 ans après le dernier échange commercial, sauf obligation légale",
       "Enregistrements audio/vidéo 3CX (si activés) : durée définie dans la console 3CX, proportionnée à la finalité qualité / formation",

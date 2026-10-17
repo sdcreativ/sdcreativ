@@ -11,7 +11,7 @@ const SCROLL_THRESHOLD = 400;
 type Props = {
   /** Option A : 3CX bas-droit → bouton remonter au-dessus de la pile droite. */
   dodgeThreeCx?: boolean;
-  /** Kady à droite : au-dessus de son bouton, quelle que soit sa taille (variable --kady-size). */
+  /** Nari à droite : au-dessus de son bouton, quelle que soit sa taille (variable --kady-size). */
   aboveChatSize?: number;
 };
 

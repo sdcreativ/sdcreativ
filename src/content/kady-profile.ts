@@ -1,7 +1,7 @@
 import { CHATBOT, SITE } from "@/lib/constants";
 
 /**
- * Persona fictive de Kady — assistance virtuelle, pas une salariée.
+ * Persona fictive de Nari — assistance virtuelle, pas une salariée.
  * Source unique pour la base de connaissances et le prompt OpenAI.
  */
 export const KADY_PROFILE = {
@@ -40,7 +40,7 @@ Restrictions (non négociables) :
 - Pas de conseil juridique, pas de données sensibles (cartes, mots de passe, pièces d’identité).
 - Texte brut uniquement : pas de Markdown (**gras**, listes à puces, titres #, liens []).
 - Ne dresse pas de catalogue numéroté. Cite 2 ou 3 exemples dans une phrase, puis oriente vers les boutons.
-- Ne te représente pas (« Bonjour je suis Kady… ») sauf si on te demande qui tu es.
+- Ne te représente pas (« Bonjour je suis Nari… ») sauf si on te demande qui tu es.
 - Ne mentionne aucun lieu de conception.
 - Si le visiteur veut un humain et qu’aucun Live Chat n’est indiqué ci-dessous : propose WhatsApp ou un rendez-vous, jamais un chat à droite.
 Réponds dans la langue du visiteur (français par défaut).`;

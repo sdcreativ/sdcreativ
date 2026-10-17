@@ -3,9 +3,11 @@ import { hasCrmPermission } from "@/lib/crm-access";
 import type { CrmPermission } from "@/lib/crm-permissions";
 import type { CrmNavBadges } from "@/lib/crm-nav-badges";
 import { listInboxItems } from "@/lib/inbox";
+import { countUnreadConversations } from "@/lib/chat-conversations";
 
 const EMPTY: CrmNavBadges = {
   leads: 0,
+  conversations: 0,
   quotes: 0,
   tasks: 0,
   tickets: 0,
@@ -25,6 +27,7 @@ export async function getCrmNavBadges(
          WHERE status IN ('new', 'contacted', 'quote_sent')`,
       );
       badges.leads = Number(rows[0]?.count ?? 0);
+      badges.conversations = await countUnreadConversations(query).catch(() => 0);
     }
 
     if (hasCrmPermission(permissions, "quotes.read")) {

@@ -16,6 +16,8 @@ import { CRM_SESSION_CHANGED_EVENT } from "@/lib/crm-session-events";
 import { formatNavBadge, type CrmNavBadges } from "@/lib/crm-nav-badges";
 import { fetchCrmNavBadges } from "@/lib/crm-nav-badges-api";
 import { useCrmFetch } from "@/hooks/useCrmFetch";
+import { useAssistantName } from "@/hooks/useAssistantName";
+import { withAssistantLabel } from "@/content/crm-nav";
 import { useCrmPermissions } from "@/hooks/useCrmPermissions";
 import { openCrmDocumentationWindow } from "@/lib/crm-docs-window";
 import { cn } from "@/lib/utils";
@@ -23,6 +25,7 @@ import { LayoutGrid, X } from "lucide-react";
 
 const NAV_BADGE_KEYS: Partial<Record<string, keyof CrmNavBadges>> = {
   leads: "leads",
+  conversations: "conversations",
   quotes: "quotes",
   tasks: "tasks",
   tickets: "tickets",
@@ -64,6 +67,7 @@ export function CrmMobileNav() {
   }, [plusOpen]);
 
   const { data: badges } = useCrmFetch("crm-nav-badges", fetchCrmNavBadges, 60_000);
+  const assistantName = useAssistantName();
 
   if (!session) return null;
 
@@ -110,7 +114,7 @@ export function CrmMobileNav() {
                       </span>
                     ) : null}
                   </span>
-                  <span className="max-w-full truncate">{getMobileNavLabel(item)}</span>
+                  <span className="max-w-full truncate">{withAssistantLabel(getMobileNavLabel(item), assistantName)}</span>
                 </Link>
               </li>
             );
@@ -206,7 +210,7 @@ export function CrmMobileNav() {
                       aria-current={active ? "page" : undefined}
                     >
                       <Icon className="h-5 w-5 shrink-0" aria-hidden />
-                      <span className="leading-tight">{item.label}</span>
+                      <span className="leading-tight">{withAssistantLabel(item.label, assistantName)}</span>
                       {badgeLabel ? (
                         <span
                           className={cn(

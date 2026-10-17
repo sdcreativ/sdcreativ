@@ -2,9 +2,9 @@ import { describe, expect, it, vi } from "vitest";
 import { getChatResponse, respondFromKnowledge } from "@/lib/chat-responder";
 import { KADY_BIO_EN, KADY_BIO_FR, KADY_PROFILE } from "@/content/kady-profile";
 
-describe("Kady — profil fictif", () => {
+describe("Nari — profil fictif", () => {
   it("répond à une question d’identité", () => {
-    const fr = respondFromKnowledge("Qui es-tu, Kady ?", "fr");
+    const fr = respondFromKnowledge("Qui es-tu, Nari ?", "fr");
     expect(fr.source).toBe("knowledge");
     expect(fr.answer).toBe(KADY_BIO_FR);
     expect(fr.answer).toContain(KADY_PROFILE.name);
@@ -12,7 +12,7 @@ describe("Kady — profil fictif", () => {
   });
 
   it("répond en anglais", () => {
-    const en = respondFromKnowledge("Who are you, Kady?", "en");
+    const en = respondFromKnowledge("Who are you, Nari?", "en");
     expect(en.source).toBe("knowledge");
     expect(en.answer).toBe(KADY_BIO_EN);
   });
@@ -34,7 +34,7 @@ describe("Kady — profil fictif", () => {
     const prev = process.env.OPENAI_API_KEY;
     delete process.env.OPENAI_API_KEY;
     try {
-      const res = await getChatResponse("Qui es-tu, Kady ?", "fr");
+      const res = await getChatResponse("Qui es-tu, Nari ?", "fr");
       expect(res.source).toBe("knowledge");
       expect(res.answer).toBe(KADY_BIO_FR);
     } finally {
@@ -54,14 +54,14 @@ describe("Kady — profil fictif", () => {
     vi.stubGlobal("fetch", fetchMock);
     try {
       const res = await getChatResponse("Et les délais ?", "fr", [
-        { role: "assistant", content: "Bonjour ! Je suis Kady, l'assistance virtuelle de SD CREATIV." },
+        { role: "assistant", content: "Bonjour ! Je suis Nari, l'assistance virtuelle de SD CREATIV." },
         { role: "user", content: "Je veux un site vitrine." },
       ]);
       expect(res.source).toBe("llm");
       const body = JSON.parse(fetchMock.mock.calls[0][1].body) as {
         messages: { role: string; content: string }[];
       };
-      expect(body.messages.some((m) => m.role === "assistant" && m.content.includes("Je suis Kady"))).toBe(true);
+      expect(body.messages.some((m) => m.role === "assistant" && m.content.includes("Je suis Nari"))).toBe(true);
       expect(body.messages.at(-1)).toEqual({ role: "user", content: "Et les délais ?" });
     } finally {
       vi.unstubAllGlobals();

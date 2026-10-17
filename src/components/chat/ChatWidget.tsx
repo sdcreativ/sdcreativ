@@ -11,12 +11,19 @@ import {
   MessagesSquare,
   Send,
   Sparkles,
+  ThumbsDown,
+  ThumbsUp,
   X,
   type LucideIcon,
 } from "lucide-react";
 import { motion, AnimatePresence, type Variants } from "framer-motion";
 import { chatSuggestions, chatSuggestionsEn } from "@/content/chat-knowledge";
 import { HoneypotField } from "@/components/forms/HoneypotField";
+import { ChatContactCard } from "@/components/chat/ChatContactCard";
+import { ChatNextSteps } from "@/components/chat/ChatNextSteps";
+import { ChatBookingOverlay, buildChatBookingUrl } from "@/components/chat/ChatBookingOverlay";
+import { useWhatsappUrl } from "@/components/site/SitePublicProvider";
+import { getStoredAttribution } from "@/lib/attribution-client";
 import { resolveImageDisplayUrl } from "@/lib/image-url";
 import {
   DEFAULT_KADY_APPEARANCE,
@@ -38,13 +45,16 @@ type Message = {
   content: string;
   links?: { label: string; href: string }[];
   openThreeCxLabel?: string;
+  /** Réponse enregistrée : permet l'avis 👍 / 👎. */
+  messageId?: string;
+  rating?: 1 | -1;
 };
 
 type Props = {
   /** Phase 7 — message d’accueil contextualisé (handoff / hors horaires). */
   mode?: AiCommsMode;
   locale?: "fr" | "en";
-  /** Apparence réglée dans CRM → Site → Kady. */
+  /** Apparence réglée dans CRM → Site → Nari. */
   appearance?: KadyAppearance;
   /** Côté effectif (forcé à gauche quand le Live Chat 3CX occupe la droite). */
   side?: "left" | "right";
@@ -54,6 +64,40 @@ type Props = {
    */
   preview?: { open: boolean; messages: Array<{ role: "user" | "assistant"; content: string }> };
 };
+
+const CONVERSATION_KEY = "sdcreativ-kady-conversation";
+const CONTACT_SENT_KEY = "sdcreativ-kady-contact-sent";
+const CONTACT_INFO_KEY = "sdcreativ-kady-contact";
+
+/** Prénom et e-mail donnés dans le chat (session) : pré-remplissent la réservation. */
+function readContactInfo(): { name?: string; email?: string } {
+  try {
+    return JSON.parse(sessionStorage.getItem(CONTACT_INFO_KEY) ?? "{}") as { name?: string; email?: string };
+  } catch {
+    return {};
+  }
+}
+
+/** Identifiant de conversation tiré au hasard, propre à l'onglet (sessionStorage) — aucun suivi d'un jour à l'autre. */
+function sessionConversationId(): string {
+  try {
+    const existing = sessionStorage.getItem(CONVERSATION_KEY);
+    if (existing) return existing;
+    const id = crypto.randomUUID();
+    sessionStorage.setItem(CONVERSATION_KEY, id);
+    return id;
+  } catch {
+    return crypto.randomUUID();
+  }
+}
+
+function readContactSent(): boolean {
+  try {
+    return sessionStorage.getItem(CONTACT_SENT_KEY) === "1";
+  } catch {
+    return false;
+  }
+}
 
 const LAUNCHER_ICONS: Record<KadyLauncherIcon, LucideIcon> = {
   "message-circle": MessageCircle,
@@ -92,6 +136,11 @@ export function ChatWidget({
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
   const [initialized, setInitialized] = useState(false);
+  const [conversationId] = useState(() => (typeof window === "undefined" ? "" : sessionConversationId()));
+  /** Carte affichée dans la conversation : suites possibles, ou formulaire de rappel. */
+  const [panel, setPanel] = useState<"choices" | "contact" | null>(null);
+  const [bookingSrc, setBookingSrc] = useState<string | null>(null);
+  const [contactSent, setContactSent] = useState(() => (typeof window === "undefined" ? false : readContactSent()));
   const listRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const modeRef = useRef(mode);
@@ -146,7 +195,7 @@ export function ChatWidget({
       listRef.current?.scrollTo({ top: listRef.current.scrollHeight, behavior: "smooth" });
       if (!preview) inputRef.current?.focus();
     }
-  }, [open, messages, loading, preview]);
+  }, [open, messages, loading, preview, panel]);
 
   async function sendMessage(text: string, hp?: FormDataEntryValue | null) {
     const trimmed = text.trim();
@@ -176,6 +225,9 @@ export function ChatWidget({
           locale: isEn ? "en" : "fr",
           history,
           mode,
+          conversationId: conversationId || undefined,
+          pagePath: window.location.pathname,
+          attribution: getStoredAttribution(),
           _hp: hp ?? "",
         }),
       });
@@ -184,6 +236,8 @@ export function ChatWidget({
         answer?: string;
         links?: { label: string; href: string }[];
         openThreeCxLabel?: string;
+        offerContact?: boolean;
+        messageId?: string;
         error?: string;
       };
 
@@ -199,8 +253,10 @@ export function ChatWidget({
           content: data.answer ?? (isEn ? "Sorry, something went wrong." : "Désolé, une erreur est survenue."),
           links: data.links,
           openThreeCxLabel: data.openThreeCxLabel,
+          messageId: data.messageId,
         },
       ]);
+      if (data.offerContact && !contactSent) setPanel("choices");
     } catch {
       setMessages((prev) => [
         ...prev,
@@ -223,6 +279,40 @@ export function ChatWidget({
     }
   }
 
+  function rate(msg: Message, rating: 1 | -1) {
+    if (!msg.messageId || msg.rating || !conversationId) return;
+    setMessages((prev) => prev.map((m) => (m.id === msg.id ? { ...m, rating } : m)));
+    void fetch("/api/chat/feedback", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ conversationId, messageId: msg.messageId, rating }),
+      keepalive: true,
+    }).catch(() => undefined);
+    // Réponse jugée inutile : un conseiller peut prendre le relais.
+    if (rating === -1 && !contactSent) setPanel("choices");
+  }
+
+  function handleContactSent(firstName: string, email: string) {
+    setContactSent(true);
+    setPanel(null);
+    try {
+      sessionStorage.setItem(CONTACT_SENT_KEY, "1");
+      sessionStorage.setItem(CONTACT_INFO_KEY, JSON.stringify({ name: firstName, email }));
+    } catch {
+      /* stockage indisponible : sans gravité */
+    }
+    setMessages((prev) => [
+      ...prev,
+      {
+        id: `assistant-${crypto.randomUUID()}`,
+        role: "assistant",
+        content: isEn
+          ? `Thank you ${firstName}! An advisor will get back to you on WhatsApp as soon as possible during business hours (Mon–Fri, 8am–6pm).`
+          : `Merci ${firstName} ! Un conseiller vous recontacte sur WhatsApp dès que possible, aux heures ouvrées (lun–ven, 8h–18h).`,
+      },
+    ]);
+  }
+
   function handleSubmit(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
     const hp = new FormData(e.currentTarget).get("_hp");
@@ -232,6 +322,42 @@ export function ChatWidget({
   const shownMessages: Message[] = preview
     ? preview.messages.map((msg, i) => ({ id: `preview-${i}`, ...msg }))
     : messages;
+
+  // Résumé du besoin (questions du visiteur) : repris dans WhatsApp et dans la réservation.
+  const visitorNeed = messages
+    .filter((m) => m.role === "user")
+    .map((m) => m.content)
+    .join(" — ")
+    .slice(0, 220);
+  const ref = conversationId ? conversationId.slice(0, 8).toUpperCase() : "";
+  const whatsappHref = useWhatsappUrl(
+    isEn
+      ? `Hello SD CREATIV, I'm coming from the website chat${ref ? ` (conv. ${ref})` : ""}.${visitorNeed ? ` My request: ${visitorNeed}` : ""}`
+      : `Bonjour SD CREATIV, je viens du chat du site${ref ? ` (conv. ${ref})` : ""}.${visitorNeed ? ` Mon besoin : ${visitorNeed}` : ""}`,
+  );
+  const bookingUrl = conversationId
+    ? buildChatBookingUrl({ conversationId, notes: visitorNeed, ...(typeof window === "undefined" ? {} : readContactInfo()) })
+    : null;
+
+  function openBooking() {
+    if (preview) return;
+    if (!bookingUrl) {
+      window.location.href = isEn ? "/en/book" : "/rendez-vous";
+      return;
+    }
+    setPanel(null);
+    setBookingSrc(bookingUrl);
+  }
+
+  function recordWhatsapp() {
+    if (preview || !conversationId) return;
+    void fetch("/api/chat/event", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ conversationId, kind: "whatsapp" }),
+      keepalive: true,
+    }).catch(() => undefined);
+  }
 
   // Couleurs, police et taille portées par des variables CSS (une seule source pour tout le widget).
   const vars = {
@@ -369,9 +495,57 @@ export function ChatWidget({
                         ))}
                       </div>
                     )}
+                    {msg.role === "assistant" && msg.messageId && !preview ? (
+                      <div className="mt-1.5 flex items-center gap-1 text-[0.8em] opacity-70">
+                        {msg.rating ? (
+                          <span>{isEn ? "Thanks for your feedback" : "Merci pour votre avis"}</span>
+                        ) : (
+                          <>
+                            <span>{isEn ? "Helpful?" : "Utile ?"}</span>
+                            <button
+                              type="button"
+                              onClick={() => rate(msg, 1)}
+                              className="rounded p-1 hover:bg-black/5"
+                              aria-label={isEn ? "Helpful answer" : "Réponse utile"}
+                            >
+                              <ThumbsUp className="h-3.5 w-3.5" aria-hidden />
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => rate(msg, -1)}
+                              className="rounded p-1 hover:bg-black/5"
+                              aria-label={isEn ? "Not helpful" : "Réponse pas utile"}
+                            >
+                              <ThumbsDown className="h-3.5 w-3.5" aria-hidden />
+                            </button>
+                          </>
+                        )}
+                      </div>
+                    ) : null}
                   </div>
                 </div>
               ))}
+
+              {panel === "choices" && !preview && conversationId ? (
+                <ChatNextSteps
+                  locale={isEn ? "en" : "fr"}
+                  whatsappHref={whatsappHref}
+                  canBook={Boolean(bookingUrl)}
+                  onBook={openBooking}
+                  onWhatsapp={recordWhatsapp}
+                  onCallback={() => setPanel(contactSent ? null : "contact")}
+                  onDismiss={() => setPanel(null)}
+                />
+              ) : null}
+
+              {panel === "contact" && !preview && conversationId ? (
+                <ChatContactCard
+                  conversationId={conversationId}
+                  locale={isEn ? "en" : "fr"}
+                  onSent={handleContactSent}
+                  onDismiss={() => setPanel(null)}
+                />
+              ) : null}
 
               {loading && (
                 <div className="flex justify-start">
@@ -398,9 +572,48 @@ export function ChatWidget({
               )}
             </div>
 
+            <div className="border-t border-gray/40 bg-[var(--kady-panel-bg)] px-3 pt-2 text-[0.75em] leading-snug text-gray-text">
+              {/* Aperçu admin : toujours montré (pas de lecture du stockage de session au rendu serveur). */}
+              {(preview || !panel) && shownMessages.some((m) => m.role === "user") ? (
+                <div className="mb-1 flex flex-wrap items-center gap-x-2 gap-y-0.5 font-semibold text-[var(--kady-accent)]">
+                  {bookingUrl || preview ? (
+                    <button type="button" onClick={openBooking} className="hover:underline">
+                      {isEn ? "Book a call" : "Prendre rendez-vous"}
+                    </button>
+                  ) : null}
+                  <span aria-hidden>·</span>
+                  <a
+                    href={whatsappHref}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    onClick={recordWhatsapp}
+                    data-track-cta="chat_whatsapp"
+                    className="hover:underline"
+                  >
+                    WhatsApp
+                  </a>
+                  {preview || !contactSent ? (
+                    <>
+                      <span aria-hidden>·</span>
+                      <button type="button" onClick={() => setPanel("contact")} className="hover:underline">
+                        {isEn ? "Get a call back" : "Être rappelé"}
+                      </button>
+                    </>
+                  ) : null}
+                </div>
+              ) : null}
+              <p>
+                {isEn
+                  ? "Messages are kept 90 days so our team can follow up. "
+                  : "Échanges conservés 90 jours pour que l'équipe puisse vous répondre. "}
+                <Link href={isEn ? "/en/privacy" : "/politique-confidentialite"} className="underline">
+                  {isEn ? "Privacy" : "Confidentialité"}
+                </Link>
+              </p>
+            </div>
             <form
               onSubmit={handleSubmit}
-              className="relative flex gap-2 border-t border-gray/40 bg-[var(--kady-panel-bg)] p-3"
+              className="relative flex gap-2 bg-[var(--kady-panel-bg)] p-3 pt-2"
             >
               <HoneypotField />
               <input
@@ -472,6 +685,9 @@ export function ChatWidget({
           {a.showNameOnLauncher ? <span className="hidden text-sm font-semibold sm:inline">{name}</span> : null}
         </button>
       )}
+      {bookingSrc ? (
+        <ChatBookingOverlay src={bookingSrc} locale={isEn ? "en" : "fr"} onClose={() => setBookingSrc(null)} />
+      ) : null}
     </>
   );
 }

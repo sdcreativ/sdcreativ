@@ -23,6 +23,8 @@ import {
   Wrench,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { withAssistantLabel } from "@/content/crm-nav";
+import { useAssistantName } from "@/hooks/useAssistantName";
 
 const tabs = [
   { href: "/admin/crm/site/equipe", label: "Équipe", icon: Users },
@@ -35,7 +37,7 @@ const tabs = [
   { href: "/admin/crm/site/partenaires", label: "Partenaires", icon: Handshake },
   { href: "/admin/crm/site/tarifs", label: "Tarifs", icon: Receipt },
   { href: "/admin/crm/site/popups", label: "Popups", icon: Gift },
-  { href: "/admin/crm/site/kady", label: "Kady", icon: MessageCircle },
+  { href: "/admin/crm/site/kady", label: "{assistant}", icon: MessageCircle },
   { href: "/admin/crm/site/devis", label: "Configurateur", icon: Calculator },
   { href: "/admin/crm/site/solutions-ia", label: "Solutions IA", icon: Bot },
   { href: "/admin/crm/site/formations", label: "Formations", icon: GraduationCap },
@@ -48,6 +50,7 @@ const tabs = [
 
 export function CrmSiteSubNav() {
   const pathname = usePathname();
+  const assistantName = useAssistantName();
 
   return (
     <nav
@@ -68,7 +71,7 @@ export function CrmSiteSubNav() {
             )}
           >
             <Icon className="h-4 w-4 shrink-0" aria-hidden />
-            {label}
+            {withAssistantLabel(label, assistantName)}
           </Link>
         );
       })}

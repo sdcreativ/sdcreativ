@@ -1,6 +1,8 @@
 /** Compteurs actionnables pour badges sidebar / mobile (client-safe). */
 export type CrmNavBadges = {
   leads: number;
+  /** Conversations Nari non lues (30 derniers jours). */
+  conversations: number;
   quotes: number;
   tasks: number;
   tickets: number;

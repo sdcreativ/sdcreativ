@@ -6,7 +6,7 @@ import {
   stripInternalChatPaths,
 } from "@/lib/chat-actions";
 
-describe("boutons d’action Kady", () => {
+describe("boutons d’action Nari", () => {
   it("ajoute devis, RDV et contact quand la réponse les propose", () => {
     const answer =
       "Pour demander un devis personnalisé, vous pouvez remplir notre formulaire en ligne ou prendre rendez-vous avec un conseiller. Vous trouverez ces options dans la section /devis ou /contact.";

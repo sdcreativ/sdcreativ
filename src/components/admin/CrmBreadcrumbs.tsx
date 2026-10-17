@@ -2,12 +2,14 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { getCrmBreadcrumbs } from "@/content/crm-nav";
+import { getCrmBreadcrumbs, withAssistantLabel } from "@/content/crm-nav";
+import { useAssistantName } from "@/hooks/useAssistantName";
 import { ChevronRight } from "lucide-react";
 
 export function CrmBreadcrumbs() {
   const pathname = usePathname() ?? "/admin/crm";
-  const crumbs = getCrmBreadcrumbs(pathname);
+  const assistantName = useAssistantName();
+  const crumbs = getCrmBreadcrumbs(pathname).map((c) => ({ ...c, label: withAssistantLabel(c.label, assistantName) }));
 
   if (crumbs.length <= 1) return null;
 
