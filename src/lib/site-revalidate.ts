@@ -4,6 +4,7 @@ import {
   PUBLIC_PRICING_REASSURANCE_TAG,
 } from "@/lib/public-pricing-resolver";
 import { KADY_APPEARANCE_TAG } from "@/lib/kady-settings";
+import { KADY_KNOWLEDGE_TAG } from "@/lib/kady-knowledge";
 import { SITE_AUDIT_SETTINGS_TAG } from "@/lib/site-audit-settings";
 import { SITE_PUBLIC_SETTINGS_TAG } from "@/lib/site-public-settings";
 import { SITE_QUOTE_CONFIG_TAG } from "@/lib/site-quote-config-settings";
@@ -148,8 +149,13 @@ export function revalidateLegalPages() {
   revalidatePath("/en/privacy");
 }
 
-/** Kady est présente sur toutes les pages publiques : le layout racine est invalidé. */
+/** Nari est présente sur toutes les pages publiques : le layout racine est invalidé. */
 export function revalidateKadyAppearance() {
   revalidateTag(KADY_APPEARANCE_TAG, "max");
   revalidatePath("/", "layout");
+}
+
+/** Réponses de Nari modifiées : prises en compte dès la question suivante. */
+export function revalidateKadyKnowledge() {
+  revalidateTag(KADY_KNOWLEDGE_TAG, "max");
 }

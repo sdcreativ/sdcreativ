@@ -6,7 +6,8 @@ import { usePathname } from "next/navigation";
 import { CrmLogo } from "@/components/admin/CrmLogo";
 import { CrmUserAvatar } from "@/components/admin/CrmUserAvatar";
 import { CRM_ROLE_LABELS } from "@/content/crm-roles";
-import { crmNavGroups, crmNavItems } from "@/content/crm-nav";
+import { crmNavGroups, crmNavItems, withAssistantLabel } from "@/content/crm-nav";
+import { useAssistantName } from "@/hooks/useAssistantName";
 import { fetchCrmSession, type CrmSessionInfo } from "@/lib/crm-settings-api";
 import { filterCrmNavGroups } from "@/lib/crm-access";
 import { formatNavBadge, type CrmNavBadges } from "@/lib/crm-nav-badges";
@@ -19,6 +20,7 @@ import { ExternalLink } from "lucide-react";
 
 const NAV_BADGE_KEYS: Partial<Record<string, keyof CrmNavBadges>> = {
   leads: "leads",
+  conversations: "conversations",
   quotes: "quotes",
   tasks: "tasks",
   tickets: "tickets",
@@ -58,6 +60,7 @@ export function CrmSidebar({ onNavigate }: Props) {
   }, [loadSession]);
 
   const { data: badges } = useCrmFetch("crm-nav-badges", fetchCrmNavBadges, 60_000);
+  const assistantName = useAssistantName();
 
   const roleLabel =
     session?.roleLabel ??
@@ -123,7 +126,7 @@ export function CrmSidebar({ onNavigate }: Props) {
                     title={openInWindow ? "Ouvrir dans une nouvelle fenêtre" : undefined}
                   >
                     <Icon className="h-4 w-4 shrink-0 opacity-90" aria-hidden />
-                    <span className="min-w-0 flex-1 truncate">{label}</span>
+                    <span className="min-w-0 flex-1 truncate">{withAssistantLabel(label, assistantName)}</span>
                     {openInWindow ? (
                       <ExternalLink className="h-3.5 w-3.5 shrink-0 opacity-70" aria-hidden />
                     ) : null}

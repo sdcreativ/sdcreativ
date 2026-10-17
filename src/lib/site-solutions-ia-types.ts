@@ -76,7 +76,7 @@ export const defaultSiteSolutionsIaSettings: SiteSolutionsIaSettings = {
     title: "Essayez un agent IA en live",
     description:
       "L’assistant en bas à gauche montre concrètement ce que vos visiteurs peuvent vivre : réponses utiles, orientation commerciale, et passage à un humain si besoin.",
-    hint: "Cliquez sur « Kady » pour l’essayer →",
+    hint: "Cliquez sur le bouton de chat pour l’essayer →",
   },
   headings: {
     useCases: {
@@ -386,7 +386,7 @@ export const defaultSiteSolutionsIaSettings: SiteSolutionsIaSettings = {
     {
       question: "Comment fonctionne l’assistant sur ce site ?",
       answer:
-        "Kady, en bas à gauche, est l’assistance virtuelle de SD CREATIV. En heures ouvrées, un conseiller peut aussi vous répondre ; hors horaires, l’IA reste disponible avec WhatsApp et prise de rendez-vous.",
+        "Notre assistance virtuelle (bouton de chat en bas de l’écran) répond 24/7. En heures ouvrées, un conseiller peut aussi vous répondre ; hors horaires, l’IA reste disponible avec WhatsApp et prise de rendez-vous.",
     },
     {
       question: "Comment cohabitent l’assistant IA et le chat conseiller ?",

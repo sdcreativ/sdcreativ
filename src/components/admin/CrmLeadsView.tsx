@@ -30,6 +30,7 @@ import {
 } from "@/lib/lead-scoring";
 import { KanbanDropColumn, KANBAN_DRAG_MIME } from "@/lib/kanban-dnd";
 import { useCrmAssignees } from "@/hooks/useCrmTeamMembers";
+import { useAssistantName } from "@/hooks/useAssistantName";
 import { CrmClickToCallButton } from "@/components/admin/CrmClickToCallButton";
 import { LeadActivityTimeline } from "@/components/admin/LeadActivityTimeline";
 import { LeadEmailComposer } from "@/components/admin/LeadEmailComposer";
@@ -719,6 +720,7 @@ function LeadDetailPanel({
   onEmailSent: () => void;
 }) {
   const assignees = useCrmAssignees();
+  const assistantName = useAssistantName();
   const [converting, setConverting] = useState(false);
   const [converted, setConverted] = useState(false);
   const [showEmail, setShowEmail] = useState(false);
@@ -817,6 +819,14 @@ function LeadDetailPanel({
             {lead.company && <DetailRow label="Entreprise" value={lead.company} />}
             <DetailRow label="Source" value={LEAD_SOURCE_LABELS[lead.source]} />
             <LeadOriginSection lead={lead} saving={saving} onChannelChange={onChannelChange} />
+            {typeof lead.metadata?.chatConversationId === "string" && (
+              <Link
+                href={`/admin/crm/conversations?id=${lead.metadata.chatConversationId}`}
+                className="inline-flex items-center gap-1.5 text-sm font-semibold text-primary hover:underline"
+              >
+                Lire la conversation avec {assistantName} →
+              </Link>
+            )}
             {presentationMeta && (
               <div className="rounded-xl border border-primary/15 bg-primary/5 p-3">
                 <p className="text-xs font-semibold uppercase tracking-wide text-primary">

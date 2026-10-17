@@ -2,8 +2,8 @@ import { z } from "zod";
 import { CHATBOT } from "@/lib/constants";
 
 /**
- * Apparence de Kady (assistance virtuelle du site) — pur, partagé site / admin / API.
- * Réglée dans CRM → Site → Kady ; les valeurs par défaut reproduisent le widget d'origine.
+ * Apparence de Nari (assistance virtuelle du site) — pur, partagé site / admin / API.
+ * Réglée dans CRM → Site → Nari ; les valeurs par défaut reproduisent le widget d'origine.
  */
 export const KADY_POSITIONS = ["left", "right"] as const;
 export const KADY_LAUNCHER_STYLES = ["avatar", "icon"] as const;

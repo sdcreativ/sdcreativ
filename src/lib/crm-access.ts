@@ -8,6 +8,7 @@ import { isCrmMessagerieUiEnabled } from "@/lib/mail/config";
 export const CRM_NAV_PERMISSIONS: Record<string, CrmPermission | CrmPermission[] | null> = {
   dashboard: null,
   leads: "leads.read",
+  conversations: "leads.read",
   deals: "deals.read",
   marketing: "marketing.read",
   presentation: "leads.write",

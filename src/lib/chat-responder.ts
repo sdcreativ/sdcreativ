@@ -7,6 +7,7 @@ import {
 } from "@/content/chat-knowledge";
 import { KADY_SYSTEM_EN, KADY_SYSTEM_FR, kadyAvailabilityHint } from "@/content/kady-profile";
 import { withAssistantName } from "@/lib/kady-appearance";
+import { CHATBOT } from "@/lib/constants";
 import { attachChatActionLinks, polishChatAnswer } from "@/lib/chat-actions";
 import {
   isAdvisorChatAvailable,
@@ -31,13 +32,28 @@ function normalize(text: string): string {
     .replace(/\p{Diacritic}/gu, "");
 }
 
+/**
+ * Mot-clé trouvé en début de mot : « tarif » trouve « tarifs », mais « ia » ne trouve plus « mariages ».
+ * Texte et mot-clé déjà normalisés (minuscules, sans accents).
+ */
+export function keywordMatches(text: string, keyword: string): boolean {
+  if (!keyword) return false;
+  let from = 0;
+  for (;;) {
+    const at = text.indexOf(keyword, from);
+    if (at === -1) return false;
+    if (at === 0 || !/[\p{L}\p{N}]/u.test(text[at - 1]!)) return true;
+    from = at + 1;
+  }
+}
+
 function scoreEntry(message: string, entry: ChatKnowledgeEntry): number {
   const normalized = normalize(message);
   let score = 0;
 
   for (const keyword of entry.keywords) {
     const kw = normalize(keyword);
-    if (normalized.includes(kw)) {
+    if (keywordMatches(normalized, kw)) {
       score += kw.includes(" ") ? 3 : 1;
     }
   }
@@ -48,8 +64,10 @@ function scoreEntry(message: string, entry: ChatKnowledgeEntry): number {
 export function respondFromKnowledge(
   message: string,
   locale: ChatLocale = "fr",
+  /** Base modifiable dans l'admin ; par défaut celle du code. */
+  entries?: ChatKnowledgeEntry[],
 ): ChatResponse {
-  const knowledge = locale === "en" ? chatKnowledgeEn : chatKnowledge;
+  const knowledge = entries ?? (locale === "en" ? chatKnowledgeEn : chatKnowledge);
   let best: ChatKnowledgeEntry | null = null;
   let bestScore = 0;
 
@@ -121,13 +139,14 @@ export async function respondWithLlm(
   locale: ChatLocale = "fr",
   history: ChatTurn[] = [],
   mode: AiCommsMode = "default",
-  /** Nom choisi dans l'admin (CRM → Site → Kady) ; par défaut « Kady ». */
+  /** Nom choisi dans l'admin (CRM → Site → Assistante) ; par défaut CHATBOT.name. */
   assistantName?: string,
+  entries?: ChatKnowledgeEntry[],
 ): Promise<ChatResponse | null> {
   const apiKey = process.env.OPENAI_API_KEY;
   if (!apiKey) return null;
 
-  const knowledge = locale === "en" ? chatKnowledgeEn : chatKnowledge;
+  const knowledge = entries ?? (locale === "en" ? chatKnowledgeEn : chatKnowledge);
   const named = (text: string) => (assistantName ? withAssistantName(text, assistantName) : text);
   const systemPrompt = named(`${locale === "en" ? SYSTEM_PROMPT_EN : SYSTEM_PROMPT_FR}\n\n${kadyAvailabilityHint(mode, locale)}`);
   const context = named(knowledge.map((e) => `[${e.id}] ${e.answer}`).join("\n"));
@@ -197,14 +216,17 @@ export async function getChatResponse(
   history: ChatTurn[] = [],
   mode: AiCommsMode = "default",
   assistantName?: string,
+  /** Base de connaissances active (admin), sinon celle du code. */
+  entries?: ChatKnowledgeEntry[],
 ): Promise<ChatResponse> {
-  const llm = await respondWithLlm(message, locale, history, mode, assistantName);
+  const llm = await respondWithLlm(message, locale, history, mode, assistantName, entries);
   if (llm) return llm;
 
-  // La base de connaissances connaît « Kady » : « Qui es-tu, Awa ? » doit trouver la même réponse.
+  // La base de connaissances connaît le nom par défaut (CHATBOT.name) : « Qui es-tu, Awa ? » doit trouver la même réponse.
   const knowledge = respondFromKnowledge(
-    assistantName ? message.replace(new RegExp(`(?<![\\p{L}\\p{N}])${escapeRegExp(assistantName)}(?![\\p{L}\\p{N}])`, "giu"), "Kady") : message,
+    assistantName ? message.replace(new RegExp(`(?<![\\p{L}\\p{N}])${escapeRegExp(assistantName)}(?![\\p{L}\\p{N}])`, "giu"), CHATBOT.name) : message,
     locale,
+    entries,
   );
   return {
     ...knowledge,

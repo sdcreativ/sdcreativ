@@ -15,6 +15,7 @@ import {
   LayoutDashboard,
   LayoutList,
   LifeBuoy,
+  MessagesSquare,
   Mail,
   Megaphone,
   Newspaper,
@@ -29,6 +30,11 @@ import {
   FileSignature,
   QrCode,
 } from "lucide-react";
+
+/** Libellés contenant le nom de l'assistante, réglé dans CRM → Site → Assistante : « {assistant} » est remplacé à l'affichage. */
+export function withAssistantLabel(label: string, assistantName: string): string {
+  return label.replace("{assistant}", assistantName);
+}
 
 export type CrmNavItem = {
   id: string;
@@ -60,6 +66,7 @@ export const crmNavGroups: CrmNavGroup[] = [
     label: "Commercial",
     items: [
       { id: "leads", label: "Leads", href: "/admin/crm/leads", icon: Target, ready: true },
+      { id: "conversations", label: "Conversations {assistant}", href: "/admin/crm/conversations", icon: MessagesSquare, ready: true },
       { id: "deals", label: "Opportunités", href: "/admin/crm/opportunites", icon: GitMerge, ready: true },
       { id: "marketing", label: "Marketing", href: "/admin/crm/marketing", icon: Megaphone, ready: true },
       { id: "clients", label: "Clients", href: "/admin/crm/clients", icon: Users, ready: true },
@@ -200,7 +207,7 @@ export function getCrmBreadcrumbs(pathname: string): CrmBreadcrumb[] {
           partenaires: "Partenaires",
           tarifs: "Tarifs",
           popups: "Popups",
-          kady: "Assistante virtuelle",
+          kady: "Assistante {assistant}",
           devis: "Configurateur de devis",
           "solutions-ia": "Solutions IA",
           formations: "Formations",

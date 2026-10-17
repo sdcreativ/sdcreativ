@@ -211,7 +211,7 @@ export const iaFaq = [
   {
     question: "Comment fonctionne l’assistant sur ce site ?",
     answer:
-      "Kady, en bas à gauche, est l’assistance virtuelle de SD CREATIV. En heures ouvrées (lun–ven 8h–18h), un conseiller humain est aussi joignable via le Live Chat / appel audio (bulle dédiée). Hors horaires, l’IA reste disponible avec WhatsApp et prise de rendez-vous.",
+      "Notre assistance virtuelle (bouton de chat en bas de l’écran) répond 24/7. En heures ouvrées (lun–ven 8h–18h), un conseiller humain est aussi joignable via le Live Chat / appel audio (bulle dédiée). Hors horaires, l’IA reste disponible avec WhatsApp et prise de rendez-vous.",
   },
   {
     question: "Comment cohabitent l’assistant IA et le chat conseiller ?",

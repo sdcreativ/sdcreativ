@@ -405,7 +405,7 @@ body {
   height: auto;
 }
 
-/* Kady — animations du bouton d'ouverture (réglées dans CRM → Site → Kady). Discrètes et espacées. */
+/* Nari — animations du bouton d'ouverture (réglées dans CRM → Site → Nari). Discrètes et espacées. */
 @keyframes kady-pulse {
   0%, 70%, 100% { box-shadow: 0 10px 15px -3px rgb(0 0 0 / 0.2), 0 0 0 0 color-mix(in srgb, var(--kady-accent) 55%, transparent); }
   35% { box-shadow: 0 10px 15px -3px rgb(0 0 0 / 0.2), 0 0 0 12px color-mix(in srgb, var(--kady-accent) 0%, transparent); }

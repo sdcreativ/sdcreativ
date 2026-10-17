@@ -11,12 +11,12 @@ export const SITE = {
 
 /** Assistance virtuelle du site (widget + prompts OpenAI). */
 export const CHATBOT = {
-  name: "Kady",
+  name: "Nari",
   roleFr: "Assistance virtuelle",
   roleEn: "Virtual assistant",
   avatarSrc: "/images/kady.webp",
-  avatarAltFr: "Kady, assistance virtuelle de SD CREATIV",
-  avatarAltEn: "Kady, SD CREATIV virtual assistant",
+  avatarAltFr: "Nari, assistance virtuelle de SD CREATIV",
+  avatarAltEn: "Nari, SD CREATIV virtual assistant",
 } as const;
 
 /** Logo officiel SD CREATIV (SVG). */

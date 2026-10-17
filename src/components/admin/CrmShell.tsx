@@ -15,7 +15,8 @@ import { CrmSidebar } from "@/components/admin/CrmSidebar";
 import { CrmMobileNav } from "@/components/admin/CrmMobileNav";
 import { CrmMailboxOnboardingBanner } from "@/components/admin/CrmMailboxOnboardingBanner";
 import { CrmIdleTimeoutWatcher } from "@/components/admin/CrmIdleTimeoutWatcher";
-import { getCrmPageTitle } from "@/content/crm-nav";
+import { getCrmPageTitle, withAssistantLabel } from "@/content/crm-nav";
+import { useAssistantName } from "@/hooks/useAssistantName";
 import type { CalendarReminder } from "@/lib/calendar-reminders";
 import type { CrmNotification } from "@/lib/billing/notifications";
 import {
@@ -34,7 +35,8 @@ type Props = {
 
 export function CrmShell({ children, subtitle, showNewButton }: Props) {
   const pathname = usePathname() ?? "/admin/crm";
-  const title = getCrmPageTitle(pathname);
+  const assistantName = useAssistantName();
+  const title = withAssistantLabel(getCrmPageTitle(pathname), assistantName);
   const docsWindow = isCrmDocumentationPath(pathname);
   const [calendarReminders, setCalendarReminders] = useState<CalendarReminder[]>([]);
   const [billingHistory, setBillingHistory] = useState<CrmNotification[]>([]);

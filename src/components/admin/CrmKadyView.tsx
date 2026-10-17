@@ -4,6 +4,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { AlertTriangle, Bot, Loader2, RotateCcw } from "lucide-react";
 import { ChatWidget } from "@/components/chat/ChatWidget";
 import { SiteImageUploadField } from "@/components/admin/SiteImageUploadField";
+import { KadyAdminTabs } from "@/components/admin/KadyAdminTabs";
 import { useDialog } from "@/components/ui/DialogProvider";
 import {
   CrmFormActions,
@@ -15,6 +16,7 @@ import {
   crmFieldClass,
 } from "@/components/admin/crm-site-form-ui";
 import { parseFetchJson } from "@/lib/fetch-json";
+import { resetAssistantNameCache } from "@/hooks/useAssistantName";
 import {
   DEFAULT_KADY_APPEARANCE,
   KADY_FONT_LABELS,
@@ -55,7 +57,7 @@ async function saveAppearance(appearance: KadyAppearance): Promise<KadyAppearanc
   return (await parseFetchJson<{ appearance: KadyAppearance }>(res)).appearance;
 }
 
-/** CRM → Site → Kady : identité et apparence de l'assistance virtuelle, avec aperçu en direct. */
+/** CRM → Site → Assistante : identité et apparence de l'assistance virtuelle, avec aperçu en direct. */
 export function CrmKadyView() {
   const { confirm } = useDialog();
   const [form, setForm] = useState<KadyAppearance | null>(null);
@@ -121,8 +123,10 @@ export function CrmKadyView() {
     setSaving(true);
     setMessage("");
     try {
-      setForm(await saveAppearance(form));
-      setMessage("Kady enregistrée — visible sur le site d'ici quelques secondes.");
+      const saved = await saveAppearance(form);
+      setForm(saved);
+      resetAssistantNameCache();
+      setMessage(`${saved.name} enregistrée — visible sur le site d'ici quelques secondes.`);
     } catch (err) {
       setMessage(err instanceof Error ? err.message : "Enregistrement impossible.");
     } finally {
@@ -162,6 +166,7 @@ export function CrmKadyView() {
           </CrmSecondaryButton>
         }
       />
+      <KadyAdminTabs />
       <CrmFormStatus message={message} />
 
       <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_440px]">

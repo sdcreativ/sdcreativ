@@ -14,6 +14,9 @@ export const chatSchema = z.object({
   locale: z.enum(["fr", "en"]).optional().default("fr"),
   history: z.array(chatTurnSchema).max(12).optional().default([]),
   mode: z.enum(["handoff", "after_hours", "default"]).optional().default("default"),
+  /** Identifiant tiré au hasard par le widget pour la session (enregistrement de la conversation). */
+  conversationId: z.string().uuid().optional(),
+  pagePath: z.string().trim().max(300).optional(),
 });
 
 export type ChatInput = z.infer<typeof chatSchema>;
